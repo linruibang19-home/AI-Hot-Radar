@@ -60,8 +60,10 @@ cd apps/ai-service && pip install -e ".[dev]" && pytest -q
 **core-api**
 
 ```bash
-cd apps/core-api && ./gradlew test
+cd apps/core-api && mvn test
 ```
+
+本地跑 Maven 需要 JDK 21（ADR-002）。当前机器上是 JDK 17，用 Docker 构建不受影响。
 
 **web**
 
