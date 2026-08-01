@@ -70,6 +70,11 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-ai_hot_radar}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-ai_hot_radar}
       REDIS_URL: redis://redis:6379/0
       CRAWLER_USER_AGENT: ${CRAWLER_USER_AGENT:-AIHotRadarBot/1.0 (+https://example.com/bot)}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    volumes:
+      # The source registry is configuration, not code: mounting it read-only
+      # lets operators edit sources.yaml and re-run sync without rebuilding.
+      - ../../config:/app/config:ro
     ports:
       - "8000:8000"
     depends_on:
