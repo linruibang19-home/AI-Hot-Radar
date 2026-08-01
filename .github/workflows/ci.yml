@@ -49,11 +49,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - uses: gradle/actions/setup-gradle@v4
+          cache: maven
       # Flyway resolves migrations from the repository root; mirror the
       # Dockerfile so CI and the image test the same SQL.
       - run: mkdir -p src/main/resources/db/migration && cp ../../database/migrations/*.sql src/main/resources/db/migration/
-      - run: gradle --no-daemon build
+      - run: mvn -B verify
 
   migration:
     name: Flyway from empty database

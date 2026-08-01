@@ -1,22 +1,22 @@
-FROM gradle:8.12-jdk21 AS build
+FROM maven:3.9-eclipse-temurin-21 AS build
 
 WORKDIR /build
 
 # Build context is the repository root, so every source path is repo-relative.
 # Resolve dependencies before copying sources so source edits reuse this layer.
-COPY apps/core-api/build.gradle.kts apps/core-api/settings.gradle.kts ./
-RUN gradle --no-daemon dependencies --quiet || true
+COPY apps/core-api/pom.xml ./
+RUN mvn -B -q dependency:go-offline
 
 COPY apps/core-api/src ./src
 # Flyway migrations live at the repository root so Java, CI and the docs share
 # one canonical set.
 COPY database/migrations ./src/main/resources/db/migration
-RUN gradle --no-daemon bootJar --quiet
+RUN mvn -B -q clean package -DskipTests
 
 FROM eclipse-temurin:21-jre-jammy AS runtime
 
 WORKDIR /app
-COPY --from=build /build/build/libs/*.jar app.jar
+COPY --from=build /build/target/*.jar app.jar
 
 RUN useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /app
 USER appuser
