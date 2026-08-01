@@ -75,9 +75,7 @@ _MIN_PARAGRAPH_CHARS = 40
 
 def _paragraph_count(text: str) -> int:
     return sum(
-        1
-        for block in _PARAGRAPH_SPLIT.split(text)
-        if len(block.strip()) >= _MIN_PARAGRAPH_CHARS
+        1 for block in _PARAGRAPH_SPLIT.split(text) if len(block.strip()) >= _MIN_PARAGRAPH_CHARS
     )
 
 

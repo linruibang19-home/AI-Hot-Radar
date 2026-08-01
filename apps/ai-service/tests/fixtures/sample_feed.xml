@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Example AI Blog</title>
+    <link>https://example.com/blog</link>
+    <description>Sample feed for offline adapter tests</description>
+    <item>
+      <title>Second post</title>
+      <link>https://example.com/blog/second?utm_source=rss</link>
+      <guid isPermaLink="false">post-2</guid>
+      <pubDate>Fri, 31 Jul 2026 10:00:00 GMT</pubDate>
+      <description>A teaser for the second post that must never become body text.</description>
+    </item>
+    <item>
+      <title>First post</title>
+      <link>https://example.com/blog/first</link>
+      <guid isPermaLink="false">post-1</guid>
+      <pubDate>Thu, 30 Jul 2026 10:00:00 GMT</pubDate>
+      <description>A teaser for the first post.</description>
+    </item>
+    <item>
+      <title>Post without guid</title>
+      <link>https://example.com/blog/no-guid</link>
+      <pubDate>Wed, 29 Jul 2026 10:00:00 GMT</pubDate>
+      <description>This entry has no guid, so the external id falls back to the link hash.</description>
+    </item>
+  </channel>
+</rss>

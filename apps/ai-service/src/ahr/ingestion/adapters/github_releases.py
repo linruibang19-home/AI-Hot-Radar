@@ -59,7 +59,9 @@ class GitHubReleasesAdapter:
 
     name = "github_release_api"
 
-    def __init__(self, fetcher: HttpFetcher, *, token: str | None = None, page_limit: int = 5) -> None:
+    def __init__(
+        self, fetcher: HttpFetcher, *, token: str | None = None, page_limit: int = 5
+    ) -> None:
         self._fetcher = fetcher
         self._token = token
         self._page_limit = page_limit
@@ -73,7 +75,9 @@ class GitHubReleasesAdapter:
             headers["Authorization"] = f"Bearer {self._token}"
         return headers
 
-    async def discover(self, source: SourceConfig, cursor: SourceCursor | None = None) -> DiscoveryBatch:
+    async def discover(
+        self, source: SourceConfig, cursor: SourceCursor | None = None
+    ) -> DiscoveryBatch:
         if not source.repository:
             raise ParseFailedError(f"source {source.id} has no repository")
 
@@ -116,7 +120,11 @@ class GitHubReleasesAdapter:
                 published_at = _parse_iso8601(release.get("published_at"))
                 # Releases arrive newest-first; once we reach content we have
                 # already ingested, later pages are older still.
-                if cursor.newest_entry_time and published_at and published_at <= cursor.newest_entry_time:
+                if (
+                    cursor.newest_entry_time
+                    and published_at
+                    and published_at <= cursor.newest_entry_time
+                ):
                     stop = True
                     break
 

@@ -37,15 +37,19 @@ async def ready(response: Response) -> HealthStatus:
     checks: dict[str, str] = {}
 
     try:
-        with psycopg.connect(settings.database_url, connect_timeout=3) as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT 1")
-                cur.fetchone()
+        with (
+            psycopg.connect(settings.database_url, connect_timeout=3) as conn,
+            conn.cursor() as cur,
+        ):
+            cur.execute("SELECT 1")
+            cur.fetchone()
         checks["postgres"] = "ok"
     except Exception as exc:  # dependency probes must never raise to the caller
         checks["postgres"] = f"error: {type(exc).__name__}"
 
-    client = aioredis.from_url(settings.redis_url, socket_connect_timeout=3)
+    client = aioredis.from_url(  # type: ignore[no-untyped-call]
+        settings.redis_url, socket_connect_timeout=3
+    )
     try:
         await client.ping()
         checks["redis"] = "ok"

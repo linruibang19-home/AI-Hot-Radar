@@ -1,0 +1,3717 @@
+{
+  "probed": 118,
+  "states": {
+    "ACTIVE": 85,
+    "DEGRADED": 3,
+    "METADATA_ONLY": 1,
+    "QUARANTINED": 2,
+    "UNSUPPORTED_PROFILE": 27
+  },
+  "documents_sampled": 246,
+  "documents_with_fulltext": 231,
+  "fulltext_rate": 0.939,
+  "sources": [
+    {
+      "source_id": "anthropic-api-release-notes",
+      "profile": "docs_changelog",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "anthropic-claude-code-changelog",
+      "profile": "docs_changelog",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "anthropic-news",
+      "profile": "static_listing_to_article",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "anthropic-python-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v0.120.2",
+          "url": "https://github.com/anthropics/anthropic-sdk-python/releases/tag/v0.120.2",
+          "body_chars": 385,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.120.1",
+          "url": "https://github.com/anthropics/anthropic-sdk-python/releases/tag/v0.120.1",
+          "body_chars": 378,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.120.0",
+          "url": "https://github.com/anthropics/anthropic-sdk-python/releases/tag/v0.120.0",
+          "body_chars": 698,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "anthropic-typescript-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "sdk: v0.115.0",
+          "url": "https://github.com/anthropics/anthropic-sdk-typescript/releases/tag/sdk-v0.115.0",
+          "body_chars": 1000,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "sdk: v0.114.0",
+          "url": "https://github.com/anthropics/anthropic-sdk-typescript/releases/tag/sdk-v0.114.0",
+          "body_chars": 356,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "sdk: v0.113.0",
+          "url": "https://github.com/anthropics/anthropic-sdk-typescript/releases/tag/sdk-v0.113.0",
+          "body_chars": 401,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "arxiv-cs-ai",
+      "profile": "arxiv_feed_paper",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 0,
+      "http_status": 200,
+      "empty_reason": "PUBLISHER_SKIP_DAY",
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "arxiv-cs-cl",
+      "profile": "arxiv_feed_paper",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 0,
+      "http_status": 200,
+      "empty_reason": "PUBLISHER_SKIP_DAY",
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "arxiv-cs-lg",
+      "profile": "arxiv_feed_paper",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 0,
+      "http_status": 200,
+      "empty_reason": "PUBLISHER_SKIP_DAY",
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "chip-huyen",
+      "profile": "author_feed_to_article",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 10,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Common pitfalls when building generative AI applications",
+          "url": "https://huyenchip.com//2025/01/16/ai-engineering-pitfalls.html",
+          "body_chars": 11635,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Agents",
+          "url": "https://huyenchip.com//2025/01/07/agents.html",
+          "body_chars": 49241,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Building A Generative AI Platform",
+          "url": "https://huyenchip.com//2024/07/25/genai-platform.html",
+          "body_chars": 50730,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "deepseek-api-changelog",
+      "profile": "docs_changelog",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "deepseek-model-repo",
+      "profile": "github_repo_activity",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "gemini-api-changelog",
+      "profile": "docs_changelog",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "glm-new-releases",
+      "profile": "docs_changelog",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "google-adk-python-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 76,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v2.6.1",
+          "url": "https://github.com/google/adk-python/releases/tag/v2.6.1",
+          "body_chars": 830,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.6.0",
+          "url": "https://github.com/google/adk-python/releases/tag/v2.6.0",
+          "body_chars": 22135,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v1.37.0",
+          "url": "https://github.com/google/adk-python/releases/tag/v1.37.0",
+          "body_chars": 319,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "google-ai-blog",
+      "profile": "rss_to_article",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 20,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Gemini API Managed Agents: 3.6 Flash, hooks, and more",
+          "url": "https://blog.google/innovation-and-ai/technology/developers-tools/expanding-managed-agents-gemini-api-3-6-flash-hooks",
+          "body_chars": 6617,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "5 ways AI Mode in Search helps you enjoy the real world",
+          "url": "https://blog.google/products-and-platforms/products/search/ai-mode-real-world-tips",
+          "body_chars": 3492,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "5 ways to host the ultimate dinner party with Google Search",
+          "url": "https://blog.google/products-and-platforms/products/search/dinner-party-hosting-tips",
+          "body_chars": 3457,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "google-deepmind-blog",
+      "profile": "static_listing_to_article",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "google-genai-js-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 91,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v2.15.0",
+          "url": "https://github.com/googleapis/js-genai/releases/tag/v2.15.0",
+          "body_chars": 702,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.14.0",
+          "url": "https://github.com/googleapis/js-genai/releases/tag/v2.14.0",
+          "body_chars": 945,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.13.0",
+          "url": "https://github.com/googleapis/js-genai/releases/tag/v2.13.0",
+          "body_chars": 703,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "google-genai-python-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v2.16.0",
+          "url": "https://github.com/googleapis/python-genai/releases/tag/v2.16.0",
+          "body_chars": 870,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.15.0",
+          "url": "https://github.com/googleapis/python-genai/releases/tag/v2.15.0",
+          "body_chars": 797,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.14.0",
+          "url": "https://github.com/googleapis/python-genai/releases/tag/v2.14.0",
+          "body_chars": 794,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "huggingface-blog",
+      "profile": "static_listing_to_article",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "huggingface-hub-models",
+      "profile": "public_json_api",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "kimi-model-repo",
+      "profile": "github_repo_activity",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "kimi-platform-changelog",
+      "profile": "docs_changelog",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "langchain4j-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 81,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "1.18.1 and 1.18.1-beta28",
+          "url": "https://github.com/langchain4j/langchain4j/releases/tag/1.18.1",
+          "body_chars": 86,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "1.11.10 and 1.11.10-beta19",
+          "url": "https://github.com/langchain4j/langchain4j/releases/tag/1.11.10",
+          "body_chars": 87,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "1.5.3 and 1.5.3-beta11",
+          "url": "https://github.com/langchain4j/langchain4j/releases/tag/1.5.3",
+          "body_chars": 84,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "langchain-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "langchain-core==1.5.3",
+          "url": "https://github.com/langchain-ai/langchain/releases/tag/langchain-core%3D%3D1.5.3",
+          "body_chars": 131,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "langchain-core==1.5.2",
+          "url": "https://github.com/langchain-ai/langchain/releases/tag/langchain-core%3D%3D1.5.2",
+          "body_chars": 339,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "langchain-anthropic==1.5.3",
+          "url": "https://github.com/langchain-ai/langchain/releases/tag/langchain-anthropic%3D%3D1.5.3",
+          "body_chars": 245,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "langgraph-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "langgraph-checkpoint-sqlite==3.1.1",
+          "url": "https://github.com/langchain-ai/langgraph/releases/tag/checkpointsqlite%3D%3D3.1.1",
+          "body_chars": 772,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "langgraph-checkpoint-postgres==3.1.1",
+          "url": "https://github.com/langchain-ai/langgraph/releases/tag/checkpointpostgres%3D%3D3.1.1",
+          "body_chars": 887,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "langgraph==1.2.10",
+          "url": "https://github.com/langchain-ai/langgraph/releases/tag/1.2.10",
+          "body_chars": 675,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "latent-space",
+      "profile": "author_feed_to_article",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 20,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "[AINews] not much happened today",
+          "url": "https://www.latent.space/p/ainews-not-much-happened-today-038",
+          "body_chars": 11578,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "[AINews] GPT 5.6 price cut by 20%-80%: Cost of GPT 5.4 Intelligence dropped 13x ",
+          "url": "https://www.latent.space/p/ainews-gpt-56-price-cut-by-20-80",
+          "body_chars": 12501,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Ontologies Are So Back: Why AI Agents Are Reviving the Semantic Web",
+          "url": "https://www.latent.space/p/ontologies-agentic-systems",
+          "body_chars": 6227,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "llamaindex-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v0.14.23",
+          "url": "https://github.com/run-llama/llama_index/releases/tag/v0.14.23",
+          "body_chars": 89336,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.14.22",
+          "url": "https://github.com/run-llama/llama_index/releases/tag/v0.14.22",
+          "body_chars": 25000,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.14.21",
+          "url": "https://github.com/run-llama/llama_index/releases/tag/v0.14.21",
+          "body_chars": 40972,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "mcp-python-sdk-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 65,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v2.0.0",
+          "url": "https://github.com/modelcontextprotocol/python-sdk/releases/tag/v2.0.0",
+          "body_chars": 4310,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v1.29.0",
+          "url": "https://github.com/modelcontextprotocol/python-sdk/releases/tag/v1.29.0",
+          "body_chars": 1086,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.0.0rc1",
+          "url": "https://github.com/modelcontextprotocol/python-sdk/releases/tag/v2.0.0rc1",
+          "body_chars": 6708,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "mcp-spec-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 9,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "2026-07-28",
+          "url": "https://github.com/modelcontextprotocol/modelcontextprotocol/releases/tag/2026-07-28",
+          "body_chars": 374,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "2026-07-28 RC",
+          "url": "https://github.com/modelcontextprotocol/modelcontextprotocol/releases/tag/2026-07-28-RC",
+          "body_chars": 867,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "2025-11-25",
+          "url": "https://github.com/modelcontextprotocol/modelcontextprotocol/releases/tag/2025-11-25",
+          "body_chars": 378,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "mcp-typescript-sdk-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "1.30.0",
+          "url": "https://github.com/modelcontextprotocol/typescript-sdk/releases/tag/1.30.0",
+          "body_chars": 1763,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "@modelcontextprotocol/server@2.0.0",
+          "url": "https://github.com/modelcontextprotocol/typescript-sdk/releases/tag/%40modelcontextprotocol/server%402.0.0",
+          "body_chars": 20162,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "@modelcontextprotocol/server-legacy@2.0.0",
+          "url": "https://github.com/modelcontextprotocol/typescript-sdk/releases/tag/%40modelcontextprotocol/server-legacy%402.0.0",
+          "body_chars": 3371,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "meta-ai-blog",
+      "profile": "static_listing_to_article",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "mistral-changelog",
+      "profile": "docs_changelog",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "nathan-lambert-interconnects",
+      "profile": "author_feed_to_article",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 20,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Open models recap: more on Kimi K3, Qwen 3.8, Xi's WAIC speech, distillation, th",
+          "url": "https://www.interconnects.ai/p/open-models-recap-more-on-kimi-k3",
+          "body_chars": 44852,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Kimi K3: The open-weights escalation",
+          "url": "https://www.interconnects.ai/p/kimi-k3-the-open-weights-escalation",
+          "body_chars": 21913,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "6 months to live for open models",
+          "url": "https://www.interconnects.ai/p/6-months-to-live-for-open-models",
+          "body_chars": 11270,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "openai-agents-js-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 69,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v0.14.2",
+          "url": "https://github.com/openai/openai-agents-js/releases/tag/v0.14.2",
+          "body_chars": 1140,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.14.1",
+          "url": "https://github.com/openai/openai-agents-js/releases/tag/v0.14.1",
+          "body_chars": 869,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.14.0",
+          "url": "https://github.com/openai/openai-agents-js/releases/tag/v0.14.0",
+          "body_chars": 5295,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "openai-agents-python-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v0.19.2",
+          "url": "https://github.com/openai/openai-agents-python/releases/tag/v0.19.2",
+          "body_chars": 4298,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.19.1",
+          "url": "https://github.com/openai/openai-agents-python/releases/tag/v0.19.1",
+          "body_chars": 2773,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.19.0",
+          "url": "https://github.com/openai/openai-agents-python/releases/tag/v0.19.0",
+          "body_chars": 10251,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "openai-api-changelog",
+      "profile": "docs_changelog",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "openai-codex-changelog",
+      "profile": "docs_changelog",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "openai-deprecations",
+      "profile": "docs_changelog",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "openai-java-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v4.49.0",
+          "url": "https://github.com/openai/openai-java/releases/tag/v4.49.0",
+          "body_chars": 344,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v4.48.0",
+          "url": "https://github.com/openai/openai-java/releases/tag/v4.48.0",
+          "body_chars": 439,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v4.47.0",
+          "url": "https://github.com/openai/openai-java/releases/tag/v4.47.0",
+          "body_chars": 259,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "openai-news",
+      "profile": "rss_to_article",
+      "priority": "P0",
+      "state": "DEGRADED",
+      "discovered": 1105,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Ten advances in mathematics and theoretical computer science",
+          "url": "https://openai.com/index/ten-advances-in-mathematics",
+          "body_chars": 0,
+          "decision": "ERROR",
+          "reason_code": null,
+          "error": "ACCESS_RESTRICTED"
+        },
+        {
+          "title": "Advancing responsible AI across Europe",
+          "url": "https://openai.com/index/advancing-responsible-ai-across-europe",
+          "body_chars": 0,
+          "decision": "ERROR",
+          "reason_code": null,
+          "error": "ACCESS_RESTRICTED"
+        },
+        {
+          "title": "Building abundant intelligence",
+          "url": "https://openai.com/index/building-abundant-intelligence",
+          "body_chars": 0,
+          "decision": "ERROR",
+          "reason_code": null,
+          "error": "ACCESS_RESTRICTED"
+        }
+      ]
+    },
+    {
+      "source_id": "openai-node-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v7.3.0",
+          "url": "https://github.com/openai/openai-node/releases/tag/v7.3.0",
+          "body_chars": 1019,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v7.2.0",
+          "url": "https://github.com/openai/openai-node/releases/tag/v7.2.0",
+          "body_chars": 254,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v7.1.0",
+          "url": "https://github.com/openai/openai-node/releases/tag/v7.1.0",
+          "body_chars": 424,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "openai-python-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v2.52.0",
+          "url": "https://github.com/openai/openai-python/releases/tag/v2.52.0",
+          "body_chars": 741,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.51.0",
+          "url": "https://github.com/openai/openai-python/releases/tag/v2.51.0",
+          "body_chars": 424,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.50.0",
+          "url": "https://github.com/openai/openai-python/releases/tag/v2.50.0",
+          "body_chars": 451,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "qbitai",
+      "profile": "rss_to_article",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 10,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "「天线宝宝」机器人上门做保洁，200元/小时，纯·人工·智能",
+          "url": "https://www.qbitai.com/2026/08/464781.html",
+          "body_chars": 2244,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "获奖之后，王虹最想感谢的人",
+          "url": "https://www.qbitai.com/2026/08/464761.html",
+          "body_chars": 3034,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "奥特曼也逃不过刷TikTok上瘾，Sora背后最抓马的一段来了",
+          "url": "https://www.qbitai.com/2026/08/464713.html",
+          "body_chars": 7439,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "qwen-model-repo",
+      "profile": "github_repo_activity",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "qwen-research",
+      "profile": "static_listing_to_article",
+      "priority": "P0",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "simon-willison",
+      "profile": "author_feed_to_article",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 30,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 2,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "deepseek-ai/DeepSeek-V4-Flash-0731",
+          "url": "https://simonwillison.net/2026/Jul/31/deepseek-v4-flash-0731",
+          "body_chars": 804,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Stateless MCP has recaptured my interest (and inspired mcp-explorer and datasett",
+          "url": "https://simonwillison.net/2026/Jul/31/stateless-mcp",
+          "body_chars": 7963,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "llm-mcp-client 0.1a0",
+          "url": "https://simonwillison.net/2026/Jul/31/llm-mcp-client",
+          "body_chars": 14,
+          "decision": "METADATA_ONLY",
+          "reason_code": "BODY_TOO_SHORT",
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "spring-ai-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 34,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Spring AI 2.0.0",
+          "url": "https://github.com/spring-projects/spring-ai/releases/tag/v2.0.0",
+          "body_chars": 2387,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Spring AI 1.1.8",
+          "url": "https://github.com/spring-projects/spring-ai/releases/tag/v1.1.8",
+          "body_chars": 691,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Spring AI 1.0.9",
+          "url": "https://github.com/spring-projects/spring-ai/releases/tag/v1.0.9",
+          "body_chars": 349,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "transformers-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Patch release: v5.14.1",
+          "url": "https://github.com/huggingface/transformers/releases/tag/v5.14.1",
+          "body_chars": 654,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Release v5.14.0",
+          "url": "https://github.com/huggingface/transformers/releases/tag/v5.14.0",
+          "body_chars": 13732,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Patch release v5.13.1",
+          "url": "https://github.com/huggingface/transformers/releases/tag/v5.13.1",
+          "body_chars": 391,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "vllm-releases",
+      "profile": "github_release_api",
+      "priority": "P0",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v0.26.0",
+          "url": "https://github.com/vllm-project/vllm/releases/tag/v0.26.0",
+          "body_chars": 18106,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.25.1",
+          "url": "https://github.com/vllm-project/vllm/releases/tag/v0.25.1",
+          "body_chars": 1304,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.25.0",
+          "url": "https://github.com/vllm-project/vllm/releases/tag/v0.25.0",
+          "body_chars": 20826,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "a2a-protocol-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 11,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v1.0.1",
+          "url": "https://github.com/a2aproject/A2A/releases/tag/v1.0.1",
+          "body_chars": 705,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v1.0.0",
+          "url": "https://github.com/a2aproject/A2A/releases/tag/v1.0.0",
+          "body_chars": 12901,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.3.0",
+          "url": "https://github.com/a2aproject/A2A/releases/tag/v0.3.0",
+          "body_chars": 1859,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "agno-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v2.8.6",
+          "url": "https://github.com/agno-agi/agno/releases/tag/v2.8.6",
+          "body_chars": 3147,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.8.5",
+          "url": "https://github.com/agno-agi/agno/releases/tag/v2.8.5",
+          "body_chars": 1243,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.8.4",
+          "url": "https://github.com/agno-agi/agno/releases/tag/v2.8.4",
+          "body_chars": 741,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "andrew-ng-the-batch",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "QUARANTINED",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": "NOT_FOUND",
+      "error_detail": "not found (404) for https://www.deeplearning.ai/the-batch/feed",
+      "documents": []
+    },
+    {
+      "source_id": "anthropic-app-release-notes",
+      "profile": "docs_changelog",
+      "priority": "P1",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "anthropic-java-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 93,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v2.52.0",
+          "url": "https://github.com/anthropics/anthropic-sdk-java/releases/tag/v2.52.0",
+          "body_chars": 685,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.51.0",
+          "url": "https://github.com/anthropics/anthropic-sdk-java/releases/tag/v2.51.0",
+          "body_chars": 574,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.50.0",
+          "url": "https://github.com/anthropics/anthropic-sdk-java/releases/tag/v2.50.0",
+          "body_chars": 368,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "anthropic-status",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 25,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Degraded performance on Claude Sonnet 5",
+          "url": "https://status.claude.com/incidents/jq4x54h69z76",
+          "body_chars": 552,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Degraded performance on Claude Opus 4.8",
+          "url": "https://status.claude.com/incidents/kqjy03gs895j",
+          "body_chars": 552,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Elevated errors across many models",
+          "url": "https://status.claude.com/incidents/fsh2zzzl2c4l",
+          "body_chars": 1863,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "apple-machine-learning",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "DEGRADED",
+      "discovered": 10,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Dimensionality Reduction Meets Network Science: Sensemaking on UMAP’s kNN Graph",
+          "url": "https://machinelearning.apple.com/research/umap-knn-graph-sensemaking",
+          "body_chars": 0,
+          "decision": "ERROR",
+          "reason_code": null,
+          "error": "ACCESS_RESTRICTED"
+        },
+        {
+          "title": "MoMo: Dial Motion Mode in Robot Manipulation with Spatiotemporal Action Tokeniza",
+          "url": "https://machinelearning.apple.com/research/momo-motion-mode-manipulation",
+          "body_chars": 0,
+          "decision": "ERROR",
+          "reason_code": null,
+          "error": "ACCESS_RESTRICTED"
+        },
+        {
+          "title": "Memory Efficient Audio Synthesis with Decoupled Temporal Depth Diffusion Transfo",
+          "url": "https://machinelearning.apple.com/research/audio-synthesis-diffusion-transformers",
+          "body_chars": 0,
+          "decision": "ERROR",
+          "reason_code": null,
+          "error": "ACCESS_RESTRICTED"
+        }
+      ]
+    },
+    {
+      "source_id": "ars-ai",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 20,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Claude published malicious code to the Internet and attacked 3 real companies",
+          "url": "https://arstechnica.com/security/2026/07/likely-illegally-claude-gained-access-to-3-networks-will-anthropic-be-held-to-account",
+          "body_chars": 3375,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Max-severity Exchange server flaw under active exploitation by Kremlin hackers",
+          "url": "https://arstechnica.com/security/2026/07/kremlin-hackers-are-exploiting-exchange-flaw-to-backdoor-unpatched-networks",
+          "body_chars": 2070,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Mythos attack on 3rd-round PQC algorithm candidate puts it out of commission",
+          "url": "https://arstechnica.com/security/2026/07/mythos-uncovers-crypto-weaknesses-that-went-unknown-for-years",
+          "body_chars": 1887,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "arxiv-cs-cv",
+      "profile": "arxiv_feed_paper",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 0,
+      "http_status": 200,
+      "empty_reason": "PUBLISHER_SKIP_DAY",
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "arxiv-cs-ir",
+      "profile": "arxiv_feed_paper",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 0,
+      "http_status": 200,
+      "empty_reason": "PUBLISHER_SKIP_DAY",
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "arxiv-cs-ma",
+      "profile": "arxiv_feed_paper",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 0,
+      "http_status": 200,
+      "empty_reason": "PUBLISHER_SKIP_DAY",
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "autogen-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 98,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "python-v0.7.5",
+          "url": "https://github.com/microsoft/autogen/releases/tag/python-v0.7.5",
+          "body_chars": 3208,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "python-v0.7.4",
+          "url": "https://github.com/microsoft/autogen/releases/tag/python-v0.7.4",
+          "body_chars": 790,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "python-v0.7.3",
+          "url": "https://github.com/microsoft/autogen/releases/tag/python-v0.7.3",
+          "body_chars": 1684,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "aws-machine-learning-blog",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 20,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Announcing the Agentic Catalog Experience in Amazon Quick",
+          "url": "https://aws.amazon.com/blogs/machine-learning/announcing-the-agentic-catalog-experience-in-amazon-quick",
+          "body_chars": 15757,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Optimizing production agents with Amazon Bedrock AgentCore Observability",
+          "url": "https://aws.amazon.com/blogs/machine-learning/optimizing-production-agents-with-amazon-bedrock-agentcore-observability",
+          "body_chars": 14719,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Deploying Kimi K3 on Amazon SageMaker HyperPod and Amazon EKS",
+          "url": "https://aws.amazon.com/blogs/machine-learning/deploying-kimi-k3-on-amazon-sagemaker-hyperpod-and-amazon-eks",
+          "body_chars": 10407,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "baai-community",
+      "profile": "static_listing_to_article",
+      "priority": "P1",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "baidu-qianfan-changelog",
+      "profile": "docs_changelog",
+      "priority": "P1",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "bair-blog",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 10,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "From CUDA to MLX: How K-Search Brings Decades of Kernel Expertise to Apple Silic",
+          "url": "http://bair.berkeley.edu/blog/2026/07/29/cuda-to-mlx-k-search",
+          "body_chars": 13655,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Teaching LLMs to Update Beliefs for Efficient Long-Horizon Interaction",
+          "url": "http://bair.berkeley.edu/blog/2026/07/26/abbel",
+          "body_chars": 11693,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Intelligence is Free, Now What? <br> Data Systems for, of, and by Agents",
+          "url": "http://bair.berkeley.edu/blog/2026/07/07/intelligence-is-free-now-what",
+          "body_chars": 17854,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "cloudflare-ai-blog",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 20,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Introducing Precursor: detecting agentic behavior with continuous client-side si",
+          "url": "https://blog.cloudflare.com/introducing-precursor",
+          "body_chars": 9242,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Unmasking the crawls with Attribution Business Insights",
+          "url": "https://blog.cloudflare.com/attribution-business-insights",
+          "body_chars": 8931,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Making AI search smarter",
+          "url": "https://blog.cloudflare.com/making-ai-search-smarter",
+          "body_chars": 10296,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "coze-studio-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 11,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "V0.5.1",
+          "url": "https://github.com/coze-dev/coze-studio/releases/tag/v0.5.1",
+          "body_chars": 4948,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.5.0",
+          "url": "https://github.com/coze-dev/coze-studio/releases/tag/v0.5.0",
+          "body_chars": 7597,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.5.0-beta",
+          "url": "https://github.com/coze-dev/coze-studio/releases/tag/v0.5.0-beta",
+          "body_chars": 5793,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "crewai-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "1.15.10",
+          "url": "https://github.com/crewAIInc/crewAI/releases/tag/1.15.10",
+          "body_chars": 247,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "1.15.9",
+          "url": "https://github.com/crewAIInc/crewAI/releases/tag/1.15.9",
+          "body_chars": 332,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "1.15.8",
+          "url": "https://github.com/crewAIInc/crewAI/releases/tag/1.15.8",
+          "body_chars": 367,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "dify-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Release v1.16.1 - Bug Fixes and Security Enhancements",
+          "url": "https://github.com/langgenius/dify/releases/tag/1.16.1",
+          "body_chars": 41971,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v1.16.0",
+          "url": "https://github.com/langgenius/dify/releases/tag/1.16.0",
+          "body_chars": 72586,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v1.16.0-rc1",
+          "url": "https://github.com/langgenius/dify/releases/tag/1.16.0-rc1",
+          "body_chars": 35337,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "dspy-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "3.3.0b1",
+          "url": "https://github.com/stanfordnlp/dspy/releases/tag/3.3.0b1",
+          "body_chars": 12606,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "3.2.1",
+          "url": "https://github.com/stanfordnlp/dspy/releases/tag/3.2.1",
+          "body_chars": 1993,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "3.2.0",
+          "url": "https://github.com/stanfordnlp/dspy/releases/tag/3.2.0",
+          "body_chars": 11485,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "ethan-mollick",
+      "profile": "author_feed_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 20,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "An opinionated guide to which AI to use to do stuff",
+          "url": "https://www.oneusefulthing.org/p/an-opinionated-guide-to-which-ai-b22",
+          "body_chars": 12747,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "The twilight of the chatbots",
+          "url": "https://www.oneusefulthing.org/p/the-twilight-of-the-chatbots",
+          "body_chars": 7200,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "What it feels like to work with Mythos",
+          "url": "https://www.oneusefulthing.org/p/what-it-feels-like-to-work-with-mythos",
+          "body_chars": 10408,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "eugene-yan",
+      "profile": "author_feed_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 212,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 2,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Patterns for Building Cybersecurity Evals",
+          "url": "https://eugeneyan.com//writing/cybersecurity-evals",
+          "body_chars": 23490,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Using LLMs to Secure Source Code",
+          "url": "https://eugeneyan.com//writing/secure-source-code",
+          "body_chars": 52,
+          "decision": "METADATA_ONLY",
+          "reason_code": "BODY_TOO_SHORT",
+          "error": null
+        },
+        {
+          "title": "How to Work and Compound with AI",
+          "url": "https://eugeneyan.com//writing/working-with-ai",
+          "body_chars": 15679,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "fastgpt-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v4.15.6",
+          "url": "https://github.com/labring/FastGPT/releases/tag/v4.15.6",
+          "body_chars": 243,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v4.15.5",
+          "url": "https://github.com/labring/FastGPT/releases/tag/v4.15.5",
+          "body_chars": 2172,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v4.15.4",
+          "url": "https://github.com/labring/FastGPT/releases/tag/v4.15.4",
+          "body_chars": 4408,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "google-adk-js-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 42,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "main: v1.5.0",
+          "url": "https://github.com/google/adk-js/releases/tag/main-v1.5.0",
+          "body_chars": 4379,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "integrations: v1.5.0",
+          "url": "https://github.com/google/adk-js/releases/tag/integrations-v1.5.0",
+          "body_chars": 316,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "devtools: v1.5.0",
+          "url": "https://github.com/google/adk-js/releases/tag/devtools-v1.5.0",
+          "body_chars": 464,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "google-research-blog",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Science One Framework: A verifiable autonomous research framework via Chain-of-E",
+          "url": "https://research.google/blog/science-one-framework-a-verifiable-autonomous-research-framework-via-chain-of-evidence",
+          "body_chars": 6231,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "SymptomAI: Towards a conversational AI agent for everyday symptom assessment",
+          "url": "https://research.google/blog/symptomai-towards-a-conversational-ai-agent-for-everyday-symptom-assessment",
+          "body_chars": 10978,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Towards a quantum computer that learns from its errors",
+          "url": "https://research.google/blog/towards-a-quantum-computer-that-learns-from-its-errors",
+          "body_chars": 7373,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "haystack-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 2,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v3.0.0",
+          "url": "https://github.com/deepset-ai/haystack/releases/tag/v3.0.0",
+          "body_chars": 88207,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v3.0.0-rc1",
+          "url": "https://github.com/deepset-ai/haystack/releases/tag/v3.0.0-rc1",
+          "body_chars": 0,
+          "decision": "METADATA_ONLY",
+          "reason_code": "EMPTY_BODY",
+          "error": null
+        },
+        {
+          "title": "v2.31.0",
+          "url": "https://github.com/deepset-ai/haystack/releases/tag/v2.31.0",
+          "body_chars": 33499,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "huggingface-daily-papers",
+      "profile": "static_listing_to_article",
+      "priority": "P1",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "hunyuan-model-repo",
+      "profile": "github_repo_activity",
+      "priority": "P1",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "import-ai",
+      "profile": "author_feed_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 20,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Import AI 466: The bitter lesson for robotics, AIs complete week-long programmin",
+          "url": "https://importai.substack.com/p/import-ai-466-the-bitter-lesson-for",
+          "body_chars": 16777,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Import AI 465: Open vs closed gaps; Kimi K3; Demis' big policy plan",
+          "url": "https://importai.substack.com/p/import-ai-465-open-vs-closed-gaps",
+          "body_chars": 14667,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Import AI 464: Fable writes GPU kernels; AI automation; and analog computation",
+          "url": "https://importai.substack.com/p/import-ai-464-fables-writes-gpu-kernels",
+          "body_chars": 15134,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "infoq-ai-ml",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 15,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Dropbox Integrates MCP and Dash to Close the Gap Between Security Design and Cod",
+          "url": "https://www.infoq.com/news/2026/07/dropbox-mcp-ai-code-review",
+          "body_chars": 8003,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Presentation: Getting Rid of LeetCode Interviews in the World of AI",
+          "url": "https://www.infoq.com/presentations/ai-lead-interview",
+          "body_chars": 40011,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Article: Securing MCP in Production: Defense-in-Depth Beyond the Gateway",
+          "url": "https://www.infoq.com/articles/securing-mcp-production-gateway",
+          "body_chars": 27242,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "jay-alammar",
+      "profile": "author_feed_to_article",
+      "priority": "P1",
+      "state": "METADATA_ONLY",
+      "discovered": 10,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 1,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Moving To Substack",
+          "url": "http://jalammar.github.io/moving_to_substack",
+          "body_chars": 288,
+          "decision": "METADATA_ONLY",
+          "reason_code": "BODY_TOO_SHORT",
+          "error": null
+        },
+        {
+          "title": "Generative AI and AI Product Moats",
+          "url": "http://jalammar.github.io/generative-ai-and-ai-product-moats",
+          "body_chars": 247,
+          "decision": "METADATA_ONLY",
+          "reason_code": "BODY_TOO_SHORT",
+          "error": null
+        },
+        {
+          "title": "Remaking Old Computer Graphics With AI Image Generation",
+          "url": "http://jalammar.github.io/ai-image-generation-tools",
+          "body_chars": 11851,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "langfuse-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v4.2.0",
+          "url": "https://github.com/langfuse/langfuse/releases/tag/v4.2.0",
+          "body_chars": 2654,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v4.1.0",
+          "url": "https://github.com/langfuse/langfuse/releases/tag/v4.1.0",
+          "body_chars": 3174,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v3.224.4",
+          "url": "https://github.com/langfuse/langfuse/releases/tag/v3.224.4",
+          "body_chars": 576,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "lilian-weng",
+      "profile": "author_feed_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 53,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Harness Engineering for Self-Improvement",
+          "url": "https://lilianweng.github.io/posts/2026-07-04-harness",
+          "body_chars": 42645,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Scaling Laws, Carefully",
+          "url": "https://lilianweng.github.io/posts/2026-06-24-scaling-laws",
+          "body_chars": 26775,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Why We Think",
+          "url": "https://lilianweng.github.io/posts/2025-05-01-thinking",
+          "body_chars": 22100,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "litellm-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v1.96.0-dev.2",
+          "url": "https://github.com/BerriAI/litellm/releases/tag/v1.96.0-dev.2",
+          "body_chars": 4785,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v1.95.0-rc.3",
+          "url": "https://github.com/BerriAI/litellm/releases/tag/v1.95.0-rc.3",
+          "body_chars": 7693,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v1.95.0-rc.2",
+          "url": "https://github.com/BerriAI/litellm/releases/tag/v1.95.0-rc.2",
+          "body_chars": 85957,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "llama-cpp-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "b10218",
+          "url": "https://github.com/ggml-org/llama.cpp/releases/tag/b10218",
+          "body_chars": 4145,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "b10217",
+          "url": "https://github.com/ggml-org/llama.cpp/releases/tag/b10217",
+          "body_chars": 3654,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "b10216",
+          "url": "https://github.com/ggml-org/llama.cpp/releases/tag/b10216",
+          "body_chars": 4402,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "mastra-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "July 30, 2026",
+          "url": "https://github.com/mastra-ai/mastra/releases/tag/%40mastra/core%401.55.0",
+          "body_chars": 31778,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "July 28, 2026",
+          "url": "https://github.com/mastra-ai/mastra/releases/tag/%40mastra/core%401.54.0",
+          "body_chars": 54168,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "July 27, 2026",
+          "url": "https://github.com/mastra-ai/mastra/releases/tag/%40mastra/core%401.53.0",
+          "body_chars": 19040,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "mcp-java-sdk-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 36,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v2.0.0",
+          "url": "https://github.com/modelcontextprotocol/java-sdk/releases/tag/v2.0.0",
+          "body_chars": 6989,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.18.3",
+          "url": "https://github.com/modelcontextprotocol/java-sdk/releases/tag/v0.18.3",
+          "body_chars": 146,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.0.0-RC1",
+          "url": "https://github.com/modelcontextprotocol/java-sdk/releases/tag/v2.0.0-RC1",
+          "body_chars": 1150,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "mem0-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Mem0 n8n Integration",
+          "url": "https://github.com/mem0ai/mem0/releases/tag/n8n-nodes-mem0-v0.1.1",
+          "body_chars": 358,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Mem0 Python SDK (v2.0.14)",
+          "url": "https://github.com/mem0ai/mem0/releases/tag/v2.0.14",
+          "body_chars": 1154,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Mem0 Node SDK (v3.1.2)",
+          "url": "https://github.com/mem0ai/mem0/releases/tag/ts-v3.1.2",
+          "body_chars": 1612,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "microsoft-ai-blog",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "QUARANTINED",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": "NOT_FOUND",
+      "error_detail": "not found (410) for https://blogs.microsoft.com/ai/feed/",
+      "documents": []
+    },
+    {
+      "source_id": "microsoft-research-blog",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 10,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Echoverse: Deep, evolving environments for computer-use agents",
+          "url": "https://www.microsoft.com/en-us/research/blog/echoverse-deep-evolving-environments-for-computer-use-agents",
+          "body_chars": 26039,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "EvoLib: Turning experience into evolving knowledge",
+          "url": "https://www.microsoft.com/en-us/research/blog/evolib-turning-experience-into-evolving-knowledge",
+          "body_chars": 6577,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Verifying Rust cryptography in SymCrypt, from standards to code",
+          "url": "https://www.microsoft.com/en-us/research/blog/verifying-rust-cryptography-in-symcrypt-from-standards-to-code",
+          "body_chars": 15156,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "mit-technology-review-ai",
+      "profile": "static_listing_to_article",
+      "priority": "P1",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "nvidia-developer-blog",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Co-Designing AI Model Attention for Fast, Interactive Long-Context Inference",
+          "url": "https://developer.nvidia.com/blog/co-designing-ai-model-attention-for-fast-interactive-long-context-inference",
+          "body_chars": 13226,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "NVIDIA Video Codec SDK 13.1: Zero-Copy Transcode, AV1 B-Frames, and Frame-Accura",
+          "url": "https://developer.nvidia.com/blog/nvidia-video-codec-sdk-13-1-zero-copy-transcode-av1-b-frames-and-frame-accurate-seek",
+          "body_chars": 16040,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Run High-Performance Core Math at Scale with NVIDIA nvmath-python",
+          "url": "https://developer.nvidia.com/blog/run-high-performance-core-math-at-scale-with-nvidia-nvmath-python",
+          "body_chars": 16829,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "nvidia-generative-ai-blog",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 18,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Industry Leaders Unite in Open Secure AI Alliance for AI Safety and Security",
+          "url": "https://blogs.nvidia.com/blog/open-secure-ai-alliance",
+          "body_chars": 7940,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "At AI Summit, South Korea Outlines Its AI Future With NVIDIA and Partners",
+          "url": "https://blogs.nvidia.com/blog/ai-summit-korea-partners-and-nvidia",
+          "body_chars": 8662,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "NVIDIA Open Sources First GPU-Accelerated Medical Physics Simulation Framework",
+          "url": "https://blogs.nvidia.com/blog/medical-physics-simulation-open-source",
+          "body_chars": 5733,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "ollama-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v0.32.5",
+          "url": "https://github.com/ollama/ollama/releases/tag/v0.32.5",
+          "body_chars": 199,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.32.4",
+          "url": "https://github.com/ollama/ollama/releases/tag/v0.32.4",
+          "body_chars": 372,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.32.3",
+          "url": "https://github.com/ollama/ollama/releases/tag/v0.32.3",
+          "body_chars": 648,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "openai-status",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 94,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 2,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Enterprise & Education Chat Errors",
+          "url": "https://status.openai.com//incidents/01KYVPNEY9736Z04D3X1NSFFF9",
+          "body_chars": 505,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Elevated errors affecting ChatGPT conversations",
+          "url": "https://status.openai.com//incidents/01KYSQ7PC81PV3PZE3ZEVFK6K5",
+          "body_chars": 277,
+          "decision": "METADATA_ONLY",
+          "reason_code": "BODY_TOO_SHORT",
+          "error": null
+        },
+        {
+          "title": "Elevated error rates with the invalid_prompt error code",
+          "url": "https://status.openai.com//incidents/01KYNNX2TQ3PV0KPJ9PTRRPX6C",
+          "body_chars": 834,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "pydantic-ai-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v2.22.0 (2026-07-31)",
+          "url": "https://github.com/pydantic/pydantic-ai/releases/tag/v2.22.0",
+          "body_chars": 6120,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.21.0 (2026-07-29)",
+          "url": "https://github.com/pydantic/pydantic-ai/releases/tag/v2.21.0",
+          "body_chars": 499,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v2.20.0 (2026-07-28)",
+          "url": "https://github.com/pydantic/pydantic-ai/releases/tag/v2.20.0",
+          "body_chars": 2047,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "quarkus-langchain4j-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "1.12.2",
+          "url": "https://github.com/quarkiverse/quarkus-langchain4j/releases/tag/1.12.2",
+          "body_chars": 313,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "1.12.1",
+          "url": "https://github.com/quarkiverse/quarkus-langchain4j/releases/tag/1.12.1",
+          "body_chars": 208,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "1.7.7",
+          "url": "https://github.com/quarkiverse/quarkus-langchain4j/releases/tag/1.7.7",
+          "body_chars": 319,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "qwen-legacy-blog",
+      "profile": "static_listing_to_article",
+      "priority": "P1",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "ragflow-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 52,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "nightly",
+          "url": "https://github.com/infiniflow/ragflow/releases/tag/nightly",
+          "body_chars": 98,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.26.4",
+          "url": "https://github.com/infiniflow/ragflow/releases/tag/v0.26.4",
+          "body_chars": 15976,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.26.3",
+          "url": "https://github.com/infiniflow/ragflow/releases/tag/v0.26.3",
+          "body_chars": 16409,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "sebastian-raschka",
+      "profile": "author_feed_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 20,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Controlling Reasoning Effort in LLMs",
+          "url": "https://magazine.sebastianraschka.com/p/controlling-reasoning-effort-in-llms",
+          "body_chars": 36939,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Using Local Coding Agents",
+          "url": "https://magazine.sebastianraschka.com/p/using-local-coding-agents",
+          "body_chars": 38847,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "LLM Research Papers: The 2026 List (January to May)",
+          "url": "https://magazine.sebastianraschka.com/p/llm-research-papers-2026-part1",
+          "body_chars": 7995,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "semantic-kernel-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "python-1.44.0",
+          "url": "https://github.com/microsoft/semantic-kernel/releases/tag/python-1.44.0",
+          "body_chars": 2978,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "dotnet-1.78.0",
+          "url": "https://github.com/microsoft/semantic-kernel/releases/tag/dotnet-1.78.0",
+          "body_chars": 3245,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "python-1.43.1",
+          "url": "https://github.com/microsoft/semantic-kernel/releases/tag/python-1.43.1",
+          "body_chars": 835,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "sglang-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 57,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v0.5.16",
+          "url": "https://github.com/sgl-project/sglang/releases/tag/v0.5.16",
+          "body_chars": 29855,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.5.15.post1",
+          "url": "https://github.com/sgl-project/sglang/releases/tag/v0.5.15.post1",
+          "body_chars": 387,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.5.15",
+          "url": "https://github.com/sgl-project/sglang/releases/tag/v0.5.15",
+          "body_chars": 27871,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "smolagents-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 36,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v1.26.0",
+          "url": "https://github.com/huggingface/smolagents/releases/tag/v1.26.0",
+          "body_chars": 1413,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v1.25.0",
+          "url": "https://github.com/huggingface/smolagents/releases/tag/v1.25.0",
+          "body_chars": 4263,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v1.24.0",
+          "url": "https://github.com/huggingface/smolagents/releases/tag/v1.24.0",
+          "body_chars": 2415,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "strands-agents-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 81,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "mcp/v0.2.8",
+          "url": "https://github.com/strands-agents/harness-sdk/releases/tag/mcp/v0.2.8",
+          "body_chars": 787,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "typescript/v1.11.2",
+          "url": "https://github.com/strands-agents/harness-sdk/releases/tag/typescript/v1.11.2",
+          "body_chars": 1261,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "python/v1.50.2",
+          "url": "https://github.com/strands-agents/harness-sdk/releases/tag/python/v1.50.2",
+          "body_chars": 1392,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "techcrunch-ai",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 20,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "OpenAI reportedly finds evidence that more of its agents ran amok",
+          "url": "https://techcrunch.com/2026/07/31/openai-reportedly-finds-evidence-that-more-of-its-agents-ran-amok",
+          "body_chars": 1170,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "India is starting to pay for apps, not just download them",
+          "url": "https://techcrunch.com/2026/07/31/india-is-starting-to-pay-for-apps-not-just-download-them",
+          "body_chars": 3843,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Google nixes its Earth AI feature one day after launch, amid criticism it would ",
+          "url": "https://techcrunch.com/2026/07/31/google-nixes-its-earth-ai-feature-one-day-after-launch-amid-criticism-it-would-spread-misinformation",
+          "body_chars": 1561,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "the-decoder",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 10,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "AI coding agents can modernize research software but can't judge if the science ",
+          "url": "https://the-decoder.com/ai-coding-agents-can-modernize-research-software-but-cant-judge-if-the-science-is-right",
+          "body_chars": 8171,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "A security researcher built a self-spreading worm that hides inside Word docs an",
+          "url": "https://the-decoder.com/a-security-researcher-built-a-self-spreading-worm-that-hides-inside-word-docs-and-hijacks-microsoft-copilot",
+          "body_chars": 1424,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "ByteDance's Seedance 2.5 generates 30-second video clips with built-in audio",
+          "url": "https://the-decoder.com/bytedances-seedance-2-5-generates-30-second-video-clips-with-built-in-audio",
+          "body_chars": 1446,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "the-verge-ai",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 10,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Google Earth&#8217;s AI deepfake tool only lasted one day",
+          "url": "https://www.theverge.com/tech/973943/google-earth-ai-image-generation-deepfake-tool",
+          "body_chars": 1600,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Here’s the problem with putting an AI image generator in Google Earth",
+          "url": "https://www.theverge.com/ai-artificial-intelligence/973764/google-earth-ai-satellite-images",
+          "body_chars": 1736,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "The major labels propose rules to keep AI slop off the charts",
+          "url": "https://www.theverge.com/ai-artificial-intelligence/973741/ai-music-major-record-labels-charts",
+          "body_chars": 2226,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "venturebeat-ai",
+      "profile": "rss_to_article",
+      "priority": "P1",
+      "state": "DEGRADED",
+      "discovered": 7,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Google just redesigned the search box for the first time in 25 years — here’s wh",
+          "url": "https://venturebeat.com/technology/google-just-redesigned-the-search-box-for-the-first-time-in-25-years-heres-why-it-matters-more-than-you-think",
+          "body_chars": 0,
+          "decision": "ERROR",
+          "reason_code": null,
+          "error": "RATE_LIMITED"
+        },
+        {
+          "title": "Railway secures $100 million to challenge AWS with AI-native cloud infrastructur",
+          "url": "https://venturebeat.com/infrastructure/railway-secures-usd100-million-to-challenge-aws-with-ai-native-cloud",
+          "body_chars": 0,
+          "decision": "ERROR",
+          "reason_code": null,
+          "error": "RATE_LIMITED"
+        },
+        {
+          "title": "Claude Code costs up to $200 a month. Goose does the same thing for free.",
+          "url": "https://venturebeat.com/infrastructure/claude-code-costs-up-to-usd200-a-month-goose-does-the-same-thing-for-free",
+          "body_chars": 0,
+          "decision": "ERROR",
+          "reason_code": null,
+          "error": "RATE_LIMITED"
+        }
+      ]
+    },
+    {
+      "source_id": "vercel-ai-releases",
+      "profile": "github_release_api",
+      "priority": "P1",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "ai@7.0.47",
+          "url": "https://github.com/vercel/ai/releases/tag/ai%407.0.47",
+          "body_chars": 157,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "ai@7.0.46",
+          "url": "https://github.com/vercel/ai/releases/tag/ai%407.0.46",
+          "body_chars": 84,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "ai@7.0.45",
+          "url": "https://github.com/vercel/ai/releases/tag/ai%407.0.45",
+          "body_chars": 374,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "arxiv-cs-se",
+      "profile": "arxiv_feed_paper",
+      "priority": "P2",
+      "state": "ACTIVE",
+      "discovered": 0,
+      "http_status": 200,
+      "empty_reason": "PUBLISHER_SKIP_DAY",
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "deepspeed-releases",
+      "profile": "github_release_api",
+      "priority": "P2",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v0.19.3 Patch Release",
+          "url": "https://github.com/deepspeedai/DeepSpeed/releases/tag/v0.19.3",
+          "body_chars": 9278,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.19.2 Patch Release",
+          "url": "https://github.com/deepspeedai/DeepSpeed/releases/tag/v0.19.2",
+          "body_chars": 3831,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.19.1",
+          "url": "https://github.com/deepspeedai/DeepSpeed/releases/tag/v0.19.1",
+          "body_chars": 3477,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "flowise-releases",
+      "profile": "github_release_api",
+      "priority": "P2",
+      "state": "ACTIVE",
+      "discovered": 85,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "flowise@3.1.4",
+          "url": "https://github.com/FlowiseAI/Flowise/releases/tag/flowise%403.1.4",
+          "body_chars": 1931,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "flowise@3.1.3",
+          "url": "https://github.com/FlowiseAI/Flowise/releases/tag/flowise%403.1.3",
+          "body_chars": 11317,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "flowise@3.1.2",
+          "url": "https://github.com/FlowiseAI/Flowise/releases/tag/flowise%403.1.2",
+          "body_chars": 10351,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "mlx-releases",
+      "profile": "github_release_api",
+      "priority": "P2",
+      "state": "ACTIVE",
+      "discovered": 74,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v0.32.0",
+          "url": "https://github.com/ml-explore/mlx/releases/tag/v0.32.0",
+          "body_chars": 20187,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.31.2",
+          "url": "https://github.com/ml-explore/mlx/releases/tag/v0.31.2",
+          "body_chars": 10480,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.31.1",
+          "url": "https://github.com/ml-explore/mlx/releases/tag/v0.31.1",
+          "body_chars": 3198,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "n8n-releases",
+      "profile": "github_release_api",
+      "priority": "P2",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "stable",
+          "url": "https://github.com/n8n-io/n8n/releases/tag/stable",
+          "body_chars": 1276,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "n8n@2.32.7",
+          "url": "https://github.com/n8n-io/n8n/releases/tag/n8n%402.32.7",
+          "body_chars": 1276,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "n8n@2.33.3",
+          "url": "https://github.com/n8n-io/n8n/releases/tag/n8n%402.33.3",
+          "body_chars": 1504,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "openalex-works",
+      "profile": "public_json_api",
+      "priority": "P2",
+      "state": "UNSUPPORTED_PROFILE",
+      "discovered": 0,
+      "http_status": null,
+      "empty_reason": null,
+      "fulltext_passed": 0,
+      "fulltext_sampled": 0,
+      "error_code": null,
+      "error_detail": null,
+      "documents": []
+    },
+    {
+      "source_id": "open-webui-releases",
+      "profile": "github_release_api",
+      "priority": "P2",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v0.11.0",
+          "url": "https://github.com/open-webui/open-webui/releases/tag/v0.11.0",
+          "body_chars": 115078,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.10.2",
+          "url": "https://github.com/open-webui/open-webui/releases/tag/v0.10.2",
+          "body_chars": 8847,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v0.10.1",
+          "url": "https://github.com/open-webui/open-webui/releases/tag/v0.10.1",
+          "body_chars": 276,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "ray-releases",
+      "profile": "github_release_api",
+      "priority": "P2",
+      "state": "ACTIVE",
+      "discovered": 100,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "Ray-2.56.1",
+          "url": "https://github.com/ray-project/ray/releases/tag/ray-2.56.1",
+          "body_chars": 3046,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Ray-2.56.0",
+          "url": "https://github.com/ray-project/ray/releases/tag/ray-2.56.0",
+          "body_chars": 33273,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "Ray-2.55.1",
+          "url": "https://github.com/ray-project/ray/releases/tag/ray-2.55.1",
+          "body_chars": 128,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "source_id": "tgi-releases",
+      "profile": "github_release_api",
+      "priority": "P2",
+      "state": "ACTIVE",
+      "discovered": 67,
+      "http_status": 200,
+      "empty_reason": null,
+      "fulltext_passed": 3,
+      "fulltext_sampled": 3,
+      "error_code": null,
+      "error_detail": null,
+      "documents": [
+        {
+          "title": "v3.3.7",
+          "url": "https://github.com/huggingface/text-generation-inference/releases/tag/v3.3.7",
+          "body_chars": 794,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v3.3.6",
+          "url": "https://github.com/huggingface/text-generation-inference/releases/tag/v3.3.6",
+          "body_chars": 1418,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        },
+        {
+          "title": "v3.3.5",
+          "url": "https://github.com/huggingface/text-generation-inference/releases/tag/v3.3.5",
+          "body_chars": 2453,
+          "decision": "ACCEPTED",
+          "reason_code": null,
+          "error": null
+        }
+      ]
+    }
+  ]
+}

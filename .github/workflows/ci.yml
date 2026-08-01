@@ -35,6 +35,8 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy src
+      # AHR-QSO-700 §1: the suite replays fixtures and must never contact live
+      # sites, so it has to pass with DNS and outbound traffic unavailable.
       - run: pytest -q
 
   core-api:

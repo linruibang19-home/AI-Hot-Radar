@@ -72,9 +72,7 @@ def load_sources(path: str | Path) -> list[SourceConfig]:
 
     for source in sources:
         if not (source.discovery_url or source.repository or source.subject):
-            raise ValueError(
-                f"source {source.id} has no discovery_url, repository or subject"
-            )
+            raise ValueError(f"source {source.id} has no discovery_url, repository or subject")
 
     return sources
 

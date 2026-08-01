@@ -24,6 +24,7 @@ dev = [
     "ruff>=0.7.0",
     "mypy>=1.13.0",
     "jsonschema>=4.23.0",
+    "types-PyYAML>=6.0.12",
 ]
 
 [build-system]
@@ -44,8 +45,19 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 pythonpath = ["src"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 mypy_path = "src"
+
+[[tool.mypy.overrides]]
+# feedparser and trafilatura ship no type stubs; their return values are
+# narrowed explicitly at each call site instead.
+module = ["feedparser.*", "trafilatura.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["redis.*"]
+ignore_missing_imports = true

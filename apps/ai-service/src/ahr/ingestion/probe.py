@@ -31,7 +31,7 @@ from ahr.ingestion.adapters.rss import RssAtomAdapter
 from ahr.ingestion.article import extract_article
 from ahr.ingestion.errors import IngestionError
 from ahr.ingestion.fulltext_gate import Decision, ExtractedDocument, evaluate
-from ahr.ingestion.http import HttpFetcher, HttpConfig
+from ahr.ingestion.http import HttpConfig, HttpFetcher
 from ahr.ingestion.models import SourceConfig
 
 # How many recent documents to check per source. §5 requires 2 of the latest 3.
@@ -194,16 +194,30 @@ def _load_from_db(limit: int, profile: str | None) -> list[SourceConfig]:
     query += " ORDER BY priority, id LIMIT %s"
     params.append(limit)
 
-    with psycopg.connect(get_settings().database_url) as connection:
-        with connection.cursor() as cursor:
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
+    with (
+        psycopg.connect(get_settings().database_url) as connection,
+        connection.cursor() as cursor,
+    ):
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
 
     return [
         SourceConfig(
-            id=r[0], name=r[1], organization=r[2], profile=r[3], tier=r[4], priority=r[5],
-            content_access=r[6], verification=r[7], enabled=r[8], discovery_url=r[9],
-            repository=r[10], subject=r[11], homepage_url=r[12], region=r[13], group=r[14],
+            id=r[0],
+            name=r[1],
+            organization=r[2],
+            profile=r[3],
+            tier=r[4],
+            priority=r[5],
+            content_access=r[6],
+            verification=r[7],
+            enabled=r[8],
+            discovery_url=r[9],
+            repository=r[10],
+            subject=r[11],
+            homepage_url=r[12],
+            region=r[13],
+            group=r[14],
         )
         for r in rows
     ]
