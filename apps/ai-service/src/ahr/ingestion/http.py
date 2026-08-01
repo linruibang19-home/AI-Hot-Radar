@@ -41,6 +41,9 @@ class HttpConfig:
     base_delay_ms: int = 500
     max_delay_ms: int = 30_000
     allow_http: bool = False
+    # Longest a single fetch may block on a rate-limit reset before deferring
+    # to the scheduler.
+    max_rate_limit_wait: float = 30.0
 
 
 @dataclass
@@ -76,6 +79,18 @@ def _backoff_delay(attempt: int, config: HttpConfig) -> float:
     """
     capped = min(config.base_delay_ms * (2**attempt), config.max_delay_ms)
     return random.uniform(0, capped) / 1000.0
+
+
+def _seconds_until_reset(value: str | None) -> float | None:
+    """Seconds until an `X-RateLimit-Reset` epoch timestamp."""
+    if not value:
+        return None
+    try:
+        reset_at = float(value)
+    except ValueError:
+        return None
+    remaining = reset_at - datetime.now(UTC).timestamp()
+    return max(remaining, 0.0)
 
 
 def _parse_retry_after(value: str | None) -> float | None:
@@ -142,6 +157,12 @@ class HttpFetcher:
             if attempt:
                 delay = _backoff_delay(attempt - 1, self.config)
                 if isinstance(last_error, RateLimitedError) and last_error.retry_after:
+                    # A quota reset can be an hour out; blocking the worker that
+                    # long would stall every other source. Wait only briefly and
+                    # let the caller reschedule, preserving retry_after so the
+                    # scheduler knows when the source becomes available again.
+                    if last_error.retry_after > self.config.max_rate_limit_wait:
+                        raise last_error
                     delay = max(delay, last_error.retry_after)
                 await asyncio.sleep(delay)
 
@@ -157,7 +178,13 @@ class HttpFetcher:
     async def _fetch_once(self, url: str, headers: dict[str, str]) -> FetchResult:
         assert self._client is not None
 
+        # Many feeds still publish http:// links for sites that serve https and
+        # redirect. Upgrading here keeps the transport-security policy intact
+        # while avoiding a spurious SSRF rejection of a healthy public host.
         current = url
+        if current.startswith("http://") and not self.config.allow_http:
+            current = "https://" + current[len("http://") :]
+
         for _ in range(self.config.redirect_limit + 1):
             # Re-validate every hop: a public host may redirect to a private one.
             resolve_and_validate(current, allow_http=self.config.allow_http)
@@ -193,6 +220,14 @@ class HttpFetcher:
             raise RateLimitedError(
                 f"rate limited by {final}",
                 retry_after=_parse_retry_after(headers.get("retry-after")),
+            )
+        if status == 403 and headers.get("x-ratelimit-remaining") == "0":
+            # GitHub signals quota exhaustion with 403 plus a zeroed remaining
+            # counter rather than 429. Treating it as ACCESS_RESTRICTED would
+            # permanently quarantine a perfectly healthy source.
+            raise RateLimitedError(
+                f"rate limit exhausted for {final}",
+                retry_after=_seconds_until_reset(headers.get("x-ratelimit-reset")),
             )
         if status in (401, 403):
             raise AccessRestrictedError(f"access restricted ({status}) for {final}")

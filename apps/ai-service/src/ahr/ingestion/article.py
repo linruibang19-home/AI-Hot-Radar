@@ -30,8 +30,6 @@ _CANONICAL_RE = re.compile(
 _OG_URL_RE = re.compile(
     r'<meta[^>]+property=["\']og:url["\'][^>]*content=["\']([^"\']+)["\']', re.IGNORECASE
 )
-_LINK_TEXT_RE = re.compile(r"<a\b[^>]*>(.*?)</a>", re.IGNORECASE | re.DOTALL)
-_TAG_RE = re.compile(r"<[^>]+>")
 
 
 @dataclass(frozen=True)
@@ -56,29 +54,25 @@ def resolve_canonical(html: str, final_url: str) -> str:
     return canonicalize_url(final_url)
 
 
-_ARTICLE_REGION_RE = re.compile(
-    r"<(article|main)\b[^>]*>(.*?)</\1>", re.IGNORECASE | re.DOTALL
-)
+def _link_text_chars(body_markdown: str | None) -> int:
+    """Visible characters inside links within the *extracted* body.
 
+    Earlier attempts measured anchors in the raw HTML — first across the whole
+    page, then within <article>/<main>. Both overcount badly: Cloudflare's blog
+    nests the article inside a <main> that also holds navigation and related
+    posts, giving a 397k-character "article region" and a density of 0.92 for a
+    perfectly good post.
 
-def _link_text_chars(html: str) -> int:
-    """Visible characters inside anchors within the article region.
-
-    Measuring across the whole page would count navigation, sidebar and footer
-    links against the extracted body, inflating density far above the 0.35
-    threshold and rejecting perfectly good articles. Scope to <article>/<main>
-    when present; otherwise fall back to the whole document, which is the
-    conservative reading for pages with no semantic wrapper.
+    Measuring the extracted body instead compares like with like: the numerator
+    and denominator now describe the same text. Trafilatura's markdown output
+    represents links as [text](url), so link text is recoverable from it.
     """
-    region = html
-    match = _ARTICLE_REGION_RE.search(html)
-    if match:
-        region = match.group(2)
+    if not body_markdown:
+        return 0
+    return sum(len(match.group(1)) for match in _MD_LINK_RE.finditer(body_markdown))
 
-    total = 0
-    for link in _LINK_TEXT_RE.finditer(region):
-        total += len(_TAG_RE.sub("", link.group(1)).strip())
-    return total
+
+_MD_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
 
 
 def _published_from_jsonld(html: str) -> datetime | None:
@@ -148,7 +142,7 @@ def extract_article(
         canonical_url=canonical,
         published_at=published,
         source_id=source_id,
-        link_text_chars=_link_text_chars(html),
+        link_text_chars=_link_text_chars(body_markdown),
         extractor="trafilatura",
     )
     return ArticleExtraction(document=document, body_markdown=body_markdown, raw_html=html)
