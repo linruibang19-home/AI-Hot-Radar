@@ -83,7 +83,41 @@ docker compose -f infra/compose/docker-compose.yml down
 docker compose -f infra/compose/docker-compose.yml down -v
 ```
 
-## 8. 重要约定
+## 8. 采集操作
+
+导入 140 个信源（幂等，可重复执行）：
+
+```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli sync-sources
+```
+
+探测信源并输出全文成功率报告：
+
+```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli probe --limit 20 --output /tmp/probe.json
+```
+
+`--profile github_release_api` 可只探测某一类。报告区分 `ACTIVE`（拿到真实全文）、`METADATA_ONLY`（只有摘要）、`DEGRADED`（全文失败）、`RATE_LIMITED`（配额耗尽，非故障）和 `QUARANTINED`（发现阶段就失败）。
+
+**GitHub 未登录配额只有 60 次/小时**。在 `.env` 里设置 `GITHUB_TOKEN`（只读权限即可）后提升到 5000 次/小时，否则大批量探测会中途耗尽。
+
+## 9. 常见问题
+
+**新增迁移后 core-api 启动失败**：迁移文件是在**构建时**拷进镜像的，改了 `database/migrations/` 必须重建：
+
+```bash
+docker compose -f infra/compose/docker-compose.yml up -d --build core-api
+```
+
+**Flyway 报 "Found non-empty schema but no schema history table"**：说明有人用 `psql` 手工执行过迁移。Flyway 必须独占管理 schema，清空数据卷重来：
+
+```bash
+docker compose -f infra/compose/docker-compose.yml down -v && docker compose -f infra/compose/docker-compose.yml up -d --build
+```
+
+**宿主机 5432 端口被本地 PostgreSQL 占用**：容器内部通信不受影响。需要直连时用 `docker compose exec postgres psql -U ai_hot_radar -d ai_hot_radar`。
+
+## 10. 重要约定
 
 - **数据库变更只能通过 Flyway**（`AHR-SPEC-000` §8）。迁移文件位于 `database/migrations/`，是 Java、CI 和文档共用的唯一入口，禁止手工改表。
 - **密钥只进 `.env`**，仓库只提交 `.env.example`。

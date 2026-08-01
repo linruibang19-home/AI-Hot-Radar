@@ -70,7 +70,11 @@ def canonicalize_url(url: str) -> str:
     if len(path) > 1 and path.endswith("/"):
         path = path.rstrip("/") or "/"
 
-    kept = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True) if not _is_tracking_param(k)]
+    kept = [
+        (k, v)
+        for k, v in parse_qsl(parts.query, keep_blank_values=True)
+        if not _is_tracking_param(k)
+    ]
     query = urlencode(sorted(kept))
 
     # Fragments never identify a distinct server-side document.

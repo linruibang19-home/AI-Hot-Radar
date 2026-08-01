@@ -33,11 +33,11 @@ def _entry_time(entry: Any) -> datetime | None:
 def _entry_url(entry: Any) -> str | None:
     link = entry.get("link")
     if link:
-        return link
+        return str(link)
     # Atom entries may only expose links through the `links` collection.
     for candidate in entry.get("links", []):
         if candidate.get("rel") in (None, "alternate") and candidate.get("href"):
-            return candidate["href"]
+            return str(candidate["href"])
     return None
 
 
@@ -58,7 +58,9 @@ class RssAtomAdapter:
     def __init__(self, fetcher: Any) -> None:
         self._fetcher = fetcher
 
-    async def discover(self, source: SourceConfig, cursor: SourceCursor | None = None) -> DiscoveryBatch:
+    async def discover(
+        self, source: SourceConfig, cursor: SourceCursor | None = None
+    ) -> DiscoveryBatch:
         if not source.discovery_url:
             raise ParseFailedError(f"source {source.id} has no discovery_url")
 

@@ -12,9 +12,9 @@ from __future__ import annotations
 
 import asyncio
 import random
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
 
 import httpx
 
@@ -106,10 +106,21 @@ def _parse_retry_after(value: str | None) -> float | None:
 class HttpFetcher:
     """Async HTTP client enforcing the project's fetch policy."""
 
-    def __init__(self, config: HttpConfig | None = None, *, client: httpx.AsyncClient | None = None) -> None:
+    def __init__(
+        self,
+        config: HttpConfig | None = None,
+        *,
+        client: httpx.AsyncClient | None = None,
+        validate_target: Callable[[str, bool], object] | None = None,
+    ) -> None:
         self.config = config or HttpConfig()
         self._client = client
         self._owns_client = client is None
+        # Injectable so offline tests can skip DNS entirely; production always
+        # uses the real resolver-backed guard.
+        self._validate_target = validate_target or (
+            lambda url, allow_http: resolve_and_validate(url, allow_http=allow_http)
+        )
 
     async def __aenter__(self) -> HttpFetcher:
         if self._client is None:
@@ -187,7 +198,7 @@ class HttpFetcher:
 
         for _ in range(self.config.redirect_limit + 1):
             # Re-validate every hop: a public host may redirect to a private one.
-            resolve_and_validate(current, allow_http=self.config.allow_http)
+            self._validate_target(current, self.config.allow_http)
 
             try:
                 response = await self._client.get(current, headers=headers)

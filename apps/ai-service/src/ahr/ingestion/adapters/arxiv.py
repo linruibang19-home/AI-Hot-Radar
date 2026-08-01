@@ -16,9 +16,9 @@ from typing import Any
 
 import feedparser
 
+from ahr.ingestion.adapters.rss import _entry_time, _entry_url
 from ahr.ingestion.errors import ParseFailedError
 from ahr.ingestion.models import DiscoveredDocument, DiscoveryBatch, SourceConfig, SourceCursor
-from ahr.ingestion.adapters.rss import _entry_time, _entry_url
 
 RSS_ROOT = "https://rss.arxiv.org/rss"
 ABS_ROOT = "https://arxiv.org/abs"
@@ -63,7 +63,9 @@ class ArxivPaperAdapter:
     def __init__(self, fetcher: Any) -> None:
         self._fetcher = fetcher
 
-    async def discover(self, source: SourceConfig, cursor: SourceCursor | None = None) -> DiscoveryBatch:
+    async def discover(
+        self, source: SourceConfig, cursor: SourceCursor | None = None
+    ) -> DiscoveryBatch:
         subject = source.subject
         if not subject and source.discovery_url:
             subject = source.discovery_url.rstrip("/").rsplit("/", 1)[-1]
@@ -83,7 +85,9 @@ class ArxivPaperAdapter:
 
         feed = feedparser.parse(response.body)
         if feed.bozo and not feed.entries:
-            raise ParseFailedError(f"failed to parse arXiv feed {subject}: {feed.get('bozo_exception')}")
+            raise ParseFailedError(
+                f"failed to parse arXiv feed {subject}: {feed.get('bozo_exception')}"
+            )
 
         items: list[DiscoveredDocument] = []
         newest_seen = cursor.newest_entry_time

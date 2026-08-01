@@ -18,6 +18,7 @@ from ahr.ingestion.errors import SsrfBlockedError
 
 ALLOWED_SCHEMES = frozenset({"https", "http"})
 
+
 # Link-local addresses cover the cloud metadata endpoints (169.254.169.254 on
 # AWS/GCP/Azure), so no separate allow/deny list is needed for those.
 def _is_blocked_address(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
@@ -55,7 +56,9 @@ def resolve_and_validate(url: str, *, allow_http: bool = False) -> list[str]:
 
     addresses: list[str] = []
     for info in infos:
-        address = info[4][0]
+        # sockaddr is (host, port) for IPv4 and (host, port, flow, scope) for
+        # IPv6; the host element is always the string address.
+        address = str(info[4][0])
         if address in addresses:
             continue
         addresses.append(address)
