@@ -13,18 +13,18 @@
 |---|---|---|
 | `README.md` | 总入口、优先级、导航 | 完成 |
 | `AGENTS.md` / `CLAUDE.md` / `.cursor/rules/*` | 三类 AI IDE 统一约束 | 完成 |
-| `docs/00-master-spec.md` | 锁定技术与范围 | 完成 |
-| `docs/01-product-requirements.md` | 页面、角色、产品验收 | 完成 |
-| `docs/02-system-architecture.md` | Java/Python/Next.js 边界 | 完成 |
-| `docs/03-data-ingestion.md` | 核心实体、去重、Story | 完成 |
-| `docs/04-rag-agent-design.md` | 时间/事件感知混合 RAG | 完成 |
-| `docs/05-api-contract.md` | API 语义 | 完成 |
-| `docs/06-frontend-spec.md` | 页面与组件状态 | 完成 |
-| `docs/07-quality-security-ops.md` | 测试、安全、版权、运维 | 完成 |
-| `docs/08-roadmap-ai-ide.md` | M0–M5 与任务卡 | 完成 |
-| `docs/09-source-registry-fulltext.md` | 信源分层与全文标准 | 完成 |
-| `docs/10-source-adapter-implementation.md` | RSS/API/HTML/PDF 实现 | 完成 |
-| `docs/11-end-to-end-runbook.md` | 联调、日报、RAG、恢复 | 完成 |
+| `00-master-spec.md` | 锁定技术与范围 | 完成 |
+| `01-product-requirements.md` | 页面、角色、产品验收 | 完成 |
+| `02-system-architecture.md` | Java/Python/Next.js 边界 | 完成 |
+| `03-data-ingestion.md` | 核心实体、去重、Story | 完成 |
+| `04-rag-agent-design.md` | 时间/事件感知混合 RAG | 完成 |
+| `05-api-contract.md` | API 语义 | 完成 |
+| `06-frontend-spec.md` | 页面与组件状态 | 完成 |
+| `07-quality-security-ops.md` | 测试、安全、版权、运维 | 完成 |
+| `08-roadmap-ai-ide.md` | M0–M5 与任务卡 | 完成 |
+| `09-source-registry-fulltext.md` | 信源分层与全文标准 | 完成 |
+| `10-source-adapter-implementation.md` | RSS/API/HTML/PDF 实现 | 完成 |
+| `11-end-to-end-runbook.md` | 联调、日报、RAG、恢复 | 完成 |
 | `config/sources.yaml` | 140 个入口 | 完成；运行时仍需 probe |
 | `config/social-watchlist.yaml` | 30 X + 8 公众号 | 完成；默认关闭 |
 | `config/taxonomy.yaml` | 主题分类 | 完成 |

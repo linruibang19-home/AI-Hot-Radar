@@ -181,7 +181,7 @@ X 或公众号帖子不能成为 Story 的唯一主来源。收到社交线索�
 1. `config/sources.yaml`；
 2. `config/social-watchlist.yaml`；
 3. 本文档；
-4. `docs/03-data-ingestion.md`；
-5. `docs/07-quality-security-ops.md`。
+4. `03-data-ingestion.md`；
+5. `07-quality-security-ops.md`。
 
 禁止一次写 140 个硬编码爬虫类。先实现通用 profile adapter，再为 `adapter_required` 来源添加声明式 selector 与 fixture。每个站点适配器必须有：成功页、无正文页、结构变化页、429/403、发布时间缺失和 canonical 冲突测试。

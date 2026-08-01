@@ -151,5 +151,5 @@ hot_score =
 - 至少 500 条真实内容和 100 个 Story 完成端到端处理；
 - 日报连续生成 7 天且可追溯到 Story；
 - 关键页面 Lighthouse Performance/Accessibility/SEO 均 ≥ 85；
-- RAG 黄金集至少 80 题，通过 `docs/07-quality-security-ops.md` 的门禁；
+- RAG 黄金集至少 80 题，通过 `07-quality-security-ops.md` 的门禁；
 - 管理员能从 UI 定位任一失败任务并安全重试。

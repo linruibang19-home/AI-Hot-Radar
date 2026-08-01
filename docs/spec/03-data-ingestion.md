@@ -98,7 +98,7 @@ class SourceAdapter(Protocol):
 9. `BrowserRenderedAdapter`：默认禁用，仅 allowlist 且 HTTP 抽取失败后使用；
 10. `AuthorizedSocialAdapter`：只有授权接口配置后才可启用。
 
-`config/sources.yaml` 是可采集信源事实配置，`config/social-watchlist.yaml` 是受限监控配置；代码不得硬编码具体站点 URL、优先级和抓取间隔。完整门禁见 `docs/09-source-registry-fulltext.md`。
+`config/sources.yaml` 是可采集信源事实配置，`config/social-watchlist.yaml` 是受限监控配置；代码不得硬编码具体站点 URL、优先级和抓取间隔。完整门禁见 `09-source-registry-fulltext.md`。
 
 ## 5. URL 与重复处理
 

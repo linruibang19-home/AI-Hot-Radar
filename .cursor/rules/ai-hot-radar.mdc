@@ -3,11 +3,11 @@ description: Repository-wide AI Hot Radar engineering rules
 alwaysApply: true
 ---
 
-- Read `README.md` and `docs/00-master-spec.md` before code changes.
-- Follow one task card in `docs/08-roadmap-ai-ide.md`; do not pull later milestones forward.
+- Read `README.md` and `docs/spec/00-master-spec.md` before code changes.
+- Follow one task card in `docs/spec/08-roadmap-ai-ide.md`; do not pull later milestones forward.
 - PostgreSQL is the fact source; Redis is cache/limit/short state only.
 - Schema changes require Flyway. Java/Python shared contracts are generated.
 - External I/O needs timeout, bounded retry, rate limit, idempotency, and trace IDs.
 - Validate all LLM output. Cite original `evidence_passage`, never an AI summary as final evidence.
 - Preserve unrelated changes, avoid broad refactors, and run relevant tests before completion.
-- Ingestion work must follow `docs/09-source-registry-fulltext.md`, `docs/10-source-adapter-implementation.md`, and `config/ingestion-profiles.yaml`; never count RSS/search excerpts as full text or enable social sources without an authorized adapter.
+- Ingestion work must follow `docs/spec/09-source-registry-fulltext.md`, `docs/spec/10-source-adapter-implementation.md`, and `config/ingestion-profiles.yaml`; never count RSS/search excerpts as full text or enable social sources without an authorized adapter.

@@ -95,19 +95,19 @@ Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互
 
 ### TASK-M1-001｜信源模型与 RSS Adapter
 
-**读取**：`docs/03-data-ingestion.md`、`docs/09-source-registry-fulltext.md`、`config/sources.yaml`、`config/social-watchlist.yaml`。  
+**读取**：`03-data-ingestion.md`、`09-source-registry-fulltext.md`、`config/sources.yaml`、`config/social-watchlist.yaml`。  
 **产出**：Flyway 表、source loader、adapter、cursor、fixture、集成测试。  
 **关键测试**：同 feed 重放、更新条目、缺失 guid、文章回源、正文质量门禁、304、429、超时、非法 URL。
 
 ### TASK-M1-002｜全文回源与信源健康门禁
 
-**读取**：`docs/09-source-registry-fulltext.md`、`docs/07-quality-security-ops.md`。  
+**读取**：`09-source-registry-fulltext.md`、`07-quality-security-ops.md`。  
 **产出**：profile adapter、站点 fixture、正文质量评分、CONFIGURED/PROBING/ACTIVE/DEGRADED/QUARANTINED 状态机、`source-health.json`。  
 **完成标准**：不得把 RSS/搜索摘要计入全文；Wave A 20 个来源最新 3 篇中至少 2 篇正文合格；失败来源自动降级且保留原因。
 
 ### TASK-M1-003｜GitHub、Changelog、arXiv 与公开 API
 
-**读取**：`docs/10-source-adapter-implementation.md`、`config/ingestion-profiles.yaml`、`config/site-overrides.yaml`。  
+**读取**：`10-source-adapter-implementation.md`、`config/ingestion-profiles.yaml`、`config/site-overrides.yaml`。  
 **产出**：GitHub Releases 分页/限额 Adapter、Changelog revision diff、arXiv HTML/PDF、Hugging Face model card、OpenAlex 元数据 Adapter。  
 **关键测试**：GitHub Link 分页/ETag/空 body，Changelog heading 更新，arXiv HTML 缺失转 PDF，模型卡 404，OpenAlex cursor；所有 fixture 均可离线重放。  
 **完成标准**：每类至少 2 个真实 canary（OpenAlex 1 个即可），原始响应、字段映射、游标与错误分类可追溯。
@@ -127,7 +127,7 @@ Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互
 将以下提示词与本目录一并交给任一 AI IDE：
 
 ```text
-你正在开发 AI Hot Radar。先完整阅读 README.md、docs/00-master-spec.md，
+你正在开发 AI Hot Radar。先完整阅读 README.md、00-master-spec.md，
 再阅读当前任务对应的专项文档和 config。先检查仓库现状，不要假设尚未存在的代码。
 
 本次只执行任务卡：<TASK-ID>。
