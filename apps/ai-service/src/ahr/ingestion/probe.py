@@ -25,9 +25,6 @@ from typing import Any
 import psycopg
 
 from ahr.config import get_settings
-from ahr.ingestion.adapters.arxiv import ArxivPaperAdapter
-from ahr.ingestion.adapters.github_releases import GitHubReleasesAdapter
-from ahr.ingestion.adapters.rss import RssAtomAdapter
 from ahr.ingestion.article import extract_article
 from ahr.ingestion.errors import IngestionError
 from ahr.ingestion.fulltext_gate import Decision, ExtractedDocument, evaluate
@@ -66,13 +63,10 @@ class SourceOutcome:
 
 
 def _adapter_for(source: SourceConfig, fetcher: HttpFetcher, token: str | None) -> Any:
-    if source.profile == "github_release_api":
-        return GitHubReleasesAdapter(fetcher, token=token, page_limit=1)
-    if source.profile == "arxiv_feed_paper":
-        return ArxivPaperAdapter(fetcher)
-    if source.profile in ("rss_to_article", "author_feed_to_article"):
-        return RssAtomAdapter(fetcher)
-    return None
+    # Single source of truth so probe and ingest cannot drift apart.
+    from ahr.ingestion.pipeline import build_adapter
+
+    return build_adapter(source, fetcher, token)
 
 
 async def probe_source(
