@@ -3,7 +3,7 @@
   "$id": "https://aihotradar.example/schemas/source-registry.schema.json",
   "title": "AI Hot Radar Source",
   "type": "object",
-  "required": ["id", "name", "organization", "group", "region", "tier", "priority", "profile", "discovery_url", "content_access", "verification", "enabled"],
+  "required": ["id", "name", "organization", "group", "region", "tier", "priority", "profile", "content_access", "verification", "enabled"],
   "properties": {
     "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,79}$"},
     "name": {"type": "string", "minLength": 1},
@@ -16,12 +16,27 @@
     "homepage_url": {"type": "string", "format": "uri"},
     "discovery_url": {"type": "string", "format": "uri"},
     "repository": {"type": "string", "pattern": "^[^/]+/[^/]+$"},
+    "subject": {"type": "string", "minLength": 1},
     "content_access": {"enum": ["full_release_text", "full_article_extract", "full_paper", "metadata_abstract", "discovery_only"]},
     "verification": {"enum": ["protocol_guaranteed", "page_confirmed", "adapter_required", "restricted"]},
     "enabled": {"type": "boolean"}
   },
   "allOf": [
     {"if": {"properties": {"profile": {"const": "github_release_api"}}}, "then": {"required": ["repository"]}},
+    {"if": {"properties": {"profile": {"const": "github_repo_activity"}}}, "then": {"required": ["repository"]}},
+    {"if": {"properties": {"profile": {"const": "arxiv_feed_paper"}}}, "then": {"required": ["subject"]}},
+    {
+      "$comment": "config/ingestion-profiles.yaml builds the endpoint from a template for these three profiles ({repository}, {subject}), so discovery_url is absent by design. Every other profile fetches a literal URL and must declare one.",
+      "if": {
+        "not": {
+          "properties": {
+            "profile": {"enum": ["github_release_api", "github_repo_activity", "arxiv_feed_paper"]}
+          },
+          "required": ["profile"]
+        }
+      },
+      "then": {"required": ["discovery_url"]}
+    },
     {"if": {"properties": {"verification": {"const": "restricted"}}}, "then": {"properties": {"enabled": {"const": false}}}}
   ],
   "additionalProperties": true

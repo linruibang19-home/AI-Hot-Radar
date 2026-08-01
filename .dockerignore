@@ -1,0 +1,25 @@
+# core-api builds from the repository root (it needs database/migrations), so
+# keep the build context small and free of secrets.
+.git/
+.github/
+.env
+.env.local
+
+node_modules/
+.next/
+out/
+
+build/
+.gradle/
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+docs/
+.cursor/

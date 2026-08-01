@@ -6,23 +6,31 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.aihotradar.coreapi.observability.RequestIdFilter;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Liveness must not depend on PostgreSQL or Redis, so this test runs without
- * either. Readiness is exercised by the Compose smoke check instead.
+ * Liveness and request-ID tests.
+ *
+ * <p>Uses {@code @WebMvcTest} with mocked infrastructure beans rather than
+ * {@code @SpringBootTest}: the full context would eagerly initialise a real
+ * DataSource and Redis connection, which would make these tests require live
+ * infrastructure. Readiness against real dependencies is covered by the Compose
+ * smoke check instead.
  */
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
+@WebMvcTest(controllers = HealthController.class)
 class HealthControllerTest {
 
     @Autowired private MockMvc mockMvc;
+
+    @MockitoBean private DataSource dataSource;
+
+    @MockitoBean private RedisConnectionFactory redisConnectionFactory;
 
     @Test
     void liveReturnsOkWithoutDependencies() throws Exception {
