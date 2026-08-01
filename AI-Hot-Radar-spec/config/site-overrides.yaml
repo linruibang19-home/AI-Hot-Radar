@@ -1,0 +1,86 @@
+schema_version: 1
+override_version: "2026-08-01.1"
+project: AI Hot Radar
+
+# Selectors are ordered candidates, not permanent truth. An override may only be
+# activated after its saved fixture passes. Generic extraction remains first for
+# normal article pages; selectors are the controlled fallback.
+overrides:
+  openai-news:
+    host_allowlist: [openai.com]
+    discovery_content_types: [application/rss+xml, application/xml, text/xml]
+    article_path_allow: ["/index/", "/news/", "/research/"]
+    title_candidates: ["h1", "meta[property='og:title']"]
+    date_candidates: ["time[datetime]", "meta[property='article:published_time']"]
+    status: fixture_required
+
+  anthropic-news:
+    host_allowlist: [anthropic.com, www.anthropic.com]
+    article_path_allow: ["/news/"]
+    discovery_candidates: ["script[type='application/ld+json']", "a[href^='/news/']"]
+    body_candidates: ["article", "main"]
+    status: fixture_required
+
+  google-deepmind-blog:
+    host_allowlist: [deepmind.google]
+    article_path_allow: ["/discover/blog/", "/blog/"]
+    discovery_candidates: ["script[type='application/ld+json']", "a[href*='/blog/']"]
+    body_candidates: ["article", "main"]
+    status: fixture_required
+
+  huggingface-blog:
+    host_allowlist: [huggingface.co]
+    article_path_allow: ["/blog/"]
+    discovery_candidates: ["a[href^='/blog/']"]
+    body_candidates: ["article", "main"]
+    status: fixture_required
+
+  qwen-research:
+    host_allowlist: [qwen.ai]
+    discovery_candidates: ["script[type='application/ld+json']", "a[href*='/research/']"]
+    body_candidates: ["article", "main"]
+    status: fixture_required
+
+  machine-heart:
+    browser_fallback: allowed_after_policy_review
+    status: disabled_until_fixture
+  infoq-cn-ai:
+    browser_fallback: allowed_after_policy_review
+    status: disabled_until_fixture
+  thirtysixkr-ai:
+    browser_fallback: allowed_after_policy_review
+    status: disabled_until_fixture
+  leiphone-ai:
+    browser_fallback: allowed_after_policy_review
+    status: disabled_until_fixture
+  zhidx:
+    browser_fallback: allowed_after_policy_review
+    status: disabled_until_fixture
+
+api_mappings:
+  huggingface-hub-models:
+    endpoint: "https://huggingface.co/api/models"
+    pagination: "Link header or cursor accepted by current public API"
+    item_fields:
+      external_id: id
+      updated_at: lastModified
+      tags: tags
+    document:
+      url: "https://huggingface.co/{id}/raw/main/README.md"
+      canonical_url: "https://huggingface.co/{id}"
+      body_format: markdown_model_card
+    status: fixture_required
+
+  openalex-works:
+    endpoint: "https://api.openalex.org/works"
+    pagination: cursor
+    cursor_parameter: cursor
+    item_fields:
+      external_id: id
+      title: title
+      published_at: publication_date
+      abstract: abstract_inverted_index
+      canonical_url: primary_location.landing_page_url
+    content_policy: metadata_abstract
+    status: fixture_required
+

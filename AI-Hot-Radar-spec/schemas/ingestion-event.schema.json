@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aihotradar.example/schemas/ingestion-event.schema.json",
+  "title": "AI Hot Radar Ingestion Event",
+  "type": "object",
+  "required": ["eventId", "eventType", "taskId", "sourceId", "attempt", "occurredAt", "traceId", "payloadVersion", "payload"],
+  "properties": {
+    "eventId": {"type": "string", "format": "uuid"},
+    "eventType": {"enum": ["SOURCE_POLL_REQUESTED", "DISCOVERY_COMPLETED", "DOCUMENT_FETCH_REQUESTED", "DOCUMENT_FETCHED", "DOCUMENT_PARSED", "CONTENT_ENRICH_REQUESTED", "CONTENT_READY", "INGESTION_FAILED"]},
+    "taskId": {"type": "string", "format": "uuid"},
+    "sourceId": {"type": "string"},
+    "attempt": {"type": "integer", "minimum": 1},
+    "occurredAt": {"type": "string", "format": "date-time"},
+    "traceId": {"type": "string", "minLength": 8},
+    "idempotencyKey": {"type": ["string", "null"]},
+    "deadlineAt": {"type": ["string", "null"], "format": "date-time"},
+    "payloadVersion": {"type": "integer", "minimum": 1},
+    "payload": {"type": "object"}
+  },
+  "additionalProperties": false
+}

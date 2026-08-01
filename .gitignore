@@ -1,0 +1,35 @@
+# Secrets: only .env.example is committed (AHR-QSO-700 §3).
+.env
+.env.local
+*.pem
+
+# Node
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# Java
+build/
+.gradle/
+*.class
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Runtime artifacts
+source-health.json
+source-health.md

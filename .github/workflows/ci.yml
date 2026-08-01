@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# AHR-QSO-700 §2 defines the M0 gate: format/lint/typecheck, unit and contract
+# tests, and a Flyway migration from an empty database. External sites are never
+# contacted; ingestion tests replay fixtures instead.
+jobs:
+  spec:
+    name: Spec validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml jsonschema
+      - run: python scripts/validate_spec.py
+
+  ai-service:
+    name: AI service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/ai-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy src
+      - run: pytest -q
+
+  core-api:
+    name: Core API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/core-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      # Flyway resolves migrations from the repository root; mirror the
+      # Dockerfile so CI and the image test the same SQL.
+      - run: mkdir -p src/main/resources/db/migration && cp ../../database/migrations/*.sql src/main/resources/db/migration/
+      - run: gradle --no-daemon build
+
+  migration:
+    name: Flyway from empty database
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: ai_hot_radar
+          POSTGRES_USER: ai_hot_radar
+          POSTGRES_PASSWORD: change-me
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ai_hot_radar -d ai_hot_radar"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply migrations
+        run: |
+          for file in database/migrations/*.sql; do
+            echo "applying $file"
+            PGPASSWORD=change-me psql -h localhost -U ai_hot_radar -d ai_hot_radar -v ON_ERROR_STOP=1 -f "$file"
+          done
+      - name: Verify pgvector and baseline tables
+        run: |
+          PGPASSWORD=change-me psql -h localhost -U ai_hot_radar -d ai_hot_radar -v ON_ERROR_STOP=1 \
+            -c "SELECT extname FROM pg_extension WHERE extname = 'vector';" \
+            -c "SELECT to_regclass('public.content_item') IS NOT NULL AS has_content_item;"
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build

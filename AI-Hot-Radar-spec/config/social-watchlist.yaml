@@ -1,0 +1,64 @@
+schema_version: 1
+registry_version: "2026-08-01.1"
+project: AI Hot Radar
+
+# Social posts are discovery signals, not canonical evidence. Keep every item
+# disabled until an authorized API/provider is configured. A story may use a
+# social post only after resolving one of its canonical_fallback_source_ids or
+# after preserving the authorized post URL and platform metadata.
+defaults:
+  enabled: false
+  content_access: discovery_only
+  adapter: authorized_provider_only
+  public_render: no_public_content
+  poll_interval: PT10M
+  require_canonical_resolution: true
+
+x_accounts:
+  - {id: x-openai, handle: "@OpenAI", owner: OpenAI, priority: P0, canonical_fallback_source_ids: [openai-news, openai-api-changelog, openai-codex-changelog]}
+  - {id: x-anthropic, handle: "@AnthropicAI", owner: Anthropic, priority: P0, canonical_fallback_source_ids: [anthropic-news, anthropic-api-release-notes, anthropic-claude-code-changelog]}
+  - {id: x-google-deepmind, handle: "@GoogleDeepMind", owner: Google DeepMind, priority: P0, canonical_fallback_source_ids: [google-deepmind-blog, google-research-blog]}
+  - {id: x-google-ai, handle: "@GoogleAI", owner: Google, priority: P0, canonical_fallback_source_ids: [google-ai-blog, gemini-api-changelog]}
+  - {id: x-meta-ai, handle: "@MetaAI", owner: Meta, priority: P0, canonical_fallback_source_ids: [meta-ai-blog, meta-engineering-ai]}
+  - {id: x-xai, handle: "@xai", owner: xAI, priority: P0, canonical_fallback_source_ids: [xai-news]}
+  - {id: x-mistral-ai, handle: "@MistralAI", owner: Mistral AI, priority: P0, canonical_fallback_source_ids: [mistral-news, mistral-changelog]}
+  - {id: x-deepseek, handle: "@deepseek_ai", owner: DeepSeek, priority: P0, canonical_fallback_source_ids: [deepseek-api-changelog, deepseek-model-repo]}
+  - {id: x-qwen, handle: "@Alibaba_Qwen", owner: Alibaba Qwen, priority: P0, canonical_fallback_source_ids: [qwen-research, qwen-legacy-blog, qwen-model-repo]}
+  - {id: x-kimi, handle: "@Kimi_Moonshot", owner: Moonshot AI, priority: P0, canonical_fallback_source_ids: [kimi-platform-changelog, kimi-model-repo]}
+  - {id: x-nvidia-ai, handle: "@NVIDIAAI", owner: NVIDIA, priority: P1, canonical_fallback_source_ids: [nvidia-generative-ai-blog, nvidia-developer-blog]}
+  - {id: x-hugging-face, handle: "@huggingface", owner: Hugging Face, priority: P0, canonical_fallback_source_ids: [huggingface-blog, huggingface-hub-models, huggingface-daily-papers]}
+  - {id: x-langchain, handle: "@LangChainAI", owner: LangChain, priority: P0, canonical_fallback_source_ids: [langchain-releases, langgraph-releases]}
+  - {id: x-github, handle: "@github", owner: GitHub, priority: P1, canonical_fallback_source_ids: [openai-agents-python-releases, mcp-spec-releases, spring-ai-releases]}
+  - {id: x-cohere, handle: "@cohere", owner: Cohere, priority: P1, canonical_fallback_source_ids: [cohere-blog]}
+  - {id: x-perplexity, handle: "@perplexity_ai", owner: Perplexity, priority: P1, canonical_fallback_source_ids: [perplexity-blog]}
+
+  - {id: x-simon-willison, handle: "@simonw", owner: Simon Willison, priority: P0, canonical_fallback_source_ids: [simon-willison]}
+  - {id: x-andrew-ng, handle: "@AndrewYNg", owner: Andrew Ng, priority: P0, canonical_fallback_source_ids: [andrew-ng-the-batch]}
+  - {id: x-andrej-karpathy, handle: "@karpathy", owner: Andrej Karpathy, priority: P0, canonical_fallback_source_ids: []}
+  - {id: x-chip-huyen, handle: "@chipro", owner: Chip Huyen, priority: P0, canonical_fallback_source_ids: [chip-huyen]}
+  - {id: x-swyx, handle: "@swyx", owner: swyx, priority: P0, canonical_fallback_source_ids: [latent-space]}
+  - {id: x-nathan-lambert, handle: "@natolambert", owner: Nathan Lambert, priority: P0, canonical_fallback_source_ids: [nathan-lambert-interconnects]}
+  - {id: x-sebastian-raschka, handle: "@rasbt", owner: Sebastian Raschka, priority: P1, canonical_fallback_source_ids: [sebastian-raschka]}
+  - {id: x-ethan-mollick, handle: "@emollick", owner: Ethan Mollick, priority: P1, canonical_fallback_source_ids: [ethan-mollick]}
+  - {id: x-harrison-chase, handle: "@hwchase17", owner: Harrison Chase, priority: P1, canonical_fallback_source_ids: [langchain-releases, langgraph-releases]}
+  - {id: x-jerry-liu, handle: "@jerryjliu0", owner: Jerry Liu, priority: P1, canonical_fallback_source_ids: [llamaindex-releases]}
+  - {id: x-lilian-weng, handle: "@lilianweng", owner: Lilian Weng, priority: P1, canonical_fallback_source_ids: [lilian-weng]}
+  - {id: x-eugene-yan, handle: "@eugeneyan", owner: Eugene Yan, priority: P1, canonical_fallback_source_ids: [eugene-yan]}
+  - {id: x-jay-alammar, handle: "@JayAlammar", owner: Jay Alammar, priority: P1, canonical_fallback_source_ids: [jay-alammar]}
+  - {id: x-jack-clark, handle: "@jackclarkSF", owner: Jack Clark, priority: P1, canonical_fallback_source_ids: [import-ai]}
+
+wechat_accounts:
+  - {id: wechat-machine-heart, display_name: 机器之心, priority: P0, canonical_fallback_source_ids: [machine-heart]}
+  - {id: wechat-qbitai, display_name: 量子位, priority: P0, canonical_fallback_source_ids: [qbitai]}
+  - {id: wechat-new-ai-era, display_name: 新智元, priority: P1, canonical_fallback_source_ids: []}
+  - {id: wechat-ai-tech-review, display_name: AI科技评论, priority: P1, canonical_fallback_source_ids: [leiphone-ai]}
+  - {id: wechat-zhidx, display_name: 智东西, priority: P1, canonical_fallback_source_ids: [zhidx]}
+  - {id: wechat-datawhale, display_name: Datawhale, priority: P1, canonical_fallback_source_ids: []}
+  - {id: wechat-alibaba-cloud-dev, display_name: 阿里云开发者, priority: P1, canonical_fallback_source_ids: [alibaba-developer-ai]}
+  - {id: wechat-tencent-cloud-dev, display_name: 腾讯云开发者, priority: P1, canonical_fallback_source_ids: [tencent-cloud-ai-team]}
+
+validation_rules:
+  - "All entries remain disabled without an authorized adapter configuration"
+  - "A social signal cannot be selected as a story's primary_source"
+  - "If canonical_fallback_source_ids is empty, editor review is mandatory"
+  - "Do not use unofficial mirrors, Nitter instances, cookie replay, or login bypass"

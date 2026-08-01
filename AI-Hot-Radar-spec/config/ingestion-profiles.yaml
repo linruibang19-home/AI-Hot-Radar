@@ -1,0 +1,169 @@
+schema_version: 1
+profile_version: "2026-08-01.1"
+project: AI Hot Radar
+
+global_http:
+  user_agent: "AIHotRadarBot/1.0 (+https://example.com/bot)"
+  connect_timeout_seconds: 5
+  read_timeout_seconds: 20
+  max_response_bytes: 10485760
+  redirect_limit: 5
+  accept_encoding: [gzip, br]
+  allowed_schemes: [https]
+  reject_private_networks: true
+  conditional_headers: [If-None-Match, If-Modified-Since]
+  retry:
+    attempts: 3
+    statuses: [408, 425, 429, 500, 502, 503, 504]
+    strategy: exponential_full_jitter
+    base_delay_ms: 500
+    max_delay_ms: 30000
+    honor_retry_after: true
+
+fulltext_gate:
+  min_body_chars_article: 300
+  min_body_chars_release: 80
+  min_paragraphs_article: 2
+  max_link_density: 0.35
+  reject_markers:
+    - "enable javascript"
+    - "sign in to continue"
+    - "access denied"
+    - "verify you are human"
+  required_metadata_any_3_of: [title, canonical_url, published_at, source_id]
+
+profiles:
+  rss_to_article:
+    discovery:
+      kind: rss_atom
+      request_method: GET
+      parse: feedparser
+      cursor: [etag, last_modified, newest_entry_time, seen_external_ids]
+      item_fields:
+        external_id: [entry.id, entry.guid, canonicalized_entry_link]
+        article_url: [entry.link, atom_link_rel_alternate]
+        title: [entry.title]
+        published_at: [entry.published_parsed, entry.updated_parsed]
+        discovery_summary: [entry.summary, entry.description]
+    acquisition:
+      requires_followup_fetch: true
+      request_method: GET
+      canonical_from: [link_rel_canonical, og_url, final_response_url]
+      extractor_chain: [json_ld_article_body, trafilatura, readability, site_selector]
+      browser_fallback: false
+    success: fulltext_gate.article
+
+  author_feed_to_article:
+    extends: rss_to_article
+    acquisition:
+      requires_followup_fetch: true
+      extractor_chain: [json_ld_article_body, trafilatura, readability]
+    public_policy: excerpt_link
+
+  static_listing_to_article:
+    discovery:
+      kind: html_listing_or_sitemap
+      request_method: GET
+      candidate_links: [json_ld_item_list, sitemap_loc, same_site_article_links]
+      cursor: [etag, last_modified, newest_canonical_url_hash, page_hash]
+      reject_links: [navigation, tag_pages, author_pages, login, privacy, careers]
+    acquisition:
+      requires_followup_fetch: true
+      canonical_from: [link_rel_canonical, og_url, final_response_url]
+      extractor_chain: [json_ld_article_body, trafilatura, readability, site_selector]
+      browser_fallback: false
+    success: fulltext_gate.article
+
+  dynamic_listing_to_article:
+    extends: static_listing_to_article
+    enabled_by_default: false
+    discovery:
+      kind: embedded_json_then_browser
+      candidate_payloads: [next_data, nuxt_data, json_ld_item_list, xhr_public_api]
+    acquisition:
+      extractor_chain: [embedded_json, site_selector, trafilatura, readability]
+      browser_fallback: allowed_after_policy_review
+    activation_requires: [fixture, selector_test, robots_record, no_authentication_bypass]
+
+  docs_changelog:
+    discovery:
+      kind: revision_diff
+      request_method: GET
+      cursor: [etag, last_modified, normalized_content_hash]
+      split_units: [dated_heading, version_heading, release_card]
+    acquisition:
+      requires_followup_fetch: false
+      extractor_chain: [main_selector, markdown_conversion]
+      revision_identity: "sha256(source_id + heading + normalized_body)"
+    success: fulltext_gate.release
+
+  github_release_api:
+    discovery:
+      kind: rest_json
+      endpoint: "https://api.github.com/repos/{repository}/releases?per_page=100&page={page}"
+      headers:
+        Accept: application/vnd.github+json
+        X-GitHub-Api-Version: "2026-03-10"
+      auth: optional_env_GITHUB_TOKEN
+      pagination: link_header
+      cursor: [etag, max_release_id, max_published_at]
+      item_fields:
+        external_id: id
+        canonical_url: html_url
+        title: "name ?? tag_name"
+        body_markdown: body
+        published_at: published_at
+        updated_at: created_at
+        draft: draft
+        prerelease: prerelease
+      filters: [draft_equals_false]
+    acquisition:
+      requires_followup_fetch: false
+      body_is_complete_document: true
+      fallback: "https://github.com/{repository}/releases.atom"
+    success: fulltext_gate.release
+
+  github_repo_activity:
+    discovery:
+      kind: github_contents_and_commits
+      endpoints:
+        repository: "https://api.github.com/repos/{repository}"
+        commits: "https://api.github.com/repos/{repository}/commits?path={watched_path}&per_page=30"
+        content: "https://api.github.com/repos/{repository}/contents/{watched_path}?ref={sha}"
+      cursor: [etag, last_commit_sha_by_path]
+      watched_paths: [README.md, CHANGELOG.md, releases.md]
+    acquisition:
+      requires_followup_fetch: false
+      diff_then_snapshot: true
+      ignore_ordinary_commits: true
+
+  arxiv_feed_paper:
+    discovery:
+      kind: rss_atom
+      endpoint: "https://rss.arxiv.org/rss/{subject}"
+      cursor: [newest_entry_time, seen_arxiv_ids]
+      item_fields:
+        external_id: arxiv_id_from_link
+        title: entry.title
+        abstract: entry.description
+        published_at: entry.published_parsed
+    acquisition:
+      requires_followup_fetch: true
+      abstract_url: "https://arxiv.org/abs/{arxiv_id}"
+      html_url: "https://arxiv.org/html/{arxiv_id}"
+      pdf_url: "https://arxiv.org/pdf/{arxiv_id}"
+      order: [html_if_available, pdf]
+      pdf_parser: pymupdf_then_grobid
+      section_preservation: true
+    rate_limit_rps: 0.33
+
+  public_json_api:
+    discovery:
+      kind: rest_json
+      cursor: [api_cursor, updated_since, stable_external_id]
+      endpoint_and_mapping_required_per_source: true
+    acquisition:
+      requires_followup_fetch: source_defined
+      store_raw_json: true
+    activation_requires: [documented_public_api, field_mapping_fixture, pagination_test]
+

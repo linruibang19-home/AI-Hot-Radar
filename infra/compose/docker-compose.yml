@@ -1,0 +1,94 @@
+# AI Hot Radar local stack (M0).
+#
+# Run from the repository root:
+#   docker compose -f infra/compose/docker-compose.yml up -d --build
+#
+# ADR-004 keeps pgvector in the same PostgreSQL instance as business data, so
+# the image is pgvector/pgvector rather than plain postgres.
+
+name: ai-hot-radar
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ai_hot_radar}
+      POSTGRES_USER: ${POSTGRES_USER:-ai_hot_radar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # `pg_isready` alone reports true before the init scripts finish, so the
+      # dependent services would race the first migration.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ai_hot_radar} -d ${POSTGRES_DB:-ai_hot_radar}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    # ADR-005: cache, rate limiting and short locks only. No persistence of
+    # business facts, so an empty volume on restart is acceptable by design.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  core-api:
+    build:
+      # Root context: the image needs database/migrations for Flyway.
+      context: ../..
+      dockerfile: apps/core-api/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ai_hot_radar}
+      POSTGRES_USER: ${POSTGRES_USER:-ai_hot_radar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      REDIS_URL: redis://redis:6379/0
+      WORKER_BASE_URL: http://ai-service:8000
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-change-me}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  ai-service:
+    build:
+      context: ../../apps/ai-service
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ai_hot_radar}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-ai_hot_radar}
+      REDIS_URL: redis://redis:6379/0
+      CRAWLER_USER_AGENT: ${CRAWLER_USER_AGENT:-AIHotRadarBot/1.0 (+https://example.com/bot)}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../../apps/web
+      dockerfile: Dockerfile
+    environment:
+      API_BASE_URL: http://core-api:8080
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - core-api
+
+volumes:
+  postgres_data:

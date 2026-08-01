@@ -1,0 +1,251 @@
+schema_version: 2
+registry_version: "2026-08-01.1"
+project: AI Hot Radar
+
+# This registry separates discovery from document acquisition. A source is not
+# considered "full-text capable" merely because its listing page is reachable.
+verification_levels:
+  protocol_guaranteed: "Standard public protocol/API; enable after one fixture smoke test"
+  page_confirmed: "Official/public listing and article pages confirmed readable"
+  adapter_required: "Public content exists but a site-specific selector/browser adapter is required"
+  restricted: "Authorization, subscription, or contracted provider required; disabled by default"
+
+content_access_levels:
+  full_release_text: "Complete release note/changelog/model card is the source document"
+  full_article_extract: "Fetch article URL and extract readable body for internal search/RAG"
+  full_paper: "Fetch abstract plus lawful open paper HTML/PDF and parse it"
+  metadata_abstract: "Metadata/abstract only; fetch the original on demand when permitted"
+  discovery_only: "Signal only; never use as final RAG evidence without a canonical source"
+
+public_render_policies:
+  excerpt_link: "Store full text internally when permitted; expose title, short excerpt, summary, citation, canonical link"
+  release_text_link: "Release notes may be shown with conservative excerpts and canonical link"
+  metadata_link: "Expose metadata/abstract and canonical link only"
+  no_public_content: "Do not expose copied content"
+
+profiles:
+  rss_to_article:
+    discovery: rss_atom
+    document_fetch: conditional_http_html
+    extractor_chain: [json_ld, trafilatura, readability, site_selector, playwright_if_allowed]
+    requires_article_fetch: true
+    respects: [robots_txt, etag, last_modified, retry_after]
+  static_listing_to_article:
+    discovery: html_listing_or_sitemap
+    document_fetch: conditional_http_html
+    extractor_chain: [json_ld, trafilatura, readability, site_selector]
+    requires_article_fetch: true
+    respects: [robots_txt, etag, last_modified, retry_after]
+  dynamic_listing_to_article:
+    discovery: html_or_embedded_json
+    document_fetch: browser_only_after_http_failure
+    extractor_chain: [embedded_json, site_selector, playwright_if_allowed]
+    requires_article_fetch: true
+    respects: [robots_txt, access_controls, retry_after]
+  docs_changelog:
+    discovery: page_hash_and_heading_diff
+    document_fetch: conditional_http_html
+    extractor_chain: [main_selector, markdown_conversion]
+    requires_article_fetch: false
+    respects: [robots_txt, etag, last_modified]
+  github_release_api:
+    discovery: github_releases_api
+    document_fetch: github_release_body
+    api_template: "https://api.github.com/repos/{repository}/releases"
+    fallback_template: "https://github.com/{repository}/releases.atom"
+    requires_article_fetch: false
+    respects: [etag, last_modified, github_rate_limit]
+  github_repo_activity:
+    discovery: github_events_tags_commits
+    document_fetch: github_markdown_raw
+    api_template: "https://api.github.com/repos/{repository}"
+    requires_article_fetch: false
+    respects: [etag, github_rate_limit]
+  arxiv_feed_paper:
+    discovery: arxiv_rss
+    document_fetch: arxiv_html_then_pdf
+    feed_template: "https://rss.arxiv.org/rss/{subject}"
+    requires_article_fetch: true
+    respects: [arxiv_api_terms, rate_limit]
+  public_json_api:
+    discovery: cursor_or_timestamp_api
+    document_fetch: json_or_canonical_document
+    requires_article_fetch: false
+    respects: [api_terms, rate_limit, retry_after]
+  author_feed_to_article:
+    discovery: rss_atom
+    document_fetch: conditional_http_html
+    extractor_chain: [json_ld, trafilatura, readability]
+    requires_article_fetch: true
+    respects: [robots_txt, etag, last_modified]
+  restricted_social:
+    discovery: authorized_provider_only
+    document_fetch: none
+    requires_article_fetch: false
+    respects: [platform_terms, authorization]
+
+defaults:
+  timezone: UTC
+  timeout_seconds: 20
+  max_attempts: 3
+  respect_robots: true
+  internal_retention: "full_text_if_permitted"
+  public_render: excerpt_link
+  poll_interval: PT30M
+  runtime_gate: "HTTP 2xx/304 + parse non-empty + canonical URL + published_at + fixture test"
+
+sources:
+  # 1. Frontier labs, model vendors, platforms, and official changelogs
+  - {id: openai-news, name: OpenAI News, organization: OpenAI, group: official, region: global, tier: primary, priority: P0, profile: rss_to_article, homepage_url: "https://openai.com/news/", discovery_url: "https://openai.com/news/rss.xml", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: openai-api-changelog, name: OpenAI API Changelog, organization: OpenAI, group: official, region: global, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://developers.openai.com/api/docs/changelog", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: openai-codex-changelog, name: ChatGPT and Codex Changelog, organization: OpenAI, group: official, region: global, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://developers.openai.com/codex/changelog", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: openai-deprecations, name: OpenAI API Deprecations, organization: OpenAI, group: official, region: global, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://developers.openai.com/api/docs/deprecations", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: openai-status, name: OpenAI Status History, organization: OpenAI, group: official, region: global, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://status.openai.com/history", discovery_url: "https://status.openai.com/history.atom", content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: anthropic-news, name: Anthropic Newsroom, organization: Anthropic, group: official, region: global, tier: primary, priority: P0, profile: static_listing_to_article, discovery_url: "https://www.anthropic.com/news", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: anthropic-api-release-notes, name: Claude Platform Release Notes, organization: Anthropic, group: official, region: global, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://docs.anthropic.com/en/release-notes/api", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: anthropic-app-release-notes, name: Claude App Release Notes, organization: Anthropic, group: official, region: global, tier: primary, priority: P1, profile: docs_changelog, discovery_url: "https://docs.anthropic.com/en/release-notes/claude-apps", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: anthropic-claude-code-changelog, name: Claude Code Changelog, organization: Anthropic, group: official, region: global, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://docs.anthropic.com/en/release-notes/claude-code", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: anthropic-status, name: Anthropic Status History, organization: Anthropic, group: official, region: global, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://status.anthropic.com/", discovery_url: "https://status.anthropic.com/history.atom", content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: google-ai-blog, name: Google AI, organization: Google, group: official, region: global, tier: primary, priority: P0, profile: rss_to_article, homepage_url: "https://blog.google/innovation-and-ai/technology/ai/", discovery_url: "https://blog.google/technology/ai/rss/", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: google-deepmind-blog, name: Google DeepMind News, organization: Google DeepMind, group: official, region: global, tier: primary, priority: P0, profile: static_listing_to_article, discovery_url: "https://deepmind.google/blog/", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: google-research-blog, name: Google Research Blog, organization: Google Research, group: official, region: global, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://research.google/blog/", discovery_url: "https://research.google/blog/rss/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: gemini-api-changelog, name: Gemini API Release Notes, organization: Google, group: official, region: global, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://ai.google.dev/gemini-api/docs/changelog", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: meta-ai-blog, name: AI at Meta Blog, organization: Meta, group: official, region: global, tier: primary, priority: P0, profile: static_listing_to_article, discovery_url: "https://ai.meta.com/blog/", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: meta-engineering-ai, name: Meta Engineering AI Research, organization: Meta, group: official, region: global, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://engineering.fb.com/category/ai-research/", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: microsoft-ai-blog, name: Microsoft AI Blog, organization: Microsoft, group: official, region: global, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://blogs.microsoft.com/ai/", discovery_url: "https://blogs.microsoft.com/ai/feed/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: microsoft-research-blog, name: Microsoft Research Blog, organization: Microsoft Research, group: official, region: global, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://www.microsoft.com/en-us/research/blog/", discovery_url: "https://www.microsoft.com/en-us/research/feed/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: aws-machine-learning-blog, name: AWS Machine Learning Blog, organization: AWS, group: official, region: global, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://aws.amazon.com/blogs/machine-learning/", discovery_url: "https://aws.amazon.com/blogs/machine-learning/feed/", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: nvidia-generative-ai-blog, name: NVIDIA Generative AI Blog, organization: NVIDIA, group: official, region: global, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://blogs.nvidia.com/blog/category/generative-ai/", discovery_url: "https://blogs.nvidia.com/blog/category/generative-ai/feed/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: nvidia-developer-blog, name: NVIDIA Technical Blog, organization: NVIDIA, group: official, region: global, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://developer.nvidia.com/blog/", discovery_url: "https://developer.nvidia.com/blog/feed/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: huggingface-blog, name: Hugging Face Blog, organization: Hugging Face, group: official, region: global, tier: primary, priority: P0, profile: static_listing_to_article, discovery_url: "https://huggingface.co/blog", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: mistral-news, name: Mistral AI News, organization: Mistral AI, group: official, region: global, tier: primary, priority: P0, profile: static_listing_to_article, discovery_url: "https://mistral.ai/news", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: mistral-changelog, name: Mistral Platform Changelog, organization: Mistral AI, group: official, region: global, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://docs.mistral.ai/resources/changelogs", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: cohere-blog, name: Cohere Blog, organization: Cohere, group: official, region: global, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://cohere.com/blog", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: xai-news, name: xAI News, organization: xAI, group: official, region: global, tier: primary, priority: P0, profile: static_listing_to_article, discovery_url: "https://x.ai/news", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: perplexity-blog, name: Perplexity Blog, organization: Perplexity, group: official, region: global, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://www.perplexity.ai/hub/blog", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: together-ai-blog, name: Together AI Blog, organization: Together AI, group: official, region: global, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://www.together.ai/blog", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: groq-blog, name: Groq Blog, organization: Groq, group: official, region: global, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://groq.com/blog", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: cerebras-blog, name: Cerebras Blog, organization: Cerebras, group: official, region: global, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://www.cerebras.ai/blog", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: cloudflare-ai-blog, name: Cloudflare AI Blog, organization: Cloudflare, group: official, region: global, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://blog.cloudflare.com/tag/ai/", discovery_url: "https://blog.cloudflare.com/tag/ai/rss/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: apple-machine-learning, name: Apple Machine Learning Research, organization: Apple, group: official, region: global, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://machinelearning.apple.com/", discovery_url: "https://machinelearning.apple.com/rss.xml", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: stability-news, name: Stability AI News, organization: Stability AI, group: official, region: global, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://stability.ai/news", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: runway-research, name: Runway Research, organization: Runway, group: official, region: global, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://runwayml.com/research", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: elevenlabs-blog, name: ElevenLabs Blog, organization: ElevenLabs, group: official, region: global, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://elevenlabs.io/blog", content_access: full_article_extract, verification: adapter_required, enabled: false}
+
+  # 2. Chinese model vendors, official platforms, and research communities
+  - {id: deepseek-api-changelog, name: DeepSeek API Changelog, organization: DeepSeek, group: official_cn, region: cn, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://api-docs.deepseek.com/zh-cn/updates/", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: qwen-research, name: Qwen Research, organization: Alibaba Qwen, group: official_cn, region: cn, tier: primary, priority: P0, profile: static_listing_to_article, discovery_url: "https://qwen.ai/research", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: qwen-legacy-blog, name: Qwen Technical Blog, organization: Alibaba Qwen, group: official_cn, region: cn, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://qwenlm.github.io/blog/", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: kimi-platform-changelog, name: Kimi Open Platform Changelog, organization: Moonshot AI, group: official_cn, region: cn, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://platform.kimi.com/blog/posts/changelog", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: glm-new-releases, name: GLM New Releases, organization: Zhipu AI, group: official_cn, region: cn, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://docs.bigmodel.cn/cn/update/new-releases", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: baidu-qianfan-changelog, name: Baidu Qianfan Changelog, organization: Baidu, group: official_cn, region: cn, tier: primary, priority: P1, profile: docs_changelog, discovery_url: "https://cloud.baidu.com/doc/qianfan/s/Mmh8l4qwj", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  - {id: bytedance-seed-research, name: ByteDance Seed Research, organization: ByteDance Seed, group: official_cn, region: cn, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://seed.bytedance.com/en/", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: baai-community, name: BAAI Community, organization: Beijing Academy of Artificial Intelligence, group: research_cn, region: cn, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://hub.baai.ac.cn/", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: modelscope-headlines, name: ModelScope Community, organization: ModelScope, group: research_cn, region: cn, tier: primary, priority: P1, profile: dynamic_listing_to_article, discovery_url: "https://modelscope.cn/headlines", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: alibaba-developer-ai, name: Alibaba Cloud Developer AI, organization: Alibaba Cloud, group: official_cn, region: cn, tier: primary, priority: P1, profile: dynamic_listing_to_article, discovery_url: "https://developer.aliyun.com/", content_access: full_article_extract, verification: page_confirmed, enabled: false}
+  - {id: tencent-cloud-ai-team, name: Tencent Cloud AI Team, organization: Tencent Cloud, group: official_cn, region: cn, tier: primary, priority: P1, profile: dynamic_listing_to_article, discovery_url: "https://cloud.tencent.com/developer/team/cloudAi/info", content_access: full_article_extract, verification: page_confirmed, enabled: false}
+  - {id: huawei-cloud-ai-community, name: Huawei Cloud AI Community, organization: Huawei Cloud, group: official_cn, region: cn, tier: primary, priority: P1, profile: dynamic_listing_to_article, discovery_url: "https://developer.huaweicloud.com/techfield/ai.html", content_access: full_article_extract, verification: page_confirmed, enabled: false}
+
+  # 3. Official SDKs, Agent/RAG frameworks, protocols, observability, and serving
+  - {id: openai-python-releases, name: OpenAI Python SDK Releases, organization: OpenAI, group: github_release, region: global, tier: primary, priority: P0, profile: github_release_api, repository: openai/openai-python, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: openai-node-releases, name: OpenAI Node SDK Releases, organization: OpenAI, group: github_release, region: global, tier: primary, priority: P0, profile: github_release_api, repository: openai/openai-node, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: openai-java-releases, name: OpenAI Java SDK Releases, organization: OpenAI, group: github_release, region: global, tier: primary, priority: P0, profile: github_release_api, repository: openai/openai-java, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: anthropic-python-releases, name: Anthropic Python SDK Releases, organization: Anthropic, group: github_release, region: global, tier: primary, priority: P0, profile: github_release_api, repository: anthropics/anthropic-sdk-python, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: anthropic-typescript-releases, name: Anthropic TypeScript SDK Releases, organization: Anthropic, group: github_release, region: global, tier: primary, priority: P0, profile: github_release_api, repository: anthropics/anthropic-sdk-typescript, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: anthropic-java-releases, name: Anthropic Java SDK Releases, organization: Anthropic, group: github_release, region: global, tier: primary, priority: P1, profile: github_release_api, repository: anthropics/anthropic-sdk-java, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: google-genai-python-releases, name: Google Gen AI Python SDK Releases, organization: Google, group: github_release, region: global, tier: primary, priority: P0, profile: github_release_api, repository: googleapis/python-genai, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: google-genai-js-releases, name: Google Gen AI JavaScript SDK Releases, organization: Google, group: github_release, region: global, tier: primary, priority: P0, profile: github_release_api, repository: googleapis/js-genai, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: openai-agents-python-releases, name: OpenAI Agents Python Releases, organization: OpenAI, group: agent_framework, region: global, tier: primary, priority: P0, profile: github_release_api, repository: openai/openai-agents-python, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: openai-agents-js-releases, name: OpenAI Agents JavaScript Releases, organization: OpenAI, group: agent_framework, region: global, tier: primary, priority: P0, profile: github_release_api, repository: openai/openai-agents-js, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: google-adk-python-releases, name: Google ADK Python Releases, organization: Google, group: agent_framework, region: global, tier: primary, priority: P0, profile: github_release_api, repository: google/adk-python, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: google-adk-js-releases, name: Google ADK JavaScript Releases, organization: Google, group: agent_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: google/adk-js, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: langchain-releases, name: LangChain Releases, organization: LangChain, group: agent_framework, region: global, tier: primary, priority: P0, profile: github_release_api, repository: langchain-ai/langchain, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: langgraph-releases, name: LangGraph Releases, organization: LangChain, group: agent_framework, region: global, tier: primary, priority: P0, profile: github_release_api, repository: langchain-ai/langgraph, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: llamaindex-releases, name: LlamaIndex Releases, organization: LlamaIndex, group: agent_framework, region: global, tier: primary, priority: P0, profile: github_release_api, repository: run-llama/llama_index, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: autogen-releases, name: Microsoft AutoGen Releases, organization: Microsoft, group: agent_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: microsoft/autogen, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: semantic-kernel-releases, name: Semantic Kernel Releases, organization: Microsoft, group: agent_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: microsoft/semantic-kernel, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: crewai-releases, name: CrewAI Releases, organization: CrewAI, group: agent_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: crewAIInc/crewAI, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: pydantic-ai-releases, name: PydanticAI Releases, organization: Pydantic, group: agent_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: pydantic/pydantic-ai, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: dspy-releases, name: DSPy Releases, organization: Stanford NLP, group: agent_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: stanfordnlp/dspy, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: haystack-releases, name: Haystack Releases, organization: deepset, group: rag_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: deepset-ai/haystack, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: vercel-ai-releases, name: Vercel AI SDK Releases, organization: Vercel, group: agent_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: vercel/ai, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: mastra-releases, name: Mastra Releases, organization: Mastra, group: agent_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: mastra-ai/mastra, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: agno-releases, name: Agno Releases, organization: Agno, group: agent_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: agno-agi/agno, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: smolagents-releases, name: smolagents Releases, organization: Hugging Face, group: agent_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: huggingface/smolagents, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: strands-agents-releases, name: Strands Agents SDK Releases, organization: AWS, group: agent_framework, region: global, tier: primary, priority: P1, profile: github_release_api, repository: strands-agents/sdk-python, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: langfuse-releases, name: Langfuse Releases, organization: Langfuse, group: observability, region: global, tier: primary, priority: P1, profile: github_release_api, repository: langfuse/langfuse, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: litellm-releases, name: LiteLLM Releases, organization: BerriAI, group: model_gateway, region: global, tier: primary, priority: P1, profile: github_release_api, repository: BerriAI/litellm, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: mcp-spec-releases, name: Model Context Protocol Releases, organization: MCP, group: protocol, region: global, tier: primary, priority: P0, profile: github_release_api, repository: modelcontextprotocol/modelcontextprotocol, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: mcp-python-sdk-releases, name: MCP Python SDK Releases, organization: MCP, group: protocol, region: global, tier: primary, priority: P0, profile: github_release_api, repository: modelcontextprotocol/python-sdk, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: mcp-typescript-sdk-releases, name: MCP TypeScript SDK Releases, organization: MCP, group: protocol, region: global, tier: primary, priority: P0, profile: github_release_api, repository: modelcontextprotocol/typescript-sdk, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: mcp-java-sdk-releases, name: MCP Java SDK Releases, organization: MCP, group: protocol, region: global, tier: primary, priority: P1, profile: github_release_api, repository: modelcontextprotocol/java-sdk, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: a2a-protocol-releases, name: Agent2Agent Protocol Releases, organization: A2A Project, group: protocol, region: global, tier: primary, priority: P1, profile: github_release_api, repository: a2aproject/A2A, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: spring-ai-releases, name: Spring AI Releases, organization: Spring, group: java_ai, region: global, tier: primary, priority: P0, profile: github_release_api, repository: spring-projects/spring-ai, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: langchain4j-releases, name: LangChain4j Releases, organization: LangChain4j, group: java_ai, region: global, tier: primary, priority: P0, profile: github_release_api, repository: langchain4j/langchain4j, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: quarkus-langchain4j-releases, name: Quarkus LangChain4j Releases, organization: Quarkiverse, group: java_ai, region: global, tier: primary, priority: P1, profile: github_release_api, repository: quarkiverse/quarkus-langchain4j, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: dify-releases, name: Dify Releases, organization: LangGenius, group: agent_platform, region: global, tier: primary, priority: P1, profile: github_release_api, repository: langgenius/dify, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: ragflow-releases, name: RAGFlow Releases, organization: InfiniFlow, group: rag_platform, region: global, tier: primary, priority: P1, profile: github_release_api, repository: infiniflow/ragflow, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: flowise-releases, name: Flowise Releases, organization: FlowiseAI, group: agent_platform, region: global, tier: primary, priority: P2, profile: github_release_api, repository: FlowiseAI/Flowise, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: n8n-releases, name: n8n Releases, organization: n8n, group: automation, region: global, tier: primary, priority: P2, profile: github_release_api, repository: n8n-io/n8n, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: coze-studio-releases, name: Coze Studio Releases, organization: Coze, group: agent_platform, region: cn, tier: primary, priority: P1, profile: github_release_api, repository: coze-dev/coze-studio, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: fastgpt-releases, name: FastGPT Releases, organization: FastGPT, group: rag_platform, region: cn, tier: primary, priority: P1, profile: github_release_api, repository: labring/FastGPT, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: mem0-releases, name: Mem0 Releases, organization: Mem0, group: memory, region: global, tier: primary, priority: P1, profile: github_release_api, repository: mem0ai/mem0, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: transformers-releases, name: Transformers Releases, organization: Hugging Face, group: model_runtime, region: global, tier: primary, priority: P0, profile: github_release_api, repository: huggingface/transformers, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: vllm-releases, name: vLLM Releases, organization: vLLM, group: inference, region: global, tier: primary, priority: P0, profile: github_release_api, repository: vllm-project/vllm, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: sglang-releases, name: SGLang Releases, organization: SGLang, group: inference, region: global, tier: primary, priority: P1, profile: github_release_api, repository: sgl-project/sglang, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: ollama-releases, name: Ollama Releases, organization: Ollama, group: local_ai, region: global, tier: primary, priority: P1, profile: github_release_api, repository: ollama/ollama, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: llama-cpp-releases, name: llama.cpp Releases, organization: ggml-org, group: local_ai, region: global, tier: primary, priority: P1, profile: github_release_api, repository: ggml-org/llama.cpp, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: tgi-releases, name: Text Generation Inference Releases, organization: Hugging Face, group: inference, region: global, tier: primary, priority: P2, profile: github_release_api, repository: huggingface/text-generation-inference, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: ray-releases, name: Ray Releases, organization: Anyscale, group: infrastructure, region: global, tier: primary, priority: P2, profile: github_release_api, repository: ray-project/ray, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: deepspeed-releases, name: DeepSpeed Releases, organization: Microsoft, group: infrastructure, region: global, tier: primary, priority: P2, profile: github_release_api, repository: microsoft/DeepSpeed, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: mlx-releases, name: MLX Releases, organization: Apple, group: local_ai, region: global, tier: primary, priority: P2, profile: github_release_api, repository: ml-explore/mlx, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: open-webui-releases, name: Open WebUI Releases, organization: Open WebUI, group: ai_ui, region: global, tier: primary, priority: P2, profile: github_release_api, repository: open-webui/open-webui, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: qwen-model-repo, name: Qwen Model Repository Activity, organization: Alibaba Qwen, group: model_repo, region: cn, tier: primary, priority: P0, profile: github_repo_activity, repository: QwenLM/Qwen3, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: deepseek-model-repo, name: DeepSeek Model Repository Activity, organization: DeepSeek, group: model_repo, region: cn, tier: primary, priority: P0, profile: github_repo_activity, repository: deepseek-ai/DeepSeek-V3, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: kimi-model-repo, name: Kimi Model Repository Activity, organization: Moonshot AI, group: model_repo, region: cn, tier: primary, priority: P0, profile: github_repo_activity, repository: MoonshotAI/Kimi-K2, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: hunyuan-model-repo, name: Tencent Hunyuan Repository Activity, organization: Tencent, group: model_repo, region: cn, tier: primary, priority: P1, profile: github_repo_activity, repository: Tencent-Hunyuan/Hunyuan-A13B, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+
+  # 4. Papers, open models, and research discovery
+  - {id: arxiv-cs-ai, name: arXiv cs.AI, organization: arXiv, group: paper, region: global, tier: primary, priority: P0, profile: arxiv_feed_paper, subject: cs.AI, content_access: full_paper, verification: protocol_guaranteed, enabled: true, public_render: metadata_link}
+  - {id: arxiv-cs-cl, name: arXiv cs.CL, organization: arXiv, group: paper, region: global, tier: primary, priority: P0, profile: arxiv_feed_paper, subject: cs.CL, content_access: full_paper, verification: protocol_guaranteed, enabled: true, public_render: metadata_link}
+  - {id: arxiv-cs-lg, name: arXiv cs.LG, organization: arXiv, group: paper, region: global, tier: primary, priority: P0, profile: arxiv_feed_paper, subject: cs.LG, content_access: full_paper, verification: protocol_guaranteed, enabled: true, public_render: metadata_link}
+  - {id: arxiv-cs-ir, name: arXiv cs.IR, organization: arXiv, group: paper, region: global, tier: primary, priority: P1, profile: arxiv_feed_paper, subject: cs.IR, content_access: full_paper, verification: protocol_guaranteed, enabled: true, public_render: metadata_link}
+  - {id: arxiv-cs-cv, name: arXiv cs.CV, organization: arXiv, group: paper, region: global, tier: primary, priority: P1, profile: arxiv_feed_paper, subject: cs.CV, content_access: full_paper, verification: protocol_guaranteed, enabled: true, public_render: metadata_link}
+  - {id: arxiv-cs-ma, name: arXiv cs.MA, organization: arXiv, group: paper, region: global, tier: primary, priority: P1, profile: arxiv_feed_paper, subject: cs.MA, content_access: full_paper, verification: protocol_guaranteed, enabled: true, public_render: metadata_link}
+  - {id: arxiv-cs-se, name: arXiv cs.SE, organization: arXiv, group: paper, region: global, tier: primary, priority: P2, profile: arxiv_feed_paper, subject: cs.SE, content_access: full_paper, verification: protocol_guaranteed, enabled: true, public_render: metadata_link}
+  - {id: huggingface-hub-models, name: Hugging Face New and Trending Models, organization: Hugging Face, group: open_model, region: global, tier: primary, priority: P0, profile: public_json_api, discovery_url: "https://huggingface.co/api/models", content_access: full_release_text, verification: page_confirmed, enabled: true, public_render: metadata_link}
+  - {id: huggingface-daily-papers, name: Hugging Face Daily Papers, organization: Hugging Face, group: paper, region: global, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://huggingface.co/papers", content_access: metadata_abstract, verification: page_confirmed, enabled: true, public_render: metadata_link}
+  - {id: openalex-works, name: OpenAlex AI Works, organization: OpenAlex, group: paper_metadata, region: global, tier: primary, priority: P2, profile: public_json_api, discovery_url: "https://api.openalex.org/works", content_access: metadata_abstract, verification: protocol_guaranteed, enabled: true, public_render: metadata_link}
+
+  # 5. Technical authors and newsletters; articles are fetched from canonical pages
+  - {id: simon-willison, name: Simon Willison's Weblog, organization: Simon Willison, group: author, region: global, tier: expert, priority: P0, profile: author_feed_to_article, homepage_url: "https://simonwillison.net/", discovery_url: "https://simonwillison.net/atom/everything/", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: chip-huyen, name: Chip Huyen Blog, organization: Chip Huyen, group: author, region: global, tier: expert, priority: P0, profile: author_feed_to_article, homepage_url: "https://huyenchip.com/blog/", discovery_url: "https://huyenchip.com/feed.xml", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: nathan-lambert-interconnects, name: Interconnects AI, organization: Nathan Lambert, group: author, region: global, tier: expert, priority: P0, profile: author_feed_to_article, homepage_url: "https://www.interconnects.ai/", discovery_url: "https://www.interconnects.ai/feed", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: latent-space, name: Latent Space, organization: swyx and Latent Space, group: author, region: global, tier: expert, priority: P0, profile: author_feed_to_article, homepage_url: "https://www.latent.space/", discovery_url: "https://www.latent.space/feed", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: sebastian-raschka, name: Ahead of AI, organization: Sebastian Raschka, group: author, region: global, tier: expert, priority: P1, profile: author_feed_to_article, homepage_url: "https://magazine.sebastianraschka.com/", discovery_url: "https://magazine.sebastianraschka.com/feed", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: ethan-mollick, name: One Useful Thing, organization: Ethan Mollick, group: author, region: global, tier: expert, priority: P1, profile: author_feed_to_article, homepage_url: "https://www.oneusefulthing.org/", discovery_url: "https://www.oneusefulthing.org/feed", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: lilian-weng, name: Lil'Log, organization: Lilian Weng, group: author, region: global, tier: expert, priority: P1, profile: author_feed_to_article, homepage_url: "https://lilianweng.github.io/", discovery_url: "https://lilianweng.github.io/index.xml", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: eugene-yan, name: Eugene Yan, organization: Eugene Yan, group: author, region: global, tier: expert, priority: P1, profile: author_feed_to_article, homepage_url: "https://eugeneyan.com/", discovery_url: "https://eugeneyan.com/rss/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: jay-alammar, name: Jay Alammar, organization: Jay Alammar, group: author, region: global, tier: expert, priority: P1, profile: author_feed_to_article, homepage_url: "https://jalammar.github.io/", discovery_url: "https://jalammar.github.io/feed.xml", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: andrew-ng-the-batch, name: The Batch, organization: DeepLearning.AI, group: newsletter, region: global, tier: expert, priority: P1, profile: rss_to_article, homepage_url: "https://www.deeplearning.ai/the-batch/", discovery_url: "https://www.deeplearning.ai/the-batch/feed/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: import-ai, name: Import AI, organization: Jack Clark, group: newsletter, region: global, tier: expert, priority: P1, profile: author_feed_to_article, homepage_url: "https://importai.substack.com/", discovery_url: "https://importai.substack.com/feed", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: bair-blog, name: Berkeley AI Research Blog, organization: BAIR, group: research_blog, region: global, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://bair.berkeley.edu/blog/", discovery_url: "https://bair.berkeley.edu/blog/feed.xml", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+
+  # 6. International and Chinese secondary sources. Never outrank primary evidence.
+  - {id: techcrunch-ai, name: TechCrunch AI, organization: TechCrunch, group: media_en, region: global, tier: secondary, priority: P1, profile: rss_to_article, homepage_url: "https://techcrunch.com/category/artificial-intelligence/", discovery_url: "https://techcrunch.com/category/artificial-intelligence/feed/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: venturebeat-ai, name: VentureBeat AI, organization: VentureBeat, group: media_en, region: global, tier: secondary, priority: P1, profile: rss_to_article, homepage_url: "https://venturebeat.com/category/ai/", discovery_url: "https://venturebeat.com/category/ai/feed/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: the-decoder, name: THE DECODER, organization: THE DECODER, group: media_en, region: global, tier: secondary, priority: P1, profile: rss_to_article, homepage_url: "https://the-decoder.com/", discovery_url: "https://the-decoder.com/feed/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: the-verge-ai, name: The Verge AI, organization: The Verge, group: media_en, region: global, tier: secondary, priority: P1, profile: rss_to_article, homepage_url: "https://www.theverge.com/ai-artificial-intelligence", discovery_url: "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: ars-ai, name: Ars Technica AI, organization: Ars Technica, group: media_en, region: global, tier: secondary, priority: P1, profile: rss_to_article, homepage_url: "https://arstechnica.com/ai/", discovery_url: "https://feeds.arstechnica.com/arstechnica/technology-lab", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: mit-technology-review-ai, name: MIT Technology Review AI, organization: MIT Technology Review, group: media_en, region: global, tier: secondary, priority: P1, profile: static_listing_to_article, discovery_url: "https://www.technologyreview.com/topic/artificial-intelligence/", content_access: metadata_abstract, verification: page_confirmed, enabled: true, public_render: metadata_link}
+  - {id: wired-ai, name: WIRED AI, organization: WIRED, group: media_en, region: global, tier: secondary, priority: P2, profile: static_listing_to_article, discovery_url: "https://www.wired.com/tag/artificial-intelligence/", content_access: metadata_abstract, verification: adapter_required, enabled: false, public_render: metadata_link}
+  - {id: infoq-ai-ml, name: InfoQ AI ML and Data Engineering, organization: InfoQ, group: media_en, region: global, tier: secondary, priority: P1, profile: rss_to_article, homepage_url: "https://www.infoq.com/ai-ml-data-eng/", discovery_url: "https://feed.infoq.com/ai-ml-data-eng/", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
+  - {id: machine-heart, name: 机器之心, organization: 机器之心, group: media_cn, region: cn, tier: secondary, priority: P0, profile: dynamic_listing_to_article, discovery_url: "https://www.jiqizhixin.com/", content_access: full_article_extract, verification: page_confirmed, enabled: false}
+  - {id: qbitai, name: 量子位, organization: 量子位, group: media_cn, region: cn, tier: secondary, priority: P0, profile: rss_to_article, homepage_url: "https://www.qbitai.com/", discovery_url: "https://www.qbitai.com/feed", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  - {id: infoq-cn-ai, name: InfoQ 中文 AI, organization: InfoQ China, group: media_cn, region: cn, tier: secondary, priority: P1, profile: dynamic_listing_to_article, discovery_url: "https://www.infoq.cn/topic/AI", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: thirtysixkr-ai, name: 36氪 AI, organization: 36氪, group: media_cn, region: cn, tier: secondary, priority: P2, profile: dynamic_listing_to_article, discovery_url: "https://36kr.com/information/AI/", content_access: metadata_abstract, verification: adapter_required, enabled: false, public_render: metadata_link}
+  - {id: leiphone-ai, name: 雷峰网 AI科技评论, organization: 雷峰网, group: media_cn, region: cn, tier: secondary, priority: P1, profile: dynamic_listing_to_article, discovery_url: "https://www.leiphone.com/category/ai", content_access: full_article_extract, verification: adapter_required, enabled: false}
+  - {id: zhidx, name: 智东西, organization: 智东西, group: media_cn, region: cn, tier: secondary, priority: P1, profile: dynamic_listing_to_article, discovery_url: "https://zhidx.com/", content_access: full_article_extract, verification: adapter_required, enabled: false}
+
+# X and WeChat are intentionally kept out of the deployable source count.
+# See social-watchlist.yaml for authorized monitoring and canonical fallbacks.

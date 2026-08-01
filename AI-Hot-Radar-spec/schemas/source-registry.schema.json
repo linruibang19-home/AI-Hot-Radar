@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aihotradar.example/schemas/source-registry.schema.json",
+  "title": "AI Hot Radar Source",
+  "type": "object",
+  "required": ["id", "name", "organization", "group", "region", "tier", "priority", "profile", "discovery_url", "content_access", "verification", "enabled"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,79}$"},
+    "name": {"type": "string", "minLength": 1},
+    "organization": {"type": "string", "minLength": 1},
+    "group": {"type": "string", "minLength": 1},
+    "region": {"enum": ["global", "cn"]},
+    "tier": {"enum": ["primary", "secondary", "expert", "community"]},
+    "priority": {"enum": ["P0", "P1", "P2"]},
+    "profile": {"enum": ["rss_to_article", "author_feed_to_article", "static_listing_to_article", "dynamic_listing_to_article", "docs_changelog", "github_release_api", "github_repo_activity", "arxiv_feed_paper", "public_json_api"]},
+    "homepage_url": {"type": "string", "format": "uri"},
+    "discovery_url": {"type": "string", "format": "uri"},
+    "repository": {"type": "string", "pattern": "^[^/]+/[^/]+$"},
+    "content_access": {"enum": ["full_release_text", "full_article_extract", "full_paper", "metadata_abstract", "discovery_only"]},
+    "verification": {"enum": ["protocol_guaranteed", "page_confirmed", "adapter_required", "restricted"]},
+    "enabled": {"type": "boolean"}
+  },
+  "allOf": [
+    {"if": {"properties": {"profile": {"const": "github_release_api"}}}, "then": {"required": ["repository"]}},
+    {"if": {"properties": {"verification": {"const": "restricted"}}}, "then": {"properties": {"enabled": {"const": false}}}}
+  ],
+  "additionalProperties": true
+}

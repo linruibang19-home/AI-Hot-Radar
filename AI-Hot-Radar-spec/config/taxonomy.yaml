@@ -1,0 +1,32 @@
+schema_version: 1
+content_types:
+  - model_release
+  - product_release
+  - api_update
+  - sdk_release
+  - open_source
+  - research
+  - benchmark
+  - business
+  - funding
+  - policy
+  - security
+  - opinion
+  - tutorial
+
+entity_types: [company, organization, product, model, technology, protocol, framework, person]
+
+topics:
+  models: [llm, multimodal, reasoning, embedding, reranker, image, video, audio, robotics]
+  engineering: [agent, rag, mcp, memory, evaluation, inference, fine_tuning, safety, observability]
+  ecosystems: [java_ai, spring_ai, python_ai, ai_coding, open_source, cloud_ai]
+  business: [funding, enterprise, regulation, chips, research]
+
+source_tiers:
+  primary: "当事公司、官方文档、官方仓库、原始论文"
+  authoritative_secondary: "有编辑责任和稳定署名的专业媒体"
+  community: "技术作者、论坛、社交平台观点；不得单独确认高风险事实"
+
+story_relation_types: [precedes, follows_up, corrects, contradicts, competes_with, caused_by, references]
+story_statuses: [emerging, developing, confirmed, corrected, closed]
+

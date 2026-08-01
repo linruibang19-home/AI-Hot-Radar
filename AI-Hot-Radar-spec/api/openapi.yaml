@@ -1,0 +1,212 @@
+openapi: 3.1.0
+info:
+  title: AI Hot Radar API
+  version: 1.2.0
+  description: Public content, RAG and source administration baseline contract.
+servers:
+  - url: /api/v1
+paths:
+  /items:
+    get:
+      operationId: listItems
+      parameters:
+        - {$ref: '#/components/parameters/Cursor'}
+        - {$ref: '#/components/parameters/Limit'}
+        - {name: from, in: query, schema: {type: string, format: date-time}}
+        - {name: to, in: query, schema: {type: string, format: date-time}}
+        - {name: source, in: query, schema: {type: string}}
+        - {name: topic, in: query, schema: {type: string}}
+        - {name: q, in: query, schema: {type: string, maxLength: 300}}
+      responses:
+        '200':
+          description: Cursor page
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ItemPage'}
+        '400': {$ref: '#/components/responses/Problem'}
+  /items/{idOrSlug}:
+    get:
+      operationId: getItem
+      parameters:
+        - {name: idOrSlug, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Item detail
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Item'}
+        '404': {$ref: '#/components/responses/Problem'}
+  /stories:
+    get:
+      operationId: listStories
+      parameters:
+        - {$ref: '#/components/parameters/Cursor'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200':
+          description: Story page
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StoryPage'}
+  /stories/{idOrSlug}:
+    get:
+      operationId: getStory
+      parameters:
+        - {name: idOrSlug, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Story detail
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Story'}
+  /rag/queries:
+    post:
+      operationId: createRagQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RagQueryRequest'}
+      responses:
+        '202':
+          description: Query accepted
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RagQueryAccepted'}
+        '429': {$ref: '#/components/responses/Problem'}
+  /rag/answers/{id}:
+    get:
+      operationId: getRagAnswer
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Final answer
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RagAnswer'}
+  /admin/sources/{id}/run:
+    post:
+      operationId: runSource
+      security: [{adminBearer: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+        - {name: Idempotency-Key, in: header, required: true, schema: {type: string}}
+      responses:
+        '202':
+          description: Probe/run accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [runId, status]
+                properties:
+                  runId: {type: string, format: uuid}
+                  status: {const: PENDING}
+components:
+  securitySchemes:
+    adminBearer: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    Cursor: {name: cursor, in: query, schema: {type: string}}
+    Limit: {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 50, default: 20}}
+  responses:
+    Problem:
+      description: RFC 9457 problem
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+  schemas:
+    Item:
+      type: object
+      required: [id, title, canonicalUrl, source, observedAt]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        summary: {type: [string, 'null']}
+        excerpt: {type: [string, 'null']}
+        canonicalUrl: {type: string, format: uri}
+        publishedAt: {type: [string, 'null'], format: date-time}
+        observedAt: {type: string, format: date-time}
+        source: {$ref: '#/components/schemas/SourceRef'}
+        topics: {type: array, items: {type: string}}
+    SourceRef:
+      type: object
+      required: [id, name, tier]
+      properties:
+        id: {type: string}
+        name: {type: string}
+        tier: {type: string}
+    Story:
+      type: object
+      required: [id, title, firstSeenAt, sources]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        summary: {type: [string, 'null']}
+        firstSeenAt: {type: string, format: date-time}
+        lastUpdatedAt: {type: string, format: date-time}
+        sources: {type: array, items: {$ref: '#/components/schemas/Item'}}
+    PageMeta:
+      type: object
+      required: [hasMore]
+      properties:
+        nextCursor: {type: [string, 'null']}
+        hasMore: {type: boolean}
+    ItemPage:
+      type: object
+      required: [data, page]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/Item'}}
+        page: {$ref: '#/components/schemas/PageMeta'}
+    StoryPage:
+      type: object
+      required: [data, page]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/Story'}}
+        page: {$ref: '#/components/schemas/PageMeta'}
+    RagQueryRequest:
+      type: object
+      required: [question, timezone]
+      properties:
+        question: {type: string, minLength: 2, maxLength: 2000}
+        conversationId: {type: [string, 'null'], format: uuid}
+        timezone: {type: string, default: Asia/Shanghai}
+        answerFormat: {enum: [brief, detailed, timeline, comparison]}
+        filters: {type: object, additionalProperties: true}
+    RagQueryAccepted:
+      type: object
+      required: [queryId, status, streamUrl]
+      properties:
+        queryId: {type: string, format: uuid}
+        conversationId: {type: string, format: uuid}
+        status: {const: PENDING}
+        streamUrl: {type: string, format: uri-reference}
+    Citation:
+      type: object
+      required: [number, title, url, publishedAt]
+      properties:
+        number: {type: integer}
+        title: {type: string}
+        url: {type: string, format: uri}
+        publishedAt: {type: [string, 'null'], format: date-time}
+        sourceTier: {type: string}
+    RagAnswer:
+      type: object
+      required: [id, status, answer, citations]
+      properties:
+        id: {type: string, format: uuid}
+        status: {enum: [COMPLETED, INSUFFICIENT_EVIDENCE]}
+        answer: {type: string}
+        citations: {type: array, items: {$ref: '#/components/schemas/Citation'}}
+        limitations: {type: array, items: {type: string}}
+        metrics: {type: object, additionalProperties: true}
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        requestId: {type: string}
+
