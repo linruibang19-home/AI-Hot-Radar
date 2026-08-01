@@ -65,6 +65,38 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     )
 
 
+def cmd_process(args: argparse.Namespace) -> int:
+    from ahr.processing.pipeline import process_pending
+
+    stats = asyncio.run(process_pending(limit=args.limit, enrich=not args.no_enrich))
+    print(json.dumps(stats.__dict__, indent=2, ensure_ascii=False))
+    return 0
+
+
+def cmd_schedule(args: argparse.Namespace) -> int:
+    import psycopg
+
+    from ahr.ingestion.scheduler import run_forever, run_tick, schedule_summary, seed_poll_schedule
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        seeded = seed_poll_schedule(connection)
+        print(json.dumps({"seeded": seeded, **schedule_summary(connection)}, indent=2))
+
+    if args.once:
+        result = asyncio.run(run_tick(batch_size=args.batch_size, max_documents=args.max_documents))
+        print(json.dumps(result.__dict__, indent=2))
+        return 0
+
+    asyncio.run(
+        run_forever(
+            interval_seconds=args.interval,
+            batch_size=args.batch_size,
+            max_documents=args.max_documents,
+        )
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ahr")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -87,6 +119,18 @@ def main(argv: list[str] | None = None) -> int:
     ingest.add_argument("--max-documents", type=int, default=10)
     ingest.add_argument("--output", default=None)
     ingest.set_defaults(func=cmd_ingest)
+
+    process = sub.add_parser("process", help="chunk, de-duplicate and enrich stored content")
+    process.add_argument("--limit", type=int, default=50)
+    process.add_argument("--no-enrich", action="store_true", help="chunk and dedup only")
+    process.set_defaults(func=cmd_process)
+
+    schedule = sub.add_parser("schedule", help="run the ingestion scheduler")
+    schedule.add_argument("--once", action="store_true", help="run a single tick and exit")
+    schedule.add_argument("--interval", type=int, default=60)
+    schedule.add_argument("--batch-size", type=int, default=20)
+    schedule.add_argument("--max-documents", type=int, default=5)
+    schedule.set_defaults(func=cmd_schedule)
 
     args = parser.parse_args(argv)
     return int(args.func(args))

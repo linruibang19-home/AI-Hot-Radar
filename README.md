@@ -11,19 +11,19 @@ AI Hot Radar 是一个面向 AI 行业的时效性情报平台。系统统一采
 
 | 文件 | 作用 | 开发前是否必读 |
 |---|---|---|
-| `docs/00-master-spec.md` | 唯一总规格与决策基线 | 是 |
-| `docs/01-product-requirements.md` | 产品范围、页面与验收 | 是 |
-| `docs/02-system-architecture.md` | 服务边界、数据流与部署 | 是 |
-| `docs/03-data-ingestion.md` | 数据模型、采集和事件聚合 | 涉及后端/数据时必读 |
-| `docs/04-rag-agent-design.md` | 时间与事件感知 RAG | 涉及 AI/RAG 时必读 |
-| `docs/05-api-contract.md` | HTTP 与内部任务契约 | 涉及接口时必读 |
-| `docs/06-frontend-spec.md` | 路由、页面、组件和状态 | 涉及前端时必读 |
-| `docs/07-quality-security-ops.md` | 测试、安全、版权和运维 | 上线前必读 |
-| `docs/08-roadmap-ai-ide.md` | 里程碑、任务卡和 AI IDE 规则 | 是 |
-| `docs/09-source-registry-fulltext.md` | 140 个信源、全文回源、状态机与验收 | 采集开发必读 |
-| `docs/10-source-adapter-implementation.md` | 各类接口怎样读取、字段映射、游标和代码边界 | 采集开发必读 |
-| `docs/11-end-to-end-runbook.md` | 从定时触发到网站、邮件、RAG 的完整运行链路 | 联调/运维必读 |
-| `docs/12-delivery-index.md` | 全部文件、用途、完成度和执行顺序 | 是 |
+| `docs/spec/00-master-spec.md` | 唯一总规格与决策基线 | 是 |
+| `docs/spec/01-product-requirements.md` | 产品范围、页面与验收 | 是 |
+| `docs/spec/02-system-architecture.md` | 服务边界、数据流与部署 | 是 |
+| `docs/spec/03-data-ingestion.md` | 数据模型、采集和事件聚合 | 涉及后端/数据时必读 |
+| `docs/spec/04-rag-agent-design.md` | 时间与事件感知 RAG | 涉及 AI/RAG 时必读 |
+| `docs/spec/05-api-contract.md` | HTTP 与内部任务契约 | 涉及接口时必读 |
+| `docs/spec/06-frontend-spec.md` | 路由、页面、组件和状态 | 涉及前端时必读 |
+| `docs/spec/07-quality-security-ops.md` | 测试、安全、版权和运维 | 上线前必读 |
+| `docs/spec/08-roadmap-ai-ide.md` | 里程碑、任务卡和 AI IDE 规则 | 是 |
+| `docs/spec/09-source-registry-fulltext.md` | 140 个信源、全文回源、状态机与验收 | 采集开发必读 |
+| `docs/spec/10-source-adapter-implementation.md` | 各类接口怎样读取、字段映射、游标和代码边界 | 采集开发必读 |
+| `docs/spec/11-end-to-end-runbook.md` | 从定时触发到网站、邮件、RAG 的完整运行链路 | 联调/运维必读 |
+| `docs/spec/12-delivery-index.md` | 全部文件、用途、完成度和执行顺序 | 是 |
 | `config/sources.yaml` | 140 个可执行采集入口 | 采集开发必读 |
 | `config/social-watchlist.yaml` | 30 个 X 与 8 个公众号受限监控目标 | 社交适配器开发必读 |
 | `config/taxonomy.yaml` | 分类、实体和内容类型 | 内容加工必读 |
@@ -37,7 +37,7 @@ AI Hot Radar 是一个面向 AI 行业的时效性情报平台。系统统一采
 
 发生冲突时按以下顺序处理：
 
-1. `docs/00-master-spec.md` 中的锁定决策；
+1. `docs/spec/00-master-spec.md` 中的锁定决策；
 2. 领域专项文档；
 3. `config/*.yaml` 机器可读配置；
 4. AI IDE 自己生成的计划或实现建议。
