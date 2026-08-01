@@ -2,13 +2,14 @@ FROM gradle:8.12-jdk21 AS build
 
 WORKDIR /build
 
+# Build context is the repository root, so every source path is repo-relative.
 # Resolve dependencies before copying sources so source edits reuse this layer.
-COPY build.gradle.kts settings.gradle.kts ./
+COPY apps/core-api/build.gradle.kts apps/core-api/settings.gradle.kts ./
 RUN gradle --no-daemon dependencies --quiet || true
 
-COPY src ./src
-# Flyway migrations live at the repository root (database/migrations) and are
-# copied in by the Compose build context so Java ships one canonical set.
+COPY apps/core-api/src ./src
+# Flyway migrations live at the repository root so Java, CI and the docs share
+# one canonical set.
 COPY database/migrations ./src/main/resources/db/migration
 RUN gradle --no-daemon bootJar --quiet
 

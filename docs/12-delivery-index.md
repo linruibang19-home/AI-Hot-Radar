@@ -32,7 +32,7 @@
 | `config/site-overrides.yaml` | 特殊站点规则 | 候选规则；fixture 后激活 |
 | `schemas/source-registry.schema.json` | 单来源 JSON Schema | 完成 |
 | `schemas/ingestion-event.schema.json` | 任务事件 Schema | 完成 |
-| `database/V001__baseline.sql` | 基线数据库 | 完成 |
+| `database/migrations/V001__baseline.sql` | 基线数据库（Flyway 唯一入口） | 完成 |
 | `api/openapi.yaml` | API 基线 | 完成 |
 | `.env.example` | 环境变量 | 完成 |
 | `scripts/validate_spec.py` | 离线规格校验 | 完成 |

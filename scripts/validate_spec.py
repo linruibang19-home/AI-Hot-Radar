@@ -83,7 +83,7 @@ def main() -> int:
 
     required_files = [
         "README.md", "AGENTS.md", "CLAUDE.md", ".env.example",
-        "database/V001__baseline.sql", "api/openapi.yaml",
+        "database/migrations/V001__baseline.sql", "api/openapi.yaml",
         "docs/10-source-adapter-implementation.md", "docs/11-end-to-end-runbook.md",
         "schemas/source-registry.schema.json", "schemas/ingestion-event.schema.json",
     ]

@@ -29,7 +29,7 @@ AI Hot Radar 是一个面向 AI 行业的时效性情报平台。系统统一采
 | `config/taxonomy.yaml` | 分类、实体和内容类型 | 内容加工必读 |
 | `config/ingestion-profiles.yaml` | 9 类采集 Profile 的机器可读执行契约 | 采集开发必读 |
 | `config/site-overrides.yaml` | 特殊站点覆盖、候选 selector 与启用门禁 | 站点适配必读 |
-| `database/V001__baseline.sql` | PostgreSQL/pgvector 基线模型 | 后端必读 |
+| `database/migrations/V001__baseline.sql` | PostgreSQL/pgvector 基线模型 | 后端必读 |
 | `api/openapi.yaml` | 公共、RAG 与管理 API 基线 | 前后端必读 |
 | `schemas/*.json` | Source 与任务事件契约 | 后端/Worker 必读 |
 

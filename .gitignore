@@ -8,11 +8,16 @@ node_modules/
 .next/
 out/
 npm-debug.log*
+*.tsbuildinfo
 
 # Java
 build/
 .gradle/
 *.class
+
+# Flyway migrations are copied here at build time from database/migrations,
+# which is the single canonical source (AHR-SPEC-000 §8).
+apps/core-api/src/main/resources/db/migration/
 
 # Python
 __pycache__/
