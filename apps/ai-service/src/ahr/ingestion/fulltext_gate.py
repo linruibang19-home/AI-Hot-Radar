@@ -65,11 +65,20 @@ class ExtractedDocument:
     extractor: str = "unknown"
 
 
-_PARAGRAPH_SPLIT = re.compile(r"\n\s*\n")
+# Extractors disagree on paragraph separators: trafilatura emits single
+# newlines, while markdown and raw HTML-to-text conversions emit blank lines.
+# Splitting on any newline run counts both correctly; a lone wrapped sentence
+# is excluded by the minimum length so soft-wrapped text is not overcounted.
+_PARAGRAPH_SPLIT = re.compile(r"\n+")
+_MIN_PARAGRAPH_CHARS = 40
 
 
 def _paragraph_count(text: str) -> int:
-    return sum(1 for block in _PARAGRAPH_SPLIT.split(text) if block.strip())
+    return sum(
+        1
+        for block in _PARAGRAPH_SPLIT.split(text)
+        if len(block.strip()) >= _MIN_PARAGRAPH_CHARS
+    )
 
 
 def _link_density(document: ExtractedDocument) -> float:
