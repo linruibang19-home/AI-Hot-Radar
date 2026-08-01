@@ -24,6 +24,6 @@ USER appuser
 EXPOSE 8080
 
 HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=10 \
-    CMD ["sh", "-c", "wget -qO- http://localhost:8080/health/live > /dev/null || exit 1"]
+    CMD ["sh", "-c", "wget -qO- http://127.0.0.1:8080/health/live > /dev/null || exit 1"]
 
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
