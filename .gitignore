@@ -11,8 +11,7 @@ npm-debug.log*
 *.tsbuildinfo
 
 # Java
-build/
-.gradle/
+target/
 *.class
 
 # Flyway migrations are copied here at build time from database/migrations,
