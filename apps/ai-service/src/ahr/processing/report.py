@@ -251,7 +251,7 @@ def save_report(connection: Any, report: DailyReport) -> uuid.UUID:
                 id, period_type, period_key, title, summary, body_markdown,
                 status, generated_at, item_count, prompt_version, model_name,
                 generation_meta
-            ) VALUES (%s, 'daily', %s, %s, %s, %s, 'DRAFT', now(), %s, %s, %s, %s::jsonb)
+            ) VALUES (%s, %s, %s, %s, %s, %s, 'DRAFT', now(), %s, %s, %s, %s::jsonb)
             ON CONFLICT (period_type, period_key) DO UPDATE SET
                 title = EXCLUDED.title,
                 summary = EXCLUDED.summary,

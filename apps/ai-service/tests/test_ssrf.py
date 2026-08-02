@@ -6,9 +6,11 @@ resolves to a literal address, so no DNS lookup of an external name is needed.
 
 from __future__ import annotations
 
+import socket
+
 import pytest
 
-from ahr.ingestion.errors import SsrfBlockedError
+from ahr.ingestion.errors import SsrfBlockedError, TransientError
 from ahr.ingestion.ssrf import resolve_and_validate
 
 
@@ -46,3 +48,37 @@ def test_http_is_rejected_unless_explicitly_allowed() -> None:
 def test_url_without_host_is_blocked() -> None:
     with pytest.raises(SsrfBlockedError):
         resolve_and_validate("https:///nohost", allow_http=True)
+
+
+def test_dns_failure_is_transient_not_a_policy_block(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A failed lookup must stay retryable.
+
+    SsrfBlockedError is terminal, so classifying a DNS hiccup as one quarantined
+    ten healthy first-party sources (api.github.com, arxiv.org and others) after
+    a single failure. Nothing was contacted, so the guard has no finding to make.
+    """
+
+    def boom(*args: object, **kwargs: object) -> None:
+        raise socket.gaierror(-2, "Name or service not known")
+
+    monkeypatch.setattr(socket, "getaddrinfo", boom)
+
+    with pytest.raises(TransientError) as caught:
+        resolve_and_validate("https://api.github.com/repos/x/y/releases")
+
+    assert caught.value.retryable is True
+    assert not isinstance(caught.value, SsrfBlockedError)
+
+
+def test_blocked_address_is_still_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The guard must not have been loosened: a real hit stays non-retryable."""
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda *a, **k: [(0, 0, 0, "", ("169.254.169.254", 443))],
+    )
+
+    with pytest.raises(SsrfBlockedError) as caught:
+        resolve_and_validate("https://metadata.example.com/")
+
+    assert caught.value.retryable is False

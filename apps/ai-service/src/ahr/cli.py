@@ -153,6 +153,21 @@ def cmd_heat(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_seed_topics(args: argparse.Namespace) -> int:
+    """Refresh the topic table from config/taxonomy.yaml.
+
+    The enrichment pipeline seeds topics too, but editing a display name should
+    not require re-running enrichment over the whole corpus.
+    """
+    from ahr.processing.topics import load_display, load_taxonomy, seed_topics
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        written = seed_topics(connection, load_taxonomy(), load_display())
+        connection.commit()
+    print(json.dumps({"topics": written}, indent=2))
+    return 0
+
+
 def cmd_reasons(args: argparse.Namespace) -> int:
     from ahr.processing.llm import LlmUnavailableError, build_client_from_env
     from ahr.processing.recommendation import backfill_reasons
@@ -360,6 +375,9 @@ def main(argv: list[str] | None = None) -> int:
     heat = sub.add_parser("heat", help="recompute hot_score for recent content")
     heat.add_argument("--days", type=int, default=7)
     heat.set_defaults(func=cmd_heat)
+
+    seed = sub.add_parser("seed-topics", help="refresh topic names and grouping from taxonomy")
+    seed.set_defaults(func=cmd_seed_topics)
 
     reasons = sub.add_parser("reasons", help="write LLM recommendation reasons for selections")
     reasons.add_argument("--limit", type=int, default=40)

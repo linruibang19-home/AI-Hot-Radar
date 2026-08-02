@@ -40,7 +40,7 @@ const NAV = [
   { href: "/", label: "精选" },
   { href: "/items", label: "全部 AI 动态" },
   { href: "/reports", label: "AI 日报" },
-  { href: "/topics", label: "主题" },
+  { href: "/topics", label: "主题地图" },
 ];
 
 const ADMIN_NAV = [{ href: "/admin/sources", label: "信源后台" }];

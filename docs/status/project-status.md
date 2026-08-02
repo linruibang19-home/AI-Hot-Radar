@@ -9,28 +9,36 @@
 | 里程碑 | 状态 | 核心产出 |
 |---|---|---|
 | **M0 工程骨架** | ✅ 完成 | 三服务 + Compose + Flyway + pgvector + CI + request-ID |
-| **M1 真实信源与入库** | ✅ 完成 | 7 类适配器、98 源 ACTIVE、723 条内容入库、调度器 |
-| **M2 内容加工与网站** | ✅ 完成 | 切块、去重、LLM 结构化、主题归一、精选、全文检索、日报、邮件投递、Redis 缓存、成本追踪、前端七页 |
-| M3 Story 与热点 | ⬜ 未开始 | 事件聚类、主来源、热度算法、时间线 |
+| **M1 真实信源与入库** | ✅ 完成 | 7 类适配器、95 源 ACTIVE、718 条内容入库、调度器 |
+| **M2 内容加工与网站** | ✅ 完成 | 切块、去重、LLM 结构化、主题归一、精选、全文检索、日/周/月报、邮件投递、Redis 缓存、成本追踪、前端八页 |
+| M3 Story 与热点 | 🟡 部分前置 | 热度算法与热榜已实现（见下方说明）；事件聚类、主来源、时间线待做 |
 | M4 RAG MVP | ⬜ 未开始 | Embedding、混合检索、RRF、引用绑定、黄金集 |
-| M5 上线与增强 | ⬜ 未开始 | 域名 HTTPS、备份监控、邮件订阅、周月报 |
+| M5 上线与增强 | ⬜ 未开始 | 域名 HTTPS、备份监控、邮件订阅 |
+
+> **关于 M3 的部分前置**：热榜所依赖的"独立信源数"目前只能用近似重复来近似，
+> 绝大多数条目因此为 1。真正的多源验证需要 M3 的 Story 聚类。现在的热榜
+> **是"编辑意义上的合理排序"，不是"多源验证的事件热度"**，不应对外宣称为后者。
 
 ## 2. 数据现状（实测）
 
 | 指标 | 数值 |
 |---|---:|
-| 已入库内容 `content_item` | 723 |
-| 有内容的信源 | 105 |
-| ACTIVE 信源 | 98 |
+| 已入库内容 `content_item` | 718 |
+| 有内容的信源 | 123 |
+| ACTIVE 信源 | 95 |
 | 已启用信源 | 124 / 140 |
-| 已 AI 结构化 | 150 |
-| 检索分块 `content_chunk` | 343 |
-| 抽取实体 `entity` | 630 |
-| 主题关联 `item_topic` | 27 |
-| 当前精选 `selection_record` | 77 |
-| 近似重复已标记 | 7 |
-| 数据库表数 | 24 |
-| 数据库体积 | 50 MB |
+| 已 AI 结构化 | 643 |
+| 检索分块 `content_chunk` | 3346 |
+| 抽取实体 `entity` | 2117 |
+| 主题关联 `item_topic` | 704 |
+| 当前精选 `selection_record` | 87 |
+| 其中含 LLM 推荐理由 | 106（含历史） |
+| 已算热度的条目 | 361 |
+| 已生成报告 `report` | 4（2 日报 + 1 周报 + 1 月报） |
+| 近似重复已标记 | 54 |
+| 数据库表数 | 27 |
+| 数据库体积 | 75 MB |
+| 死信 | 0 |
 
 ## 3. 信源情况
 
@@ -68,18 +76,24 @@
 | 站点限流 | 1 | 退避重试 |
 | 需专用适配器 / SPA | 16 | Wave C，默认关闭 |
 
+> **已修复的误判**：DNS 解析失败原本被归类为 `SSRF_BLOCKED`。该错误类型不可重试，
+> 于是一次短暂的 DNS 抖动就把 10 个一手信源（OpenAI / Anthropic / Google SDK、
+> arXiv、DeepSeek Changelog、Latent Space 等）**永久隔离**。解析失败意味着根本
+> 没有发起连接，防护逻辑并未做出任何安全判定，应归为 `TRANSIENT`。修复后
+> ACTIVE 由 87 回升至 95，隔离数由 13 降至 3。
+
 ## 4. 服务与中间件
 
 | 组件 | 地址 | 状态 | 实现进度 |
 |---|---|---|---|
-| Next.js web | http://localhost:3000 | healthy | 精选、全部动态、详情、日报列表、日报详情、主题、信源后台 |
-| Spring Boot core-api | http://localhost:8080 | healthy | items / selected / topics / reports / stats / admin.sources |
+| Next.js web | http://localhost:3000 | healthy | 精选、全部动态、详情、报告列表、报告详情、主题地图、主题详情、信源后台 |
+| Spring Boot core-api | http://localhost:8080 | healthy | items / selected / hot / categories / topics / topics.map / reports / stats / admin.sources |
 | FastAPI ai-service | http://localhost:8000 | healthy | 采集、加工、调度全部功能 |
 | scheduler（采集 worker） | 无端口 | running | 每 120s 轮询到期信源，`restart: unless-stopped` |
-| PostgreSQL + pgvector | localhost:5432 | healthy | 28 表，7 个 Flyway 迁移 |
+| PostgreSQL + pgvector | localhost:5432 | healthy | 27 表，9 个 Flyway 迁移 |
 | Redis | localhost:6379 | healthy | **已接入读缓存**（selected 5min / topics 10min / stats 2min） |
 
-**全部运行在 Docker 中**，宿主机零依赖。消息队列与对象存储按 ADR-007 与规格暂不引入（Outbox 已实现，733 条事件待消费）。
+**全部运行在 Docker 中**，宿主机零依赖。消息队列与对象存储按 ADR-007 与规格暂不引入（Outbox 已实现）。
 
 ## 5. 数据库设计
 
@@ -115,6 +129,7 @@ processed_event       消费幂等记录
 | V006 | llm_usage 成本核算表、report 扩展列、report_item 溯源表 |
 | V007 | email_delivery 投递记录（delivery_key 唯一，防重复发送） |
 | V008 | entity_type 扩充为 8 类，与 taxonomy.yaml 对齐（ADR-0014） |
+| V009 | 推荐理由版本/模型列、hot_score 热度列、report 周期放宽为日/周/月、topic 展示元数据 |
 
 ## 6. 已完成任务
 
@@ -143,7 +158,13 @@ processed_event       消费幂等记录
 - [x] 日报列表页与详情页
 - [x] 日报邮件投递（HTML + 纯文本双格式、delivery_key 防重发、标题转义）
 - [x] 前端 SEO 与无障碍（og/canonical/theme-color、skip link、focus ring、per-page title、robots.txt、sitemap.xml）
-- [x] 180 个离线测试，断网可通过
+- [x] **LLM 逐条推荐理由**（读全文后生成，强制指出一处局限；替换掉原先千篇一律的模板拼接）
+- [x] **热度算法与当前热点榜**（类型权重改为乘数、指数衰减、独立信源对数饱和）
+- [x] **周报 / 月报**（与日报共用渲染与溯源路径，prompt 分别强调趋势与格局）
+- [x] **分类 tab**（全部 / 模型 / 产品 / 行业 / 论文 / 教程 / 观点，一个 tab 可映射多个 content_type）
+- [x] **精选排序切换**（按精选日 / 按发布时间 / 按热度，全部为可分享的 URL）
+- [x] **主题地图**（四条主线分组 + 中文名 + 一句话说明，全部由 taxonomy.yaml 驱动）
+- [x] 250 个测试（Python 215 + Java 22 + Web 12 + 类型检查），Python 部分断网可通过
 
 ## 7. 待完成任务
 
@@ -196,7 +217,27 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 ```
 
 ```bash
-docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli report --date 2026-08-01
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli report --period daily
+```
+
+```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli report --period weekly
+```
+
+```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli report --period monthly
+```
+
+```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli reasons --limit 40
+```
+
+```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli heat
+```
+
+```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli seed-topics
 ```
 
 ```bash
@@ -219,4 +260,8 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 | LLM 成本随内容量线性增长 | 已消耗见 `ahr.cli usage` | 已加正文长度门槛跳过薄内容；按优先级分批 |
 | 中文动态站点需浏览器渲染 | 16 个源未接入 | Wave C 专项，需 robots 复核 |
 | 密钥曾出现在会话记录 | 泄露风险 | **上线前必须轮换 GitHub / DeepSeek 密钥** |
+| 热榜的"独立信源数"绝大多数为 1 | 热度只是编辑权重的代理指标 | M3 Story 聚类后才是真实的多源验证信号；对外描述不得夸大 |
+| LLM 推荐理由与摘要可能出错 | 事实性风险 | 页面已标注"AI 生成"，每条均链接原文；理由 prompt 强制指出局限 |
+| `mypy>=1.13.0` 无上界 | 类型检查结果取决于安装时间 | 见待办：固定版本 |
 | ~~entity_type 规格冲突~~ | 已解决 | 见 [ADR-0014](../adr/0014-entity-types-align-to-taxonomy.md)，扩充为 8 类 |
+| ~~DNS 失败被判为 SSRF~~ | 已解决 | 改判 `TRANSIENT`，10 个一手信源恢复 |

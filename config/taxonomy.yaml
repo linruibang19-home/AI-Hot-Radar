@@ -22,6 +22,120 @@ topics:
   ecosystems: [java_ai, spring_ai, python_ai, ai_coding, open_source, cloud_ai]
   business: [funding, enterprise, regulation, chips, research]
 
+# Presentation metadata for the topic map.
+#
+# `topics` above remains the vocabulary authority: normalisation reads only that
+# mapping, so an entry here for an unrecognised slug changes nothing about which
+# labels are accepted. Kept in config rather than in the page because the site,
+# the report renderer and the email template all need the same display names,
+# and a slug titlecased in the frontend produced "Llm" and "Rag".
+topic_groups:
+  models:
+    label: 模型能力
+    order: 1
+    description: 模型本身能做什么——发布、能力边界与技术路线
+  engineering:
+    label: 工程实践
+    order: 2
+    description: 把模型变成可用系统的方法：检索、智能体、部署与安全
+  ecosystems:
+    label: 生态与工具链
+    order: 3
+    description: 语言生态、开发工具与云平台侧的动态
+  business:
+    label: 产业与政策
+    order: 4
+    description: 资本、落地、算力与监管
+
+topic_display:
+  llm:
+    name: 大语言模型
+    description: 通用文本大模型的发布、能力更新与技术路线
+  multimodal:
+    name: 多模态
+    description: 同时处理文本、图像与音视频的模型及其应用
+  reasoning:
+    name: 推理模型
+    description: 强调思维链与长程推理的模型方向
+  embedding:
+    name: 向量嵌入
+    description: 文本与多模态向量化模型，检索与聚类的基础设施
+  reranker:
+    name: 重排序
+    description: 检索结果的二次排序模型，直接决定 RAG 的命中质量
+  image:
+    name: 图像生成
+    description: 文生图与图像编辑模型
+  video:
+    name: 视频生成
+    description: 文生视频与视频编辑模型
+  audio:
+    name: 语音与音频
+    description: 语音识别、语音合成与音乐生成
+  robotics:
+    name: 具身智能
+    description: 机器人控制与视觉-语言-动作模型
+  agent:
+    name: 智能体
+    description: 具备规划与工具调用能力的 Agent 框架与产品
+  rag:
+    name: 检索增强
+    description: 用外部知识约束模型输出的检索增强生成
+  mcp:
+    name: MCP 协议
+    description: Model Context Protocol 及其周边工具生态
+  memory:
+    name: 记忆与上下文
+    description: 长期记忆、上下文管理与会话状态
+  evaluation:
+    name: 评测与基准
+    description: 榜单、评测集与模型能力的测量方法
+  inference:
+    name: 推理与部署
+    description: 服务化、量化、加速与推理成本优化
+  fine_tuning:
+    name: 微调与后训练
+    description: SFT、RLHF、LoRA 等后训练方法
+  safety:
+    name: 安全与对齐
+    description: 对齐、越狱防护、内容安全与红队测试
+  observability:
+    name: 可观测性
+    description: 链路追踪、指标采集与线上效果监控
+  java_ai:
+    name: Java AI
+    description: Java 生态中的 AI 框架与集成
+  spring_ai:
+    name: Spring AI
+    description: Spring AI 项目的版本发布与工程实践
+  python_ai:
+    name: Python AI
+    description: Python 生态的 AI 库与工具链
+  ai_coding:
+    name: AI 编程
+    description: 代码助手、Agent 编程与研发流程变化
+  open_source:
+    name: 开源
+    description: 开源模型权重、工具与许可证动态
+  cloud_ai:
+    name: 云与平台
+    description: 云厂商 AI 平台与托管推理服务
+  funding:
+    name: 融资
+    description: 融资、估值与资本动向
+  enterprise:
+    name: 企业落地
+    description: 企业级采用、行业方案与商业化进展
+  regulation:
+    name: 政策与监管
+    description: 法规、合规要求与政府动作
+  chips:
+    name: 芯片与算力
+    description: 加速卡、算力供给与硬件供应链
+  research:
+    name: 研究论文
+    description: 学术论文与研究进展
+
 source_tiers:
   primary: "当事公司、官方文档、官方仓库、原始论文"
   authoritative_secondary: "有编辑责任和稳定署名的专业媒体"

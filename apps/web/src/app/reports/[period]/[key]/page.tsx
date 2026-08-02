@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { fetchDailyReport } from "@/lib/api";
+import { REPORT_PERIODS, fetchReport, formatPeriodKey, normalisePeriod } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,12 @@ function renderMarkdown(markdown: string) {
       );
     }
     if (line.startsWith("---")) {
-      return <hr key={key} style={{ border: 0, borderTop: "1px solid var(--border)", margin: "20px 0" }} />;
+      return (
+        <hr
+          key={key}
+          style={{ border: 0, borderTop: "1px solid var(--border)", margin: "20px 0" }}
+        />
+      );
     }
 
     const match = linkPattern.exec(line);
@@ -61,27 +66,38 @@ function renderMarkdown(markdown: string) {
   });
 }
 
-export default async function DailyReportPage({
+export default async function ReportPage({
   params,
 }: {
-  params: Promise<{ date: string }>;
+  params: Promise<{ period: string; key: string }>;
 }) {
-  const { date } = await params;
-  const report = await fetchDailyReport(date);
+  const raw = await params;
+  const period = normalisePeriod(raw.period);
 
+  // An unrecognised period would otherwise silently fall back to daily and show
+  // the wrong report under a URL that claims to be weekly.
+  if (raw.period !== period) {
+    notFound();
+  }
+
+  const report = await fetchReport(period, raw.key);
   if (!report) {
     notFound();
   }
 
+  const label = REPORT_PERIODS.find((entry) => entry.key === period)?.label ?? "报告";
+
   return (
     <>
       <p className="page-subtitle">
-        <Link href="/reports">← 返回日报列表</Link>
+        <Link href={period === "daily" ? "/reports" : `/reports?period=${period}`}>
+          ← 返回{label}列表
+        </Link>
       </p>
 
       <h1 className="page-title">{report.title}</h1>
       <p className="page-subtitle">
-        {report.itemCount} 条精选
+        {formatPeriodKey(period, report.date)} · {report.itemCount} 条精选
         {report.modelName ? ` · 总述由 ${report.modelName} 生成` : ""}
         {report.promptVersion ? ` · ${report.promptVersion}` : ""}
       </p>
@@ -89,7 +105,7 @@ export default async function DailyReportPage({
       <div className="detail-body">{renderMarkdown(report.bodyMarkdown)}</div>
 
       <div className="notice">
-        日报总述为 AI 生成内容，可能存在误差。每条目均链接到原始来源，事实请以原文为准。
+        {label}总述为 AI 生成内容，可能存在误差。每条目均链接到原始来源，事实请以原文为准。
       </div>
     </>
   );
