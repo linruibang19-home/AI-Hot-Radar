@@ -206,3 +206,83 @@ def test_unsupported_period_is_rejected() -> None:
 
     with _pytest.raises(ValueError):
         _period_range("quarterly", "2026-Q1")
+
+
+# --- persistence ----------------------------------------------------------
+
+
+class _RecordingCursor:
+    """Cursor stub that records statements instead of executing them.
+
+    Enough to check the shape of the SQL and its parameters without a database,
+    which keeps this test in the offline suite (AHR-QSO-700 §1).
+    """
+
+    def __init__(self, calls: list[tuple[str, tuple[object, ...]]]) -> None:
+        self.calls = calls
+
+    def __enter__(self) -> _RecordingCursor:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def execute(self, sql: str, params: tuple[object, ...] = ()) -> None:
+        self.calls.append((sql, params))
+
+    def fetchone(self) -> tuple[uuid.UUID]:
+        return (uuid.uuid4(),)
+
+
+class _RecordingConnection:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, tuple[object, ...]]] = []
+
+    def cursor(self) -> _RecordingCursor:
+        return _RecordingCursor(self.calls)
+
+    def commit(self) -> None:
+        return None
+
+
+def _saved_insert(period: str, key: str) -> tuple[str, tuple[object, ...]]:
+    from ahr.processing.report import DailyReport, save_report
+
+    report = DailyReport(
+        report_date=date(2026, 8, 1),
+        period_type=period,
+        period_key=key,
+        title=f"标题 · {key}",
+        summary="总述",
+        body_markdown="# 标题",
+        items=[item()],
+        model_name="deepseek-chat",
+    )
+    connection = _RecordingConnection()
+    save_report(connection, report)
+    return next(call for call in connection.calls if "INSERT INTO report " in call[0])
+
+
+@pytest.mark.parametrize(
+    ("period", "key"),
+    [("daily", "2026-08-01"), ("weekly", "2026-W31"), ("monthly", "2026-08")],
+)
+def test_insert_placeholders_match_parameters(period: str, key: str) -> None:
+    """A hardcoded 'daily' literal left one fewer placeholder than parameters.
+
+    psycopg only raises at execution time, so nothing caught it until a report
+    was actually generated against a live database.
+    """
+    sql, params = _saved_insert(period, key)
+    assert sql.count("%s") == len(params)
+
+
+@pytest.mark.parametrize(
+    ("period", "key"),
+    [("daily", "2026-08-01"), ("weekly", "2026-W31"), ("monthly", "2026-08")],
+)
+def test_period_type_is_stored_not_assumed(period: str, key: str) -> None:
+    """Every period must round-trip; a literal would file them all as daily."""
+    _, params = _saved_insert(period, key)
+    assert period in params
+    assert key in params

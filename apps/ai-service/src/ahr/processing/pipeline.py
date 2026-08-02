@@ -33,7 +33,13 @@ from ahr.processing.llm import (
     prompt_version,
 )
 from ahr.processing.schemas import EnrichmentResult
-from ahr.processing.topics import known_slugs, link_topics, load_taxonomy, seed_topics
+from ahr.processing.topics import (
+    known_slugs,
+    link_topics,
+    load_display,
+    load_taxonomy,
+    seed_topics,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -288,7 +294,7 @@ async def process_pending(
             # The controlled vocabulary is small and rarely changes, so seeding
             # it per run keeps topic pages consistent without a separate step.
             taxonomy = load_taxonomy()
-            seed_topics(connection, taxonomy)
+            seed_topics(connection, taxonomy, load_display())
             vocabulary = known_slugs(taxonomy)
             connection.commit()
 

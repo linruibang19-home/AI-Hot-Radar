@@ -272,6 +272,236 @@ a {
   margin-left: 5px;
 }
 
+/* Category / period tabs */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.tab {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tab:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tab-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.tab-count {
+  font-size: 11px;
+  margin-left: 6px;
+  opacity: 0.75;
+}
+
+.sort-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 18px;
+  font-size: 13px;
+}
+
+.sort-label {
+  color: var(--muted);
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.sort-option {
+  padding: 3px 10px;
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.sort-option:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.sort-option-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Hot list */
+.hot-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px 8px;
+  margin-bottom: 22px;
+}
+
+.hot-heading {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.hot-note {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 8px;
+}
+
+.hot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hot-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+
+.hot-row:first-child {
+  border-top: none;
+}
+
+.hot-rank {
+  flex-shrink: 0;
+  width: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: center;
+}
+
+.hot-rank-top {
+  color: #c2410c;
+}
+
+.hot-body {
+  min-width: 0;
+}
+
+.hot-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.hot-title:hover {
+  color: var(--accent);
+}
+
+.hot-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+/* Search / filter bar */
+.filter-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.filter-input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 280px;
+  max-width: 100%;
+  font-size: 14px;
+}
+
+.filter-clear {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.filter-clear:hover {
+  color: var(--accent);
+}
+
+/* Topic map */
+.topic-group {
+  margin-bottom: 26px;
+}
+
+.topic-group-desc {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.topic-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.topic-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.topic-card:hover {
+  border-color: var(--accent);
+}
+
+/* A topic the taxonomy defines but nothing has been tagged with yet. Shown
+   rather than hidden so the vocabulary's shape is visible, but visibly quieter. */
+.topic-card-empty {
+  opacity: 0.55;
+}
+
+.topic-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.topic-card-name {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.topic-card-count {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.topic-card-desc {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

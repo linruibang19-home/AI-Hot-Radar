@@ -1,0 +1,110 @@
+import { describe, expect, it } from "vitest";
+
+import { formatPeriodKey, groupByDay, groupReports, normalisePeriod } from "./api";
+
+import type { ContentItem, ReportSummary } from "./api";
+
+function report(date: string): ReportSummary {
+  return {
+    date,
+    title: `报告 ${date}`,
+    summary: "",
+    itemCount: 1,
+    generatedAt: "2026-08-02T00:00:00Z",
+  };
+}
+
+function item(id: string, publishedAt?: string): ContentItem {
+  return {
+    id,
+    title: id,
+    canonicalUrl: `https://example.com/${id}`,
+    publishedAt,
+    observedAt: "2026-08-02T09:00:00Z",
+    source: { id: "s", name: "Source", tier: "primary" },
+  };
+}
+
+describe("normalisePeriod", () => {
+  it("accepts the three supported periods", () => {
+    expect(normalisePeriod("weekly")).toBe("weekly");
+    expect(normalisePeriod("monthly")).toBe("monthly");
+    expect(normalisePeriod("daily")).toBe("daily");
+  });
+
+  it("falls back to daily for anything else", () => {
+    // The route uses this to decide whether a URL is valid, so an unknown value
+    // must land on a known period rather than reaching the API.
+    expect(normalisePeriod("quarterly")).toBe("daily");
+    expect(normalisePeriod(undefined)).toBe("daily");
+    expect(normalisePeriod("")).toBe("daily");
+  });
+});
+
+describe("formatPeriodKey", () => {
+  it("spells out a daily key", () => {
+    expect(formatPeriodKey("daily", "2026-08-01")).toBe("2026 年 8 月 1 日");
+  });
+
+  it("renders an ISO week as a week number", () => {
+    expect(formatPeriodKey("weekly", "2026-W31")).toBe("2026 年第 31 周");
+  });
+
+  it("renders a month key without a leading zero", () => {
+    expect(formatPeriodKey("monthly", "2026-08")).toBe("2026 年 8 月");
+  });
+
+  it("returns a malformed week key unchanged rather than inventing a date", () => {
+    expect(formatPeriodKey("weekly", "garbage")).toBe("garbage");
+  });
+});
+
+describe("groupReports", () => {
+  it("groups daily reports by month", () => {
+    const groups = groupReports("daily", [
+      report("2026-08-02"),
+      report("2026-08-01"),
+      report("2026-07-31"),
+    ]);
+    expect([...groups.keys()]).toEqual(["2026 年 8 月", "2026 年 7 月"]);
+    expect(groups.get("2026 年 8 月")).toHaveLength(2);
+  });
+
+  it("groups weekly reports by year, not by a month they do not have", () => {
+    // Slicing YYYY-MM out of "2026-W31" produced the heading "2026 年 W3 月".
+    const groups = groupReports("weekly", [report("2026-W31"), report("2026-W30")]);
+    expect([...groups.keys()]).toEqual(["2026 年"]);
+  });
+
+  it("groups monthly reports by year", () => {
+    const groups = groupReports("monthly", [report("2026-08"), report("2025-12")]);
+    expect([...groups.keys()]).toEqual(["2026 年", "2025 年"]);
+  });
+
+  it("preserves the order the API returned", () => {
+    const groups = groupReports("daily", [report("2026-08-02"), report("2026-08-01")]);
+    expect(groups.get("2026 年 8 月")?.map((r) => r.date)).toEqual([
+      "2026-08-02",
+      "2026-08-01",
+    ]);
+  });
+});
+
+describe("groupByDay", () => {
+  it("buckets items by publication day", () => {
+    const groups = groupByDay([
+      item("a", "2026-08-02T10:00:00Z"),
+      item("b", "2026-08-02T08:00:00Z"),
+      item("c", "2026-08-01T23:00:00Z"),
+    ]);
+    expect([...groups.keys()]).toEqual(["2026-08-02", "2026-08-01"]);
+    expect(groups.get("2026-08-02")).toHaveLength(2);
+  });
+
+  it("falls back to the observation time when publication is unknown", () => {
+    // Items without a publication date must still appear; dropping them would
+    // silently hide content that was ingested correctly.
+    const groups = groupByDay([item("a")]);
+    expect([...groups.keys()]).toEqual(["2026-08-02"]);
+  });
+});

@@ -109,8 +109,90 @@ export function fetchStats(): Promise<Stats> {
   });
 }
 
-export function fetchSelected(days = 7, limit = 40): Promise<SelectedItem[]> {
-  return getJson<SelectedItem[]>(`/api/v1/selected?days=${days}&limit=${limit}`, []);
+export type SelectionSort = "curated" | "latest" | "heat";
+
+export function fetchSelected(
+  days = 7,
+  limit = 40,
+  options: { contentType?: string; sort?: SelectionSort } = {},
+): Promise<SelectedItem[]> {
+  const query = new URLSearchParams({ days: String(days), limit: String(limit) });
+  if (options.contentType && options.contentType !== "all") {
+    query.set("contentType", options.contentType);
+  }
+  if (options.sort) query.set("sort", options.sort);
+  return getJson<SelectedItem[]>(`/api/v1/selected?${query}`, []);
+}
+
+export interface HotItem {
+  id: string;
+  title: string;
+  heat: number;
+  independentSources: number;
+  contentType?: string;
+  sourceName: string;
+}
+
+export function fetchHot(limit = 10): Promise<HotItem[]> {
+  return getJson<HotItem[]>(`/api/v1/hot?limit=${limit}`, []);
+}
+
+export interface CategoryTab {
+  key: string;
+  label: string;
+  total: number;
+}
+
+export function fetchCategories(): Promise<CategoryTab[]> {
+  return getJson<CategoryTab[]>("/api/v1/categories", []);
+}
+
+export interface TopicNode {
+  slug: string;
+  name: string;
+  description?: string | null;
+  group: boolean;
+  groupSlug: string;
+  groupName: string;
+  groupDescription?: string | null;
+  total: number;
+}
+
+export interface TopicGroup {
+  slug: string;
+  name: string;
+  description?: string | null;
+  total: number;
+  children: TopicNode[];
+}
+
+export async function fetchTopicMap(): Promise<TopicGroup[]> {
+  const nodes = await getJson<TopicNode[]>("/api/v1/topics/map", []);
+  const groups = new Map<string, TopicGroup>();
+
+  for (const node of nodes) {
+    let group = groups.get(node.groupSlug);
+    if (!group) {
+      group = {
+        slug: node.groupSlug,
+        name: node.groupName,
+        description: node.groupDescription,
+        total: 0,
+        children: [],
+      };
+      groups.set(node.groupSlug, group);
+    }
+    // The group's own row carries the heading, not a child chip: items tagged
+    // with the parent slug directly still count toward the group total.
+    if (node.group) {
+      group.total += node.total;
+    } else {
+      group.children.push(node);
+      group.total += node.total;
+    }
+  }
+
+  return [...groups.values()];
 }
 
 export interface SourceHealth {
@@ -148,12 +230,77 @@ export interface ReportDetail extends ReportSummary {
   promptVersion?: string | null;
 }
 
-export function fetchReports(limit = 30): Promise<ReportSummary[]> {
-  return getJson<ReportSummary[]>(`/api/v1/reports?limit=${limit}`, []);
+export type ReportPeriod = "daily" | "weekly" | "monthly";
+
+export const REPORT_PERIODS: { key: ReportPeriod; label: string; blurb: string }[] = [
+  { key: "daily", label: "日报", blurb: "当天精选的逐条速览" },
+  { key: "weekly", label: "周报", blurb: "一周之内反复出现的方向与变化" },
+  { key: "monthly", label: "月报", blurb: "一个月的格局判断与主线回顾" },
+];
+
+export function normalisePeriod(value?: string): ReportPeriod {
+  return value === "weekly" || value === "monthly" ? value : "daily";
 }
 
-export function fetchDailyReport(date: string): Promise<ReportDetail | null> {
-  return getJson<ReportDetail | null>(`/api/v1/reports/daily/${date}`, null);
+export function fetchReports(limit = 30, period: ReportPeriod = "daily"): Promise<ReportSummary[]> {
+  return getJson<ReportSummary[]>(`/api/v1/reports?period=${period}&limit=${limit}`, []);
+}
+
+export function fetchReport(
+  period: ReportPeriod,
+  key: string,
+): Promise<ReportDetail | null> {
+  return getJson<ReportDetail | null>(
+    `/api/v1/reports/${period}/${encodeURIComponent(key)}`,
+    null,
+  );
+}
+
+/**
+ * Label a period key for display.
+ *
+ * Weekly keys are ISO weeks (2026-W31), which readers cannot date at a glance,
+ * so the label spells out the month range instead of echoing the key.
+ */
+export function formatPeriodKey(period: ReportPeriod, key: string): string {
+  if (period === "monthly") {
+    const [year, month] = key.split("-");
+    return `${year} 年 ${Number(month)} 月`;
+  }
+  if (period === "weekly") {
+    const match = /^(\d{4})-W(\d{2})$/.exec(key);
+    if (!match) return key;
+    const [, year, week] = match;
+    return `${year} 年第 ${Number(week)} 周`;
+  }
+  const [year, month, day] = key.split("-");
+  return `${year} 年 ${Number(month)} 月 ${Number(day)} 日`;
+}
+
+/**
+ * Bucket an archive into headed sections.
+ *
+ * The bucket depends on the period. Daily reports group by month; weekly reports
+ * group by year, because an ISO week key carries no month and a week can span
+ * two of them; monthly reports group by year as well, since a month-per-section
+ * archive would be one entry per heading.
+ */
+export function groupReports(
+  period: ReportPeriod,
+  reports: ReportSummary[],
+): Map<string, ReportSummary[]> {
+  const groups = new Map<string, ReportSummary[]>();
+
+  for (const report of reports) {
+    const [year, month] = report.date.split("-");
+    const label =
+      period === "daily" && month ? `${year} 年 ${Number(month)} 月` : `${year} 年`;
+
+    const bucket = groups.get(label);
+    if (bucket) bucket.push(report);
+    else groups.set(label, [report]);
+  }
+  return groups;
 }
 
 export function fetchTopics(): Promise<TopicSummary[]> {

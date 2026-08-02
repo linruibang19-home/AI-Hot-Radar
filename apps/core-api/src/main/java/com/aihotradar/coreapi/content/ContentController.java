@@ -2,8 +2,11 @@ package com.aihotradar.coreapi.content;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import com.aihotradar.coreapi.cache.CacheConfig;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
@@ -61,12 +64,19 @@ public class ContentController {
     }
 
     @GetMapping("/selected")
-    @Cacheable(value = CacheConfig.SELECTED, key = "#days + ':' + #limit")
+    @Cacheable(
+            value = CacheConfig.SELECTED,
+            key = "#days + ':' + #limit + ':' + #contentType + ':' + #sort")
     public List<ContentRepository.SelectedItem> selected(
             @RequestParam(required = false, defaultValue = "7") int days,
-            @RequestParam(required = false, defaultValue = "40") int limit) {
+            @RequestParam(required = false, defaultValue = "40") int limit,
+            @RequestParam(required = false) String contentType,
+            @RequestParam(required = false, defaultValue = "curated") String sort) {
         return repository.findSelected(
-                Math.min(Math.max(days, 1), 30), Math.min(Math.max(limit, 1), 100));
+                Math.min(Math.max(days, 1), 30),
+                Math.min(Math.max(limit, 1), 100),
+                contentType,
+                sort);
     }
 
     @GetMapping("/items/{id}/topics")
@@ -81,16 +91,47 @@ public class ContentController {
         return repository.findHot(Math.min(Math.max(limit, 1), 30));
     }
 
+    /**
+     * Category tabs with their item counts.
+     *
+     * <p>Aggregation happens here rather than in the client so the tab-to-type
+     * mapping lives in exactly one place; the web tier only renders what it is
+     * given. Tabs are always returned, including empty ones, so the navigation
+     * does not change shape as content arrives.
+     */
     @GetMapping("/categories")
     @Cacheable(CacheConfig.TOPICS)
-    public List<ContentRepository.CategoryCount> categories() {
-        return repository.categoryCounts();
+    public List<CategoryTab> categories() {
+        Map<String, Long> byTab = new LinkedHashMap<>();
+        long total = 0;
+        for (ContentRepository.CategoryCount row : repository.categoryCounts()) {
+            String tab = ContentCategory.tabFor(row.contentType());
+            total += row.total();
+            if (tab != null) {
+                byTab.merge(tab, row.total(), Long::sum);
+            }
+        }
+
+        List<CategoryTab> tabs = new ArrayList<>();
+        tabs.add(new CategoryTab("all", "全部", total));
+        for (String key : ContentCategory.tabKeys()) {
+            tabs.add(new CategoryTab(key, ContentCategory.label(key), byTab.getOrDefault(key, 0L)));
+        }
+        return tabs;
     }
+
+    public record CategoryTab(String key, String label, long total) {}
 
     @GetMapping("/topics")
     @Cacheable(CacheConfig.TOPICS)
     public List<ContentRepository.TopicSummary> topics() {
         return repository.listTopics();
+    }
+
+    @GetMapping("/topics/map")
+    @Cacheable(value = CacheConfig.TOPICS, key = "'map'")
+    public List<ContentRepository.TopicNode> topicMap() {
+        return repository.topicMap();
     }
 
     @GetMapping("/topics/{slug}")

@@ -14,7 +14,7 @@ import ipaddress
 import socket
 from urllib.parse import urlsplit
 
-from ahr.ingestion.errors import SsrfBlockedError
+from ahr.ingestion.errors import SsrfBlockedError, TransientError
 
 ALLOWED_SCHEMES = frozenset({"https", "http"})
 
@@ -52,7 +52,12 @@ def resolve_and_validate(url: str, *, allow_http: bool = False) -> list[str]:
     try:
         infos = socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80))
     except socket.gaierror as exc:
-        raise SsrfBlockedError(f"dns resolution failed for {host}: {exc}") from exc
+        # Transient, not a policy block. A failed lookup means nothing was
+        # contacted, so the guard has made no security finding — and
+        # SsrfBlockedError is not retryable, so classifying it that way let a
+        # momentary DNS hiccup permanently quarantine first-party sources
+        # (api.github.com, arxiv.org and eight others were lost this way).
+        raise TransientError(f"dns resolution failed for {host}: {exc}") from exc
 
     addresses: list[str] = []
     for info in infos:

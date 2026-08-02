@@ -49,29 +49,41 @@ python scripts/validate_spec.py
 
 校验 140 个信源、profile 引用完整性，以及 `verification: restricted` 的来源确实默认关闭。
 
-## 6. 单独运行各服务
+## 6. 运行测试
 
-**ai-service**
+三套测试都能在 Docker 里跑，不依赖本机装了什么运行时。
 
-```bash
-cd apps/ai-service && pip install -e ".[dev]" && pytest -q
-```
-
-**core-api**
+**ai-service（213 个用例）**——`--network none` 是刻意的：AHR-QSO-700 §1 要求测试回放 fixture 而不是访问真实站点，断网是唯一能证明这一点的方式。
 
 ```bash
-cd apps/core-api && mvn test
+docker build --target test -t ahr-test apps/ai-service
 ```
 
-本地跑 Maven 需要 JDK 21（ADR-002）。当前机器上是 JDK 17，用 Docker 构建不受影响。
+```bash
+docker run --rm --network none -v "$PWD/config:/app/config:ro" ahr-test
+```
 
-**web**
+**core-api（22 个用例）**——本机是 JDK 17，而 ADR-002 锁定 JDK 21，所以用镜像里的 JDK 跑：
+
+```bash
+docker run --rm -v "$PWD:/repo" -w /repo/apps/core-api maven:3.9-eclipse-temurin-21 mvn -B test
+```
+
+**web（12 个用例 + 类型检查）**
+
+```bash
+docker run --rm -v "$PWD/apps/web:/app" -w /app node:22-slim sh -c "npm ci && npx vitest run && npx tsc --noEmit"
+```
+
+本机若已装好对应运行时，也可以直接 `cd apps/ai-service && pip install -e ".[dev]" && pytest -q`、`cd apps/core-api && mvn test`、`cd apps/web && npm test`。
+
+## 7. 单独运行各服务
 
 ```bash
 cd apps/web && npm install && npm run dev
 ```
 
-## 7. 停止与清理
+## 8. 停止与清理
 
 ```bash
 docker compose -f infra/compose/docker-compose.yml down

@@ -43,4 +43,35 @@ public final class ContentCategory {
     public static List<String> tabKeys() {
         return List.of("model", "product", "industry", "paper", "tutorial", "opinion");
     }
+
+    private static final Map<String, String> LABELS =
+            Map.of(
+                    "model", "模型",
+                    "product", "产品",
+                    "industry", "行业",
+                    "paper", "论文",
+                    "tutorial", "教程",
+                    "opinion", "观点");
+
+    public static String label(String tab) {
+        return LABELS.getOrDefault(tab, tab);
+    }
+
+    /**
+     * The tab a stored content type belongs to, or null if none claims it.
+     *
+     * <p>Derived from {@link #TABS} rather than written out a second time: a type
+     * added to a tab must not need a matching edit here to be counted.
+     */
+    public static String tabFor(String contentType) {
+        if (contentType == null) {
+            return null;
+        }
+        for (Map.Entry<String, List<String>> entry : TABS.entrySet()) {
+            if (entry.getValue().contains(contentType)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
 }

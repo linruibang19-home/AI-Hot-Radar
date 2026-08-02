@@ -151,30 +151,48 @@ public class ContentRepository {
      * shows exactly the decision that was recorded and can explain it
      * (AHR-PRD-100 §4 requires the contributing factors to be visible).
      */
-    public List<SelectedItem> findSelected(int days, int limit) {
-        String sql =
-                """
-                SELECT ci.id, ci.title, ci.zh_title, ci.summary_zh, cr.excerpt,
-                       ci.canonical_url, ci.published_at, ci.observed_at,
-                       ci.content_type, ci.quality_score,
-                       s.id AS source_id, s.name AS source_name,
-                       s.source_tier, s.organization,
-                       sr.selected_for_date, sr.score AS selection_score, sr.reason
-                  FROM selection_record sr
-                  JOIN content_item ci ON ci.id = sr.content_item_id
-                  JOIN source s ON s.id = ci.source_id
-                  LEFT JOIN content_revision cr ON cr.id = ci.current_revision_id
-                 WHERE sr.withdrawn_at IS NULL
-                   AND ci.duplicate_of_id IS NULL
-                   AND sr.selected_for_date > current_date - CAST(:days AS integer)
-                 ORDER BY sr.selected_for_date DESC, sr.score DESC
-                 LIMIT :limit
-                """;
+    public List<SelectedItem> findSelected(int days, int limit, String contentType, String sort) {
+        StringBuilder sql =
+                new StringBuilder(
+                        """
+                        SELECT ci.id, ci.title, ci.zh_title, ci.summary_zh, cr.excerpt,
+                               ci.canonical_url, ci.published_at, ci.observed_at,
+                               ci.content_type, ci.quality_score,
+                               s.id AS source_id, s.name AS source_name,
+                               s.source_tier, s.organization,
+                               sr.selected_for_date, sr.score AS selection_score, sr.reason
+                          FROM selection_record sr
+                          JOIN content_item ci ON ci.id = sr.content_item_id
+                          JOIN source s ON s.id = ci.source_id
+                          LEFT JOIN content_revision cr ON cr.id = ci.current_revision_id
+                         WHERE sr.withdrawn_at IS NULL
+                           AND ci.duplicate_of_id IS NULL
+                           AND sr.selected_for_date > current_date - CAST(:days AS integer)
+                        """);
         MapSqlParameterSource params =
                 new MapSqlParameterSource().addValue("days", days).addValue("limit", limit);
 
+        if (contentType != null && !contentType.isBlank()) {
+            List<String> types = ContentCategory.resolve(contentType);
+            if (!types.isEmpty()) {
+                sql.append(" AND ci.content_type IN (:contentTypes)");
+                params.addValue("contentTypes", types);
+            }
+        }
+
+        // "latest" orders by publication rather than by the day the editor picked
+        // it: a piece selected today may have been published yesterday, and the
+        // time-ordered view has to reflect the article's own timeline.
+        sql.append(
+                "heat".equals(sort)
+                        ? " ORDER BY ci.hot_score DESC NULLS LAST, sr.score DESC"
+                        : "latest".equals(sort)
+                                ? " ORDER BY COALESCE(ci.published_at, ci.observed_at) DESC"
+                                : " ORDER BY sr.selected_for_date DESC, sr.score DESC");
+        sql.append(" LIMIT :limit");
+
         return jdbc.query(
-                sql,
+                sql.toString(),
                 params,
                 (rs, rowNum) ->
                         new SelectedItem(
@@ -221,6 +239,52 @@ public class ContentRepository {
                 (rs, rowNum) ->
                         new TopicSummary(
                                 rs.getString("slug"), rs.getString("name"), rs.getLong("total")));
+    }
+
+    /**
+     * The topic map: every vocabulary entry with its group, description and count.
+     *
+     * <p>Unlike {@link #listTopics()} this keeps zero-count topics. The map is
+     * meant to show the shape of the controlled vocabulary — a topic with no
+     * coverage yet is itself information, and hiding it would make the taxonomy
+     * look like it changes size as content arrives.
+     */
+    public List<TopicNode> topicMap() {
+        String sql =
+                """
+                SELECT t.slug, t.name, t.description, t.display_order,
+                       t.parent_id IS NULL AS is_group,
+                       COALESCE(g.slug, t.slug) AS group_slug,
+                       COALESCE(g.name, t.name) AS group_name,
+                       -- A group row has no parent to read the blurb from, so it
+                       -- supplies its own; otherwise the heading loses its text
+                       -- because the group is always the first row of its block.
+                       CASE WHEN t.parent_id IS NULL THEN t.description
+                            ELSE g.description END AS group_description,
+                       COALESCE(g.display_order, t.display_order) AS group_order,
+                       count(it.content_item_id) AS total
+                  FROM topic t
+                  LEFT JOIN topic g ON g.id = t.parent_id
+                  LEFT JOIN item_topic it ON it.topic_id = t.id
+                  LEFT JOIN content_item ci
+                         ON ci.id = it.content_item_id AND ci.duplicate_of_id IS NULL
+                 GROUP BY t.slug, t.name, t.description, t.display_order,
+                          t.parent_id, g.slug, g.name, g.description, g.display_order
+                 ORDER BY group_order, is_group DESC, t.display_order, t.slug
+                """;
+        return jdbc.query(
+                sql,
+                new MapSqlParameterSource(),
+                (rs, rowNum) ->
+                        new TopicNode(
+                                rs.getString("slug"),
+                                rs.getString("name"),
+                                rs.getString("description"),
+                                rs.getBoolean("is_group"),
+                                rs.getString("group_slug"),
+                                rs.getString("group_name"),
+                                rs.getString("group_description"),
+                                rs.getLong("total")));
     }
 
     public List<ContentItem> findByTopic(String slug, int limit) {
@@ -324,6 +388,17 @@ public class ContentRepository {
     public record TopicRef(String slug, String name, Double confidence) {}
 
     public record TopicSummary(String slug, String name, long total) {}
+
+    /** One entry of the topic map, carrying the group it belongs to. */
+    public record TopicNode(
+            String slug,
+            String name,
+            String description,
+            boolean group,
+            String groupSlug,
+            String groupName,
+            String groupDescription,
+            long total) {}
 
     public record HotItem(
             String id,

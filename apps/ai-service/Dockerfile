@@ -13,6 +13,22 @@ RUN pip install --no-cache-dir .
 
 COPY tests ./tests
 
+# Test stage, not built by default. Exists so the suite runs on the same Python
+# and dependency set as production, and so `--network none` can be enforced:
+# AHR-QSO-700 §1 requires the suite to replay fixtures rather than contact live
+# sites, and the only way to prove that is to remove the network.
+#
+# config/ is mounted rather than copied, matching how compose supplies it — the
+# build context is apps/ai-service, so the repo-root config is out of reach here.
+#
+#   docker build --target test -t ahr-test apps/ai-service
+#   docker run --rm --network none -v "$PWD/config:/app/config:ro" ahr-test
+FROM base AS test
+RUN pip install --no-cache-dir ".[dev]"
+CMD ["python", "-m", "pytest", "tests", "-q"]
+
+FROM base AS runtime
+
 # Run as a non-root user: this service fetches untrusted remote content.
 RUN useradd --create-home --uid 10001 appuser && chown -R appuser:appuser /app
 USER appuser

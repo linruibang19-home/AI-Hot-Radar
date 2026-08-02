@@ -91,6 +91,34 @@ def load_taxonomy(path: str | Path = DEFAULT_TAXONOMY_PATH) -> dict[str, list[st
     return topics
 
 
+def load_display(path: str | Path = DEFAULT_TAXONOMY_PATH) -> dict[str, dict[str, Any]]:
+    """Read the presentation metadata for the topic map.
+
+    Optional by design: `topics` alone is enough to normalise labels, so a
+    taxonomy without this section still seeds correctly, just with slug-derived
+    names.
+    """
+    with Path(path).open(encoding="utf-8") as handle:
+        document = yaml.safe_load(handle)
+    return {
+        "groups": document.get("topic_groups", {}) or {},
+        "topics": document.get("topic_display", {}) or {},
+    }
+
+
+def display_name(slug: str, display: dict[str, dict[str, Any]]) -> str:
+    """Human-facing name, falling back to a titlecased slug.
+
+    The fallback is deliberately kept: a slug added to `topics` without a display
+    entry should still appear on the site rather than vanish.
+    """
+    entry = display.get("topics", {}).get(slug) or {}
+    name = entry.get("name")
+    if isinstance(name, str) and name.strip():
+        return name.strip()
+    return slug.replace("_", " ").title()
+
+
 def known_slugs(taxonomy: dict[str, list[str]]) -> set[str]:
     slugs = set(taxonomy.keys())
     for children in taxonomy.values():
@@ -114,35 +142,74 @@ def resolve(raw: str, vocabulary: set[str]) -> str | None:
     return None
 
 
-def seed_topics(connection: Any, taxonomy: dict[str, list[str]]) -> int:
-    """Insert the taxonomy into the topic table, parents before children."""
+def seed_topics(
+    connection: Any,
+    taxonomy: dict[str, list[str]],
+    display: dict[str, dict[str, Any]] | None = None,
+) -> int:
+    """Insert the taxonomy into the topic table, parents before children.
+
+    Re-running this is the only way display metadata reaches the database, so
+    every column it owns is refreshed on conflict. Editing a name in
+    `taxonomy.yaml` and re-seeding must actually change the site.
+    """
+    meta = display or {"groups": {}, "topics": {}}
+    groups = meta.get("groups", {})
     written = 0
+
     with connection.cursor() as cursor:
         for parent_slug, children in taxonomy.items():
+            group = groups.get(parent_slug) or {}
+            group_order = int(group.get("order", 100))
+
             cursor.execute(
                 """
-                INSERT INTO topic (id, slug, name, parent_id)
-                VALUES (%s, %s, %s, NULL)
-                ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
+                INSERT INTO topic (id, slug, name, parent_id, description,
+                                   display_group, display_order)
+                VALUES (%s, %s, %s, NULL, %s, %s, %s)
+                ON CONFLICT (slug) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    display_group = EXCLUDED.display_group,
+                    display_order = EXCLUDED.display_order
                 RETURNING id
                 """,
-                (uuid.uuid4(), parent_slug, parent_slug.replace("_", " ").title()),
+                (
+                    uuid.uuid4(),
+                    parent_slug,
+                    group.get("label") or display_name(parent_slug, meta),
+                    group.get("description"),
+                    parent_slug,
+                    group_order,
+                ),
             )
             parent_id = cursor.fetchone()[0]
             written += 1
 
-            for child_slug in children:
+            for index, child_slug in enumerate(children):
+                entry = meta.get("topics", {}).get(child_slug) or {}
                 cursor.execute(
                     """
-                    INSERT INTO topic (id, slug, name, parent_id)
-                    VALUES (%s, %s, %s, %s)
-                    ON CONFLICT (slug) DO UPDATE SET parent_id = EXCLUDED.parent_id
+                    INSERT INTO topic (id, slug, name, parent_id, description,
+                                       display_group, display_order)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (slug) DO UPDATE SET
+                        name = EXCLUDED.name,
+                        parent_id = EXCLUDED.parent_id,
+                        description = EXCLUDED.description,
+                        display_group = EXCLUDED.display_group,
+                        display_order = EXCLUDED.display_order
                     """,
                     (
                         uuid.uuid4(),
                         child_slug,
-                        child_slug.replace("_", " ").title(),
+                        display_name(child_slug, meta),
                         parent_id,
+                        entry.get("description"),
+                        parent_slug,
+                        # Keep the taxonomy's own ordering rather than sorting by
+                        # item count: the map should read the same every visit.
+                        group_order * 100 + index,
                     ),
                 )
                 written += 1
