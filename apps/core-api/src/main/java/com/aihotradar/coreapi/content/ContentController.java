@@ -74,6 +74,19 @@ public class ContentController {
         return repository.findTopics(id);
     }
 
+    @GetMapping("/hot")
+    @Cacheable(value = CacheConfig.SELECTED, key = "'hot:' + #limit")
+    public List<ContentRepository.HotItem> hot(
+            @RequestParam(required = false, defaultValue = "10") int limit) {
+        return repository.findHot(Math.min(Math.max(limit, 1), 30));
+    }
+
+    @GetMapping("/categories")
+    @Cacheable(CacheConfig.TOPICS)
+    public List<ContentRepository.CategoryCount> categories() {
+        return repository.categoryCounts();
+    }
+
     @GetMapping("/topics")
     @Cacheable(CacheConfig.TOPICS)
     public List<ContentRepository.TopicSummary> topics() {

@@ -15,12 +15,17 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from ahr.processing.llm import LlmClient, LlmUnavailableError
 
-REPORT_PROMPT_VERSION = "report-v1"
+REPORT_PROMPT_VERSION = "report-v2"
+
+# Weekly and monthly digests reuse the daily pipeline; only the window and the
+# prompt emphasis change, so the rendering and provenance paths stay identical
+# and web/email/RSS cannot drift apart (AHR-FEAT-105).
+PERIOD_LABELS = {"daily": "日报", "weekly": "周报", "monthly": "月报"}
 
 SECTION_ORDER = [
     ("model_release", "模型发布"),
@@ -35,13 +40,29 @@ SECTION_ORDER = [
     ("opinion", "观点"),
 ]
 
-SUMMARY_SYSTEM_PROMPT = """你是 AI 行业日报编辑。根据给定的当日精选条目，写一段中文总述。
+SUMMARY_PROMPTS = {
+    "daily": """你是 AI 行业日报编辑。根据给定的当日精选条目，写一段中文总述。
 
 要求：
 1. 3-5 句，先说当天最重要的变化，再说次要趋势。
 2. 只能使用给定条目中的事实，禁止补充任何未提供的信息。
 3. 不要罗列全部条目，抓主线。
-4. 只输出总述正文，不要标题、不要 markdown、不要编号。"""
+4. 只输出总述正文，不要标题、不要 markdown、不要编号。""",
+    "weekly": """你是 AI 行业周报主编。根据给定的本周精选条目，写一段中文总述。
+
+要求：
+1. 4-6 句。周报关注的是**趋势**而非单个事件：哪条主线在推进、哪些厂商在同一方向上动作。
+2. 如果多条内容指向同一变化，合并成一句话说清楚，不要重复罗列。
+3. 只能使用给定条目中的事实，禁止补充任何未提供的信息。
+4. 只输出总述正文，不要标题、不要 markdown、不要编号。""",
+    "monthly": """你是 AI 行业月报主编。根据给定的本月精选条目，写一段中文总述。
+
+要求：
+1. 5-8 句。月报关注**格局变化**：能力边界推到了哪里、竞争态势有何变化、哪些方向开始收敛或分化。
+2. 必须给出至少一个跨条目的归纳判断，而不是事件流水账。
+3. 只能使用给定条目中的事实，禁止补充任何未提供的信息，不确定的地方要说明是趋势推测。
+4. 只输出总述正文，不要标题、不要 markdown、不要编号。""",
+}
 
 
 @dataclass
@@ -58,6 +79,8 @@ class ReportItem:
 @dataclass
 class DailyReport:
     report_date: date
+    period_type: str
+    period_key: str
     title: str
     summary: str
     body_markdown: str
@@ -65,7 +88,35 @@ class DailyReport:
     model_name: str | None
 
 
-def _load_selected(connection: Any, report_date: date) -> list[ReportItem]:
+def _period_range(period: str, key: str) -> tuple[date, date, str]:
+    """Return (start, end_inclusive, title_suffix) for a report period.
+
+    Weekly keys are ISO weeks (2026-W31) so the boundary is unambiguous across
+    locales; monthly keys are 2026-08.
+    """
+    if period == "daily":
+        day = date.fromisoformat(key)
+        return day, day, key
+    if period == "weekly":
+        year_text, week_text = key.split("-W")
+        # ISO weeks so the boundary is unambiguous: week 1 is the one holding
+        # the first Thursday, and day 1 is Monday.
+        start = date.fromisocalendar(int(year_text), int(week_text), 1)
+        return start, start + timedelta(days=6), f"{start.isoformat()} 起当周"
+    if period == "monthly":
+        year_text, month_text = key.split("-")
+        year, month = int(year_text), int(month_text)
+        start = date(year, month, 1)
+        # First day of the following month, minus one day. Rolling December
+        # into January of the next year is the only wrap case.
+        next_year = year + 1 if month == 12 else year
+        next_month = 1 if month == 12 else month + 1
+        end = date(next_year, next_month, 1) - timedelta(days=1)
+        return start, end, f"{year} 年 {month} 月"
+    raise ValueError(f"unsupported period: {period}")
+
+
+def _load_selected(connection: Any, start: date, end: date) -> list[ReportItem]:
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -79,12 +130,12 @@ def _load_selected(connection: Any, report_date: date) -> list[ReportItem]:
               FROM selection_record sr
               JOIN content_item ci ON ci.id = sr.content_item_id
               JOIN source s ON s.id = ci.source_id
-             WHERE sr.selected_for_date = %s
+             WHERE sr.selected_for_date BETWEEN %s AND %s
                AND sr.withdrawn_at IS NULL
                AND ci.duplicate_of_id IS NULL
              ORDER BY sr.score DESC
             """,
-            (report_date,),
+            (start, end),
         )
         rows = cursor.fetchall()
 
@@ -118,10 +169,8 @@ def _group_by_section(items: list[ReportItem]) -> list[tuple[str, list[ReportIte
     return ordered
 
 
-def render_markdown(
-    report_date: date, summary: str, sections: list[tuple[str, list[ReportItem]]]
-) -> str:
-    lines = [f"# AI Hot Radar 日报 · {report_date.isoformat()}", ""]
+def render_markdown(title: str, summary: str, sections: list[tuple[str, list[ReportItem]]]) -> str:
+    lines = [f"# {title}", ""]
     if summary:
         lines += [summary, ""]
 
@@ -142,11 +191,12 @@ def render_markdown(
     return "\n".join(lines)
 
 
-async def build_daily_report(
-    connection: Any, report_date: date, *, client: LlmClient | None = None
+async def build_report(
+    connection: Any, period: str, key: str, *, client: LlmClient | None = None
 ) -> DailyReport | None:
-    """Build the report for one day, or None when nothing was selected."""
-    items = _load_selected(connection, report_date)
+    """Build a daily, weekly or monthly report, or None when nothing was selected."""
+    start, end, label = _period_range(period, key)
+    items = _load_selected(connection, start, end)
     if not items:
         return None
 
@@ -155,15 +205,19 @@ async def build_daily_report(
     summary = ""
     model_name: str | None = None
     if client is not None:
+        # A month can hold hundreds of items; sending them all would blow the
+        # context and the budget, so the digest is capped and the highest-scoring
+        # items come first.
+        digest_limit = {"daily": 20, "weekly": 40, "monthly": 60}[period]
         digest = "\n".join(
             f"- [{item.content_type or 'other'}] {item.title}（{item.source_name}）"
             f"{'：' + item.summary[:120] if item.summary else ''}"
-            for item in items[:20]
+            for item in items[:digest_limit]
         )
         try:
             raw, _usage = await client.summarize(
-                system_prompt=SUMMARY_SYSTEM_PROMPT,
-                user_prompt=f"日期：{report_date.isoformat()}\n\n当日精选条目：\n{digest}",
+                system_prompt=SUMMARY_PROMPTS[period],
+                user_prompt=f"周期：{label}\n\n该周期精选条目：\n{digest}",
             )
             summary = raw.strip()
             model_name = client.model_name
@@ -172,15 +226,16 @@ async def build_daily_report(
             summary = ""
 
     if not summary:
-        summary = (
-            f"{report_date.isoformat()} 共精选 {len(items)} 条内容，覆盖 {len(sections)} 个类别。"
-        )
+        summary = f"{label} 共精选 {len(items)} 条内容，覆盖 {len(sections)} 个类别。"
 
+    title = f"AI Hot Radar {PERIOD_LABELS[period]} · {key}"
     return DailyReport(
-        report_date=report_date,
-        title=f"AI Hot Radar 日报 · {report_date.isoformat()}",
+        report_date=start,
+        period_type=period,
+        period_key=key,
+        title=title,
         summary=summary,
-        body_markdown=render_markdown(report_date, summary, sections),
+        body_markdown=render_markdown(title, summary, sections),
         items=items,
         model_name=model_name,
     )
@@ -209,7 +264,8 @@ def save_report(connection: Any, report: DailyReport) -> uuid.UUID:
             """,
             (
                 report_id,
-                report.report_date.isoformat(),
+                report.period_type,
+                report.period_key,
                 report.title,
                 report.summary,
                 report.body_markdown,

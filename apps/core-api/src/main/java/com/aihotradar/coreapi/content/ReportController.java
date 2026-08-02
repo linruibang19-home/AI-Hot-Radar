@@ -29,18 +29,21 @@ public class ReportController {
 
     @GetMapping
     public List<ReportSummary> list(
+            @RequestParam(required = false, defaultValue = "daily") String period,
             @RequestParam(required = false, defaultValue = "30") int limit) {
         String sql =
                 """
                 SELECT period_key, title, summary, item_count, generated_at, model_name
                   FROM report
-                 WHERE period_type = 'daily'
+                 WHERE period_type = :period
                  ORDER BY period_key DESC
                  LIMIT :limit
                 """;
         return jdbc.query(
                 sql,
-                new MapSqlParameterSource("limit", Math.min(Math.max(limit, 1), 90)),
+                new MapSqlParameterSource()
+                        .addValue("period", normalisePeriod(period))
+                        .addValue("limit", Math.min(Math.max(limit, 1), 90)),
                 (rs, rowNum) ->
                         new ReportSummary(
                                 rs.getString("period_key"),
@@ -51,19 +54,22 @@ public class ReportController {
                                 rs.getString("model_name")));
     }
 
-    @GetMapping("/daily/{date}")
-    public ResponseEntity<ReportDetail> daily(@PathVariable String date) {
+    @GetMapping("/{period}/{key}")
+    public ResponseEntity<ReportDetail> detail(
+            @PathVariable String period, @PathVariable String key) {
         String sql =
                 """
                 SELECT period_key, title, summary, body_markdown, item_count,
                        generated_at, model_name, prompt_version
                   FROM report
-                 WHERE period_type = 'daily' AND period_key = :date
+                 WHERE period_type = :period AND period_key = :key
                 """;
         List<ReportDetail> rows =
                 jdbc.query(
                         sql,
-                        new MapSqlParameterSource("date", date),
+                        new MapSqlParameterSource()
+                                .addValue("period", normalisePeriod(period))
+                                .addValue("key", key),
                         (rs, rowNum) ->
                                 new ReportDetail(
                                         rs.getString("period_key"),
@@ -77,6 +83,21 @@ public class ReportController {
 
         return rows.stream().findFirst().map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Reject unknown period values rather than passing them to SQL.
+     *
+     * <p>The parameter is bound, so this is not an injection guard; it keeps an
+     * arbitrary string from silently returning an empty list, which would look
+     * like "no reports" instead of "wrong URL".
+     */
+    private static String normalisePeriod(String period) {
+        return switch (period == null ? "" : period.toLowerCase()) {
+            case "weekly" -> "weekly";
+            case "monthly" -> "monthly";
+            default -> "daily";
+        };
     }
 
     public record ReportSummary(

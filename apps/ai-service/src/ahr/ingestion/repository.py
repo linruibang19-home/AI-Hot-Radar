@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from ahr.ingestion.fulltext_gate import Decision, GateResult
@@ -28,6 +28,31 @@ from ahr.ingestion.models import DiscoveredDocument, SourceConfig, SourceCursor
 from ahr.ingestion.urls import canonicalize_url, content_hash, url_hash
 
 EXTRACTION_VERSION = "trafilatura-2.2.0/ahr-1"
+
+# Clock skew between us and a publisher is minutes, not days. OpenAlex returns
+# expected-publication dates decades out (2045 was observed), and a future
+# published_at pins an item to the top of every time-ordered view forever.
+# AHR-INGEST-1000 §5 forbids fabricating a publication date, so an implausible
+# one is discarded rather than clamped to now: observed_at still records when we
+# actually saw it.
+PUBLISHED_AT_FUTURE_GRACE = timedelta(hours=6)
+
+
+def sanitize_published_at(
+    value: datetime | None, *, now: datetime | None = None
+) -> datetime | None:
+    """Drop publication dates that cannot be real."""
+    if value is None:
+        return None
+    reference = now or datetime.now(UTC)
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    if value > reference + PUBLISHED_AT_FUTURE_GRACE:
+        return None
+    # A date before the web existed is equally a parsing artefact.
+    if value.year < 1990:
+        return None
+    return value
 
 
 @dataclass
@@ -192,7 +217,7 @@ def persist_document(
                 _item_type(source),
                 None,
                 (item.title_hint or canonical)[:500],
-                item.published_at_hint,
+                sanitize_published_at(item.published_at_hint, now=now),
                 now,
                 "PARSED" if gate.accepted else "DISCOVERED",
                 "excerpt_link",

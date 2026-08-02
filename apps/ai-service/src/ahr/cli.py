@@ -145,13 +145,51 @@ def cmd_usage(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_heat(args: argparse.Namespace) -> int:
+    from ahr.processing.heat import rescore
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        print(json.dumps(rescore(connection, days=args.days), indent=2))
+    return 0
+
+
+def cmd_reasons(args: argparse.Namespace) -> int:
+    from ahr.processing.llm import LlmUnavailableError, build_client_from_env
+    from ahr.processing.recommendation import backfill_reasons
+
+    async def run() -> dict[str, int]:
+        try:
+            client = build_client_from_env()
+        except LlmUnavailableError as exc:
+            return {"error": str(exc)}  # type: ignore[dict-item]
+        async with client:
+            with psycopg.connect(get_settings().database_url) as connection:
+                return await backfill_reasons(
+                    connection, limit=args.limit, client=client, force=args.force
+                )
+
+    print(json.dumps(asyncio.run(run()), indent=2, ensure_ascii=False))
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     from datetime import date, timedelta
 
     from ahr.processing.llm import LlmUnavailableError, build_client_from_env
-    from ahr.processing.report import build_daily_report, save_report
+    from ahr.processing.report import build_report, save_report
 
-    target = date.fromisoformat(args.date) if args.date else date.today() - timedelta(days=1)
+    period = args.period
+    if args.date:
+        key = args.date
+    else:
+        anchor = date.today() - timedelta(days=1)
+        if period == "daily":
+            key = anchor.isoformat()
+        elif period == "weekly":
+            iso = anchor.isocalendar()
+            key = f"{iso.year}-W{iso.week:02d}"
+        else:
+            key = f"{anchor.year}-{anchor.month:02d}"
 
     async def run() -> dict[str, object]:
         client = None
@@ -163,14 +201,15 @@ def cmd_report(args: argparse.Namespace) -> int:
                 client = None
         try:
             with psycopg.connect(get_settings().database_url) as connection:
-                report = await build_daily_report(connection, target, client=client)
+                report = await build_report(connection, period, key, client=client)
                 if report is None:
-                    return {"date": target.isoformat(), "status": "no_selected_items"}
+                    return {"period": period, "key": key, "status": "no_selected_items"}
                 report_id = save_report(connection, report)
                 if args.output:
                     Path(args.output).write_text(report.body_markdown, encoding="utf-8")
                 return {
-                    "date": target.isoformat(),
+                    "period": period,
+                    "key": key,
                     "report_id": str(report_id),
                     "items": len(report.items),
                     "model": report.model_name,
@@ -318,8 +357,18 @@ def main(argv: list[str] | None = None) -> int:
     usage.add_argument("--days", type=int, default=30)
     usage.set_defaults(func=cmd_usage)
 
-    report = sub.add_parser("report", help="generate the daily report from the shortlist")
-    report.add_argument("--date", default=None, help="YYYY-MM-DD, defaults to yesterday")
+    heat = sub.add_parser("heat", help="recompute hot_score for recent content")
+    heat.add_argument("--days", type=int, default=7)
+    heat.set_defaults(func=cmd_heat)
+
+    reasons = sub.add_parser("reasons", help="write LLM recommendation reasons for selections")
+    reasons.add_argument("--limit", type=int, default=40)
+    reasons.add_argument("--force", action="store_true", help="rewrite even if already generated")
+    reasons.set_defaults(func=cmd_reasons)
+
+    report = sub.add_parser("report", help="generate a daily/weekly/monthly report")
+    report.add_argument("--period", choices=["daily", "weekly", "monthly"], default="daily")
+    report.add_argument("--date", default=None, help="YYYY-MM-DD / YYYY-Www / YYYY-MM")
     report.add_argument("--no-llm", action="store_true", help="skip the narrative summary")
     report.add_argument("--output", default=None, help="also write the markdown here")
     report.set_defaults(func=cmd_report)
