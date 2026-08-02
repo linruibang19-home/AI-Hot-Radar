@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { SidebarResizer } from "@/components/SidebarResizer";
+
 /**
  * Primary navigation.
  *
@@ -149,6 +151,8 @@ export function Sidebar() {
           </ul>
         </nav>
       ))}
+
+      <SidebarResizer />
     </aside>
   );
 }

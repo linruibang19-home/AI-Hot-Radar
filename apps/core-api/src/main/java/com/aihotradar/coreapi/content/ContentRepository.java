@@ -87,7 +87,8 @@ public class ContentRepository {
 
         if (cursor != null) {
             sql.append(
-                    " AND (ci.published_at, ci.id) < (:cursorTime, CAST(:cursorId AS uuid))");
+                    " AND (COALESCE(ci.published_at, ci.observed_at), ci.id)"
+                            + " < (:cursorTime, CAST(:cursorId AS uuid))");
             params.addValue("cursorTime", cursor.publishedAt());
             params.addValue("cursorId", cursor.id());
         }
@@ -117,7 +118,13 @@ public class ContentRepository {
             params.addValue("likeQuery", "%" + query.trim() + "%");
         }
 
-        sql.append(" ORDER BY ci.published_at DESC NULLS LAST, ci.id DESC LIMIT :limit");
+        // Order by the same expression the UI groups by. Ordering on
+        // published_at alone sent items without a publication date to the end of
+        // the feed while the page still grouped them under the day they were
+        // observed, so a recent-looking day section appeared below much older
+        // ones and the timeline read as jumbled.
+        sql.append(
+                " ORDER BY COALESCE(ci.published_at, ci.observed_at) DESC, ci.id DESC LIMIT :limit");
         params.addValue("limit", limit);
 
         return jdbc.query(sql.toString(), params, MAPPER);

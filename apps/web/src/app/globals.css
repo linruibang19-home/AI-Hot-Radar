@@ -46,6 +46,7 @@ a {
   inset: 0 auto 0 0;
   width: var(--sidebar-w);
   overflow-y: auto;
+  overflow-x: hidden;
   border-right: 1px solid var(--border);
   background: var(--surface);
   padding: 22px 14px 28px;
@@ -54,6 +55,13 @@ a {
 .main {
   margin-left: var(--sidebar-w);
   padding: 30px 34px 72px;
+}
+
+/* Animate width changes, but only outside a drag: transitioning during a drag
+   makes the divider lag the pointer. The dragging class is set on <html>. */
+:root:not(.sidebar-dragging) .sidebar,
+:root:not(.sidebar-dragging) .main {
+  transition: width 0.18s ease, margin-left 0.18s ease;
 }
 
 .main-inner {
@@ -106,6 +114,7 @@ a {
 }
 
 .nav-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -114,6 +123,10 @@ a {
   border-radius: 8px;
   font-size: 14px;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
 }
 
 .nav-icon {
@@ -121,11 +134,17 @@ a {
   height: 17px;
   flex-shrink: 0;
   opacity: 0.85;
+  transition: opacity 0.16s ease, transform 0.16s ease;
 }
 
 .nav-link:hover {
   background: var(--bg);
   color: var(--text);
+  transform: translateX(2px);
+}
+
+.nav-link:hover .nav-icon {
+  opacity: 1;
 }
 
 .nav-link-active {
@@ -136,6 +155,74 @@ a {
 
 .nav-link-active .nav-icon {
   opacity: 1;
+}
+
+/* A left rail on the active item, grown from zero so switching pages reads as
+   movement rather than a jump. */
+.nav-link-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+  transform: translateY(-50%);
+  animation: nav-rail 0.2s ease;
+}
+
+@keyframes nav-rail {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+  to {
+    height: 60%;
+    opacity: 1;
+  }
+}
+
+/* ---------- sidebar resizer ---------- */
+
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.sidebar-resizer:hover,
+.sidebar-resizer-active,
+.sidebar-resizer:focus-visible {
+  background: var(--accent-soft);
+}
+
+/* The grip only appears on hover/drag so the divider stays quiet at rest. */
+.sidebar-resizer-grip {
+  width: 3px;
+  height: 34px;
+  border-radius: 3px;
+  background: var(--border);
+  opacity: 0;
+  transform: scaleY(0.5);
+  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+.sidebar-resizer:hover .sidebar-resizer-grip,
+.sidebar-resizer:focus-visible .sidebar-resizer-grip,
+.sidebar-resizer-active .sidebar-resizer-grip {
+  opacity: 1;
+  transform: scaleY(1);
+  background: var(--accent);
 }
 
 /* ---------- page header ---------- */

@@ -19,9 +19,40 @@ from typing import Any
 
 from ahr.processing.llm import LlmClient, LlmUnavailableError, TokenUsage
 
-RECOMMENDATION_PROMPT_VERSION = "recommend-v1"
+# v2 changed what the model is shown, not what it is asked: v1 passed only the
+# first 4000 characters, which truncated 72% of selected items and cut exactly
+# the closing passage the "state a limitation" requirement depends on. Bumping
+# the version makes the backfill re-run over reasons written from the old
+# excerpt rather than leaving two prompt generations mixed on the same page.
+RECOMMENDATION_PROMPT_VERSION = "recommend-v2"
 
-MAX_BODY_CHARS = 4000
+MAX_BODY_CHARS = 6000
+
+# Of the body budget, how much comes from the end of the article.
+#
+# Taking only the opening truncated 72% of selected items, and it truncated them
+# in the worst possible place: a release note leads with its changes, but an
+# analysis piece leads with background and states its conclusion — and its
+# caveats — at the end. Since the prompt requires a stated limitation, cutting
+# the tail removed exactly the material that requirement depends on.
+TAIL_SHARE = 0.35
+
+ELLIPSIS = "\n\n……（正文中段略）……\n\n"
+
+
+def excerpt_for_prompt(body_text: str, *, budget: int = MAX_BODY_CHARS) -> str:
+    """Head plus tail, so a long article's conclusion survives truncation.
+
+    The gap is marked, so the model is not led to believe the two halves are
+    contiguous and invent a connection between them.
+    """
+    if len(body_text) <= budget:
+        return body_text
+
+    tail_chars = int(budget * TAIL_SHARE)
+    head_chars = budget - tail_chars
+    return body_text[:head_chars] + ELLIPSIS + body_text[-tail_chars:]
+
 
 SYSTEM_PROMPT = """你是 AI 行业资深编辑，为「精选」栏目撰写推荐理由。
 
@@ -68,7 +99,7 @@ async def write_reason(
         f"类型：{content_type or '未分类'}\n"
         f"标题：{title}\n"
         f"{('摘要：' + summary) if summary else ''}\n\n"
-        f"正文：\n{body_text[:MAX_BODY_CHARS]}"
+        f"正文：\n{excerpt_for_prompt(body_text)}"
     )
 
     text, usage = await client.summarize(system_prompt=SYSTEM_PROMPT, user_prompt=prompt)

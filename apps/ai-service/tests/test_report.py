@@ -26,6 +26,8 @@ def item(
     summary: str | None = "摘要内容",
     url: str = "https://example.com/a",
     score: float = 80.0,
+    story_slug: str | None = None,
+    independent_sources: int = 1,
 ) -> ReportItem:
     return ReportItem(
         item_id=uuid.uuid4(),
@@ -35,7 +37,72 @@ def item(
         canonical_url=url,
         content_type=content_type,
         score=score,
+        story_slug=story_slug,
+        independent_sources=independent_sources,
     )
+
+
+# --- story collapsing (M3) -------------------------------------------------
+
+
+def test_one_event_appears_once() -> None:
+    """Three outlets covering one release is one entry, not three headlines."""
+    from ahr.processing.report import collapse_by_story
+
+    collapsed = collapse_by_story(
+        [
+            item(title="官方发布", story_slug="s1", score=90),
+            item(title="媒体报道", story_slug="s1", score=70),
+            item(title="另一家报道", story_slug="s1", score=60),
+        ]
+    )
+    assert len(collapsed) == 1
+
+
+def test_the_highest_scoring_article_represents_the_event() -> None:
+    """Rows arrive score-ordered, so the first seen is the one worth linking."""
+    from ahr.processing.report import collapse_by_story
+
+    collapsed = collapse_by_story(
+        [
+            item(title="官方发布", story_slug="s1", score=90),
+            item(title="转载", story_slug="s1", score=40),
+        ]
+    )
+    assert collapsed[0].title == "官方发布"
+
+
+def test_items_without_a_story_are_all_kept() -> None:
+    """Clustering only covers a recent window; older selections have no story
+    and must not collapse into each other."""
+    from ahr.processing.report import collapse_by_story
+
+    collapsed = collapse_by_story([item(title="甲"), item(title="乙"), item(title="丙")])
+    assert len(collapsed) == 3
+
+
+def test_distinct_stories_are_not_merged() -> None:
+    from ahr.processing.report import collapse_by_story
+
+    collapsed = collapse_by_story(
+        [item(story_slug="s1"), item(story_slug="s2"), item(story_slug="s3")]
+    )
+    assert len(collapsed) == 3
+
+
+def test_corroboration_count_is_rendered() -> None:
+    markdown = render_markdown(
+        TITLE, "", [("模型发布", [item(title="事件", independent_sources=4)])]
+    )
+    assert "另有 3 家信源报道" in markdown
+
+
+def test_single_source_entry_says_nothing_about_corroboration() -> None:
+    """Claiming corroboration that does not exist is worse than staying silent."""
+    markdown = render_markdown(
+        TITLE, "", [("模型发布", [item(title="事件", independent_sources=1)])]
+    )
+    assert "信源报道" not in markdown
 
 
 # --- section grouping ----------------------------------------------------

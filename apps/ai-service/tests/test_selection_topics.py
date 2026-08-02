@@ -104,6 +104,7 @@ def _score(**overrides: object) -> float:
         "content_type": "model_release",
         "age_hours": 1.0,
         "body_chars": 4000,
+        "independent_sources": 1,
     }
     base.update(overrides)
     return score_item(**base).total()  # type: ignore[arg-type]
@@ -128,6 +129,52 @@ def test_substantial_body_outranks_thin_one() -> None:
 def test_unenriched_content_still_scores() -> None:
     """The homepage must not go empty when the model is unavailable."""
     assert _score(quality_score=None, content_type=None) > 0
+
+
+def test_corroborated_event_outranks_an_identical_single_source_item() -> None:
+    """The gap M3 exists to close.
+
+    Before this factor the shortlist could not see corroboration at all: the two
+    events that four and three independent outlets reported were selected zero
+    times, while 87 single-source release notes were.
+    """
+    assert _score(independent_sources=4) > _score(independent_sources=1)
+
+
+def test_corroboration_saturates() -> None:
+    """The second outlet is strong evidence; the tenth adds little."""
+    first_step = _score(independent_sources=2) - _score(independent_sources=1)
+    later_step = _score(independent_sources=8) - _score(independent_sources=7)
+    assert first_step > later_step
+
+
+def test_single_source_items_are_not_penalised() -> None:
+    """Most releases are legitimately announced once; the factor lifts
+    corroborated events rather than demoting everything else."""
+    factors = score_item(
+        quality_score=70.0,
+        source_tier="primary",
+        content_type="model_release",
+        age_hours=1.0,
+        body_chars=4000,
+        independent_sources=1,
+    )
+    assert factors.corroboration == 0.0
+
+
+def test_media_coverage_can_now_beat_a_routine_release() -> None:
+    """A four-outlet news event on a secondary source against a primary-tier
+    release note — the exact comparison the shortlist used to get wrong."""
+    news = _score(
+        source_tier="secondary", content_type="security", independent_sources=4, quality_score=75
+    )
+    routine = _score(
+        source_tier="primary",
+        content_type="product_release",
+        independent_sources=1,
+        quality_score=75,
+    )
+    assert news > routine
 
 
 def test_score_stays_within_range() -> None:

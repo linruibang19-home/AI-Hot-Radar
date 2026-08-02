@@ -74,6 +74,11 @@ class ReportItem:
     canonical_url: str
     content_type: str | None
     score: float
+    # M3: when several selected articles describe one event, the report shows
+    # the event once and says how many outlets carried it, rather than listing
+    # the same story three times under three headlines.
+    story_slug: str | None = None
+    independent_sources: int = 1
 
 
 @dataclass
@@ -126,10 +131,13 @@ def _load_selected(connection: Any, start: date, end: date) -> list[ReportItem]:
                    s.name,
                    ci.canonical_url,
                    ci.content_type,
-                   sr.score
+                   sr.score,
+                   st.slug,
+                   COALESCE(st.independent_source_count, 1)
               FROM selection_record sr
               JOIN content_item ci ON ci.id = sr.content_item_id
               JOIN source s ON s.id = ci.source_id
+              LEFT JOIN story st ON st.id = ci.story_id
              WHERE sr.selected_for_date BETWEEN %s AND %s
                AND sr.withdrawn_at IS NULL
                AND ci.duplicate_of_id IS NULL
@@ -139,7 +147,7 @@ def _load_selected(connection: Any, start: date, end: date) -> list[ReportItem]:
         )
         rows = cursor.fetchall()
 
-    return [
+    items = [
         ReportItem(
             item_id=uuid.UUID(str(r[0])),
             title=r[1],
@@ -148,9 +156,33 @@ def _load_selected(connection: Any, start: date, end: date) -> list[ReportItem]:
             canonical_url=r[4],
             content_type=r[5],
             score=float(r[6]),
+            story_slug=r[7],
+            independent_sources=int(r[8] or 1),
         )
         for r in rows
     ]
+    return collapse_by_story(items)
+
+
+def collapse_by_story(items: list[ReportItem]) -> list[ReportItem]:
+    """Keep one entry per event (AHR-DATA-300 §8: report is built from Stories).
+
+    Rows arrive ordered by selection score, so the first item seen for a story
+    is its highest-scoring article — which is the one worth linking. Items with
+    no story are passed through untouched; clustering only covers a recent
+    window, so older selections legitimately have none.
+    """
+    seen: set[str] = set()
+    collapsed: list[ReportItem] = []
+
+    for item in items:
+        if item.story_slug is not None:
+            if item.story_slug in seen:
+                continue
+            seen.add(item.story_slug)
+        collapsed.append(item)
+
+    return collapsed
 
 
 def _group_by_section(items: list[ReportItem]) -> list[tuple[str, list[ReportItem]]]:
@@ -180,7 +212,14 @@ def render_markdown(title: str, summary: str, sections: list[tuple[str, list[Rep
         for item in items:
             # Every entry links to the publisher, never to a local copy
             # (AHR-SPEC-000 ADR-009).
-            lines.append(f"- **[{item.title}]({item.canonical_url})** · {item.source_name}")
+            corroboration = (
+                f" · 另有 {item.independent_sources - 1} 家信源报道"
+                if item.independent_sources > 1
+                else ""
+            )
+            lines.append(
+                f"- **[{item.title}]({item.canonical_url})** · {item.source_name}{corroboration}"
+            )
             if item.summary:
                 lines.append(f"  {item.summary}")
         lines.append("")

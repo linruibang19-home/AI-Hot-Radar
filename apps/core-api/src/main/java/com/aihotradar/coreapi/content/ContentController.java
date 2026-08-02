@@ -154,7 +154,13 @@ public class ContentController {
      * identifier that callers might start depending on.
      */
     private static String encodeCursor(ContentItem item) {
-        String raw = (item.publishedAt() == null ? "" : item.publishedAt().toString()) + "|" + item.id();
+        // Must be the same expression the feed orders by. Using publishedAt
+        // alone produced an empty timestamp for items without one, which
+        // decodeCursor then rejected — so "load more" silently restarted from
+        // the top instead of paging.
+        OffsetDateTime effective =
+                item.publishedAt() == null ? item.observedAt() : item.publishedAt();
+        String raw = (effective == null ? "" : effective.toString()) + "|" + item.id();
         return Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(raw.getBytes(StandardCharsets.UTF_8));
     }
