@@ -141,7 +141,7 @@ LLM 返回必须符合：
 {
   "summary_zh": "string",
   "content_type": "model_release|product_release|api_update|research|open_source|business|policy|security|opinion|tutorial",
-  "entities": [{"name":"string","type":"company|product|model|technology|person","role":"subject|object|mention","confidence":0.0}],
+  "entities": [{"name":"string","type":"company|organization|product|model|technology|protocol|framework|person","role":"subject|object|mention","confidence":0.0}],
   "topics": [{"slug":"string","confidence":0.0}],
   "claims": [{"text":"string","passage_indexes":[0],"confidence":0.0}],
   "event": {"action":"string","object":"string","event_time":"ISO-8601|null"},
