@@ -194,9 +194,11 @@ async def test_enrich_parses_valid_response() -> None:
         return httpx.Response(200, json=_completion(json.dumps(VALID_PAYLOAD)))
 
     async with _client(handler) as client:
-        result = await client.enrich(title="t", body_text="body", source_name="s")
+        result, usage = await client.enrich(title="t", body_text="body", source_name="s")
 
     assert result.zh_title == "OpenAI 发布新推理模型"
+    # Usage must come from the provider so spend is auditable, not estimated.
+    assert usage.attempts == 1
 
 
 async def test_enrich_strips_markdown_code_fence() -> None:
@@ -208,7 +210,7 @@ async def test_enrich_strips_markdown_code_fence() -> None:
         return httpx.Response(200, json=_completion(fenced))
 
     async with _client(handler) as client:
-        result = await client.enrich(title="t", body_text="body", source_name="s")
+        result, _usage = await client.enrich(title="t", body_text="body", source_name="s")
 
     assert result.content_type == "model_release"
 
@@ -225,10 +227,12 @@ async def test_enrich_repairs_once_then_succeeds() -> None:
         return httpx.Response(200, json=_completion(json.dumps(VALID_PAYLOAD)))
 
     async with _client(handler) as client:
-        result = await client.enrich(title="t", body_text="body", source_name="s")
+        result, usage = await client.enrich(title="t", body_text="body", source_name="s")
 
     assert calls["n"] == 2
     assert result.summary_zh
+    # The repair turn is billed too, so both attempts must be recorded.
+    assert usage.attempts == 2
 
 
 async def test_enrich_dead_letters_after_one_failed_repair() -> None:

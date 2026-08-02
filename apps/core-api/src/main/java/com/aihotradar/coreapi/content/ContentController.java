@@ -4,6 +4,8 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.List;
+import com.aihotradar.coreapi.cache.CacheConfig;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -53,11 +55,13 @@ public class ContentController {
     }
 
     @GetMapping("/stats")
+    @Cacheable(CacheConfig.STATS)
     public ContentRepository.Stats stats() {
         return repository.stats();
     }
 
     @GetMapping("/selected")
+    @Cacheable(value = CacheConfig.SELECTED, key = "#days + ':' + #limit")
     public List<ContentRepository.SelectedItem> selected(
             @RequestParam(required = false, defaultValue = "7") int days,
             @RequestParam(required = false, defaultValue = "40") int limit) {
@@ -71,6 +75,7 @@ public class ContentController {
     }
 
     @GetMapping("/topics")
+    @Cacheable(CacheConfig.TOPICS)
     public List<ContentRepository.TopicSummary> topics() {
         return repository.listTopics();
     }

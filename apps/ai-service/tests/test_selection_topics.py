@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from typing import get_args
+
 import pytest
 
+from ahr.processing.schemas import ContentType
 from ahr.processing.selection import (
     CONTENT_TYPE_WEIGHT,
     DAILY_QUOTA,
@@ -167,8 +170,5 @@ def test_quota_constants_prevent_single_source_domination() -> None:
 
 def test_every_content_type_has_a_weight() -> None:
     """A missing weight would silently score an entire category as the default."""
-    from ahr.processing.schemas import ContentType
-    from typing import get_args
-
     for content_type in get_args(ContentType):
         assert content_type in CONTENT_TYPE_WEIGHT, content_type

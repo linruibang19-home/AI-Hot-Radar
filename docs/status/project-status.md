@@ -1,7 +1,7 @@
 # 项目进度总览
 
 > 更新时间：2026-08-02
-> 当前阶段：**M2 进行中（约 80%）**（M1 已完成）
+> 当前阶段：**M2 基本完成（约 95%）**（M1 已完成）
 > 所有数据均来自实际运行，非估算
 
 ## 1. 里程碑完成情况
@@ -10,7 +10,7 @@
 |---|---|---|
 | **M0 工程骨架** | ✅ 完成 | 三服务 + Compose + Flyway + pgvector + CI + request-ID |
 | **M1 真实信源与入库** | ✅ 完成 | 7 类适配器、98 源 ACTIVE、723 条内容入库、调度器 |
-| **M2 内容加工与网站** | 🟡 约 80% | 切块、去重、LLM 结构化、主题归一、精选算法、全文检索、API、前端六页 |
+| **M2 内容加工与网站** | 🟢 约 95% | 切块、去重、LLM 结构化、主题归一、精选、全文检索、日报、Redis 缓存、成本追踪、前端七页 |
 | M3 Story 与热点 | ⬜ 未开始 | 事件聚类、主来源、热度算法、时间线 |
 | M4 RAG MVP | ⬜ 未开始 | Embedding、混合检索、RRF、引用绑定、黄金集 |
 | M5 上线与增强 | ⬜ 未开始 | 域名 HTTPS、备份监控、邮件订阅、周月报 |
@@ -72,11 +72,11 @@
 
 | 组件 | 地址 | 状态 | 实现进度 |
 |---|---|---|---|
-| Next.js web | http://localhost:3000 | healthy | 精选、全部动态、详情、主题列表、主题详情、信源后台 |
-| Spring Boot core-api | http://localhost:8080 | healthy | items / selected / topics / stats / admin.sources |
+| Next.js web | http://localhost:3000 | healthy | 精选、全部动态、详情、日报列表、日报详情、主题、信源后台 |
+| Spring Boot core-api | http://localhost:8080 | healthy | items / selected / topics / reports / stats / admin.sources |
 | FastAPI ai-service | http://localhost:8000 | healthy | 采集、加工、调度全部功能 |
-| PostgreSQL + pgvector | localhost:5432 | healthy | 24 表，5 个 Flyway 迁移 |
-| Redis | localhost:6379 | healthy | 已就绪，缓存逻辑待接入 |
+| PostgreSQL + pgvector | localhost:5432 | healthy | 27 表，6 个 Flyway 迁移 |
+| Redis | localhost:6379 | healthy | **已接入读缓存**（selected 5min / topics 10min / stats 2min） |
 
 **全部运行在 Docker 中**，宿主机零依赖。消息队列与对象存储按 ADR-007 与规格暂不引入（Outbox 已实现，733 条事件待消费）。
 
@@ -93,7 +93,10 @@ raw_document          原始响应，内部审计
          │     └── content_chunk   语义分块（含 embedding 列，待 M4 填充）
          ├── item_entity ── entity 实体关系
          ├── item_topic  ── topic  主题关系（归一到 taxonomy.yaml）
-         └── selection_record      精选决定 + 分项因子 + 入选理由
+         ├── selection_record      精选决定 + 分项因子 + 入选理由
+         └── report_item ── report  日报溯源（每条可回到原文）
+
+llm_usage             真实 token 消耗（provider 上报，非估算）
 
 outbox_event          业务写入同事务的可靠事件
 processed_event       消费幂等记录
@@ -108,6 +111,7 @@ processed_event       消费幂等记录
 | V003 | 信源状态机扩充 METADATA_ONLY / RATE_LIMITED |
 | V004 | 内容加工：simhash、去重关系、AI 结构化列、entity / item_entity / item_topic |
 | V005 | 全文检索 tsvector + trigram 索引、selection_record 精选表 |
+| V006 | llm_usage 成本核算表、report 扩展列、report_item 溯源表 |
 
 ## 6. 已完成任务
 
@@ -129,16 +133,20 @@ processed_event       消费幂等记录
 - [x] 全文检索（tsvector 加权 + trigram 兜底版本号）
 - [x] 主题页与主题详情页
 - [x] 信源后台只读页（失败源排前）
-- [x] 148 个离线测试，断网可通过
+- [x] 日报生成（按类别分章 + LLM 总述 + 全条目溯源）
+- [x] Redis 读缓存（实测 warm 比 cold 快约 28%）
+- [x] LLM 成本追踪（provider 真实 token，非字符估算）
+- [x] 加工成本控制（正文 < 200 字符跳过，不浪费调用）
+- [x] 日报列表页与详情页
+- [x] 161 个离线测试，断网可通过
 
 ## 7. 待完成任务
 
 ### M2 剩余
 
-- [ ] 日报生成与测试邮件
-- [ ] Redis 缓存接入（首页、详情）
+- [ ] 测试邮件投递（日报内容已就绪，缺 SMTP 发送）
 - [ ] 后台任务重跑（需先有鉴权，见下）
-- [ ] 剩余约 570 条内容完成 AI 结构化
+- [ ] 剩余内容完成 AI 结构化（批量运行中）
 - [ ] Lighthouse ≥ 85 验收
 
 > 信源后台目前是**只读**。`AHR-QSO-700` §3 要求管理操作具备最小权限 RBAC 与二次确认，
@@ -167,6 +175,14 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 ```
 
 ```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli report --date 2026-08-01
+```
+
+```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli usage --days 30
+```
+
+```bash
 docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli schedule --interval 60
 ```
 
@@ -175,6 +191,6 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 | 风险 | 影响 | 应对 |
 |---|---|---|
 | 原始 HTML 占数据库约一半体积 | 长期增长最快 | M5 前迁对象存储或加保留期 |
-| LLM 成本随内容量线性增长 | 约 570 条待结构化 | 按优先级分批，低质量内容跳过 |
+| LLM 成本随内容量线性增长 | 已消耗见 `ahr.cli usage` | 已加正文长度门槛跳过薄内容；按优先级分批 |
 | 中文动态站点需浏览器渲染 | 16 个源未接入 | Wave C 专项，需 robots 复核 |
 | 密钥曾出现在会话记录 | 泄露风险 | **上线前必须轮换 GitHub / DeepSeek 密钥** |
