@@ -31,6 +31,7 @@ public class ContentRepository {
             SELECT ci.id, ci.title, ci.zh_title, ci.summary_zh, cr.excerpt,
                    ci.canonical_url, ci.published_at, ci.observed_at,
                    ci.content_type, ci.quality_score,
+                   ci.hot_score, ci.independent_source_count,
                    s.id AS source_id, s.name AS source_name,
                    s.source_tier, s.organization
               FROM content_item ci
@@ -60,6 +61,10 @@ public class ContentRepository {
                 rs.getObject("observed_at", OffsetDateTime.class),
                 rs.getString("content_type"),
                 rs.getObject("quality_score") == null ? null : rs.getDouble("quality_score"),
+                rs.getObject("hot_score") == null ? null : rs.getDouble("hot_score"),
+                rs.getObject("independent_source_count") == null
+                        ? null
+                        : rs.getInt("independent_source_count"),
                 new ContentItem.SourceRef(
                         rs.getString("source_id"),
                         rs.getString("source_name"),
@@ -158,6 +163,7 @@ public class ContentRepository {
                         SELECT ci.id, ci.title, ci.zh_title, ci.summary_zh, cr.excerpt,
                                ci.canonical_url, ci.published_at, ci.observed_at,
                                ci.content_type, ci.quality_score,
+                               ci.hot_score, ci.independent_source_count,
                                s.id AS source_id, s.name AS source_name,
                                s.source_tier, s.organization,
                                sr.selected_for_date, sr.score AS selection_score, sr.reason

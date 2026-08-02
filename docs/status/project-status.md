@@ -10,35 +10,42 @@
 |---|---|---|
 | **M0 工程骨架** | ✅ 完成 | 三服务 + Compose + Flyway + pgvector + CI + request-ID |
 | **M1 真实信源与入库** | ✅ 完成 | 7 类适配器、95 源 ACTIVE、718 条内容入库、调度器 |
-| **M2 内容加工与网站** | ✅ 完成 | 切块、去重、LLM 结构化、主题归一、精选、全文检索、日/周/月报、邮件投递、Redis 缓存、成本追踪、前端八页 |
-| M3 Story 与热点 | 🟡 部分前置 | 热度算法与热榜已实现（见下方说明）；事件聚类、主来源、时间线待做 |
+| **M2 内容加工与网站** | ✅ 完成 | 切块、去重、LLM 结构化、主题归一、精选、全文检索、日/周/月报、邮件投递、Redis 缓存、成本追踪 |
+| **M3 Story 与热点** | ✅ 主体完成 | 事件聚类、主来源选择、独立信源计数、事件时间线、cluster_suggestion 复核队列、Story 热度 |
 | M4 RAG MVP | ⬜ 未开始 | Embedding、混合检索、RRF、引用绑定、黄金集 |
-| M5 上线与增强 | ⬜ 未开始 | 域名 HTTPS、备份监控、邮件订阅 |
+| M5 上线与增强 | ⬜ 未开始 | 域名 HTTPS、备份监控、邮件订阅、合并/拆分/锁定后台 |
 
-> **关于 M3 的部分前置**：热榜所依赖的"独立信源数"目前只能用近似重复来近似，
-> 绝大多数条目因此为 1。真正的多源验证需要 M3 的 Story 聚类。现在的热榜
-> **是"编辑意义上的合理排序"，不是"多源验证的事件热度"**，不应对外宣称为后者。
+> **M3 已完成与未完成的边界**：聚类、主来源、独立信源、时间线、复核队列已实现并跑通真实数据。
+> 未做的是**人工合并/拆分/锁定的后台界面**——数据库已支持 `locked_by_editor`
+> 且聚类会跳过锁定的 Story（已测试），但操作界面需要鉴权，属 M5。
+> `report 从 Story 生成` 也未做，日/周/月报目前仍从精选条目生成。
 
 ## 2. 数据现状（实测）
 
 | 指标 | 数值 |
 |---|---:|
-| 已入库内容 `content_item` | 718 |
-| 有内容的信源 | 123 |
-| ACTIVE 信源 | 95 |
+| 已入库内容 `content_item` | 724 |
+| ACTIVE 信源 | 78 |
 | 已启用信源 | 124 / 140 |
 | 已 AI 结构化 | 643 |
 | 检索分块 `content_chunk` | 3346 |
 | 抽取实体 `entity` | 2117 |
-| 主题关联 `item_topic` | 704 |
+| **事件 `story`** | **497** |
+| **其中多篇报道的事件** | **7** |
+| **多信源佐证的条目** | **9** |
+| **待人工复核的合并建议** | **40** |
 | 当前精选 `selection_record` | 87 |
-| 其中含 LLM 推荐理由 | 106（含历史） |
-| 已算热度的条目 | 361 |
 | 已生成报告 `report` | 4（2 日报 + 1 周报 + 1 月报） |
 | 近似重复已标记 | 54 |
-| 数据库表数 | 27 |
-| 数据库体积 | 75 MB |
+| 数据库表数 | 29 |
+| 数据库体积 | 80 MB |
 | 死信 | 0 |
+
+> **为什么 497 个事件里只有 7 个是多篇报道**：本语料以 GitHub Release 为主
+> （53 个信源），一次发布本来就只有仓库自己公告一次，天然是单信源事件。
+> 真正被多家媒体同时报道的是「Anthropic Claude 测试入侵真实公司」（4 家）、
+> 「谷歌地球 AI 深度伪造工具下架」（3 家）这类新闻事件。这个比例是语料结构
+> 的真实反映，不是聚类失效。
 
 ## 3. 信源情况
 
@@ -82,15 +89,77 @@
 > 没有发起连接，防护逻辑并未做出任何安全判定，应归为 `TRANSIENT`。修复后
 > ACTIVE 由 87 回升至 95，隔离数由 13 降至 3。
 
+## 3.5 事件聚类（M3）
+
+### 特征与权重
+
+`docs/spec/03 §8` 规定的 6 个特征里有 2 个当前拿不到，**显式处理而不是当成 0**：
+
+| 特征 | 规格权重 | 现状 |
+|---|---:|---|
+| `title_and_summary_embedding` | 0.35 | Embedding 属 M4，暂用**词法标题相似度**代替（中文按 bigram、英文按词并拆分复合词） |
+| `entity_overlap` | 0.25 | ✅ 已实现 |
+| `action_object_match` | 0.15 | ✅ 已实现（共享实体覆盖率 × 内容类型是否同类） |
+| `url_or_quote_link` | 0.10 | ❌ 采集未抽取外链，**权重重新归一化**而非计 0 |
+| `time_proximity` | 0.10 | ✅ 72 小时窗口内线性衰减 |
+| `topic_overlap` | 0.05 | ✅ 但 39% 的条目没有主题，此时**丢弃该项并重新归一化** |
+
+一个常数 0 的特征会把所有配对的分数等量拉低，让阈值失去意义——所以缺失特征是
+剔除后归一化，而不是记 0。
+
+### 硬规则（无论分数多高都不合并）
+
+- **版本冲突**：两边都带版本号且不相交 → 不合并。`DeepSeek V3` 与 `DeepSeek V4-Flash`
+  共享公司、产品线和绝大部分措辞，合并是**事实错误**而不是排序瑕疵。
+- **同一信源**：一个信源的两条内容永远不合并。Story 的意义是统计**独立**佐证，
+  同源合并既不能提升排序，又实测制造了错误分组（见下）。
+- **人工锁定**：`locked_by_editor` 的 Story 及其条目完全排除在重聚类之外。
+
+### 阈值是实测标定的，不是拍脑袋定的
+
+初版阈值定在 0.62，结果**真实语料 508 条产生 0 次合并**——因为全语料最高分只有
+0.571，阈值高于所有真实配对。把全部 40761 个配对打分后才发现两个真问题：
+
+1. **Jaccard 用错了**。changelog 条目挂 5 个实体、媒体报道挂 10 个，两边在事件真正
+   涉及的 2 个实体上一致——Jaccard 只有 0.15，和"完全无关"没有区别，因为并集被各自
+   附带提及的实体淹没。改用**重叠系数**（交集 / 较小集合）后同一对读作 0.40。
+   语料里每一个真实事件都长这样。
+
+2. **同源高分是最大的假阳性来源**。分数最高的配对是 OpenAI status 页面的**四次不同故障**
+   （措辞高度雷同）和 Together AI 的**六条标题全被抽成 "Read More"** 的条目。
+   两者都是同一家的固定句式导致的高相似度。
+
+修完后阈值标定为 **0.52**（复核带 0.42–0.52），得到 7 个多篇报道的事件。
+
+### 人工抽检结果（AHR-KPI-003 要求纯度 ≥ 0.85）
+
+7 个多篇报道的事件**逐个人工核对，纯度 7/7 = 1.00**：
+
+| 事件 | 篇数 | 独立信源 | 核对 |
+|---|---:|---:|---|
+| Anthropic Claude 测试入侵真实公司 | 4 | 4（量子位、Ars、The Verge、Simon Willison） | ✅ 同一事件 |
+| 谷歌地球 AI 深度伪造工具下架 | 3 | 3（The Verge、TechCrunch、THE DECODER） | ✅ 同一事件 |
+| Anthropic 发布 Claude Opus 5 | 2 | 2（官方 + Latent Space） | ✅ 同一事件 |
+| OpenAI SDK 支持 gpt-5.6-sol | 3 | 1 | ✅ 同一次协同发布，且正确记为 1 家独立信源 |
+| Google Gen AI JS/Python SDK 2.13.0 | 2 | 1 | ✅ 同版本协同发布 |
+| OpenAI Agents Python/JS（两组） | 2×2 | 1 | ✅ 同版本协同发布 |
+
+注意后三类：同一家公司的多个 SDK 仓库会聚成一个事件，但 `independent_source_count`
+按**组织**去重后仍是 1——所以协同发布**不会伪造出"多家信源佐证"**。
+
+**局限**：抽检样本只有 7 个多篇事件，达不到验收要求的「100 个 Story 人工抽检」规模。
+其余 490 个是单条事件，纯度平凡为 1 但不检验算法。要凑够样本需要更长的运行时间或
+更多媒体类信源。
+
 ## 4. 服务与中间件
 
 | 组件 | 地址 | 状态 | 实现进度 |
 |---|---|---|---|
-| Next.js web | http://localhost:3000 | healthy | 精选、全部动态、详情、报告列表、报告详情、主题地图、主题详情、信源后台 |
-| Spring Boot core-api | http://localhost:8080 | healthy | items / selected / hot / categories / topics / topics.map / reports / stats / admin.sources |
-| FastAPI ai-service | http://localhost:8000 | healthy | 采集、加工、调度全部功能 |
+| Next.js web | http://localhost:3000 | healthy | 精选、全部动态、热点榜、事件聚合、事件详情、内容详情、报告列表/详情、主题地图、主题详情、信源后台 |
+| Spring Boot core-api | http://localhost:8080 | healthy | items / selected / hot / categories / stories / stories.{slug} / topics / topics.map / reports / stats / admin.sources |
+| FastAPI ai-service | http://localhost:8000 | healthy | 采集、加工、聚类、调度全部功能 |
 | scheduler（采集 worker） | 无端口 | running | 每 120s 轮询到期信源，`restart: unless-stopped` |
-| PostgreSQL + pgvector | localhost:5432 | healthy | 27 表，9 个 Flyway 迁移 |
+| PostgreSQL + pgvector | localhost:5432 | healthy | 29 表，10 个 Flyway 迁移 |
 | Redis | localhost:6379 | healthy | **已接入读缓存**（selected 5min / topics 10min / stats 2min） |
 
 **全部运行在 Docker 中**，宿主机零依赖。消息队列与对象存储按 ADR-007 与规格暂不引入（Outbox 已实现）。
@@ -130,6 +199,7 @@ processed_event       消费幂等记录
 | V007 | email_delivery 投递记录（delivery_key 唯一，防重复发送） |
 | V008 | entity_type 扩充为 8 类，与 taxonomy.yaml 对齐（ADR-0014） |
 | V009 | 推荐理由版本/模型列、hot_score 热度列、report 周期放宽为日/周/月、topic 展示元数据 |
+| V010 | Story 聚类：算法版本/独立信源列、`cluster_suggestion` 复核队列、`story_relation` 事件关系边、`content_item.story_id` 反查列 |
 
 ## 6. 已完成任务
 
@@ -164,9 +234,19 @@ processed_event       消费幂等记录
 - [x] **分类 tab**（全部 / 模型 / 产品 / 行业 / 论文 / 教程 / 观点，一个 tab 可映射多个 content_type）
 - [x] **精选排序切换**（按精选日 / 按发布时间 / 按热度，全部为可分享的 URL）
 - [x] **主题地图**（四条主线分组 + 中文名 + 一句话说明，全部由 taxonomy.yaml 驱动）
-- [x] 250 个测试（Python 215 + Java 22 + Web 12 + 类型检查），Python 部分断网可通过
+- [x] **左侧导航固定 + 分区标题分层**（内容/管理 加重加大，当前页高亮，图标）
+- [x] **精选与全部动态改为可折叠时间线**（原生 `<details>`，无 JS 也能展开）
+- [x] **主题地图 hero + 卡片网格**
+- [x] **M3 事件聚类**：候选生成、聚类、主来源、独立信源、事件时间线、复核队列
+- [x] 265 个测试（Python 251 + Java 22 + Web 12 + 类型检查），Python 部分断网可通过
 
 ## 7. 待完成任务
+
+### M3 剩余
+
+- [ ] 人工合并/拆分/锁定后台（数据库已支持 `locked_by_editor` 且聚类会跳过，缺鉴权界面 → M5）
+- [ ] report 从 Story 生成（目前仍从精选条目生成）
+- [ ] 100 个 Story 人工抽检（当前只有 7 个多篇事件可供检验，样本不足）
 
 ### M2 剩余
 
@@ -241,6 +321,10 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 ```
 
 ```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli cluster --days 30
+```
+
+```bash
 docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli send-report --date 2026-08-01 --to you@example.com
 ```
 
@@ -260,7 +344,10 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 | LLM 成本随内容量线性增长 | 已消耗见 `ahr.cli usage` | 已加正文长度门槛跳过薄内容；按优先级分批 |
 | 中文动态站点需浏览器渲染 | 16 个源未接入 | Wave C 专项，需 robots 复核 |
 | 密钥曾出现在会话记录 | 泄露风险 | **上线前必须轮换 GitHub / DeepSeek 密钥** |
-| 热榜的"独立信源数"绝大多数为 1 | 热度只是编辑权重的代理指标 | M3 Story 聚类后才是真实的多源验证信号；对外描述不得夸大 |
+| 语料以 Release 为主，多信源事件仅 7 个 | 事件聚类的价值暂时体现不足 | 需要更多媒体类信源与更长运行时间；不是算法问题 |
+| 聚类缺 Embedding，用词法相似度代替 | 同义改写（"开源"/"开放权重"）识别不了，召回偏低 | 阈值偏保守换纯度；M4 补 Embedding 后放宽 |
+| 39% 的条目没有主题标签 | 主题地图覆盖不全、聚类少一个特征 | 需复查 LLM 主题抽取的召回 |
+| 部分 Together AI 条目标题被抽成 "Read More" | 标题错误，影响展示与聚类 | 列表适配器的标题选择器需修正 |
 | LLM 推荐理由与摘要可能出错 | 事实性风险 | 页面已标注"AI 生成"，每条均链接原文；理由 prompt 强制指出局限 |
 | `mypy>=1.13.0` 无上界 | 类型检查结果取决于安装时间 | 见待办：固定版本 |
 | ~~entity_type 规格冲突~~ | 已解决 | 见 [ADR-0014](../adr/0014-entity-types-align-to-taxonomy.md)，扩充为 8 类 |

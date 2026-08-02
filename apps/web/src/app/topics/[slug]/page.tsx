@@ -1,9 +1,41 @@
 import Link from "next/link";
 
 import { ItemCard } from "@/components/ItemCard";
-import { fetchTopicItems } from "@/lib/api";
+import { TimelineDay, TimelineRow } from "@/components/Timeline";
+import { fetchTopicItems, fetchTopicMap, groupByDay } from "@/lib/api";
+
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+const OPEN_DAYS = 3;
+
+function formatTime(value?: string): string {
+  return value ? value.slice(11, 16) : "--:--";
+}
+
+/** Look the topic up in the map so the page shows its name, not its slug. */
+async function findTopic(slug: string) {
+  const groups = await fetchTopicMap();
+  for (const group of groups) {
+    const match = group.children.find((child) => child.slug === slug);
+    if (match) return { topic: match, group };
+  }
+  return null;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const found = await findTopic(slug);
+  return {
+    title: found?.topic.name ?? slug,
+    description: found?.topic.description ?? undefined,
+  };
+}
 
 export default async function TopicDetail({
   params,
@@ -11,21 +43,43 @@ export default async function TopicDetail({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const items = await fetchTopicItems(slug, 40);
+  const [items, found] = await Promise.all([fetchTopicItems(slug, 40), findTopic(slug)]);
+  const groups = groupByDay(items);
 
   return (
     <>
-      <p className="page-subtitle">
-        <Link href="/topics">← 返回主题列表</Link>
+      <p className="page-subtitle" style={{ marginBottom: 10 }}>
+        <Link href="/topics">← 返回主题地图</Link>
       </p>
 
-      <h1 className="page-title">{slug.replace(/_/g, " ")}</h1>
-      <p className="page-subtitle">该主题下的全部内容，按发布时间倒序 · {items.length} 条</p>
+      <header className="page-head">
+        <h1 className="page-title">{found?.topic.name ?? slug.replace(/_/g, " ")}</h1>
+        <p className="page-subtitle">
+          {found?.group.name ? `${found.group.name} · ` : ""}
+          {found?.topic.description ?? "该主题下的全部内容"} · 共 {items.length} 条
+        </p>
+      </header>
 
       {items.length === 0 ? (
         <div className="empty">该主题暂无内容。</div>
       ) : (
-        items.map((item) => <ItemCard key={item.id} item={item} />)
+        [...groups.entries()].map(([day, dayItems], index) => (
+          <TimelineDay
+            key={day}
+            day={day}
+            count={dayItems.length}
+            defaultOpen={index < OPEN_DAYS}
+          >
+            {dayItems.map((item) => (
+              <TimelineRow
+                key={item.id}
+                time={formatTime(item.publishedAt ?? item.observedAt)}
+              >
+                <ItemCard item={item} />
+              </TimelineRow>
+            ))}
+          </TimelineDay>
+        ))
       )}
     </>
   );

@@ -1,11 +1,17 @@
 :root {
-  --bg: #f7f7f5;
+  --bg: #f6f7f8;
   --surface: #ffffff;
-  --border: #e4e4e0;
-  --text: #1a1a18;
-  --muted: #6b6b66;
+  --border: #e6e7e5;
+  --border-soft: #eeefed;
+  --text: #16181a;
+  --text-soft: #3f4247;
+  --muted: #74787e;
+  --muted-2: #9aa0a6;
   --accent: #0f6e5c;
-  --accent-soft: #e6f2ef;
+  --accent-soft: #e8f2ef;
+  --accent-ink: #0b5648;
+  --hot: #c2410c;
+  --sidebar-w: 232px;
 }
 
 * {
@@ -19,6 +25,7 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC",
     "Microsoft YaHei", sans-serif;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -26,39 +33,94 @@ a {
   text-decoration: none;
 }
 
+/* ---------- layout ---------- */
+
 .layout {
-  display: flex;
   min-height: 100vh;
 }
 
+/* Fixed rather than sticky: the nav must stay put regardless of how long the
+   timeline gets, and it scrolls independently when it outgrows the viewport. */
 .sidebar {
-  width: 200px;
-  flex-shrink: 0;
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-w);
+  overflow-y: auto;
   border-right: 1px solid var(--border);
   background: var(--surface);
-  padding: 20px 16px;
+  padding: 22px 14px 28px;
 }
+
+.main {
+  margin-left: var(--sidebar-w);
+  padding: 30px 34px 72px;
+}
+
+.main-inner {
+  max-width: 940px;
+}
+
+/* ---------- sidebar ---------- */
 
 .brand {
-  font-weight: 700;
-  font-size: 18px;
-  letter-spacing: 0.08em;
-  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  padding: 0 8px;
+  margin-bottom: 26px;
+  color: var(--text);
 }
 
+.brand-mark {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+.brand-mark svg {
+  width: 22px;
+  height: 22px;
+}
+
+.nav-section + .nav-section {
+  margin-top: 22px;
+}
+
+/* Section headings carry the primary/secondary split in the nav, so they are
+   deliberately heavier and darker than the links beneath them. */
 .nav-label {
-  font-size: 11px;
-  color: var(--muted);
-  margin: 16px 0 6px;
-  letter-spacing: 0.1em;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.12em;
+  margin: 0 0 10px;
+  padding: 0 10px;
+}
+
+.nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .nav-link {
-  display: block;
-  padding: 7px 10px;
-  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  margin-bottom: 2px;
+  border-radius: 8px;
   font-size: 14px;
   color: var(--muted);
+}
+
+.nav-icon {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .nav-link:hover {
@@ -66,40 +128,135 @@ a {
   color: var(--text);
 }
 
-.nav-link.active {
+.nav-link-active {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
-.main {
-  flex: 1;
-  padding: 28px 32px 64px;
-  max-width: 1080px;
+.nav-link-active .nav-icon {
+  opacity: 1;
+}
+
+/* ---------- page header ---------- */
+
+.page-head {
+  margin-bottom: 18px;
 }
 
 .page-title {
-  font-size: 26px;
-  margin: 0 0 4px;
+  font-size: 27px;
+  font-weight: 700;
+  margin: 0 0 5px;
+  letter-spacing: -0.01em;
 }
 
 .page-subtitle {
   color: var(--muted);
   font-size: 13px;
-  margin: 0 0 24px;
+  margin: 0;
 }
+
+/* ---------- toolbar: tabs + search ---------- */
+
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.tab {
+  position: relative;
+  padding: 8px 14px 11px;
+  font-size: 14px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab-active {
+  color: var(--accent-ink);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+
+.tab-count {
+  font-size: 11px;
+  margin-left: 5px;
+  color: var(--muted-2);
+}
+
+.tab-active .tab-count {
+  color: var(--accent);
+}
+
+.searchbox {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.searchbox-input {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 220px;
+  max-width: 100%;
+  font-size: 13px;
+  background: var(--surface);
+}
+
+.searchbox-button {
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  padding: 7px 18px;
+  cursor: pointer;
+}
+
+.searchbox-button:hover {
+  background: var(--accent-ink);
+}
+
+.filter-note {
+  font-size: 13px;
+  color: var(--muted);
+  margin: -8px 0 16px;
+}
+
+.filter-note a:hover {
+  color: var(--accent);
+}
+
+/* ---------- stats ---------- */
 
 .stat-row {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .stat {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 10px 16px;
   min-width: 108px;
 }
@@ -113,6 +270,463 @@ a {
   font-size: 12px;
   color: var(--muted);
 }
+
+/* ---------- hot panel ---------- */
+
+.hot-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px 6px;
+  margin-bottom: 22px;
+}
+
+.hot-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.hot-heading {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.hot-more {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.hot-more:hover {
+  text-decoration: underline;
+}
+
+.hot-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hot-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.hot-row:first-child {
+  border-top: none;
+}
+
+.hot-rank {
+  flex-shrink: 0;
+  width: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted-2);
+  text-align: center;
+}
+
+.hot-rank-top {
+  color: var(--hot);
+}
+
+.hot-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.hot-title:hover {
+  color: var(--accent);
+}
+
+.hot-score {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+.hot-score-unit {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+/* ---------- sort toggle ---------- */
+
+.sort-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.sort-label {
+  color: var(--muted);
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.sort-option {
+  padding: 3px 10px;
+  border-radius: 6px;
+  color: var(--muted);
+}
+
+.sort-option:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.sort-option-active {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+/* ---------- collapsible timeline ---------- */
+
+.tl-day {
+  margin-bottom: 4px;
+}
+
+.tl-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 4px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+/* The default disclosure triangle is replaced by the chevron below. */
+.tl-summary::-webkit-details-marker {
+  display: none;
+}
+
+.tl-summary:hover .tl-date {
+  color: var(--accent-ink);
+}
+
+.tl-chevron {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--muted-2);
+  transform: rotate(0deg);
+  transition: transform 0.15s ease;
+  align-self: center;
+}
+
+.tl-day[open] > .tl-summary .tl-chevron {
+  transform: rotate(90deg);
+}
+
+.tl-date {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tl-weekday {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* The rail: one continuous line down the gutter, behind the row markers. */
+.tl-body {
+  position: relative;
+  padding: 2px 0 10px;
+}
+
+.tl-body::before {
+  content: "";
+  position: absolute;
+  left: 71px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border);
+}
+
+.tl-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  margin-bottom: 10px;
+}
+
+.tl-gutter {
+  position: relative;
+  width: 84px;
+  flex-shrink: 0;
+  padding-top: 15px;
+  text-align: right;
+  padding-right: 21px;
+}
+
+.tl-time {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tl-dot {
+  position: absolute;
+  right: -4px;
+  top: 20px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--bg);
+}
+
+.tl-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- card ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px 16px;
+}
+
+.card:hover {
+  border-color: #d5d7d3;
+}
+
+.card-head,
+/* Still used by the item detail and report pages, which show a plain metadata
+   line rather than the timeline card's header. */
+.card-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 7px;
+}
+
+.card-meta {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.card-source {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.card-heat {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.card-heat-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--hot);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 650;
+  margin: 0 0 6px;
+  line-height: 1.45;
+}
+
+.card-title a:hover {
+  color: var(--accent-ink);
+}
+
+.card-summary {
+  font-size: 13.5px;
+  color: var(--text-soft);
+  margin: 0;
+  line-height: 1.65;
+}
+
+.card-corroboration {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 8px 0 0;
+}
+
+.card-reason {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border-radius: 8px;
+  padding: 8px 12px;
+  line-height: 1.65;
+}
+
+.card-reason-label {
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.card-reason-label::after {
+  content: "：";
+}
+
+/* ---------- tags ---------- */
+
+.tag {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tag-primary {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent-ink);
+}
+
+.tag-curated {
+  background: #fdf6e3;
+  border-color: transparent;
+  color: #8a6d1f;
+}
+
+/* ---------- topic map ---------- */
+
+.hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 34px 36px 30px;
+  margin-bottom: 34px;
+}
+
+.hero-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+
+.hero-rule {
+  width: 34px;
+  height: 1.5px;
+  background: var(--muted-2);
+}
+
+.hero-title {
+  font-size: 40px;
+  font-weight: 800;
+  margin: 0 0 16px;
+  letter-spacing: -0.02em;
+}
+
+.hero-lead {
+  font-size: 14.5px;
+  color: var(--text-soft);
+  margin: 0;
+  max-width: 700px;
+  line-height: 1.8;
+}
+
+.topic-group {
+  margin-bottom: 36px;
+}
+
+.topic-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 19px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+
+.topic-group-desc {
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.topic-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 14px;
+}
+
+.topic-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px 18px;
+}
+
+.topic-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 1px 10px rgba(15, 110, 92, 0.07);
+}
+
+/* A topic the taxonomy defines but nothing has been tagged with yet. Shown
+   rather than hidden so the vocabulary's shape is visible, but visibly quieter. */
+.topic-card-empty {
+  opacity: 0.55;
+}
+
+.topic-card-name {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.topic-card-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 16px;
+  line-height: 1.7;
+  flex: 1;
+}
+
+.topic-card-link {
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.topic-card:hover .topic-card-link {
+  color: var(--accent-ink);
+}
+
+/* ---------- misc ---------- */
 
 .day-heading {
   font-size: 15px;
@@ -129,58 +743,10 @@ a {
   margin-left: 8px;
 }
 
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 16px 18px;
-  margin-bottom: 10px;
-}
-
-.card:hover {
-  border-color: #cfcfc9;
-}
-
-.card-meta {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-
-.card-title {
-  font-size: 16px;
-  font-weight: 650;
-  margin: 0 0 6px;
-  line-height: 1.45;
-}
-
-.card-summary {
-  font-size: 14px;
-  color: #43433f;
-  margin: 0;
-}
-
-.tag {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 1px 8px;
-  font-size: 11px;
-}
-
-.tag-primary {
-  background: var(--accent-soft);
-  border-color: transparent;
-  color: var(--accent);
-}
-
 .empty {
   background: var(--surface);
   border: 1px dashed var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 36px;
   text-align: center;
   color: var(--muted);
@@ -189,17 +755,18 @@ a {
 .detail-body {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 24px;
+  border-radius: 12px;
+  padding: 24px 28px;
 }
 
 .notice {
   background: #fff8e6;
   border: 1px solid #f0e0b0;
-  border-radius: 8px;
-  padding: 10px 14px;
+  border-radius: 10px;
+  padding: 12px 16px;
   font-size: 13px;
-  margin: 16px 0;
+  margin: 20px 0;
+  line-height: 1.7;
 }
 
 .pager {
@@ -218,32 +785,6 @@ a {
 .button:hover {
   border-color: var(--accent);
   color: var(--accent);
-}
-
-@media (max-width: 720px) {
-  .layout {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .main {
-    padding: 20px 16px 48px;
-  }
-}
-
-.card-reason {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--accent);
-  background: var(--accent-soft);
-  border-radius: 6px;
-  padding: 5px 10px;
-  display: inline-block;
 }
 
 .topic-grid {
@@ -270,236 +811,6 @@ a {
   color: var(--muted);
   font-size: 11px;
   margin-left: 5px;
-}
-
-/* Category / period tabs */
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0 0 14px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 10px;
-}
-
-.tab {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 999px;
-  padding: 5px 14px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.tab:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.tab-active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  font-weight: 600;
-}
-
-.tab-count {
-  font-size: 11px;
-  margin-left: 6px;
-  opacity: 0.75;
-}
-
-.sort-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 18px;
-  font-size: 13px;
-}
-
-.sort-label {
-  color: var(--muted);
-  font-size: 12px;
-  margin-right: 4px;
-}
-
-.sort-option {
-  padding: 3px 10px;
-  border-radius: 6px;
-  color: var(--muted);
-}
-
-.sort-option:hover {
-  background: var(--bg);
-  color: var(--text);
-}
-
-.sort-option-active {
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 600;
-}
-
-/* Hot list */
-.hot-panel {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 18px 8px;
-  margin-bottom: 22px;
-}
-
-.hot-heading {
-  font-size: 15px;
-  font-weight: 700;
-  margin: 0 0 8px;
-}
-
-.hot-note {
-  font-weight: 400;
-  font-size: 11px;
-  color: var(--muted);
-  margin-left: 8px;
-}
-
-.hot-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.hot-row {
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
-  padding: 6px 0;
-  border-top: 1px solid var(--border);
-}
-
-.hot-row:first-child {
-  border-top: none;
-}
-
-.hot-rank {
-  flex-shrink: 0;
-  width: 20px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-  text-align: center;
-}
-
-.hot-rank-top {
-  color: #c2410c;
-}
-
-.hot-body {
-  min-width: 0;
-}
-
-.hot-title {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.45;
-}
-
-.hot-title:hover {
-  color: var(--accent);
-}
-
-.hot-meta {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 1px;
-}
-
-/* Search / filter bar */
-.filter-form {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-
-.filter-input {
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  width: 280px;
-  max-width: 100%;
-  font-size: 14px;
-}
-
-.filter-clear {
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.filter-clear:hover {
-  color: var(--accent);
-}
-
-/* Topic map */
-.topic-group {
-  margin-bottom: 26px;
-}
-
-.topic-group-desc {
-  color: var(--muted);
-  font-size: 13px;
-  margin: 0 0 12px;
-}
-
-.topic-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-}
-
-.topic-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 14px;
-}
-
-.topic-card:hover {
-  border-color: var(--accent);
-}
-
-/* A topic the taxonomy defines but nothing has been tagged with yet. Shown
-   rather than hidden so the vocabulary's shape is visible, but visibly quieter. */
-.topic-card-empty {
-  opacity: 0.55;
-}
-
-.topic-card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.topic-card-name {
-  font-size: 14px;
-  font-weight: 650;
-}
-
-.topic-card-count {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.topic-card-desc {
-  font-size: 12px;
-  color: var(--muted);
-  margin: 4px 0 0;
-  line-height: 1.5;
 }
 
 .table {
@@ -536,8 +847,8 @@ a {
 }
 
 .state-ACTIVE {
-  background: #e6f2ef;
-  color: #0f6e5c;
+  background: #e8f2ef;
+  color: #0b5648;
 }
 
 .state-DEGRADED,
@@ -574,17 +885,12 @@ a {
   left: 0;
 }
 
-.nav-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
 /* A visible focus ring is required for keyboard navigation; the browser
    default is removed by some resets, so it is restored explicitly. */
 a:focus-visible,
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+summary:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -593,5 +899,49 @@ input:focus-visible {
   * {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .sidebar {
+    position: static;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 16px;
+  }
+
+  .main {
+    margin-left: 0;
+    padding: 20px 16px 48px;
+  }
+
+  .hero {
+    padding: 24px 20px;
+  }
+
+  .hero-title {
+    font-size: 30px;
+  }
+
+  /* The time gutter costs too much width on a phone; the marker rail goes
+     away and the timestamp moves inline above the card. */
+  .tl-body::before {
+    display: none;
+  }
+
+  .tl-row {
+    flex-direction: column;
+  }
+
+  .tl-gutter {
+    width: auto;
+    text-align: left;
+    padding: 0 0 4px;
+  }
+
+  .tl-dot {
+    display: none;
   }
 }

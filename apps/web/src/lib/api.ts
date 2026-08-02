@@ -25,6 +25,8 @@ export interface ContentItem {
   observedAt: string;
   contentType?: string;
   qualityScore?: number;
+  hotScore?: number;
+  independentSources?: number;
   source: SourceRef;
 }
 
@@ -135,6 +137,54 @@ export interface HotItem {
 
 export function fetchHot(limit = 10): Promise<HotItem[]> {
   return getJson<HotItem[]>(`/api/v1/hot?limit=${limit}`, []);
+}
+
+export interface StorySummary {
+  id: string;
+  slug: string;
+  title: string;
+  occurredAt?: string;
+  heat?: number;
+  independentSources: number;
+  itemCount: number;
+  locked: boolean;
+  contentType?: string;
+  primarySourceName?: string;
+  primarySourceTier?: string;
+}
+
+export interface StoryEntry {
+  id: string;
+  title: string;
+  summary?: string;
+  canonicalUrl: string;
+  publishedAt?: string;
+  observedAt?: string;
+  contentType?: string;
+  relationType: string;
+  similarity?: number;
+  sourceName: string;
+  sourceTier: string;
+  organization?: string;
+}
+
+export interface StoryDetail {
+  story: StorySummary;
+  timeline: StoryEntry[];
+}
+
+export function fetchStories(limit = 30, minSources = 1): Promise<StorySummary[]> {
+  return getJson<StorySummary[]>(
+    `/api/v1/stories?limit=${limit}&minSources=${minSources}`,
+    [],
+  );
+}
+
+export function fetchStory(slug: string): Promise<StoryDetail | null> {
+  return getJson<StoryDetail | null>(
+    `/api/v1/stories/${encodeURIComponent(slug)}`,
+    null,
+  );
 }
 
 export interface CategoryTab {

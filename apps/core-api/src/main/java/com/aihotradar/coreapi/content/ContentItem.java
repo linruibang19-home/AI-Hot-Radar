@@ -26,6 +26,11 @@ public record ContentItem(
         OffsetDateTime observedAt,
         String contentType,
         Double qualityScore,
+        Double hotScore,
+        // How many independent sources reported the same event. Pre-M3 this is
+        // approximated by near-duplicate grouping, so it is usually 1; story
+        // clustering is what makes it meaningful.
+        Integer independentSources,
         SourceRef source) {
 
     /** Minimal source descriptor; the full source record is admin-only. */
