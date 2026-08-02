@@ -1,7 +1,7 @@
 # 项目进度总览
 
 > 更新时间：2026-08-02
-> 当前阶段：**M2 基本完成（约 95%）**（M1 已完成）
+> 当前阶段：**M2 已完成**（M1 已完成）
 > 所有数据均来自实际运行，非估算
 
 ## 1. 里程碑完成情况
@@ -10,7 +10,7 @@
 |---|---|---|
 | **M0 工程骨架** | ✅ 完成 | 三服务 + Compose + Flyway + pgvector + CI + request-ID |
 | **M1 真实信源与入库** | ✅ 完成 | 7 类适配器、98 源 ACTIVE、723 条内容入库、调度器 |
-| **M2 内容加工与网站** | 🟢 约 95% | 切块、去重、LLM 结构化、主题归一、精选、全文检索、日报、Redis 缓存、成本追踪、前端七页 |
+| **M2 内容加工与网站** | ✅ 完成 | 切块、去重、LLM 结构化、主题归一、精选、全文检索、日报、邮件投递、Redis 缓存、成本追踪、前端七页 |
 | M3 Story 与热点 | ⬜ 未开始 | 事件聚类、主来源、热度算法、时间线 |
 | M4 RAG MVP | ⬜ 未开始 | Embedding、混合检索、RRF、引用绑定、黄金集 |
 | M5 上线与增强 | ⬜ 未开始 | 域名 HTTPS、备份监控、邮件订阅、周月报 |
@@ -75,7 +75,7 @@
 | Next.js web | http://localhost:3000 | healthy | 精选、全部动态、详情、日报列表、日报详情、主题、信源后台 |
 | Spring Boot core-api | http://localhost:8080 | healthy | items / selected / topics / reports / stats / admin.sources |
 | FastAPI ai-service | http://localhost:8000 | healthy | 采集、加工、调度全部功能 |
-| PostgreSQL + pgvector | localhost:5432 | healthy | 27 表，6 个 Flyway 迁移 |
+| PostgreSQL + pgvector | localhost:5432 | healthy | 28 表，7 个 Flyway 迁移 |
 | Redis | localhost:6379 | healthy | **已接入读缓存**（selected 5min / topics 10min / stats 2min） |
 
 **全部运行在 Docker 中**，宿主机零依赖。消息队列与对象存储按 ADR-007 与规格暂不引入（Outbox 已实现，733 条事件待消费）。
@@ -112,6 +112,7 @@ processed_event       消费幂等记录
 | V004 | 内容加工：simhash、去重关系、AI 结构化列、entity / item_entity / item_topic |
 | V005 | 全文检索 tsvector + trigram 索引、selection_record 精选表 |
 | V006 | llm_usage 成本核算表、report 扩展列、report_item 溯源表 |
+| V007 | email_delivery 投递记录（delivery_key 唯一，防重复发送） |
 
 ## 6. 已完成任务
 
@@ -138,16 +139,20 @@ processed_event       消费幂等记录
 - [x] LLM 成本追踪（provider 真实 token，非字符估算）
 - [x] 加工成本控制（正文 < 200 字符跳过，不浪费调用）
 - [x] 日报列表页与详情页
-- [x] 161 个离线测试，断网可通过
+- [x] 日报邮件投递（HTML + 纯文本双格式、delivery_key 防重发、标题转义）
+- [x] 174 个离线测试，断网可通过
 
 ## 7. 待完成任务
 
 ### M2 剩余
 
-- [ ] 测试邮件投递（日报内容已就绪，缺 SMTP 发送）
-- [ ] 后台任务重跑（需先有鉴权，见下）
+- [ ] Lighthouse ≥ 85 验收（需真实浏览器，本地未跑）
 - [ ] 剩余内容完成 AI 结构化（批量运行中）
-- [ ] Lighthouse ≥ 85 验收
+- [ ] 后台任务重跑（需先有鉴权，见下）
+
+> **邮件投递已实现但未配置真实 SMTP**。`.env` 里 `SMTP_HOST`/`EMAIL_FROM` 为空时命令返回
+> `not_configured` 而非报错。发送链路已用本地 SMTP sink 实测：25KB 邮件，HTML 与纯文本
+> 双部分各含 12 条原文链接，中文正常。
 
 > 信源后台目前是**只读**。`AHR-QSO-700` §3 要求管理操作具备最小权限 RBAC 与二次确认，
 > 而鉴权属于 M5；在此之前提供启停/重跑接口会造成无鉴权的写入面，因此推迟。
@@ -179,6 +184,10 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 ```
 
 ```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli send-report --date 2026-08-01 --to you@example.com
+```
+
+```bash
 docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli usage --days 30
 ```
 
@@ -194,3 +203,4 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 | LLM 成本随内容量线性增长 | 已消耗见 `ahr.cli usage` | 已加正文长度门槛跳过薄内容；按优先级分批 |
 | 中文动态站点需浏览器渲染 | 16 个源未接入 | Wave C 专项，需 robots 复核 |
 | 密钥曾出现在会话记录 | 泄露风险 | **上线前必须轮换 GitHub / DeepSeek 密钥** |
+| entity_type 规格冲突 | 1 条内容进入 DEAD_LETTER | `docs/spec/03` 定义 5 类，`taxonomy.yaml` 定义 8 类，待决策 |

@@ -183,6 +183,93 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_send_report(args: argparse.Namespace) -> int:
+    """Send a stored daily report by email."""
+    from ahr.processing.email import (
+        EmailNotConfiguredError,
+        SmtpConfig,
+        already_delivered,
+        build_message,
+        delivery_key,
+        record_delivery,
+        send_message,
+    )
+
+    try:
+        config = SmtpConfig.from_env()
+    except EmailNotConfiguredError as exc:
+        print(json.dumps({"status": "not_configured", "detail": str(exc)}, indent=2))
+        return 1
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT title, summary, body_markdown FROM report"
+                " WHERE period_type = 'daily' AND period_key = %s",
+                (args.date,),
+            )
+            row = cursor.fetchone()
+
+        if row is None:
+            print(json.dumps({"status": "no_report", "date": args.date}, indent=2))
+            return 1
+
+        title, summary, body_markdown = row
+        key = delivery_key(args.date, args.to)
+
+        if already_delivered(connection, key) and not args.force:
+            print(json.dumps({"status": "already_sent", "delivery_key": key[:16]}, indent=2))
+            return 0
+
+        if args.dry_run:
+            print(
+                json.dumps(
+                    {
+                        "status": "dry_run",
+                        "to": args.to,
+                        "subject": title,
+                        "body_chars": len(body_markdown),
+                    },
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        message = build_message(
+            config=config,
+            recipient=args.to,
+            title=title,
+            summary=summary or "",
+            body_markdown=body_markdown,
+        )
+        try:
+            send_message(config, message)
+        except Exception as exc:  # noqa: BLE001 - failure must be recorded, not raised
+            record_delivery(
+                connection,
+                key=key,
+                recipient=args.to,
+                report_date=args.date,
+                status="FAILED",
+                error=str(exc),
+            )
+            print(json.dumps({"status": "failed", "error": str(exc)[:200]}, indent=2))
+            return 1
+
+        record_delivery(
+            connection,
+            key=key,
+            recipient=args.to,
+            report_date=args.date,
+            status="SENT",
+            error=None,
+        )
+
+    print(json.dumps({"status": "sent", "to": args.to, "date": args.date}, indent=2))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ahr")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -231,6 +318,13 @@ def main(argv: list[str] | None = None) -> int:
     report.add_argument("--no-llm", action="store_true", help="skip the narrative summary")
     report.add_argument("--output", default=None, help="also write the markdown here")
     report.set_defaults(func=cmd_report)
+
+    send = sub.add_parser("send-report", help="email a stored daily report")
+    send.add_argument("--date", required=True, help="YYYY-MM-DD")
+    send.add_argument("--to", required=True, help="recipient address")
+    send.add_argument("--dry-run", action="store_true", help="render without sending")
+    send.add_argument("--force", action="store_true", help="resend even if already delivered")
+    send.set_defaults(func=cmd_send_report)
 
     args = parser.parse_args(argv)
     return int(args.func(args))
