@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
 import type { ReactNode } from "react";
+
+import { Sidebar } from "@/components/Sidebar";
+
 import "./globals.css";
 
 const SITE_URL = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
@@ -36,15 +38,6 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-const NAV = [
-  { href: "/", label: "精选" },
-  { href: "/items", label: "全部 AI 动态" },
-  { href: "/reports", label: "AI 日报" },
-  { href: "/topics", label: "主题地图" },
-];
-
-const ADMIN_NAV = [{ href: "/admin/sources", label: "信源后台" }];
-
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="zh-CN">
@@ -56,42 +49,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
 
         <div className="layout">
-          <aside className="sidebar">
-            <div className="brand">AI HOT RADAR</div>
-
-            <nav aria-label="内容导航">
-              <div className="nav-label" id="nav-content">
-                内容
-              </div>
-              <ul className="nav-list" aria-labelledby="nav-content">
-                {NAV.map((entry) => (
-                  <li key={entry.href}>
-                    <Link className="nav-link" href={entry.href}>
-                      {entry.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-
-            <nav aria-label="管理导航">
-              <div className="nav-label" id="nav-admin">
-                管理
-              </div>
-              <ul className="nav-list" aria-labelledby="nav-admin">
-                {ADMIN_NAV.map((entry) => (
-                  <li key={entry.href}>
-                    <Link className="nav-link" href={entry.href}>
-                      {entry.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </aside>
-
+          <Sidebar />
           <main className="main" id="main">
-            {children}
+            <div className="main-inner">{children}</div>
           </main>
         </div>
       </body>

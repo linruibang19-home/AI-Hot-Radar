@@ -51,3 +51,34 @@ export function CategoryTabs({
     </nav>
   );
 }
+
+/** Search box that preserves the active category across a submit. */
+export function SearchBox({
+  action,
+  defaultValue,
+  category,
+}: {
+  action: string;
+  defaultValue?: string;
+  category?: string;
+}) {
+  return (
+    <form method="get" action={action} className="searchbox" role="search">
+      {/* Without this the active tab is silently dropped on submit. */}
+      {category && category !== "all" && (
+        <input type="hidden" name="category" value={category} />
+      )}
+      <input
+        type="search"
+        name="q"
+        defaultValue={defaultValue ?? ""}
+        placeholder="搜索标题/摘要/正文…"
+        className="searchbox-input"
+        aria-label="搜索内容"
+      />
+      <button type="submit" className="searchbox-button">
+        搜索
+      </button>
+    </form>
+  );
+}

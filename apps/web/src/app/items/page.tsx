@@ -1,7 +1,8 @@
 import Link from "next/link";
 
-import { CategoryTabs } from "@/components/CategoryTabs";
+import { CategoryTabs, SearchBox } from "@/components/CategoryTabs";
 import { ItemCard } from "@/components/ItemCard";
+import { TimelineDay, TimelineRow } from "@/components/Timeline";
 import { fetchCategories, fetchItems, groupByDay } from "@/lib/api";
 
 import type { Metadata } from "next";
@@ -13,12 +14,10 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+const OPEN_DAYS = 2;
 
-function formatDay(day: string): string {
-  const date = new Date(`${day}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) return day;
-  return `${date.getUTCMonth() + 1}月${date.getUTCDate()}日 · ${WEEKDAYS[date.getUTCDay()]}`;
+function formatTime(value?: string): string {
+  return value ? value.slice(11, 16) : "--:--";
 }
 
 interface SearchParams {
@@ -57,54 +56,51 @@ export default async function ItemsPage({
 
   return (
     <>
-      <h1 className="page-title">全部 AI 动态</h1>
-      <p className="page-subtitle">
-        候选池全量内容，按发布时间倒序 · 中文标题与摘要由模型生成，事实以原文为准
-        {params.q ? ` · 搜索「${params.q}」` : ""}
-      </p>
+      <header className="page-head">
+        <h1 className="page-title">全部 AI 动态</h1>
+        <p className="page-subtitle">
+          候选池全量内容，按发布时间倒序 · 中文标题与摘要由模型生成，事实以原文为准
+          {params.q ? ` · 搜索「${params.q}」` : ""}
+        </p>
+      </header>
 
-      <CategoryTabs
-        tabs={categories}
-        active={category}
-        basePath="/items"
-        params={{ q: params.q }}
-      />
-
-      <form method="get" action="/items" className="filter-form">
-        {/* The category has to survive a search, otherwise submitting the form
-            silently drops the active tab. */}
-        {category !== "all" && <input type="hidden" name="category" value={category} />}
-        <input
-          type="search"
-          name="q"
-          defaultValue={params.q ?? ""}
-          placeholder="搜索标题、模型名或版本号…"
-          className="filter-input"
-          aria-label="搜索内容"
+      <div className="toolbar">
+        <CategoryTabs
+          tabs={categories}
+          active={category}
+          basePath="/items"
+          params={{ q: params.q }}
         />
-        <button type="submit" className="button">
-          搜索
-        </button>
-        {params.q && (
-          <Link className="filter-clear" href={category === "all" ? "/items" : `/items?category=${category}`}>
+        <SearchBox action="/items" defaultValue={params.q} category={category} />
+      </div>
+
+      {params.q && (
+        <p className="filter-note">
+          <Link href={category === "all" ? "/items" : `/items?category=${category}`}>
             清除搜索
           </Link>
-        )}
-      </form>
+        </p>
+      )}
 
       {page.data.length === 0 ? (
         <div className="empty">没有匹配的内容。</div>
       ) : (
-        [...groups.entries()].map(([day, items]) => (
-          <section key={day}>
-            <h2 className="day-heading">
-              {formatDay(day)}
-              <span className="day-count">{items.length} 条</span>
-            </h2>
+        [...groups.entries()].map(([day, items], index) => (
+          <TimelineDay
+            key={day}
+            day={day}
+            count={items.length}
+            defaultOpen={index < OPEN_DAYS}
+          >
             {items.map((item) => (
-              <ItemCard key={item.id} item={item} />
+              <TimelineRow
+                key={item.id}
+                time={formatTime(item.publishedAt ?? item.observedAt)}
+              >
+                <ItemCard item={item} />
+              </TimelineRow>
             ))}
-          </section>
+          </TimelineDay>
         ))
       )}
 

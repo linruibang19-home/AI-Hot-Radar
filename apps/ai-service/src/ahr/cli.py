@@ -153,6 +153,16 @@ def cmd_heat(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_cluster(args: argparse.Namespace) -> int:
+    from ahr.processing.story_repository import recluster, sync_item_heat
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        result = recluster(connection, days=args.days)
+        result["items_rescored"] = sync_item_heat(connection)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
+
 def cmd_seed_topics(args: argparse.Namespace) -> int:
     """Refresh the topic table from config/taxonomy.yaml.
 
@@ -375,6 +385,10 @@ def main(argv: list[str] | None = None) -> int:
     heat = sub.add_parser("heat", help="recompute hot_score for recent content")
     heat.add_argument("--days", type=int, default=7)
     heat.set_defaults(func=cmd_heat)
+
+    clusters = sub.add_parser("cluster", help="group content into event Stories")
+    clusters.add_argument("--days", type=int, default=14)
+    clusters.set_defaults(func=cmd_cluster)
 
     seed = sub.add_parser("seed-topics", help="refresh topic names and grouping from taxonomy")
     seed.set_defaults(func=cmd_seed_topics)

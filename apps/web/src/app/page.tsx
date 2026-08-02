@@ -1,19 +1,25 @@
-import { CategoryTabs } from "@/components/CategoryTabs";
+import { CategoryTabs, SearchBox } from "@/components/CategoryTabs";
 import { HotList } from "@/components/HotList";
 import { ItemCard } from "@/components/ItemCard";
 import { SortToggle } from "@/components/SortToggle";
+import { TimelineDay, TimelineRow } from "@/components/Timeline";
 import { fetchCategories, fetchHot, fetchSelected, fetchStats } from "@/lib/api";
 import type { SelectedItem, SelectionSort } from "@/lib/api";
 
 // SSR on every request so the first screen is always current (AHR-FEAT-101).
 export const dynamic = "force-dynamic";
 
-const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+/** How many day sections start expanded. Older days collapse to stay scannable. */
+const OPEN_DAYS = 2;
 
-function formatDay(day: string): string {
-  const date = new Date(`${day}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) return day;
-  return `${date.getUTCMonth() + 1}月${date.getUTCDate()}日 · ${WEEKDAYS[date.getUTCDay()]}`;
+function formatToday(): string {
+  const now = new Date();
+  const weekday = ["日", "一", "二", "三", "四", "五", "六"][now.getDay()];
+  return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日星期${weekday}`;
+}
+
+function formatTime(value?: string): string {
+  return value ? value.slice(11, 16) : "--:--";
 }
 
 /**
@@ -43,6 +49,7 @@ function groupEntries(
 interface SearchParams {
   category?: string;
   sort?: string;
+  q?: string;
 }
 
 export default async function Home({
@@ -67,10 +74,22 @@ export default async function Home({
 
   return (
     <>
-      <h1 className="page-title">精选</h1>
-      <p className="page-subtitle">
-        AI 自动挑选的高价值内容 · 推荐理由由模型阅读全文后逐条撰写，并标注局限
-      </p>
+      <header className="page-head">
+        <h1 className="page-title">精选</h1>
+        <p className="page-subtitle">
+          {formatToday()} · AI 自动挑选的高价值内容 · 推荐理由由模型阅读全文后逐条撰写
+        </p>
+      </header>
+
+      <div className="toolbar">
+        <CategoryTabs
+          tabs={categories}
+          active={category}
+          basePath="/"
+          params={{ sort: params.sort }}
+        />
+        <SearchBox action="/items" defaultValue={params.q} category={category} />
+      </div>
 
       <div className="stat-row">
         <div className="stat">
@@ -93,12 +112,6 @@ export default async function Home({
 
       <HotList items={hot} />
 
-      <CategoryTabs
-        tabs={categories}
-        active={category}
-        basePath="/"
-        params={{ sort: params.sort }}
-      />
       <SortToggle
         active={sort}
         basePath="/"
@@ -118,21 +131,22 @@ export default async function Home({
           )}
         </div>
       ) : (
-        [...groups.entries()].map(([day, entries]) => (
-          <section key={day}>
-            <h2 className="day-heading">
-              {formatDay(day)}
-              <span className="day-count">{entries.length} 条精选</span>
-            </h2>
+        [...groups.entries()].map(([day, entries], index) => (
+          <TimelineDay
+            key={day}
+            day={day}
+            count={entries.length}
+            defaultOpen={index < OPEN_DAYS}
+          >
             {entries.map((entry) => (
-              <ItemCard
+              <TimelineRow
                 key={entry.item.id}
-                item={entry.item}
-                selectionReason={entry.reason}
-                selectionScore={entry.score}
-              />
+                time={formatTime(entry.item.publishedAt ?? entry.item.observedAt)}
+              >
+                <ItemCard item={entry.item} selectionReason={entry.reason} curated />
+              </TimelineRow>
             ))}
-          </section>
+          </TimelineDay>
         ))
       )}
     </>
