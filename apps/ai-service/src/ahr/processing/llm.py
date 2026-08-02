@@ -11,7 +11,9 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 from pydantic import ValidationError
@@ -41,6 +43,30 @@ class LlmUnavailableError(RuntimeError):
 
 class EnrichmentSchemaError(RuntimeError):
     """The model answered but the answer does not satisfy the contract."""
+
+
+@dataclass
+class TokenUsage:
+    """Actual usage reported by the provider, accumulated across attempts.
+
+    Taken from the response rather than estimated from characters: tokenisation
+    and prompt caching both make character counts a poor proxy for spend.
+    """
+
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cached_tokens: int = 0
+    attempts: int = 0
+    latency_ms: int = 0
+
+    def add(self, payload: dict[str, Any] | None, *, elapsed_ms: int) -> None:
+        self.attempts += 1
+        self.latency_ms += elapsed_ms
+        if not payload:
+            return
+        self.prompt_tokens += int(payload.get("prompt_tokens") or 0)
+        self.completion_tokens += int(payload.get("completion_tokens") or 0)
+        self.cached_tokens += int(payload.get("prompt_cache_hit_tokens") or 0)
 
 
 @dataclass(frozen=True)
@@ -89,28 +115,34 @@ class LlmClient:
             await self._client.aclose()
             self._client = None
 
-    async def _complete(self, messages: list[dict[str, str]]) -> str:
+    async def _complete(
+        self, messages: list[dict[str, str]], usage: TokenUsage, *, json_mode: bool = True
+    ) -> str:
         if self._client is None:
             raise RuntimeError("LlmClient must be used as an async context manager")
 
-        payload = {
+        payload: dict[str, Any] = {
             "model": self._config.model,
             "messages": messages,
             "temperature": self._config.temperature,
             "stream": False,
-            # Providers that support it return strict JSON; others ignore it and
-            # the fence-stripping fallback handles the difference.
-            "response_format": {"type": "json_object"},
         }
+        if json_mode:
+            # Providers that support it return strict JSON; others ignore it and
+            # the fence-stripping fallback handles the difference. Prose calls
+            # must not set it, or the model wraps the summary in a JSON object.
+            payload["response_format"] = {"type": "json_object"}
 
         last_error: Exception | None = None
         for _attempt in range(self._config.max_attempts):
+            started = time.monotonic()
             try:
                 response = await self._client.post(
                     f"{self._config.base_url.rstrip('/')}/chat/completions", json=payload
                 )
             except httpx.HTTPError as exc:
                 last_error = exc
+                usage.add(None, elapsed_ms=int((time.monotonic() - started) * 1000))
                 continue
 
             if response.status_code == 429 or response.status_code >= 500:
@@ -123,13 +155,37 @@ class LlmClient:
                 )
 
             body = response.json()
+            usage.add(body.get("usage"), elapsed_ms=int((time.monotonic() - started) * 1000))
             return str(body["choices"][0]["message"]["content"])
 
         raise LlmUnavailableError(
             f"llm unavailable after {self._config.max_attempts} attempts: {last_error}"
         )
 
-    async def enrich(self, *, title: str, body_text: str, source_name: str) -> EnrichmentResult:
+    @property
+    def model_name(self) -> str:
+        return self._config.model
+
+    async def summarize(self, *, system_prompt: str, user_prompt: str) -> tuple[str, TokenUsage]:
+        """Free-text completion for narrative output such as report summaries.
+
+        Separate from `enrich` because there is no JSON contract to validate
+        here; the caller is expected to treat the result as prose.
+        """
+        usage = TokenUsage()
+        text = await self._complete(
+            [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            usage,
+            json_mode=False,
+        )
+        return text, usage
+
+    async def enrich(
+        self, *, title: str, body_text: str, source_name: str
+    ) -> tuple[EnrichmentResult, TokenUsage]:
         """Structure one article, with a single repair attempt on schema failure."""
         user_prompt = (
             f"来源：{source_name}\n原标题：{title}\n\n正文：\n{body_text[:MAX_BODY_CHARS]}"
@@ -139,9 +195,10 @@ class LlmClient:
             {"role": "user", "content": user_prompt},
         ]
 
-        raw = await self._complete(messages)
+        usage = TokenUsage()
+        raw = await self._complete(messages, usage)
         try:
-            return EnrichmentResult.model_validate_json(_strip_code_fence(raw))
+            return EnrichmentResult.model_validate_json(_strip_code_fence(raw)), usage
         except (ValidationError, ValueError) as exc:
             # Python unbinds the `as` name when the except block exits, so the
             # message has to be captured here to survive into the repair turn.
@@ -154,9 +211,9 @@ class LlmClient:
                 {"role": "user", "content": REPAIR_PROMPT.format(error=first_error[:400])},
             ]
         )
-        repaired = await self._complete(messages)
+        repaired = await self._complete(messages, usage)
         try:
-            return EnrichmentResult.model_validate_json(_strip_code_fence(repaired))
+            return EnrichmentResult.model_validate_json(_strip_code_fence(repaired)), usage
         except (ValidationError, ValueError) as second_error:
             raise EnrichmentSchemaError(
                 f"schema validation failed after one repair: {second_error}"

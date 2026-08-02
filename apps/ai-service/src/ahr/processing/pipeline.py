@@ -28,6 +28,7 @@ from ahr.processing.llm import (
     EnrichmentSchemaError,
     LlmClient,
     LlmUnavailableError,
+    TokenUsage,
     build_client_from_env,
     prompt_version,
 )
@@ -38,6 +39,12 @@ logger = logging.getLogger(__name__)
 
 SOURCE_AUTHORITY = {"primary": 90, "secondary": 65, "expert": 75, "community": 40}
 
+# Below this the body is a stub — a bare version bump, a one-line note — and a
+# summary of it carries no information the title does not already give. Spending
+# a model call on those is pure cost, so they are marked SKIPPED and stay
+# browsable with their original title and excerpt.
+MIN_BODY_CHARS_FOR_ENRICHMENT = 200
+
 
 @dataclass
 class ProcessStats:
@@ -46,6 +53,10 @@ class ProcessStats:
     near_duplicates: int = 0
     enriched: int = 0
     enrich_failed: int = 0
+    skipped_thin: int = 0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    cached_tokens: int = 0
     llm_unavailable: bool = False
 
 
@@ -183,6 +194,39 @@ def _store_enrichment(
     )
 
 
+def _record_usage(
+    connection: Any,
+    item_id: uuid.UUID | None,
+    usage: TokenUsage,
+    *,
+    model: str,
+    succeeded: bool,
+) -> None:
+    """Persist provider-reported usage so spend is auditable (AHR-QSO-700 §5)."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO llm_usage (
+                id, content_item_id, operation, model, prompt_version,
+                prompt_tokens, completion_tokens, cached_tokens,
+                attempts, succeeded, latency_ms
+            ) VALUES (%s, %s, 'enrich', %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                uuid.uuid4(),
+                item_id,
+                model,
+                prompt_version(),
+                usage.prompt_tokens,
+                usage.completion_tokens,
+                usage.cached_tokens,
+                usage.attempts,
+                succeeded,
+                usage.latency_ms,
+            ),
+        )
+
+
 def _mark_enrichment_failed(connection: Any, item_id: uuid.UUID, *, state: str, error: str) -> None:
     with connection.cursor() as cursor:
         cursor.execute(
@@ -281,14 +325,30 @@ async def process_pending(
                     connection.commit()
                     continue
 
+                if len(body.strip()) < MIN_BODY_CHARS_FOR_ENRICHMENT:
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            "UPDATE content_item SET enrichment_state = 'SKIPPED',"
+                            " enrichment_error = 'body below enrichment threshold'"
+                            " WHERE id = %s",
+                            (item_id,),
+                        )
+                    stats.skipped_thin += 1
+                    connection.commit()
+                    continue
+
                 if llm is None:
                     connection.commit()
                     continue
 
                 try:
-                    result = await llm.enrich(
+                    result, usage = await llm.enrich(
                         title=title or "", body_text=body, source_name=source_name
                     )
+                    _record_usage(connection, item_id, usage, model=model_name, succeeded=True)
+                    stats.prompt_tokens += usage.prompt_tokens
+                    stats.completion_tokens += usage.completion_tokens
+                    stats.cached_tokens += usage.cached_tokens
                     _store_enrichment(
                         connection,
                         item_id,

@@ -134,6 +134,28 @@ export function fetchSourceHealth(): Promise<SourceHealth[]> {
   return getJson<SourceHealth[]>("/api/v1/admin/sources", []);
 }
 
+export interface ReportSummary {
+  date: string;
+  title: string;
+  summary: string;
+  itemCount: number;
+  generatedAt: string;
+  modelName?: string | null;
+}
+
+export interface ReportDetail extends ReportSummary {
+  bodyMarkdown: string;
+  promptVersion?: string | null;
+}
+
+export function fetchReports(limit = 30): Promise<ReportSummary[]> {
+  return getJson<ReportSummary[]>(`/api/v1/reports?limit=${limit}`, []);
+}
+
+export function fetchDailyReport(date: string): Promise<ReportDetail | null> {
+  return getJson<ReportDetail | null>(`/api/v1/reports/daily/${date}`, null);
+}
+
 export function fetchTopics(): Promise<TopicSummary[]> {
   return getJson<TopicSummary[]>("/api/v1/topics", []);
 }

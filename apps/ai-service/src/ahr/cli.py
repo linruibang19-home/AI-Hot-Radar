@@ -108,6 +108,81 @@ def cmd_select(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_usage(args: argparse.Namespace) -> int:
+    """Report actual LLM spend from recorded provider usage."""
+    with psycopg.connect(get_settings().database_url) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT model,
+                   count(*),
+                   sum(prompt_tokens), sum(completion_tokens), sum(cached_tokens),
+                   sum(attempts), count(*) FILTER (WHERE NOT succeeded),
+                   round(avg(latency_ms))
+              FROM llm_usage
+             WHERE created_at > now() - (%s || ' days')::interval
+             GROUP BY model
+            """,
+            (args.days,),
+        )
+        rows = cursor.fetchall()
+
+    report = [
+        {
+            "model": r[0],
+            "calls": r[1],
+            "prompt_tokens": int(r[2] or 0),
+            "completion_tokens": int(r[3] or 0),
+            "cached_tokens": int(r[4] or 0),
+            "total_tokens": int((r[2] or 0) + (r[3] or 0)),
+            "attempts": int(r[5] or 0),
+            "failed": r[6],
+            "avg_latency_ms": int(r[7] or 0),
+        }
+        for r in rows
+    ]
+    print(json.dumps({"days": args.days, "usage": report}, indent=2, ensure_ascii=False))
+    return 0
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    from datetime import date, timedelta
+
+    from ahr.processing.llm import LlmUnavailableError, build_client_from_env
+    from ahr.processing.report import build_daily_report, save_report
+
+    target = date.fromisoformat(args.date) if args.date else date.today() - timedelta(days=1)
+
+    async def run() -> dict[str, object]:
+        client = None
+        if not args.no_llm:
+            try:
+                client = build_client_from_env()
+                await client.__aenter__()
+            except LlmUnavailableError:
+                client = None
+        try:
+            with psycopg.connect(get_settings().database_url) as connection:
+                report = await build_daily_report(connection, target, client=client)
+                if report is None:
+                    return {"date": target.isoformat(), "status": "no_selected_items"}
+                report_id = save_report(connection, report)
+                if args.output:
+                    Path(args.output).write_text(report.body_markdown, encoding="utf-8")
+                return {
+                    "date": target.isoformat(),
+                    "report_id": str(report_id),
+                    "items": len(report.items),
+                    "model": report.model_name,
+                    "summary": report.summary[:160],
+                }
+        finally:
+            if client is not None:
+                await client.__aexit__()
+
+    print(json.dumps(asyncio.run(run()), indent=2, ensure_ascii=False))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ahr")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -146,6 +221,16 @@ def main(argv: list[str] | None = None) -> int:
     select = sub.add_parser("select", help="rank recent content into the daily shortlist")
     select.add_argument("--days", type=int, default=7)
     select.set_defaults(func=cmd_select)
+
+    usage = sub.add_parser("usage", help="report recorded LLM token usage")
+    usage.add_argument("--days", type=int, default=30)
+    usage.set_defaults(func=cmd_usage)
+
+    report = sub.add_parser("report", help="generate the daily report from the shortlist")
+    report.add_argument("--date", default=None, help="YYYY-MM-DD, defaults to yesterday")
+    report.add_argument("--no-llm", action="store_true", help="skip the narrative summary")
+    report.add_argument("--output", default=None, help="also write the markdown here")
+    report.set_defaults(func=cmd_report)
 
     args = parser.parse_args(argv)
     return int(args.func(args))
