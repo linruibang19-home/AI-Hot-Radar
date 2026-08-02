@@ -1,6 +1,13 @@
 import type { SourceHealth } from "@/lib/api";
 import { fetchSourceHealth } from "@/lib/api";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "信源后台",
+  description: "信源运行状态、全文成功率与错误诊断。",
+};
+
 export const dynamic = "force-dynamic";
 
 function formatTime(value?: string | null): string {

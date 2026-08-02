@@ -3,6 +3,13 @@ import Link from "next/link";
 import { ItemCard } from "@/components/ItemCard";
 import { fetchItems } from "@/lib/api";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "全部 AI 动态",
+  description: "候选池全量 AI 资讯，按发布时间倒序，支持关键词搜索。",
+};
+
 export const dynamic = "force-dynamic";
 
 interface SearchParams {

@@ -1,7 +1,7 @@
 # 项目进度总览
 
 > 更新时间：2026-08-02
-> 当前阶段：**M2 已完成**（M1 已完成）
+> 当前阶段：**M1 / M2 均已完成**，M3 待开始
 > 所有数据均来自实际运行，非估算
 
 ## 1. 里程碑完成情况
@@ -142,15 +142,29 @@ processed_event       消费幂等记录
 - [x] 加工成本控制（正文 < 200 字符跳过，不浪费调用）
 - [x] 日报列表页与详情页
 - [x] 日报邮件投递（HTML + 纯文本双格式、delivery_key 防重发、标题转义）
-- [x] 174 个离线测试，断网可通过
+- [x] 前端 SEO 与无障碍（og/canonical/theme-color、skip link、focus ring、per-page title、robots.txt、sitemap.xml）
+- [x] 180 个离线测试，断网可通过
 
 ## 7. 待完成任务
 
 ### M2 剩余
 
-- [ ] Lighthouse ≥ 85 验收（需真实浏览器，本地未跑）
-- [ ] 剩余内容完成 AI 结构化（批量运行中）
+- [x] Lighthouse ≥ 85 验收 —— 四个关键页面全部达标
+- [x] AI 结构化 —— 643 条完成，81 条薄内容跳过，0 死信
 - [ ] 后台任务重跑（需先有鉴权，见下）
+
+**Lighthouse 实测**（Docker headless Chrome）：
+
+| 页面 | Performance | Accessibility | SEO |
+|---|---:|---:|---:|
+| 精选首页 | 96 | 100 | 100 |
+| 全部动态 | 96 | 98 | 100 |
+| AI 日报 | 99 | 98 | 91 |
+| 主题 | 99 | 100 | 91 |
+
+Best Practices 本地为 78，失分项**全部是 HTTPS 相关**（`Does not use HTTPS`、
+`Does not redirect HTTP traffic to HTTPS`），属 M5 域名与 TLS 工作，非代码缺陷。
+`docs/spec/01` §6 的验收口径是 Performance / Accessibility / SEO ≥ 85，均已达标。
 
 > **邮件投递已实现但未配置真实 SMTP**。`.env` 里 `SMTP_HOST`/`EMAIL_FROM` 为空时命令返回
 > `not_configured` 而非报错。发送链路已用本地 SMTP sink 实测：25KB 邮件，HTML 与纯文本

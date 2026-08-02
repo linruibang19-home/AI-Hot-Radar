@@ -326,3 +326,42 @@ a {
   background: #eef0f5;
   color: #55607a;
 }
+
+/* Visible only when focused, so keyboard users can bypass the nav (WCAG 2.4.1)
+   without adding visual clutter for everyone else. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 0 0 8px 0;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+.nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* A visible focus ring is required for keyboard navigation; the browser
+   default is removed by some resets, so it is restored explicitly. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
