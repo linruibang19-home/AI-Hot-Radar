@@ -57,6 +57,31 @@ public class ContentController {
         return repository.stats();
     }
 
+    @GetMapping("/selected")
+    public List<ContentRepository.SelectedItem> selected(
+            @RequestParam(required = false, defaultValue = "7") int days,
+            @RequestParam(required = false, defaultValue = "40") int limit) {
+        return repository.findSelected(
+                Math.min(Math.max(days, 1), 30), Math.min(Math.max(limit, 1), 100));
+    }
+
+    @GetMapping("/items/{id}/topics")
+    public List<ContentRepository.TopicRef> itemTopics(@PathVariable String id) {
+        return repository.findTopics(id);
+    }
+
+    @GetMapping("/topics")
+    public List<ContentRepository.TopicSummary> topics() {
+        return repository.listTopics();
+    }
+
+    @GetMapping("/topics/{slug}")
+    public List<ContentItem> topicItems(
+            @PathVariable String slug,
+            @RequestParam(required = false, defaultValue = "30") int limit) {
+        return repository.findByTopic(slug, Math.min(Math.max(limit, 1), MAX_LIMIT));
+    }
+
     @GetMapping("/items/days")
     public List<ContentRepository.DayCount> days(
             @RequestParam(required = false, defaultValue = "14") int days) {

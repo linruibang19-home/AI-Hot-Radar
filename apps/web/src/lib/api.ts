@@ -40,6 +40,25 @@ export interface Stats {
   chunks: number;
 }
 
+export interface SelectedItem {
+  item: ContentItem;
+  selectedFor: string;
+  score: number;
+  reason: string;
+}
+
+export interface TopicSummary {
+  slug: string;
+  name: string;
+  total: number;
+}
+
+export interface TopicRef {
+  slug: string;
+  name: string;
+  confidence?: number;
+}
+
 const EMPTY_PAGE: ItemPage = { data: [], page: { nextCursor: null, hasMore: false } };
 
 async function getJson<T>(path: string, fallback: T): Promise<T> {
@@ -88,6 +107,46 @@ export function fetchStats(): Promise<Stats> {
     activeSources: 0,
     chunks: 0,
   });
+}
+
+export function fetchSelected(days = 7, limit = 40): Promise<SelectedItem[]> {
+  return getJson<SelectedItem[]>(`/api/v1/selected?days=${days}&limit=${limit}`, []);
+}
+
+export interface SourceHealth {
+  id: string;
+  name: string;
+  organization: string;
+  profile: string;
+  priority: string;
+  tier: string;
+  runtimeState: string;
+  contentAccess: string;
+  lastSuccessAt?: string | null;
+  lastErrorCode?: string | null;
+  consecutiveFailures: number;
+  nextPollAt?: string | null;
+  items: number;
+  fulltextSuccessRate?: number | null;
+}
+
+export function fetchSourceHealth(): Promise<SourceHealth[]> {
+  return getJson<SourceHealth[]>("/api/v1/admin/sources", []);
+}
+
+export function fetchTopics(): Promise<TopicSummary[]> {
+  return getJson<TopicSummary[]>("/api/v1/topics", []);
+}
+
+export function fetchTopicItems(slug: string, limit = 30): Promise<ContentItem[]> {
+  return getJson<ContentItem[]>(
+    `/api/v1/topics/${encodeURIComponent(slug)}?limit=${limit}`,
+    [],
+  );
+}
+
+export function fetchItemTopics(id: string): Promise<TopicRef[]> {
+  return getJson<TopicRef[]>(`/api/v1/items/${id}/topics`, []);
 }
 
 /** Group items by calendar day for the date-sectioned feed (AHR-FEAT-101). */

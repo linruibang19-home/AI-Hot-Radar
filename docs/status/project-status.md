@@ -1,7 +1,7 @@
 # 项目进度总览
 
 > 更新时间：2026-08-02
-> 当前阶段：**M2 进行中**（M1 已完成）
+> 当前阶段：**M2 进行中（约 80%）**（M1 已完成）
 > 所有数据均来自实际运行，非估算
 
 ## 1. 里程碑完成情况
@@ -9,8 +9,8 @@
 | 里程碑 | 状态 | 核心产出 |
 |---|---|---|
 | **M0 工程骨架** | ✅ 完成 | 三服务 + Compose + Flyway + pgvector + CI + request-ID |
-| **M1 真实信源与入库** | ✅ 完成 | 7 类适配器、98 源 ACTIVE、724 条内容入库、调度器 |
-| **M2 内容加工与网站** | 🟡 约 60% | 切块、去重、LLM 结构化、API、前端三页 |
+| **M1 真实信源与入库** | ✅ 完成 | 7 类适配器、98 源 ACTIVE、723 条内容入库、调度器 |
+| **M2 内容加工与网站** | 🟡 约 80% | 切块、去重、LLM 结构化、主题归一、精选算法、全文检索、API、前端六页 |
 | M3 Story 与热点 | ⬜ 未开始 | 事件聚类、主来源、热度算法、时间线 |
 | M4 RAG MVP | ⬜ 未开始 | Embedding、混合检索、RRF、引用绑定、黄金集 |
 | M5 上线与增强 | ⬜ 未开始 | 域名 HTTPS、备份监控、邮件订阅、周月报 |
@@ -19,16 +19,18 @@
 
 | 指标 | 数值 |
 |---|---:|
-| 已入库内容 `content_item` | 724 |
+| 已入库内容 `content_item` | 723 |
 | 有内容的信源 | 105 |
 | ACTIVE 信源 | 98 |
 | 已启用信源 | 124 / 140 |
-| 已 AI 结构化 | 126 |
-| 检索分块 `content_chunk` | 234 |
-| 抽取实体 `entity` | 551 |
-| 近似重复已标记 | 6 |
-| 数据库表数 | 23 |
-| 数据库体积 | 48 MB |
+| 已 AI 结构化 | 150 |
+| 检索分块 `content_chunk` | 343 |
+| 抽取实体 `entity` | 630 |
+| 主题关联 `item_topic` | 27 |
+| 当前精选 `selection_record` | 77 |
+| 近似重复已标记 | 7 |
+| 数据库表数 | 24 |
+| 数据库体积 | 50 MB |
 
 ## 3. 信源情况
 
@@ -70,10 +72,10 @@
 
 | 组件 | 地址 | 状态 | 实现进度 |
 |---|---|---|---|
-| Next.js web | http://localhost:3000 | healthy | 精选首页、全部动态、详情页 |
-| Spring Boot core-api | http://localhost:8080 | healthy | `/api/v1/items`、`/items/{id}`、`/stats` |
+| Next.js web | http://localhost:3000 | healthy | 精选、全部动态、详情、主题列表、主题详情、信源后台 |
+| Spring Boot core-api | http://localhost:8080 | healthy | items / selected / topics / stats / admin.sources |
 | FastAPI ai-service | http://localhost:8000 | healthy | 采集、加工、调度全部功能 |
-| PostgreSQL + pgvector | localhost:5432 | healthy | 23 表，4 个 Flyway 迁移 |
+| PostgreSQL + pgvector | localhost:5432 | healthy | 24 表，5 个 Flyway 迁移 |
 | Redis | localhost:6379 | healthy | 已就绪，缓存逻辑待接入 |
 
 **全部运行在 Docker 中**，宿主机零依赖。消息队列与对象存储按 ADR-007 与规格暂不引入（Outbox 已实现，733 条事件待消费）。
@@ -90,7 +92,8 @@ raw_document          原始响应，内部审计
          ├── content_revision      正文版本 + simhash + 质量分
          │     └── content_chunk   语义分块（含 embedding 列，待 M4 填充）
          ├── item_entity ── entity 实体关系
-         └── item_topic  ── topic  主题关系
+         ├── item_topic  ── topic  主题关系（归一到 taxonomy.yaml）
+         └── selection_record      精选决定 + 分项因子 + 入选理由
 
 outbox_event          业务写入同事务的可靠事件
 processed_event       消费幂等记录
@@ -104,6 +107,7 @@ processed_event       消费幂等记录
 | V002 | 采集运行时：discovery_url 可空、subject 列、处理状态、fulltext_attempt |
 | V003 | 信源状态机扩充 METADATA_ONLY / RATE_LIMITED |
 | V004 | 内容加工：simhash、去重关系、AI 结构化列、entity / item_entity / item_topic |
+| V005 | 全文检索 tsvector + trigram 索引、selection_record 精选表 |
 
 ## 6. 已完成任务
 
@@ -120,20 +124,25 @@ processed_event       消费幂等记录
 - [x] DeepSeek LLM 结构化（Pydantic 校验 + 一次修复 + 死信）
 - [x] core-api 内容读接口（游标分页）
 - [x] 前端三个页面（精选 / 全部动态 / 详情）
-- [x] 118 个离线测试，断网可通过
+- [x] 主题归一（受控词表 + 别名字典，未命中即丢弃）
+- [x] 精选算法（5 因子加权 + 每日配额 + 单源上限 + 入选理由）
+- [x] 全文检索（tsvector 加权 + trigram 兜底版本号）
+- [x] 主题页与主题详情页
+- [x] 信源后台只读页（失败源排前）
+- [x] 148 个离线测试，断网可通过
 
 ## 7. 待完成任务
 
 ### M2 剩余
 
-- [ ] 主题页与主题归一（`item_topic` 目前未写入）
-- [ ] 精选算法与 `selection_record`
-- [ ] 全文检索（tsvector 已有列，需接入搜索页）
 - [ ] 日报生成与测试邮件
-- [ ] 管理后台（信源状态、任务重跑）
 - [ ] Redis 缓存接入（首页、详情）
-- [ ] 剩余 598 条内容完成 AI 结构化
+- [ ] 后台任务重跑（需先有鉴权，见下）
+- [ ] 剩余约 570 条内容完成 AI 结构化
 - [ ] Lighthouse ≥ 85 验收
+
+> 信源后台目前是**只读**。`AHR-QSO-700` §3 要求管理操作具备最小权限 RBAC 与二次确认，
+> 而鉴权属于 M5；在此之前提供启停/重跑接口会造成无鉴权的写入面，因此推迟。
 
 ### M1 遗留
 
@@ -154,6 +163,10 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 ```
 
 ```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli select --days 7
+```
+
+```bash
 docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli schedule --interval 60
 ```
 
@@ -161,7 +174,7 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 
 | 风险 | 影响 | 应对 |
 |---|---|---|
-| 原始 HTML 占数据库 25 MB / 48 MB | 长期增长最快 | M5 前迁对象存储或加保留期 |
-| LLM 成本随内容量线性增长 | 598 条待结构化 | 按优先级分批，低质量内容跳过 |
+| 原始 HTML 占数据库约一半体积 | 长期增长最快 | M5 前迁对象存储或加保留期 |
+| LLM 成本随内容量线性增长 | 约 570 条待结构化 | 按优先级分批，低质量内容跳过 |
 | 中文动态站点需浏览器渲染 | 16 个源未接入 | Wave C 专项，需 robots 复核 |
 | 密钥曾出现在会话记录 | 泄露风险 | **上线前必须轮换 GitHub / DeepSeek 密钥** |
