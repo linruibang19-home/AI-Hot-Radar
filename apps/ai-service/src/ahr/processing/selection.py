@@ -12,12 +12,15 @@ days entirely.
 from __future__ import annotations
 
 import json
+import math
 import uuid
 from dataclasses import asdict, dataclass
 from datetime import date
 from typing import Any
 
-ALGORITHM_VERSION = "select-v1"
+# v2 adds the corroboration factor; the version is recorded per selection so a
+# re-ranked shortlist can be told apart from one scored by the old weights.
+ALGORITHM_VERSION = "select-v2"
 
 # How many items may be selected per day. Small enough to stay curated, large
 # enough that a busy release day is not truncated to a single vendor.
@@ -51,14 +54,16 @@ class SelectionFactors:
     content_type: float = 0.0
     freshness: float = 0.0
     body_depth: float = 0.0
+    corroboration: float = 0.0
 
     def total(self) -> float:
         return round(
-            0.40 * self.quality
-            + 0.20 * self.source_tier
-            + 0.20 * self.content_type
-            + 0.10 * self.freshness
-            + 0.10 * self.body_depth,
+            0.34 * self.quality
+            + 0.17 * self.source_tier
+            + 0.17 * self.content_type
+            + 0.09 * self.freshness
+            + 0.08 * self.body_depth
+            + 0.15 * self.corroboration,
             2,
         )
 
@@ -70,6 +75,7 @@ class SelectionFactors:
             "content_type": "属于关键变更类型",
             "freshness": "发布时间新",
             "body_depth": "正文信息量充足",
+            "corroboration": "多家独立信源报道",
         }
         ranked = sorted(asdict(self).items(), key=lambda kv: kv[1], reverse=True)
         return "、".join(labels[name] for name, value in ranked[:3] if value > 0)
@@ -82,6 +88,7 @@ def score_item(
     content_type: str | None,
     age_hours: float,
     body_chars: int,
+    independent_sources: int = 1,
 ) -> SelectionFactors:
     """Score one candidate on a 0-100 scale per factor."""
     factors = SelectionFactors()
@@ -100,6 +107,23 @@ def score_item(
     # Rewards substance up to ~4000 characters, then flattens so a long paper
     # does not automatically outrank a short but important release note.
     factors.body_depth = min(body_chars / 4000.0, 1.0) * 100
+
+    # How many independent outlets covered the same event (M3).
+    #
+    # Without this term the shortlist could not see corroboration at all, and it
+    # showed: the two events that four and three independent outlets each
+    # reported — Anthropic's Claude security incident and Google pulling its
+    # satellite-deepfake tool — were selected zero times, while 87 single-source
+    # release notes were. Media coverage sits in the secondary/expert tiers and
+    # lost every comparison to a primary-tier GitHub release.
+    #
+    # Saturating rather than linear: the second outlet is strong evidence an
+    # event matters, the fifth adds little. A single-source item scores 0 here
+    # rather than being penalised — most releases are legitimately announced
+    # once, so this lifts corroborated events instead of demoting the rest.
+    factors.corroboration = (
+        min(math.log1p(max(independent_sources - 1, 0)) / math.log(4), 1.0) * 100
+    )
 
     return factors
 
@@ -122,10 +146,12 @@ def select_for_days(connection: Any, *, days: int = 7) -> dict[str, int]:
                    ci.quality_score,
                    COALESCE(ci.published_at, ci.observed_at) AS stamp,
                    EXTRACT(EPOCH FROM (now() - COALESCE(ci.published_at, ci.observed_at))) / 3600.0,
-                   COALESCE(length(cr.body_text), 0)
+                   COALESCE(length(cr.body_text), 0),
+                   COALESCE(st.independent_source_count, 1)
               FROM content_item ci
               JOIN source s ON s.id = ci.source_id
               LEFT JOIN content_revision cr ON cr.id = ci.current_revision_id
+              LEFT JOIN story st ON st.id = ci.story_id
              WHERE ci.duplicate_of_id IS NULL
                AND COALESCE(ci.published_at, ci.observed_at) > now() - (%s || ' days')::interval
                AND COALESCE(ci.published_at, ci.observed_at) <= now()
@@ -136,13 +162,24 @@ def select_for_days(connection: Any, *, days: int = 7) -> dict[str, int]:
 
     candidates: list[Candidate] = []
     for row in rows:
-        item_id, source_id, tier, content_type, quality, stamp, age_hours, body_chars = row
+        (
+            item_id,
+            source_id,
+            tier,
+            content_type,
+            quality,
+            stamp,
+            age_hours,
+            body_chars,
+            independent_sources,
+        ) = row
         factors = score_item(
             quality_score=float(quality) if quality is not None else None,
             source_tier=tier,
             content_type=content_type,
             age_hours=float(age_hours or 0),
             body_chars=int(body_chars or 0),
+            independent_sources=int(independent_sources or 1),
         )
         candidates.append(
             Candidate(
