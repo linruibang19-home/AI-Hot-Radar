@@ -9,7 +9,14 @@ import httpx
 import pytest
 
 from ahr.processing.llm import LlmClient, LlmConfig, LlmUnavailableError, TokenUsage
-from ahr.processing.report import ReportItem, _group_by_section, render_markdown
+from ahr.processing.report import (
+    ReportItem,
+    _group_by_section,
+    _period_range,
+    render_markdown,
+)
+
+TITLE = "AI Hot Radar 日报 · 2026-08-01"
 
 
 def item(
@@ -68,26 +75,24 @@ def test_no_item_is_lost_across_sections() -> None:
 
 def test_every_entry_links_to_the_publisher() -> None:
     """ADR-009: evidence resolves to the original, never a local copy."""
-    markdown = render_markdown(
-        date(2026, 8, 1), "总述", _group_by_section([item(url="https://openai.com/x")])
-    )
+    markdown = render_markdown(TITLE, "总述", _group_by_section([item(url="https://openai.com/x")]))
     assert "(https://openai.com/x)" in markdown
 
 
 def test_report_carries_an_ai_disclaimer() -> None:
-    markdown = render_markdown(date(2026, 8, 1), "总述", _group_by_section([item()]))
+    markdown = render_markdown(TITLE, "总述", _group_by_section([item()]))
     assert "AI" in markdown
     assert "原文为准" in markdown
 
 
 def test_summary_appears_before_sections() -> None:
-    markdown = render_markdown(date(2026, 8, 1), "今日总述", _group_by_section([item()]))
+    markdown = render_markdown(TITLE, "今日总述", _group_by_section([item()]))
     assert markdown.index("今日总述") < markdown.index("## 模型发布")
 
 
 def test_render_survives_missing_summary() -> None:
-    markdown = render_markdown(date(2026, 8, 1), "", _group_by_section([item(summary=None)]))
-    assert "# AI Hot Radar 日报" in markdown
+    markdown = render_markdown(TITLE, "", _group_by_section([item(summary=None)]))
+    assert TITLE in markdown
 
 
 # --- token accounting ----------------------------------------------------
@@ -162,3 +167,42 @@ async def test_summarize_propagates_provider_outage() -> None:
     async with _client(handler) as client:
         with pytest.raises(LlmUnavailableError):
             await client.summarize(system_prompt="s", user_prompt="u")
+
+
+# --- period ranges --------------------------------------------------------
+
+
+def test_daily_range_is_a_single_day() -> None:
+    start, end, _ = _period_range("daily", "2026-08-01")
+    assert start == end == date(2026, 8, 1)
+
+
+def test_weekly_range_spans_seven_days_from_monday() -> None:
+    start, end, _ = _period_range("weekly", "2026-W31")
+    assert (end - start).days == 6
+    assert start.weekday() == 0
+
+
+def test_monthly_range_covers_the_whole_month() -> None:
+    start, end, _ = _period_range("monthly", "2026-08")
+    assert start == date(2026, 8, 1)
+    assert end == date(2026, 8, 31)
+
+
+def test_december_rolls_into_the_next_year() -> None:
+    """The only wrap case; getting it wrong would truncate December."""
+    start, end, _ = _period_range("monthly", "2026-12")
+    assert start == date(2026, 12, 1)
+    assert end == date(2026, 12, 31)
+
+
+def test_february_length_follows_the_calendar() -> None:
+    assert _period_range("monthly", "2026-02")[1] == date(2026, 2, 28)
+    assert _period_range("monthly", "2028-02")[1] == date(2028, 2, 29)
+
+
+def test_unsupported_period_is_rejected() -> None:
+    import pytest as _pytest
+
+    with _pytest.raises(ValueError):
+        _period_range("quarterly", "2026-Q1")

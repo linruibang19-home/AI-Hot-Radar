@@ -91,8 +91,13 @@ public class ContentRepository {
             params.addValue("sourceId", sourceId);
         }
         if (contentType != null && !contentType.isBlank()) {
-            sql.append(" AND ci.content_type = :contentType");
-            params.addValue("contentType", contentType);
+            // A UI tab maps to several content types ("产品" covers product and
+            // API releases), so the filter takes a list rather than one value.
+            List<String> types = ContentCategory.resolve(contentType);
+            if (!types.isEmpty()) {
+                sql.append(" AND ci.content_type IN (:contentTypes)");
+                params.addValue("contentTypes", types);
+            }
         }
         if (query != null && !query.isBlank()) {
             // Full-text match on the weighted tsvector, with a trigram fallback so
@@ -236,6 +241,55 @@ public class ContentRepository {
                 MAPPER);
     }
 
+    /**
+     * Current hot ranking.
+     *
+     * <p>Reads the stored hot_score rather than ranking on the fly: AHR-PRD-100
+     * §4 requires the score and its factors to be inspectable, and recomputing
+     * per request would make the list shift between page loads.
+     */
+    public List<HotItem> findHot(int limit) {
+        String sql =
+                """
+                SELECT ci.id, COALESCE(ci.zh_title, ci.title) AS title,
+                       ci.hot_score, ci.independent_source_count, ci.content_type,
+                       s.name AS source_name
+                  FROM content_item ci
+                  JOIN source s ON s.id = ci.source_id
+                 WHERE ci.duplicate_of_id IS NULL
+                   AND ci.hot_score IS NOT NULL
+                 ORDER BY ci.hot_score DESC
+                 LIMIT :limit
+                """;
+        return jdbc.query(
+                sql,
+                new MapSqlParameterSource("limit", limit),
+                (rs, rowNum) ->
+                        new HotItem(
+                                rs.getString("id"),
+                                rs.getString("title"),
+                                Math.round(rs.getDouble("hot_score")),
+                                rs.getInt("independent_source_count"),
+                                rs.getString("content_type"),
+                                rs.getString("source_name")));
+    }
+
+    /** Item counts per category tab, so empty tabs can be hidden. */
+    public List<CategoryCount> categoryCounts() {
+        String sql =
+                """
+                SELECT content_type, count(*) AS total
+                  FROM content_item
+                 WHERE duplicate_of_id IS NULL AND content_type IS NOT NULL
+                 GROUP BY content_type
+                """;
+        return jdbc.query(
+                sql,
+                new MapSqlParameterSource(),
+                (rs, rowNum) ->
+                        new CategoryCount(rs.getString("content_type"), rs.getLong("total")));
+    }
+
     public Stats stats() {
         String sql =
                 """
@@ -270,4 +324,14 @@ public class ContentRepository {
     public record TopicRef(String slug, String name, Double confidence) {}
 
     public record TopicSummary(String slug, String name, long total) {}
+
+    public record HotItem(
+            String id,
+            String title,
+            long heat,
+            int independentSources,
+            String contentType,
+            String sourceName) {}
+
+    public record CategoryCount(String contentType, long total) {}
 }
