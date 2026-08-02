@@ -2,6 +2,13 @@ import Link from "next/link";
 
 import { fetchTopics } from "@/lib/api";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "主题",
+  description: "AI 主题分类，归一到受控词表。",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function TopicsPage() {

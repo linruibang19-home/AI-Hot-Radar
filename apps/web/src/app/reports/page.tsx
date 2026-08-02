@@ -2,6 +2,13 @@ import Link from "next/link";
 
 import { fetchReports } from "@/lib/api";
 
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "AI 日报",
+  description: "每日精选生成的 AI 行业日报，条目可追溯到原文。",
+};
+
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
