@@ -18,6 +18,7 @@ import psycopg
 
 from ahr.config import get_settings
 from ahr.ingestion.registry import load_sources, summarize, sync_sources
+from ahr.observability import configure_logging
 
 DEFAULT_SOURCES_PATH = Path("/app/config/sources.yaml")
 
@@ -271,6 +272,10 @@ def cmd_send_report(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Without this the CLI emits nothing: configure_logging only ran inside the
+    # FastAPI app, so a long scheduler run was completely unobservable.
+    configure_logging(get_settings().service_name)
+
     parser = argparse.ArgumentParser(prog="ahr")
     sub = parser.add_subparsers(dest="command", required=True)
 

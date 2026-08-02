@@ -87,6 +87,40 @@ services:
       redis:
         condition: service_healthy
 
+  # Long-running ingestion worker. Separate from ai-service so the HTTP service
+  # stays responsive while polling runs, and so the M1 "30 sources for 24h"
+  # acceptance can accumulate without a shell session holding it open.
+  # `restart: unless-stopped` means a crash resumes the clock rather than
+  # silently ending the run.
+  scheduler:
+    build:
+      context: ../../apps/ai-service
+      dockerfile: Dockerfile
+    command:
+      ["python", "-m", "ahr.cli", "schedule", "--interval", "120", "--batch-size", "10"]
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ai_hot_radar}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-ai_hot_radar}
+      REDIS_URL: redis://redis:6379/0
+      CRAWLER_USER_AGENT: ${CRAWLER_USER_AGENT:-AIHotRadarBot/1.0 (+https://example.com/bot)}
+      PYTHONUNBUFFERED: "1"
+    env_file:
+      - path: ../../.env
+        required: false
+    volumes:
+      - ../../config:/app/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    # No ports: this worker is not an HTTP service. The image's healthcheck
+    # probes :8000, which this container never serves, so it is disabled here
+    # rather than left to report a permanent false failure.
+    healthcheck:
+      disable: true
+
   web:
     build:
       context: ../../apps/web

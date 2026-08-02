@@ -75,6 +75,7 @@
 | Next.js web | http://localhost:3000 | healthy | 精选、全部动态、详情、日报列表、日报详情、主题、信源后台 |
 | Spring Boot core-api | http://localhost:8080 | healthy | items / selected / topics / reports / stats / admin.sources |
 | FastAPI ai-service | http://localhost:8000 | healthy | 采集、加工、调度全部功能 |
+| scheduler（采集 worker） | 无端口 | running | 每 120s 轮询到期信源，`restart: unless-stopped` |
 | PostgreSQL + pgvector | localhost:5432 | healthy | 28 表，7 个 Flyway 迁移 |
 | Redis | localhost:6379 | healthy | **已接入读缓存**（selected 5min / topics 10min / stats 2min） |
 
@@ -113,6 +114,7 @@ processed_event       消费幂等记录
 | V005 | 全文检索 tsvector + trigram 索引、selection_record 精选表 |
 | V006 | llm_usage 成本核算表、report 扩展列、report_item 溯源表 |
 | V007 | email_delivery 投递记录（delivery_key 唯一，防重复发送） |
+| V008 | entity_type 扩充为 8 类，与 taxonomy.yaml 对齐（ADR-0014） |
 
 ## 6. 已完成任务
 
@@ -159,7 +161,7 @@ processed_event       消费幂等记录
 
 ### M1 遗留
 
-- [ ] 30 个源连续运行 24 小时的正式计时（调度器已就位，需长跑）
+- [x] 调度器已作为常驻 Compose 服务运行（`scheduler`），24 小时计时进行中
 
 ## 8. 常用命令
 
@@ -203,4 +205,4 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 | LLM 成本随内容量线性增长 | 已消耗见 `ahr.cli usage` | 已加正文长度门槛跳过薄内容；按优先级分批 |
 | 中文动态站点需浏览器渲染 | 16 个源未接入 | Wave C 专项，需 robots 复核 |
 | 密钥曾出现在会话记录 | 泄露风险 | **上线前必须轮换 GitHub / DeepSeek 密钥** |
-| entity_type 规格冲突 | 1 条内容进入 DEAD_LETTER | `docs/spec/03` 定义 5 类，`taxonomy.yaml` 定义 8 类，待决策 |
+| ~~entity_type 规格冲突~~ | 已解决 | 见 [ADR-0014](../adr/0014-entity-types-align-to-taxonomy.md)，扩充为 8 类 |
