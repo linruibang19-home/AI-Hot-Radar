@@ -20,7 +20,15 @@ function formatTime(value?: string): string {
   return value.slice(11, 16);
 }
 
-export function ItemCard({ item }: { item: ContentItem }) {
+export function ItemCard({
+  item,
+  selectionReason,
+  selectionScore,
+}: {
+  item: ContentItem;
+  selectionReason?: string;
+  selectionScore?: number;
+}) {
   // Prefer the Chinese title, but fall back to the original so an article that
   // has not been enriched yet is still readable (M2 acceptance).
   const title = item.zhTitle ?? item.title;
@@ -39,6 +47,9 @@ export function ItemCard({ item }: { item: ContentItem }) {
         {typeof item.qualityScore === "number" && (
           <span className="tag">质量 {Math.round(item.qualityScore)}</span>
         )}
+        {typeof selectionScore === "number" && (
+          <span className="tag tag-primary">精选 {Math.round(selectionScore)}</span>
+        )}
       </div>
 
       <h3 className="card-title">
@@ -46,6 +57,9 @@ export function ItemCard({ item }: { item: ContentItem }) {
       </h3>
 
       {body && <p className="card-summary">{body.slice(0, 180)}</p>}
+
+      {/* AHR-PRD-100 §4: the UI must explain why an item was chosen. */}
+      {selectionReason && <p className="card-reason">入选理由：{selectionReason}</p>}
     </article>
   );
 }

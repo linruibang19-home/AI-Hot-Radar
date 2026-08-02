@@ -95,10 +95,16 @@ public class ContentRepository {
             params.addValue("contentType", contentType);
         }
         if (query != null && !query.isBlank()) {
-            // ILIKE over titles is adequate at current volume; FTS ranking is an
-            // M2 search-page concern and needs the tsvector index to be populated.
-            sql.append(" AND (ci.title ILIKE :query OR ci.zh_title ILIKE :query)");
-            params.addValue("query", "%" + query.trim() + "%");
+            // Full-text match on the weighted tsvector, with a trigram fallback so
+            // partial version strings ("v2.52") still hit — tsvector tokenisation
+            // splits those apart (AHR-PRD-100 §102 forbids relying on semantic
+            // matching alone for exact names and versions).
+            sql.append(
+                    " AND (ci.search_vector @@ plainto_tsquery('simple', :rawQuery)"
+                            + " OR ci.title ILIKE :likeQuery"
+                            + " OR ci.zh_title ILIKE :likeQuery)");
+            params.addValue("rawQuery", query.trim());
+            params.addValue("likeQuery", "%" + query.trim() + "%");
         }
 
         sql.append(" ORDER BY ci.published_at DESC NULLS LAST, ci.id DESC LIMIT :limit");
@@ -133,6 +139,103 @@ public class ContentRepository {
                                 rs.getObject("day", OffsetDateTime.class), rs.getLong("total")));
     }
 
+    /**
+     * The curated shortlist for the homepage.
+     *
+     * <p>Reads {@code selection_record} rather than re-ranking here, so the site
+     * shows exactly the decision that was recorded and can explain it
+     * (AHR-PRD-100 §4 requires the contributing factors to be visible).
+     */
+    public List<SelectedItem> findSelected(int days, int limit) {
+        String sql =
+                """
+                SELECT ci.id, ci.title, ci.zh_title, ci.summary_zh, cr.excerpt,
+                       ci.canonical_url, ci.published_at, ci.observed_at,
+                       ci.content_type, ci.quality_score,
+                       s.id AS source_id, s.name AS source_name,
+                       s.source_tier, s.organization,
+                       sr.selected_for_date, sr.score AS selection_score, sr.reason
+                  FROM selection_record sr
+                  JOIN content_item ci ON ci.id = sr.content_item_id
+                  JOIN source s ON s.id = ci.source_id
+                  LEFT JOIN content_revision cr ON cr.id = ci.current_revision_id
+                 WHERE sr.withdrawn_at IS NULL
+                   AND ci.duplicate_of_id IS NULL
+                   AND sr.selected_for_date > current_date - CAST(:days AS integer)
+                 ORDER BY sr.selected_for_date DESC, sr.score DESC
+                 LIMIT :limit
+                """;
+        MapSqlParameterSource params =
+                new MapSqlParameterSource().addValue("days", days).addValue("limit", limit);
+
+        return jdbc.query(
+                sql,
+                params,
+                (rs, rowNum) ->
+                        new SelectedItem(
+                                mapRow(rs),
+                                rs.getObject("selected_for_date", java.time.LocalDate.class),
+                                rs.getDouble("selection_score"),
+                                rs.getString("reason")));
+    }
+
+    /** Topics attached to one item. */
+    public List<TopicRef> findTopics(String itemId) {
+        String sql =
+                """
+                SELECT t.slug, t.name, it.confidence
+                  FROM item_topic it
+                  JOIN topic t ON t.id = it.topic_id
+                 WHERE it.content_item_id = CAST(:id AS uuid)
+                 ORDER BY it.confidence DESC NULLS LAST
+                """;
+        return jdbc.query(
+                sql,
+                new MapSqlParameterSource("id", itemId),
+                (rs, rowNum) ->
+                        new TopicRef(
+                                rs.getString("slug"), rs.getString("name"), rs.getDouble("confidence")));
+    }
+
+    /** Topics ordered by how much content currently carries them. */
+    public List<TopicSummary> listTopics() {
+        String sql =
+                """
+                SELECT t.slug, t.name, count(it.content_item_id) AS total
+                  FROM topic t
+                  LEFT JOIN item_topic it ON it.topic_id = t.id
+                  LEFT JOIN content_item ci
+                         ON ci.id = it.content_item_id AND ci.duplicate_of_id IS NULL
+                 GROUP BY t.slug, t.name
+                HAVING count(it.content_item_id) > 0
+                 ORDER BY total DESC
+                """;
+        return jdbc.query(
+                sql,
+                new MapSqlParameterSource(),
+                (rs, rowNum) ->
+                        new TopicSummary(
+                                rs.getString("slug"), rs.getString("name"), rs.getLong("total")));
+    }
+
+    public List<ContentItem> findByTopic(String slug, int limit) {
+        String sql =
+                BASE_SELECT
+                        + """
+                           AND ci.id IN (
+                               SELECT it.content_item_id FROM item_topic it
+                               JOIN topic t ON t.id = it.topic_id
+                              WHERE t.slug = :slug
+                           )
+                         ORDER BY ci.published_at DESC NULLS LAST, ci.id DESC
+                         LIMIT :limit
+                        """;
+        return jdbc.query(
+                sql,
+                new MapSqlParameterSource().addValue("slug", slug).addValue("limit", limit),
+                MAPPER);
+    }
+
     public Stats stats() {
         String sql =
                 """
@@ -159,4 +262,12 @@ public class ContentRepository {
     public record DayCount(OffsetDateTime day, long total) {}
 
     public record Stats(long items, long enriched, long activeSources, long chunks) {}
+
+    /** A curated item plus the recorded reason it was chosen. */
+    public record SelectedItem(
+            ContentItem item, java.time.LocalDate selectedFor, double score, String reason) {}
+
+    public record TopicRef(String slug, String name, Double confidence) {}
+
+    public record TopicSummary(String slug, String name, long total) {}
 }

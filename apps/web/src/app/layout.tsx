@@ -11,7 +11,10 @@ export const metadata: Metadata = {
 const NAV = [
   { href: "/", label: "精选" },
   { href: "/items", label: "全部 AI 动态" },
+  { href: "/topics", label: "主题" },
 ];
+
+const ADMIN_NAV = [{ href: "/admin/sources", label: "信源后台" }];
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -22,6 +25,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <div className="brand">AI HOT RADAR</div>
             <div className="nav-label">内容</div>
             {NAV.map((entry) => (
+              <Link key={entry.href} className="nav-link" href={entry.href}>
+                {entry.label}
+              </Link>
+            ))}
+            <div className="nav-label">管理</div>
+            {ADMIN_NAV.map((entry) => (
               <Link key={entry.href} className="nav-link" href={entry.href}>
                 {entry.label}
               </Link>

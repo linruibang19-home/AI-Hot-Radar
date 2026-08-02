@@ -1,5 +1,6 @@
 import { ItemCard } from "@/components/ItemCard";
-import { fetchItems, fetchStats, groupByDay } from "@/lib/api";
+import { fetchSelected, fetchStats } from "@/lib/api";
+import type { SelectedItem } from "@/lib/api";
 
 // SSR on every request so the first screen is always current (AHR-FEAT-101).
 export const dynamic = "force-dynamic";
@@ -7,19 +8,29 @@ export const dynamic = "force-dynamic";
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
 function formatDay(day: string): string {
-  if (day === "未知日期") return day;
   const date = new Date(`${day}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return day;
   return `${date.getUTCMonth() + 1}月${date.getUTCDate()}日 · ${WEEKDAYS[date.getUTCDay()]}`;
 }
 
+function groupBySelectedDate(entries: SelectedItem[]): Map<string, SelectedItem[]> {
+  const groups = new Map<string, SelectedItem[]>();
+  for (const entry of entries) {
+    const bucket = groups.get(entry.selectedFor);
+    if (bucket) bucket.push(entry);
+    else groups.set(entry.selectedFor, [entry]);
+  }
+  return groups;
+}
+
 export default async function Home() {
-  const [page, stats] = await Promise.all([fetchItems({ limit: 30 }), fetchStats()]);
-  const groups = groupByDay(page.data);
+  const [selected, stats] = await Promise.all([fetchSelected(7, 60), fetchStats()]);
+  const groups = groupBySelectedDate(selected);
 
   return (
     <>
       <h1 className="page-title">精选</h1>
-      <p className="page-subtitle">AI 自动挑选的高价值内容 · 全部来自可追溯的公开信源</p>
+      <p className="page-subtitle">AI 自动挑选的高价值内容 · 每条都标注入选理由与原始来源</p>
 
       <div className="stat-row">
         <div className="stat">
@@ -40,21 +51,26 @@ export default async function Home() {
         </div>
       </div>
 
-      {page.data.length === 0 ? (
+      {selected.length === 0 ? (
         <div className="empty">
-          暂无内容。请先运行采集：
+          尚未生成精选。请先运行：
           <br />
-          <code>docker compose exec ai-service python -m ahr.cli ingest</code>
+          <code>docker compose exec ai-service python -m ahr.cli select</code>
         </div>
       ) : (
-        [...groups.entries()].map(([day, items]) => (
+        [...groups.entries()].map(([day, entries]) => (
           <section key={day}>
             <h2 className="day-heading">
               {formatDay(day)}
-              <span className="day-count">{items.length} 条</span>
+              <span className="day-count">{entries.length} 条精选</span>
             </h2>
-            {items.map((item) => (
-              <ItemCard key={item.id} item={item} />
+            {entries.map((entry) => (
+              <ItemCard
+                key={entry.item.id}
+                item={entry.item}
+                selectionReason={entry.reason}
+                selectionScore={entry.score}
+              />
             ))}
           </section>
         ))

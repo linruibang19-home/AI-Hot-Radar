@@ -97,6 +97,17 @@ def cmd_schedule(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_select(args: argparse.Namespace) -> int:
+    import psycopg
+
+    from ahr.processing.selection import select_for_days
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        result = select_for_days(connection, days=args.days)
+    print(json.dumps(result, indent=2))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="ahr")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -131,6 +142,10 @@ def main(argv: list[str] | None = None) -> int:
     schedule.add_argument("--batch-size", type=int, default=20)
     schedule.add_argument("--max-documents", type=int, default=5)
     schedule.set_defaults(func=cmd_schedule)
+
+    select = sub.add_parser("select", help="rank recent content into the daily shortlist")
+    select.add_argument("--days", type=int, default=7)
+    select.set_defaults(func=cmd_select)
 
     args = parser.parse_args(argv)
     return int(args.func(args))

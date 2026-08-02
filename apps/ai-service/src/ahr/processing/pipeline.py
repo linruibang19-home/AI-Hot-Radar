@@ -32,6 +32,7 @@ from ahr.processing.llm import (
     prompt_version,
 )
 from ahr.processing.schemas import EnrichmentResult
+from ahr.processing.topics import known_slugs, link_topics, load_taxonomy, seed_topics
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +122,7 @@ def _store_enrichment(
     *,
     source_tier: str,
     model_name: str,
+    vocabulary: set[str],
 ) -> None:
     score = result.quality_score(source_authority=SOURCE_AUTHORITY.get(source_tier, 50))
 
@@ -170,6 +172,15 @@ def _store_enrichment(
                 """,
                 (item_id, entity_id, entity.role, entity.confidence),
             )
+
+    # Topics are normalised against config/taxonomy.yaml; a label that does not
+    # resolve is dropped rather than creating a one-off topic page.
+    link_topics(
+        connection,
+        item_id,
+        [(topic.slug, topic.confidence) for topic in result.topics],
+        vocabulary,
+    )
 
 
 def _mark_enrichment_failed(connection: Any, item_id: uuid.UUID, *, state: str, error: str) -> None:
@@ -230,6 +241,13 @@ async def process_pending(
 
     try:
         with psycopg.connect(get_settings().database_url) as connection:
+            # The controlled vocabulary is small and rarely changes, so seeding
+            # it per run keeps topic pages consistent without a separate step.
+            taxonomy = load_taxonomy()
+            seed_topics(connection, taxonomy)
+            vocabulary = known_slugs(taxonomy)
+            connection.commit()
+
             for row in _pending_items(connection, limit):
                 item_id, title, _source_id, source_tier, revision_id, body, source_name = row
                 item_id = uuid.UUID(str(item_id))
@@ -277,6 +295,7 @@ async def process_pending(
                         result,
                         source_tier=source_tier,
                         model_name=model_name,
+                        vocabulary=vocabulary,
                     )
                     stats.enriched += 1
                 except EnrichmentSchemaError as exc:
