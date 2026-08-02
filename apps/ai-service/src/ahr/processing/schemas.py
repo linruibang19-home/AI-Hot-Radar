@@ -24,7 +24,19 @@ ContentType = Literal[
     "tutorial",
 ]
 
-EntityType = Literal["company", "product", "model", "technology", "person"]
+# ADR-0014: aligned with config/taxonomy.yaml. The extra three matter because
+# a university is not a company, MCP is not a product, and LangChain is not a
+# technology — collapsing them writes a wrong fact at the data layer.
+EntityType = Literal[
+    "company",
+    "organization",
+    "product",
+    "model",
+    "technology",
+    "protocol",
+    "framework",
+    "person",
+]
 EntityRole = Literal["subject", "object", "mention"]
 
 
@@ -82,7 +94,7 @@ class EnrichmentResult(BaseModel):
 
 # Kept in the repository so a prompt change is reviewable and versioned
 # (AHR-SPEC-000 §8 requires prompt and model versions to be recorded).
-PROMPT_VERSION = "enrich-v1"
+PROMPT_VERSION = "enrich-v2"
 
 SYSTEM_PROMPT = """你是 AI 行业情报分析助手。请阅读给定的资讯正文，输出结构化 JSON。
 
@@ -91,7 +103,16 @@ SYSTEM_PROMPT = """你是 AI 行业情报分析助手。请阅读给定的资讯
 2. summary_zh：用中文写 2-4 句摘要，覆盖「谁、做了什么、影响是什么」。只能基于正文事实，禁止推测或补充正文没有的信息。
 3. zh_title：中文标题，不超过 40 字，忠实于原标题含义。
 4. content_type 必须是以下之一：model_release, product_release, api_update, research, open_source, business, policy, security, opinion, tutorial。
-5. entities：正文中出现的公司/产品/模型/技术/人物，type 必须是 company|product|model|technology|person，role 用 subject（主角）|object（被涉及）|mention（提及）。
+5. entities：正文中出现的实体。type 必须是以下之一：
+   - company：商业公司（OpenAI、字节跳动）
+   - organization：大学、标准组织、非营利机构（Stanford、Linux Foundation）
+   - product：产品或平台（ChatGPT、Claude Code）
+   - model：具体模型（GPT-5.6、DeepSeek-V4）
+   - technology：技术方法（RAG、量化、蒸馏）
+   - protocol：协议或规范（MCP、OpenAI 兼容 API）
+   - framework：框架或库（LangChain、vLLM、PyTorch）
+   - person：人物
+   role 用 subject（主角）|object（被涉及）|mention（提及）。
 6. topics：用小写英文 slug，如 agent、rag、multimodal、inference、training、safety。
 7. quality_factors 各项 0-100：relevance（与 AI 行业相关度）、information_gain（相比常识的新增信息量）、technical_depth（技术深度）、spam_penalty（营销水分，越高越差）。
 
