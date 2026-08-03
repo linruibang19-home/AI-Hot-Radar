@@ -242,6 +242,26 @@ def cmd_fix_titles(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_embed(args: argparse.Namespace) -> int:
+    """Populate content_chunk.embedding for the retrieval index (M4)."""
+    from ahr.rag.backfill import backfill_embeddings
+    from ahr.rag.embeddings import EmbeddingUnavailableError, build_client_from_env
+
+    async def run() -> dict[str, object]:
+        try:
+            client = build_client_from_env()
+        except EmbeddingUnavailableError as exc:
+            return {"error": str(exc)}
+        async with client:
+            with psycopg.connect(get_settings().database_url) as connection:
+                return await backfill_embeddings(
+                    connection, client=client, limit=args.limit, batch_size=args.batch_size
+                )
+
+    print(json.dumps(asyncio.run(run()), indent=2, ensure_ascii=False))
+    return 0
+
+
 def cmd_seed_topics(args: argparse.Namespace) -> int:
     """Refresh the topic table from config/taxonomy.yaml.
 
@@ -483,6 +503,11 @@ def main(argv: list[str] | None = None) -> int:
     fix_titles = sub.add_parser("fix-titles", help="re-sanitise titles already in the database")
     fix_titles.add_argument("--dry-run", action="store_true")
     fix_titles.set_defaults(func=cmd_fix_titles)
+
+    embed = sub.add_parser("embed", help="generate embeddings for content chunks")
+    embed.add_argument("--limit", type=int, default=500)
+    embed.add_argument("--batch-size", type=int, default=64)
+    embed.set_defaults(func=cmd_embed)
 
     seed = sub.add_parser("seed-topics", help="refresh topic names and grouping from taxonomy")
     seed.set_defaults(func=cmd_seed_topics)
