@@ -91,14 +91,25 @@ describe("groupReports", () => {
 });
 
 describe("groupByDay", () => {
-  it("buckets items by publication day", () => {
+  it("buckets items by the local publication day", () => {
+    // All three are 2026-08-02 in Asia/Shanghai: 23:00Z on the 1st is 07:00 on
+    // the 2nd in Beijing. Bucketing by the UTC date split them across two
+    // headings and put the newest-looking section in the wrong place.
     const groups = groupByDay([
       item("a", "2026-08-02T10:00:00Z"),
       item("b", "2026-08-02T08:00:00Z"),
       item("c", "2026-08-01T23:00:00Z"),
     ]);
+    expect([...groups.keys()]).toEqual(["2026-08-02"]);
+    expect(groups.get("2026-08-02")).toHaveLength(3);
+  });
+
+  it("separates days that really are different locally", () => {
+    const groups = groupByDay([
+      item("a", "2026-08-02T10:00:00Z"), // 18:00 on the 2nd
+      item("b", "2026-08-01T10:00:00Z"), // 18:00 on the 1st
+    ]);
     expect([...groups.keys()]).toEqual(["2026-08-02", "2026-08-01"]);
-    expect(groups.get("2026-08-02")).toHaveLength(2);
   });
 
   it("falls back to the observation time when publication is unknown", () => {

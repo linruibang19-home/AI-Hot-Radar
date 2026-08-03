@@ -5,6 +5,8 @@
  * must not reach past the API), so these run during SSR only.
  */
 
+import { dayKey } from "@/lib/datetime";
+
 const API_BASE_URL = process.env.API_BASE_URL ?? "http://core-api:8080";
 
 export interface SourceRef {
@@ -377,12 +379,17 @@ export function fetchItemTopics(id: string): Promise<TopicRef[]> {
   return getJson<TopicRef[]>(`/api/v1/items/${id}/topics`, []);
 }
 
-/** Group items by calendar day for the date-sectioned feed (AHR-FEAT-101). */
+/**
+ * Group items by calendar day for the date-sectioned feed (AHR-FEAT-101).
+ *
+ * Bucketed by the display timezone, not UTC: slicing the ISO string put
+ * anything published after 08:00 Beijing time under the previous day's heading.
+ */
 export function groupByDay(items: ContentItem[]): Map<string, ContentItem[]> {
   const groups = new Map<string, ContentItem[]>();
   for (const item of items) {
     const stamp = item.publishedAt ?? item.observedAt;
-    const day = stamp ? stamp.slice(0, 10) : "未知日期";
+    const day = dayKey(stamp) ?? "未知日期";
     const bucket = groups.get(day);
     if (bucket) {
       bucket.push(item);

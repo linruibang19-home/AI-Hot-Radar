@@ -1,3 +1,4 @@
+import { formatDate } from "@/lib/datetime";
 import Link from "next/link";
 
 import { CONTENT_TYPE_LABELS } from "@/components/ItemCard";
@@ -11,12 +12,6 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
-
-function formatDate(value?: string): string {
-  if (!value) return "时间未知";
-  const [year, month, day] = value.slice(0, 10).split("-");
-  return `${year}-${month}-${day}`;
-}
 
 export default async function StoriesPage({
   searchParams,

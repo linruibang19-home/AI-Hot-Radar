@@ -1,3 +1,4 @@
+import { formatTime } from "@/lib/datetime";
 import Link from "next/link";
 
 import { CategoryTabs, SearchBox } from "@/components/CategoryTabs";
@@ -15,10 +16,6 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 const OPEN_DAYS = 2;
-
-function formatTime(value?: string): string {
-  return value ? value.slice(11, 16) : "--:--";
-}
 
 interface SearchParams {
   cursor?: string;
