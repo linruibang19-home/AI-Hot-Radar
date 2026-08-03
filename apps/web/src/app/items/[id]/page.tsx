@@ -6,6 +6,15 @@ import { fetchItem } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
+/** The publisher's host, or nothing. A malformed URL must not 500 the page. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
 export default async function ItemDetail({
   params,
 }: {
@@ -20,9 +29,22 @@ export default async function ItemDetail({
 
   return (
     <>
-      <p className="page-subtitle">
-        <Link href="/items">← 返回全部动态</Link>
-      </p>
+      <Link className="back-link" href="/items">
+        <svg
+          className="back-link-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M19 12H5" />
+          <path d="m12 19-7-7 7-7" />
+        </svg>
+        返回全部动态
+      </Link>
 
       <h1 className="page-title">{item.zhTitle ?? item.title}</h1>
       {item.zhTitle && item.zhTitle !== item.title && (
@@ -70,13 +92,33 @@ export default async function ItemDetail({
           <div>来源机构：{item.source.organization ?? item.source.name}</div>
         </dl>
 
-        <p style={{ marginTop: 20 }}>
-          {/* Evidence always resolves to the publisher, never to our copy
-              (AHR-SPEC-000 ADR-009). */}
-          <a className="button" href={item.canonicalUrl} target="_blank" rel="noreferrer noopener">
-            阅读原文 ↗
-          </a>
-        </p>
+        {/* Evidence always resolves to the publisher, never to our copy
+            (AHR-SPEC-000 ADR-009). This is the page's primary action, so it
+            reads as one rather than as another neutral outline button. */}
+        <a
+          className="origin-link"
+          href={item.canonicalUrl}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          阅读原文
+          <svg
+            className="origin-link-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M7 17 17 7" />
+            <path d="M9 7h8v8" />
+          </svg>
+          {hostOf(item.canonicalUrl) && (
+            <span className="origin-link-host">{hostOf(item.canonicalUrl)}</span>
+          )}
+        </a>
       </div>
     </>
   );

@@ -100,7 +100,11 @@ public class ContentController {
      * does not change shape as content arrives.
      */
     @GetMapping("/categories")
-    @Cacheable(CacheConfig.TOPICS)
+    // Explicit key. Two no-arg methods sharing a cache both default to
+    // SimpleKey.EMPTY, so /categories and /topics were reading each other's
+    // payload: /topics got a List<CategoryTab> and failed while serialising the
+    // response as "object is not an instance of declaring class".
+    @Cacheable(value = CacheConfig.TOPICS, key = "'categories'")
     public List<CategoryTab> categories() {
         Map<String, Long> byTab = new LinkedHashMap<>();
         long total = 0;
@@ -123,7 +127,7 @@ public class ContentController {
     public record CategoryTab(String key, String label, long total) {}
 
     @GetMapping("/topics")
-    @Cacheable(CacheConfig.TOPICS)
+    @Cacheable(value = CacheConfig.TOPICS, key = "'list'")
     public List<ContentRepository.TopicSummary> topics() {
         return repository.listTopics();
     }

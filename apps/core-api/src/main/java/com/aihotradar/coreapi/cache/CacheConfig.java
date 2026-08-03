@@ -36,22 +36,43 @@ public class CacheConfig {
     public static final String STATS = "stats";
     public static final String REPORTS = "reports";
 
-    @Bean
-    public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+    /**
+     * The serializer used for every cached value.
+     *
+     * <p>Exposed separately so it can be round-tripped in a test without a
+     * Redis connection: the defect this guards against lived entirely in this
+     * configuration, and was invisible from the outside until the second
+     * request for a cached endpoint.
+     */
+    public static GenericJackson2JsonRedisSerializer valueSerializer() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         // Records are deserialised back into concrete types, so the serializer
         // needs type information. The validator restricts that to our own
         // package: unrestricted polymorphic typing is a deserialisation risk.
+        //
+        // EVERYTHING, not NON_FINAL: every DTO here is a Java record, and
+        // records are implicitly final. Under NON_FINAL the writer silently
+        // omitted their type header, so the value landed in Redis as a bare
+        // `{"items":878,...}` and the reader — which expects the wrapper array —
+        // threw. The effect was invisible on a cache miss and a 500 on the very
+        // next request, so /stats, /selected, /topics, /categories and /reports
+        // all failed on their second call within the TTL. The homepage rendered
+        // zeros because its client falls back to an empty payload on error.
         mapper.activateDefaultTyping(
                 BasicPolymorphicTypeValidator.builder()
                         .allowIfSubType("com.aihotradar.coreapi")
                         .allowIfSubType("java.util")
                         .allowIfSubType("java.time")
                         .build(),
-                ObjectMapper.DefaultTyping.NON_FINAL);
+                ObjectMapper.DefaultTyping.EVERYTHING);
 
+        return new GenericJackson2JsonRedisSerializer(mapper);
+    }
+
+    @Bean
+    public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         RedisCacheConfiguration base =
                 RedisCacheConfiguration.defaultCacheConfig()
                         .serializeKeysWith(
@@ -59,7 +80,7 @@ public class CacheConfig {
                                         new StringRedisSerializer()))
                         .serializeValuesWith(
                                 RedisSerializationContext.SerializationPair.fromSerializer(
-                                        new GenericJackson2JsonRedisSerializer(mapper)))
+                                        valueSerializer()))
                         // Caching a null would hide content that has just been
                         // published until the entry expires.
                         .disableCachingNullValues();
