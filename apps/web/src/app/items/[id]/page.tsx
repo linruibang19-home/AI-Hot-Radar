@@ -1,14 +1,10 @@
+import { formatDateTime } from "@/lib/datetime";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CONTENT_TYPE_LABELS } from "@/components/ItemCard";
 import { fetchItem } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
-
-function formatDateTime(value?: string): string {
-  if (!value) return "未知";
-  return `${value.slice(0, 10)} ${value.slice(11, 16)} UTC`;
-}
 
 export default async function ItemDetail({
   params,

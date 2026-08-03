@@ -1,3 +1,4 @@
+import { formatShortDateTime } from "@/lib/datetime";
 import type { SourceHealth } from "@/lib/api";
 import { fetchSourceHealth } from "@/lib/api";
 
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 function formatTime(value?: string | null): string {
   if (!value) return "—";
-  return `${value.slice(5, 10)} ${value.slice(11, 16)}`;
+  return formatShortDateTime(value);
 }
 
 function summarise(sources: SourceHealth[]) {

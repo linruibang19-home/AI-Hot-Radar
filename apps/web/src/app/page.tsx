@@ -1,3 +1,4 @@
+import { dayKey, formatTime, formatWeekday } from "@/lib/datetime";
 import { CategoryTabs, SearchBox } from "@/components/CategoryTabs";
 import { HotList } from "@/components/HotList";
 import { ItemCard } from "@/components/ItemCard";
@@ -13,13 +14,10 @@ export const dynamic = "force-dynamic";
 const OPEN_DAYS = 2;
 
 function formatToday(): string {
-  const now = new Date();
-  const weekday = ["日", "一", "二", "三", "四", "五", "六"][now.getDay()];
-  return `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日星期${weekday}`;
-}
-
-function formatTime(value?: string): string {
-  return value ? value.slice(11, 16) : "--:--";
+  // The server's clock is UTC; the heading must read as the visitor's date.
+  const key = dayKey(new Date().toISOString()) ?? "";
+  const [year, month, day] = key.split("-");
+  return `${year}年${Number(month)}月${Number(day)}日星期${formatWeekday(key).slice(2)}`;
 }
 
 /**
@@ -38,7 +36,7 @@ function groupEntries(
   for (const entry of entries) {
     const stamp = entry.item.publishedAt ?? entry.item.observedAt;
     const key =
-      sort === "latest" ? (stamp ? stamp.slice(0, 10) : "未知日期") : entry.selectedFor;
+      sort === "latest" ? (dayKey(stamp) ?? "未知日期") : entry.selectedFor;
     const bucket = groups.get(key);
     if (bucket) bucket.push(entry);
     else groups.set(key, [entry]);

@@ -1,3 +1,4 @@
+import { formatTime } from "@/lib/datetime";
 import Link from "next/link";
 
 import { ItemCard } from "@/components/ItemCard";
@@ -9,10 +10,6 @@ import type { Metadata } from "next";
 export const dynamic = "force-dynamic";
 
 const OPEN_DAYS = 3;
-
-function formatTime(value?: string): string {
-  return value ? value.slice(11, 16) : "--:--";
-}
 
 /** Look the topic up in the map so the page shows its name, not its slug. */
 async function findTopic(slug: string) {

@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from "@/lib/datetime";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 function formatStamp(value?: string): string {
   if (!value) return "时间未知";
-  return `${value.slice(0, 10)} ${value.slice(11, 16)}`;
+  return formatDateTime(value);
 }
 
 export async function generateMetadata({
@@ -45,7 +46,7 @@ export default async function StoryPage({
       <header className="page-head">
         <h1 className="page-title">{story.title}</h1>
         <p className="page-subtitle">
-          {story.occurredAt ? story.occurredAt.slice(0, 10) : "时间未知"} ·{" "}
+          {formatDate(story.occurredAt)} ·{" "}
           {story.itemCount} 篇报道 · {story.independentSources} 家独立信源
           {story.contentType
             ? ` · ${CONTENT_TYPE_LABELS[story.contentType] ?? story.contentType}`
