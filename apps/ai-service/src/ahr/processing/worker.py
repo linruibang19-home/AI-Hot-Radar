@@ -10,6 +10,7 @@ This closes that loop. The stages run in dependency order, because each one
 consumes what the previous produced:
 
     process   raw rows        -> zh_title, summary, entities, topics, quality
+    embed     new chunks      -> vectors for retrieval (M4)
     cluster   enriched items  -> stories, independent_source_count, hot_score
     select    scored items    -> the daily shortlist (needs corroboration counts)
     reasons   selections      -> LLM recommendation text
@@ -119,6 +120,7 @@ async def run_once(
     reason_limit: int = 40,
     cluster_days: int = 30,
     select_days: int = 7,
+    embed_limit: int = 400,
     with_reports: bool = True,
 ) -> PipelineResult:
     """Run one full downstream pass. Safe to call concurrently; extra callers no-op."""
@@ -129,6 +131,9 @@ async def run_once(
     from ahr.processing.report import build_report, save_report
     from ahr.processing.selection import select_for_days
     from ahr.processing.story_repository import recluster, sync_item_heat
+    from ahr.rag.backfill import backfill_embeddings
+    from ahr.rag.embeddings import EmbeddingUnavailableError
+    from ahr.rag.embeddings import build_client_from_env as build_embedding_client
 
     started = datetime.now(UTC)
     result = PipelineResult(started_at=started.isoformat())
@@ -157,6 +162,21 @@ async def run_once(
                     # ProcessStats is a dataclass; the result is logged as JSON.
                     result.stages["process"] = asdict(stats)
 
+                # Embedding is independent of the LLM provider, so it runs even
+                # when DeepSeek is down. Without it in the loop the vector index
+                # only covers whatever existed at the last manual backfill, and
+                # the newest content — the reason anyone searches — is missing.
+                try:
+                    embed_client = build_embedding_client()
+                except EmbeddingUnavailableError as exc:
+                    logger.warning("pipeline: embeddings unavailable: %s", exc)
+                else:
+                    async with embed_client:
+                        with psycopg.connect(get_settings().database_url) as connection:
+                            result.stages["embed"] = await backfill_embeddings(
+                                connection, client=embed_client, limit=embed_limit
+                            )
+
                 with psycopg.connect(get_settings().database_url) as connection:
                     result.stages["cluster"] = recluster(connection, days=cluster_days)
                     result.stages["heat"] = rescore(connection, days=cluster_days)
@@ -183,12 +203,15 @@ async def run_once(
 
     result.duration_seconds = round(time.monotonic() - began, 2)
     process = result.stages.get("process") or {}
+    embed = result.stages.get("embed") or {}
     cluster = result.stages.get("cluster") or {}
     select = result.stages.get("select") or {}
     logger.info(
-        "pipeline pass done in %ss: enriched=%s stories=%s multi_source=%s selected=%s reports=%s",
+        "pipeline pass done in %ss: enriched=%s embedded=%s stories=%s multi_source=%s "
+        "selected=%s reports=%s",
         result.duration_seconds,
         process.get("enriched", 0),
+        embed.get("embedded", 0),
         cluster.get("stories", 0),
         cluster.get("multi_source_stories", 0),
         select.get("selected", 0),

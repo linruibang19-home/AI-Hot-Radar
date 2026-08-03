@@ -1,0 +1,89 @@
+"""Populate content_chunk.embedding (M4).
+
+Runs over chunks that have no vector yet. Idempotent by construction: the
+selection is `embedding IS NULL`, so an interrupted run resumes exactly where it
+stopped and a completed run is a no-op.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+
+from ahr.rag.embeddings import DEFAULT_BATCH_SIZE, EmbeddingClient, EmbeddingUnavailableError
+
+logger = logging.getLogger(__name__)
+
+
+def _pending(connection: Any, limit: int, model: str) -> list[tuple[Any, str]]:
+    """Chunks still needing a vector for this model.
+
+    Also picks up chunks embedded by a *different* model: mixing models in one
+    column makes distances meaningless, so switching models must re-embed rather
+    than leave a silently incomparable mixture behind.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id, body_text
+              FROM content_chunk
+             WHERE embedding IS NULL
+                OR embedding_model IS DISTINCT FROM %s
+             ORDER BY created_at
+             LIMIT %s
+            """,
+            (model, limit),
+        )
+        return [(row[0], row[1]) for row in cursor.fetchall()]
+
+
+async def backfill_embeddings(
+    connection: Any,
+    *,
+    client: EmbeddingClient,
+    limit: int = 500,
+    batch_size: int = DEFAULT_BATCH_SIZE,
+) -> dict[str, Any]:
+    rows = _pending(connection, limit, client.model_name)
+    written = 0
+    failed_batches = 0
+
+    for start in range(0, len(rows), batch_size):
+        batch = rows[start : start + batch_size]
+        try:
+            vectors = await client.embed([text for _, text in batch])
+        except EmbeddingUnavailableError as exc:
+            # Stop rather than burn the remaining budget against a provider that
+            # is down; the next run resumes from the same place.
+            failed_batches += 1
+            logger.warning("embedding batch failed, stopping: %s", exc)
+            break
+
+        with connection.cursor() as cursor:
+            cursor.executemany(
+                """
+                UPDATE content_chunk
+                   SET embedding = %s::vector, embedding_model = %s
+                 WHERE id = %s
+                """,
+                [
+                    (str(vector), client.model_name, chunk_id)
+                    for (chunk_id, _), vector in zip(batch, vectors, strict=True)
+                ],
+            )
+        connection.commit()
+        written += len(batch)
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT count(*) FROM content_chunk WHERE embedding IS NULL")
+        remaining = cursor.fetchone()[0]
+
+    return {
+        "candidates": len(rows),
+        "embedded": written,
+        "failed_batches": failed_batches,
+        "remaining": remaining,
+        "model": client.model_name,
+        "calls": client.usage.calls,
+        "prompt_tokens": client.usage.prompt_tokens,
+    }
