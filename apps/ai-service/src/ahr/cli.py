@@ -242,6 +242,59 @@ def cmd_fix_titles(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_rechunk(args: argparse.Namespace) -> int:
+    """Re-split every stored revision with the current chunker.
+
+    Chunking rules changed (short-fragment merging and a hard size cap), and the
+    stored chunks predate them. Re-running the ingest pipeline would not do this:
+    it only processes items in PENDING, and every item here is already ENRICHED.
+
+    Embeddings are cleared for rewritten revisions so the next `embed` run
+    regenerates them — a vector left attached to replaced text points at content
+    that no longer exists.
+    """
+    from ahr.processing.pipeline import chunk_revision
+
+    before = 0
+    after = 0
+    revisions = 0
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT cr.id, cr.body_text
+                  FROM content_revision cr
+                  JOIN content_item ci ON ci.current_revision_id = cr.id
+                 WHERE cr.body_text IS NOT NULL AND length(cr.body_text) > 0
+                 ORDER BY cr.created_at
+                """
+            )
+            rows = cursor.fetchall()
+
+        for revision_id, body in rows:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT count(*) FROM content_chunk WHERE content_revision_id = %s",
+                    (revision_id,),
+                )
+                before += cursor.fetchone()[0]
+
+            written = chunk_revision(connection, revision_id, body)
+            after += written
+            revisions += 1
+
+        connection.commit()
+
+    print(
+        json.dumps(
+            {"revisions": revisions, "chunks_before": before, "chunks_after": after},
+            indent=2,
+        )
+    )
+    return 0
+
+
 def cmd_embed(args: argparse.Namespace) -> int:
     """Populate content_chunk.embedding for the retrieval index (M4)."""
     from ahr.rag.backfill import backfill_embeddings
@@ -503,6 +556,9 @@ def main(argv: list[str] | None = None) -> int:
     fix_titles = sub.add_parser("fix-titles", help="re-sanitise titles already in the database")
     fix_titles.add_argument("--dry-run", action="store_true")
     fix_titles.set_defaults(func=cmd_fix_titles)
+
+    rechunk = sub.add_parser("rechunk", help="re-split every stored revision with current rules")
+    rechunk.set_defaults(func=cmd_rechunk)
 
     embed = sub.add_parser("embed", help="generate embeddings for content chunks")
     embed.add_argument("--limit", type=int, default=500)
