@@ -4,6 +4,12 @@ import { REPORT_PERIODS, fetchReports, fetchTopics } from "@/lib/api";
 
 const SITE_URL = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
 
+// Rendered per request rather than at build time. The API client is
+// deliberately uncached, which Next cannot reconcile with prerendering — it
+// logged a dynamic-server error and fell back to an empty list, publishing a
+// sitemap with no topics or reports in it.
+export const dynamic = "force-dynamic";
+
 /**
  * Sitemap covering the public routes.
  *

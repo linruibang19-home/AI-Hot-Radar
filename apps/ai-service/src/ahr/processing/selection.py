@@ -230,10 +230,22 @@ def select_for_days(connection: Any, *, days: int = 7) -> dict[str, int]:
                     ) VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, 'auto', NULL)
                     ON CONFLICT (content_item_id, selected_for_date) DO UPDATE SET
                         score = EXCLUDED.score,
-                        reason = EXCLUDED.reason,
                         factors = EXCLUDED.factors,
                         algorithm_version = EXCLUDED.algorithm_version,
-                        withdrawn_at = NULL
+                        withdrawn_at = NULL,
+                        -- Keep an LLM-written reason. Re-ranking changes the
+                        -- score, not what the article says, so overwriting it
+                        -- with the factor list would replace real analysis with
+                        -- the boilerplate this pipeline exists to avoid — and
+                        -- because reason_version stayed set, the backfill then
+                        -- considered the row done and never restored it. That
+                        -- silently reverted 90 of 97 cards to the templated
+                        -- text on the first scheduled pass.
+                        reason = CASE
+                            WHEN selection_record.reason_version IS NOT NULL
+                            THEN selection_record.reason
+                            ELSE EXCLUDED.reason
+                        END
                     """,
                     (
                         uuid.uuid4(),

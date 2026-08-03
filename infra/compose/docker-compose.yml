@@ -121,6 +121,44 @@ services:
     healthcheck:
       disable: true
 
+  # Everything after ingestion. Separate from `scheduler` because the two have
+  # different shapes: ingestion is network-bound and cheap, so it polls every
+  # two minutes; this one spends money on the model, so it runs on a much longer
+  # interval and skips work that would produce an identical result.
+  #
+  # Without this service the site collected content continuously and displayed
+  # none of it — 精选, 热点, 事件聚合 and 日报 were all frozen at the last manual
+  # CLI run while 141 items sat unprocessed.
+  pipeline:
+    build:
+      context: ../../apps/ai-service
+      dockerfile: Dockerfile
+    command:
+      [
+        "python", "-m", "ahr.cli", "pipeline",
+        "--interval", "900",
+        "--process-limit", "60",
+        "--reason-limit", "40",
+      ]
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ai_hot_radar}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-ai_hot_radar}
+      REDIS_URL: redis://redis:6379/0
+      PYTHONUNBUFFERED: "1"
+    env_file:
+      - path: ../../.env
+        required: false
+    volumes:
+      - ../../config:/app/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+
   web:
     build:
       context: ../../apps/web

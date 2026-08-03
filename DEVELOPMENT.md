@@ -53,7 +53,7 @@ python scripts/validate_spec.py
 
 三套测试都能在 Docker 里跑，不依赖本机装了什么运行时。
 
-**ai-service（213 个用例）**——`--network none` 是刻意的：AHR-QSO-700 §1 要求测试回放 fixture 而不是访问真实站点，断网是唯一能证明这一点的方式。
+**ai-service（323 个用例）**——`--network none` 是刻意的：AHR-QSO-700 §1 要求测试回放 fixture 而不是访问真实站点，断网是唯一能证明这一点的方式。
 
 ```bash
 docker build --target test -t ahr-test apps/ai-service
@@ -77,13 +77,31 @@ docker run --rm -v "$PWD/apps/web:/app" -w /app node:22-slim sh -c "npm ci && np
 
 本机若已装好对应运行时，也可以直接 `cd apps/ai-service && pip install -e ".[dev]" && pytest -q`、`cd apps/core-api && mvn test`、`cd apps/web && npm test`。
 
-## 7. 单独运行各服务
+## 7. 后台常驻服务
+
+两个 worker，分工不同：
+
+| 服务 | 间隔 | 职责 |
+|---|---|---|
+| `scheduler` | 120s | 只做采集：轮询到期信源、抓取入库 |
+| `pipeline` | 900s | 采集之后的全部环节：结构化 → 聚类 → 精选 → 推荐理由 → 报告 |
+
+两者都随 `docker compose up -d` 自动启动。手动跑一趟加工：
+
+```bash
+docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli pipeline --once
+```
+
+`pipeline` 用 Postgres advisory lock 保证不会有两趟重叠——一趟实测约 6 分钟，
+超过间隔时重叠会对同一批内容重复调用 LLM。
+
+## 8. 单独运行各服务
 
 ```bash
 cd apps/web && npm install && npm run dev
 ```
 
-## 8. 停止与清理
+## 9. 停止与清理
 
 ```bash
 docker compose -f infra/compose/docker-compose.yml down
@@ -95,7 +113,7 @@ docker compose -f infra/compose/docker-compose.yml down
 docker compose -f infra/compose/docker-compose.yml down -v
 ```
 
-## 8. 采集操作
+## 10. 采集操作
 
 导入 140 个信源（幂等，可重复执行）：
 
@@ -113,7 +131,7 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 
 **GitHub 未登录配额只有 60 次/小时**。在 `.env` 里设置 `GITHUB_TOKEN`（只读权限即可）后提升到 5000 次/小时，否则大批量探测会中途耗尽。
 
-## 9. 常见问题
+## 11. 常见问题
 
 **新增迁移后 core-api 启动失败**：迁移文件是在**构建时**拷进镜像的，改了 `database/migrations/` 必须重建：
 
@@ -129,7 +147,7 @@ docker compose -f infra/compose/docker-compose.yml down -v && docker compose -f 
 
 **宿主机 5432 端口被本地 PostgreSQL 占用**：容器内部通信不受影响。需要直连时用 `docker compose exec postgres psql -U ai_hot_radar -d ai_hot_radar`。
 
-## 10. 重要约定
+## 12. 重要约定
 
 - **数据库变更只能通过 Flyway**（`AHR-SPEC-000` §8）。迁移文件位于 `database/migrations/`，是 Java、CI 和文档共用的唯一入口，禁止手工改表。
 - **密钥只进 `.env`**，仓库只提交 `.env.example`。

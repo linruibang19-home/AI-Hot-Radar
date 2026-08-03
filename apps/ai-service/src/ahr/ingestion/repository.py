@@ -25,6 +25,7 @@ from typing import Any
 
 from ahr.ingestion.fulltext_gate import Decision, GateResult
 from ahr.ingestion.models import DiscoveredDocument, SourceConfig, SourceCursor
+from ahr.ingestion.titles import resolve_title
 from ahr.ingestion.urls import canonicalize_url, content_hash, url_hash
 
 EXTRACTION_VERSION = "trafilatura-2.2.0/ahr-1"
@@ -189,6 +190,15 @@ def persist_document(
             stats.rejected += 1
             return None
 
+        # A listing page that misses its heading selector falls back to the
+        # anchor's text or href, which is how five sources ended up with URLs,
+        # "Read More" and author/date decoration as titles. Resolved once here so
+        # content_item and content_revision cannot disagree, and so a new adapter
+        # inherits the protection without remembering to ask for it.
+        resolved_title = (
+            resolve_title(item.title_hint, body_text=body_text, fallback=canonical) or canonical
+        )
+
         # --- content_item: the normalised unit -------------------------------
         item_id = uuid.uuid4()
         cursor.execute(
@@ -216,7 +226,7 @@ def persist_document(
                 canonical_hash,
                 _item_type(source),
                 None,
-                (item.title_hint or canonical)[:500],
+                resolved_title[:500],
                 sanitize_published_at(item.published_at_hint, now=now),
                 now,
                 "PARSED" if gate.accepted else "DISCOVERED",
@@ -262,7 +272,7 @@ def persist_document(
                 item_id,
                 raw_id,
                 next_revision,
-                (item.title_hint or canonical)[:500],
+                resolved_title[:500],
                 body_markdown,
                 body_text,
                 body_text[:500] if body_text else None,

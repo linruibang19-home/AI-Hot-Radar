@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import get_args
 
 import pytest
@@ -213,6 +214,36 @@ def test_top_reasons_names_three_factors() -> None:
 def test_quota_constants_prevent_single_source_domination() -> None:
     """53 of the sources are GitHub release feeds; one must not fill a day."""
     assert MAX_PER_SOURCE_PER_DAY < DAILY_QUOTA
+
+
+def test_reselecting_preserves_an_llm_written_reason() -> None:
+    """Re-ranking must not overwrite analysis with the factor list.
+
+    The upsert used to set `reason = EXCLUDED.reason` unconditionally while
+    leaving `reason_version` untouched. On the first scheduled pipeline pass that
+    replaced 90 of 97 LLM reasons with "一手/权威来源、属于关键变更类型…" — and
+    since the version still said recommend-v2, the backfill treated every row as
+    done and never wrote them back.
+    """
+    import re
+
+    from ahr.processing import selection
+
+    source = inspect.getsource(selection.select_for_days)
+    upsert = source[source.index("ON CONFLICT (content_item_id") :]
+
+    # The unconditional assignment must not be there...
+    assert not re.search(r"^\s*reason = EXCLUDED\.reason,\s*$", upsert, re.MULTILINE)
+    # ...and the guard must reference the version column.
+    assert "selection_record.reason_version IS NOT NULL" in upsert
+
+
+def test_selection_does_not_clear_the_reason_version() -> None:
+    """Clearing it would make every pass re-pay for reasons that already exist."""
+    from ahr.processing import selection
+
+    source = inspect.getsource(selection.select_for_days)
+    assert "reason_version = NULL" not in source
 
 
 def test_every_content_type_has_a_weight() -> None:
