@@ -76,27 +76,40 @@ def test_no_selections_at_all_is_not_stale() -> None:
 # --- period selection -----------------------------------------------------
 
 
-def test_daily_report_covers_yesterday_not_today() -> None:
-    """A report for a day still in progress would be rewritten all day and be
-    wrong until midnight."""
-    keys = dict(_period_keys(date(2026, 8, 3)))
-    assert keys["daily"] == "2026-08-02"
+def test_daily_covers_today_as_well_as_yesterday() -> None:
+    """Generating only yesterday's left the site with no digest for today.
+
+    Weekly and monthly already summarise the period in progress; daily now does
+    the same, and yesterday stays in the list so the last full day settles once
+    its remaining items finish processing.
+    """
+    keys = _period_keys(date(2026, 8, 3))
+    daily = [key for period, key in keys if period == "daily"]
+    assert daily == ["2026-08-03", "2026-08-02"]
 
 
 def test_weekly_and_monthly_cover_the_period_in_progress() -> None:
     """These are explicitly running summaries; a reader looking at 本周 during
     the week expects the week so far, not an empty page."""
-    keys = dict(_period_keys(date(2026, 8, 3)))
+    keys = dict((p, k) for p, k in _period_keys(date(2026, 8, 3)))
     assert keys["monthly"] == "2026-08"
     assert keys["weekly"].startswith("2026-W")
 
 
 def test_daily_key_rolls_across_a_month_boundary() -> None:
-    assert dict(_period_keys(date(2026, 8, 1)))["daily"] == "2026-07-31"
+    daily = [key for period, key in _period_keys(date(2026, 8, 1)) if period == "daily"]
+    assert daily == ["2026-08-01", "2026-07-31"]
 
 
 def test_daily_key_rolls_across_a_year_boundary() -> None:
-    assert dict(_period_keys(date(2026, 1, 1)))["daily"] == "2025-12-31"
+    daily = [key for period, key in _period_keys(date(2026, 1, 1)) if period == "daily"]
+    assert daily == ["2026-01-01", "2025-12-31"]
+
+
+def test_every_period_key_pair_is_distinct() -> None:
+    """Duplicates would make the pass regenerate the same report twice."""
+    keys = _period_keys(date(2026, 8, 3))
+    assert len(keys) == len(set(keys))
 
 
 def test_weekly_key_uses_iso_week_numbering() -> None:

@@ -1032,3 +1032,97 @@ summary:focus-visible {
     display: none;
   }
 }
+
+/* ---------- detail page actions ---------- */
+
+/* The back link used to be plain text inside a subtitle paragraph, which gave
+   it no hit area and no affordance. It is now a real control, with the arrow
+   sliding on hover so the direction reads before the label does. */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding: 6px 14px 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--muted);
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+
+.back-link:hover {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.back-link-icon {
+  width: 15px;
+  height: 15px;
+  transition: transform 0.16s ease;
+}
+
+.back-link:hover .back-link-icon {
+  transform: translateX(-3px);
+}
+
+/* The primary action on the page: everything else here is a link to our own
+   copy, this is the one that reaches the publisher. Filled rather than
+   outlined so it does not compete with the back link for the same weight. */
+.origin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 11px 20px;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgb(15 110 92 / 0.2);
+  transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.origin-link:hover {
+  background: var(--accent-ink);
+  box-shadow: 0 4px 12px rgb(15 110 92 / 0.28);
+  transform: translateY(-1px);
+}
+
+.origin-link:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgb(15 110 92 / 0.2);
+}
+
+.origin-link-icon {
+  width: 15px;
+  height: 15px;
+  transition: transform 0.16s ease;
+}
+
+.origin-link:hover .origin-link-icon {
+  transform: translate(2px, -2px);
+}
+
+/* Naming the destination host makes it clear the link leaves the site, which
+   AHR-SOURCE-900 §2 wants to be unambiguous. */
+.origin-link-host {
+  padding-left: 10px;
+  margin-left: 2px;
+  border-left: 1px solid rgb(255 255 255 / 0.28);
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-link-icon,
+  .origin-link,
+  .origin-link-icon {
+    transition: none;
+    transform: none;
+  }
+}

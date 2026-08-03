@@ -65,15 +65,19 @@ def _unlock(connection: Any) -> None:
 def _period_keys(today: date) -> list[tuple[str, str]]:
     """Which report periods to keep current.
 
-    The daily report covers yesterday, because a report for a day still in
-    progress would be rewritten all day and would be wrong until midnight. The
-    weekly and monthly ones cover the period now in progress: they are explicitly
-    running summaries, and a reader looking at 本周 during the week expects to
-    see the week so far rather than nothing.
+    Every period includes the one currently in progress. An earlier version
+    generated only yesterday's daily, on the grounds that a day still running
+    would be rewritten repeatedly — but that is exactly what the weekly and
+    monthly reports already do, and it left the site with no digest for today
+    at all. A reader opening 日报 in the evening expects today's.
+
+    Yesterday's daily is kept in the list too, so the last full day settles to
+    its final form once the day's remaining items finish processing.
     """
     yesterday = today - timedelta(days=1)
     iso = today.isocalendar()
     return [
+        ("daily", today.isoformat()),
         ("daily", yesterday.isoformat()),
         ("weekly", f"{iso.year}-W{iso.week:02d}"),
         ("monthly", f"{today.year}-{today.month:02d}"),
@@ -194,22 +198,25 @@ async def run_once(
 
 
 async def _refresh_reports(client: Any, build_report: Any, save_report: Any) -> dict[str, str]:
+    # Keyed by "period:key", not period: the daily entry appears twice (today
+    # and yesterday) and one would otherwise overwrite the other's status.
     written: dict[str, str] = {}
     today = datetime.now(UTC).date()
 
     for period, key in _period_keys(today):
+        label = f"{period}:{key}"
         with psycopg.connect(get_settings().database_url) as connection:
             if not _report_is_stale(connection, period, key):
-                written[period] = "unchanged"
+                written[label] = "unchanged"
                 continue
 
             report = await build_report(connection, period, key, client=client)
             if report is None:
-                written[period] = "no_selected_items"
+                written[label] = "no_selected_items"
                 continue
             save_report(connection, report)
             connection.commit()
-            written[period] = key
+            written[label] = "written"
 
     return written
 
