@@ -298,7 +298,11 @@ processed_event       消费幂等记录
 - [x] **修复精选覆盖 LLM 理由的回归**（重排序曾把 90/97 条理由打回模板文案）
 - [x] **修复 Next.js 数据缓存导致的长期陈旧**（改由 core-api 的 Redis 单层缓存）
 - [x] **时区修复**：全站时间改按 `Asia/Shanghai` 渲染（原先直接切 ISO 串，显示的是 UTC，比北京时间慢 8 小时）
-- [x] 376 个测试（Python 323 + Java 22 + Web 31），Python 部分断网可通过
+- [x] **修复 Redis 缓存两处缺陷**：record 是 final 导致类型头缺失（第二次请求即 500）；`/categories` 与 `/topics` 共用默认缓存键互相读串
+- [x] **AI 日报补上当天**（原先只生成昨天的，日报页永远看不到今天）
+- [x] **详情页两个操作按钮重做**（返回=胶囊控件，阅读原文=主操作并标注目标站点）
+- [x] **Docker 清理**：回收 36.21GB 构建缓存 + 死镜像，两个项目及其卷未动
+- [x] 385 个测试（Python 324 + Java 30 + Web 31），Python 部分断网可通过
 
 ## 7. 待完成任务
 
@@ -410,6 +414,8 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 | ~~标题被抽成 URL / "Read More" / 带作者时间后缀~~ | 已从 28 条降到 2 条 | 统一在入库处净化，见 `ingestion/titles.py` |
 | 剩余 2 条 BAAI 导航页标题仍是 URL | 正文为空，无处可取标题 | 属列表适配器的链接选择器问题，已挂待办 |
 | ~~全站时间显示为 UTC~~ | 已解决 | 比北京时间慢 8 小时，下午的内容看起来像早上的；已统一走 `lib/datetime.ts` |
+| ~~Redis 缓存第二次请求即 500~~ | 已解决 | Java record 是 final，`NON_FINAL` 类型策略不写类型头；已改 `EVERYTHING` 并加往返测试 |
+| ~~两个接口共用缓存键互相读串~~ | 已解决 | Spring 无参方法默认键都是 `SimpleKey.EMPTY`；已显式指定 key 并加防冲突测试 |
 | 推荐理由仍非"完整正文" | 长文按首 3900 + 尾 2100 字摘取 | 已标注中段省略；完整正文属 RAG（M4）的检索职责 |
 | LLM 推荐理由与摘要可能出错 | 事实性风险 | 页面已标注"AI 生成"，每条均链接原文；理由 prompt 强制指出局限 |
 | `mypy>=1.13.0` 无上界 | 类型检查结果取决于安装时间 | 见待办：固定版本 |
