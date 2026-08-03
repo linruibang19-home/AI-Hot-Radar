@@ -66,9 +66,18 @@ const EMPTY_PAGE: ItemPage = { data: [], page: { nextCursor: null, hasMore: fals
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
-      // Content updates continuously; a short revalidation window keeps the
-      // feed fresh without hammering the API on every request.
-      next: { revalidate: 60 },
+      // Deliberately uncached at this layer.
+      //
+      // `next: { revalidate: 60 }` was serving stale responses long past the
+      // window — after the pipeline rewrote every recommendation reason, the
+      // site kept rendering the old text until the container was restarted.
+      // Two caches over the same data meant the outer one could not be
+      // invalidated by anything the backend did.
+      //
+      // core-api already caches these reads in Redis with explicit TTLs
+      // (selected 5min / topics 10min / stats 2min), so one layer is enough and
+      // flushing Redis is now sufficient to refresh the site.
+      cache: "no-store",
     });
     if (!response.ok) {
       console.error(`core-api ${path} responded ${response.status}`);

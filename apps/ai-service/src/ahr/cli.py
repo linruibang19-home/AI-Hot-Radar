@@ -163,6 +163,85 @@ def cmd_cluster(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_pipeline(args: argparse.Namespace) -> int:
+    """Run the downstream pipeline once, or on a loop.
+
+    Ingestion has its own scheduler; this is everything after it. Without it the
+    site keeps collecting content and stops showing it.
+    """
+    from ahr.processing.worker import run_forever, run_once
+
+    if args.once:
+        result = asyncio.run(
+            run_once(
+                process_limit=args.process_limit,
+                reason_limit=args.reason_limit,
+                with_reports=not args.no_reports,
+            )
+        )
+        print(json.dumps(result.__dict__, indent=2, ensure_ascii=False, default=str))
+        return 0
+
+    asyncio.run(
+        run_forever(
+            interval_seconds=args.interval,
+            process_limit=args.process_limit,
+            reason_limit=args.reason_limit,
+            with_reports=not args.no_reports,
+        )
+    )
+    return 0
+
+
+def cmd_fix_titles(args: argparse.Namespace) -> int:
+    """Re-apply title sanitising to rows already stored.
+
+    Re-ingesting only repairs items still on their source's listing page; an
+    article that has scrolled off keeps its bad title forever. This walks stored
+    rows instead, using the body we already have.
+    """
+    from ahr.ingestion.titles import resolve_title
+
+    fixed = 0
+    inspected = 0
+    with psycopg.connect(get_settings().database_url) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT ci.id, ci.title, ci.canonical_url, cr.body_text
+                  FROM content_item ci
+                  LEFT JOIN content_revision cr ON cr.id = ci.current_revision_id
+                 WHERE ci.duplicate_of_id IS NULL
+                """
+            )
+            rows = cursor.fetchall()
+
+        for item_id, title, canonical, body in rows:
+            inspected += 1
+            resolved = resolve_title(title, body_text=body, fallback=canonical) or canonical
+            if resolved == title:
+                continue
+            if args.dry_run:
+                print(f"{title[:60]!r}\n  -> {resolved[:60]!r}")
+            else:
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "UPDATE content_item SET title = %s WHERE id = %s",
+                        (resolved[:500], item_id),
+                    )
+                    cursor.execute(
+                        "UPDATE content_revision SET title = %s WHERE content_item_id = %s",
+                        (resolved[:500], item_id),
+                    )
+            fixed += 1
+
+        if not args.dry_run:
+            connection.commit()
+
+    print(json.dumps({"inspected": inspected, "fixed": fixed, "dry_run": args.dry_run}, indent=2))
+    return 0
+
+
 def cmd_seed_topics(args: argparse.Namespace) -> int:
     """Refresh the topic table from config/taxonomy.yaml.
 
@@ -389,6 +468,21 @@ def main(argv: list[str] | None = None) -> int:
     clusters = sub.add_parser("cluster", help="group content into event Stories")
     clusters.add_argument("--days", type=int, default=14)
     clusters.set_defaults(func=cmd_cluster)
+
+    pipeline = sub.add_parser(
+        "pipeline",
+        help="run everything after ingestion: process, cluster, select, reasons, reports",
+    )
+    pipeline.add_argument("--interval", type=int, default=900)
+    pipeline.add_argument("--process-limit", type=int, default=60)
+    pipeline.add_argument("--reason-limit", type=int, default=40)
+    pipeline.add_argument("--no-reports", action="store_true", help="skip report generation")
+    pipeline.add_argument("--once", action="store_true", help="single pass then exit")
+    pipeline.set_defaults(func=cmd_pipeline)
+
+    fix_titles = sub.add_parser("fix-titles", help="re-sanitise titles already in the database")
+    fix_titles.add_argument("--dry-run", action="store_true")
+    fix_titles.set_defaults(func=cmd_fix_titles)
 
     seed = sub.add_parser("seed-topics", help="refresh topic names and grouping from taxonomy")
     seed.set_defaults(func=cmd_seed_topics)
