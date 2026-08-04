@@ -31,7 +31,7 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -40,6 +40,7 @@ from ahr.processing.llm import build_client_from_env as build_llm
 from ahr.rag.answer import Answer
 from ahr.rag.embeddings import EmbeddingUnavailableError
 from ahr.rag.embeddings import build_client_from_env as build_embedder
+from ahr.rag.ratelimit import caller_id, check, get_client
 from ahr.rag.rerank import RerankUnavailableError
 from ahr.rag.rerank import build_client_from_env as build_reranker
 from ahr.rag.service import answer_question
@@ -55,12 +56,32 @@ class AskRequest(BaseModel):
     question: str = Field(min_length=2, max_length=MAX_QUESTION_CHARS)
 
 
+async def _enforce_quota(http: Request) -> None:
+    """Charge this call against the anonymous quota, or refuse it.
+
+    Applied to both endpoints. Answering costs an embedding, a rerank and a
+    generation, so an unguarded public `/ask` spends real money for anyone who
+    walks it.
+    """
+    caller = caller_id(
+        http.headers.get("x-forwarded-for"), http.client.host if http.client else None
+    )
+    decision = await check(get_client(), caller)
+    if not decision.allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=decision.message,
+            headers={"Retry-After": str(decision.retry_after)},
+        )
+
+
 @router.post("/ask")
-async def ask(request: AskRequest) -> dict[str, object]:
+async def ask(request: AskRequest, http: Request) -> dict[str, object]:
     question = request.question.strip()
     if not question:
         raise HTTPException(status_code=422, detail="question must not be blank")
 
+    await _enforce_quota(http)
     answer = await _answer(question)
     return answer.as_dict()
 
@@ -133,10 +154,14 @@ def _sse(event: str, payload: dict[str, Any]) -> str:
 
 
 @router.post("/ask/stream")
-async def ask_stream(request: AskRequest) -> StreamingResponse:
+async def ask_stream(request: AskRequest, http: Request) -> StreamingResponse:
     question = request.question.strip()
     if not question:
         raise HTTPException(status_code=422, detail="question must not be blank")
+
+    # Before the stream opens, so a refusal is a 429 the client can read rather
+    # than a 200 whose first event says it was rejected.
+    await _enforce_quota(http)
 
     # Provider failures are raised before the response starts, so a missing key
     # is still a 503 rather than a 200 whose first event says it failed.
