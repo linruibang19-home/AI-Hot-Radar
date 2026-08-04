@@ -927,6 +927,66 @@ a {
   border-bottom: none;
 }
 
+/* The source table has seven columns, four of them short. Without a hint the
+   browser gave every column an equal share, so "内容数" and "最近成功" wrapped
+   one character per line into vertical stacks and every timestamp took three
+   rows. The name column is the only one that should absorb slack. */
+.table-sources {
+  table-layout: fixed;
+}
+
+.table-sources th,
+.table-sources td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The two columns carrying real prose keep wrapping; everything else is a
+   number, a date or an enum and must stay on one line. */
+.table-sources th:first-child,
+.table-sources td:first-child {
+  white-space: normal;
+  width: auto;
+}
+
+.table-sources col.col-profile {
+  width: 15%;
+}
+.table-sources col.col-state {
+  width: 12%;
+}
+.table-sources col.col-num {
+  width: 8%;
+}
+.table-sources col.col-time {
+  width: 13%;
+}
+.table-sources col.col-error {
+  width: 14%;
+}
+
+.table-sources td:nth-child(4),
+.table-sources td:nth-child(5),
+.table-sources th:nth-child(4),
+.table-sources th:nth-child(5) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 860px) {
+  /* Seven columns cannot fit a phone; scrolling the table beats destroying the
+     page layout, which is what `table-layout: fixed` would otherwise do. */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-sources {
+    min-width: 720px;
+  }
+}
+
 .state {
   border-radius: 999px;
   padding: 1px 8px;
@@ -997,6 +1057,13 @@ summary:focus-visible {
     border-right: none;
     border-bottom: 1px solid var(--border);
     padding: 16px;
+  }
+
+  /* The sidebar is a full-width bar here, so there is no column to drag — and
+     the handle's `right: -3px` was hanging 3px past the viewport, giving every
+     page on the site a horizontal scrollbar at phone width. */
+  .sidebar-resizer {
+    display: none;
   }
 
   .main {
@@ -1125,4 +1192,562 @@ summary:focus-visible {
     transition: none;
     transform: none;
   }
+}
+
+/* ---------- ask ---------- */
+
+.ask-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ask-input {
+  flex: 1;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.ask-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.ask-submit {
+  flex-shrink: 0;
+}
+
+.ask-examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.ask-examples-label {
+  font-size: 13px;
+  color: var(--muted-2);
+}
+
+.ask-example {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.ask-example:hover {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.ask-answer {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  background: var(--surface);
+  margin-bottom: 18px;
+}
+
+/* Progress while the query runs. p50 is 10.5s and generation alone is 5.7s of
+   it, so the wait is long enough that an undifferentiated spinner reads as a
+   hung page. Naming the stage that is running makes the same wait legible. */
+.ask-progress {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.ask-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.94rem;
+  transition: color 0.2s ease;
+}
+
+.ask-step-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  font-size: 0.7rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.ask-step.is-done {
+  color: var(--ink);
+}
+
+.ask-step.is-done .ask-step-mark {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.ask-step.is-active {
+  color: var(--ink);
+}
+
+.ask-step.is-active .ask-step-mark {
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  animation: ask-pulse 1.1s ease-in-out infinite;
+}
+
+.ask-step-detail {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@keyframes ask-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* Respect a reader who has asked the OS for less motion; the step list still
+   communicates position without the pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .ask-step.is-active .ask-step-mark {
+    animation: none;
+  }
+}
+
+/* What the planner resolved, shown before the answer. The absolute window is
+   the point: "最近" became a real interval, and a reader who can see it caught
+   the wrong week can fix the question instead of distrusting the system. */
+.ask-plan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ask-plan-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--bg);
+}
+
+.ask-plan-range {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.ask-body p {
+  margin: 0 0 10px;
+  line-height: 1.9;
+}
+
+/* The conclusion the prompt now requires, marked as such. A reader who stops
+   after one paragraph should already have the answer. */
+.ask-lead {
+  font-size: 1.06rem;
+  color: var(--ink);
+  padding-left: 14px;
+  border-left: 3px solid var(--accent);
+  margin-bottom: 14px !important;
+}
+
+.ask-points {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.ask-points li {
+  line-height: 1.8;
+  color: #35352f;
+}
+
+/* The trace, kept after the answer lands rather than discarded. */
+.ask-trace {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 12px 16px;
+  margin-bottom: 14px;
+}
+
+.ask-trace-summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.ask-trace[open] .ask-trace-summary {
+  margin-bottom: 12px;
+}
+
+.ask-trace-summary .ask-step-detail {
+  margin-left: 10px;
+  font-weight: 400;
+}
+
+/* --- conversation history --- */
+
+.ask-history {
+  margin-top: 28px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+
+.ask-history-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.ask-history[open] .ask-history-title {
+  margin-bottom: 12px;
+}
+
+/* The count reads as the affordance it is: these two summaries are the only
+   controls that open anything, and at 0.8rem grey-on-white they looked like
+   captions. */
+.ask-history-count,
+.ask-sources-count {
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+/* Collapsed by default at the reader's request: eight citations filled a
+   screen. The count stays in the summary so the guarantee — every fact has a
+   source — is still visible without expanding. */
+.ask-sources-title,
+.ask-history-title {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--ink);
+  padding: 10px 12px;
+  margin: 0 -12px;
+  border-radius: 10px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ask-sources-title:hover,
+.ask-history-title:hover {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+/* The disclosure triangle is the only cue that these open, so it gets the
+   accent rather than the browser's default black. */
+.ask-sources-title::marker,
+.ask-history-title::marker {
+  color: var(--accent);
+  font-size: 0.9em;
+}
+
+.ask-history-note {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.ask-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.ask-history-row {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.ask-history-row.is-open {
+  border-color: var(--accent);
+}
+
+.ask-history-head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+}
+
+.ask-history-head:hover {
+  background: var(--accent-soft);
+}
+
+.ask-history-q {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.ask-history-meta {
+  color: var(--muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ask-history-refused {
+  color: var(--accent-ink);
+}
+
+.ask-history-body {
+  padding: 6px 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* The citation marker as a control rather than text.
+   Every claim in this product is supposed to be checkable; until this existed
+   the reader had to match `[1]` to a list by eye. */
+.cite-ref {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  margin: 0 2px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: 2px;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cite-ref:hover,
+.cite-ref.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Source tier, the same signal the ranker uses in its §6 boost. A reader
+   deciding whether to believe a claim deserves what the ranker had. */
+.tier-badge {
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tier-primary {
+  background: #e7f2ec;
+  color: #1f6b45;
+}
+
+.tier-secondary {
+  background: #eef1f6;
+  color: #46566f;
+}
+
+.tier-expert {
+  background: #f4eee3;
+  color: #7a5a1e;
+}
+
+.tier-community {
+  background: #f2f2f0;
+  color: #5f5f58;
+}
+
+/* M3's event clustering, surfaced where it changes a reader's mind: this is
+   not one outlet's word for it. */
+.corroboration-badge {
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.corroboration-badge:hover {
+  text-decoration: underline;
+}
+
+.ask-source-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ask-source.is-active {
+  background: var(--accent-soft);
+  border-radius: 8px;
+  margin: 0 -10px;
+  padding: 10px;
+}
+
+/* A refusal that names what it read. Without this the reader gets a dead end,
+   while the system knows exactly which documents it rejected. */
+.ask-considered {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.ask-considered-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.ask-considered ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.ask-considered li {
+  font-size: 13px;
+}
+
+.ask-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* A refusal is a result, not an error: it reads as a deliberate outcome
+   rather than a failure the reader should retry their way out of. */
+.ask-refusal {
+  border-left: 3px solid var(--accent);
+  padding-left: 14px;
+}
+
+.ask-refusal p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.ask-refusal-note {
+  font-size: 13px;
+  color: var(--muted-2);
+}
+
+.ask-limitations {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.ask-sources {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.ask-sources-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.ask-source-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ask-source {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.ask-source:last-child {
+  border-bottom: none;
+}
+
+.ask-source-no {
+  flex-shrink: 0;
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.ask-source a {
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.ask-source-meta {
+  font-size: 13px;
+  color: var(--muted-2);
+  margin-top: 2px;
+}
+
+.ask-source-claim {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.6;
+}
+
+.ask-meta {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--muted-2);
 }

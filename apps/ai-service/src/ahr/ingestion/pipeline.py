@@ -227,18 +227,38 @@ async def ingest_source(
         "NO_NEW_ARTICLES",
     }
 
+    # The verdict is about the *source*, not about this one poll. The scheduler
+    # runs every two minutes, so a healthy low-volume feed routinely returns one
+    # new article or none — and judging it on that alone marked five working
+    # sources DEGRADED and thirteen PROBING while every one of them had
+    # `consecutive_failures = 0`, no error code, and a success minutes earlier.
+    # `_state_from_evidence` already asks the right question; it was simply only
+    # consulted in one branch.
     if stats.fulltext_accepted >= 2:
         result.state = "ACTIVE"
-    elif stats.fulltext_accepted or stats.metadata_only:
-        result.state = "METADATA_ONLY" if stats.metadata_only else "DEGRADED"
+    elif stats.fulltext_accepted == 1:
+        # One accepted document is a small poll, not a degradation. A source
+        # that has cleared the gate before keeps the verdict it earned.
+        result.state = _state_from_evidence(connection, source.id) or "PROBING"
+    elif stats.metadata_only:
+        result.state = "METADATA_ONLY"
     elif not batch.items:
         if batch.not_modified or batch.empty_reason in healthy_empty:
             # Preserve the verdict the source already earned.
             result.state = _state_from_evidence(connection, source.id) or "PROBING"
         else:
             result.state = "PROBING"
-    else:
+    elif stats.rejected:
+        # Documents were fetched and the gate turned them down. That is a real
+        # signal about the source — it has started serving pages the extractor
+        # cannot read — and it stands on its own.
         result.state = "DEGRADED"
+    else:
+        # Items appeared in the feed but none reached the gate: every one was
+        # already stored. That is what a healthy feed looks like when polled
+        # more often than it publishes, and four sources with 11-16 accepted
+        # documents each sat in DEGRADED because of it.
+        result.state = _state_from_evidence(connection, source.id) or "PROBING"
 
     finish_crawl_run(
         connection,

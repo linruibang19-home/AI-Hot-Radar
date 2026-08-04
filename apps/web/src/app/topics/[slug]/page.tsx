@@ -1,6 +1,8 @@
 import { formatTime } from "@/lib/datetime";
 import Link from "next/link";
 
+import { BackLink } from "@/components/BackLink";
+
 import { ItemCard } from "@/components/ItemCard";
 import { TimelineDay, TimelineRow } from "@/components/Timeline";
 import { fetchTopicItems, fetchTopicMap, groupByDay } from "@/lib/api";
@@ -46,7 +48,7 @@ export default async function TopicDetail({
   return (
     <>
       <p className="page-subtitle" style={{ marginBottom: 10 }}>
-        <Link href="/topics">← 返回主题地图</Link>
+        <BackLink href="/topics">返回主题地图</BackLink>
       </p>
 
       <header className="page-head">

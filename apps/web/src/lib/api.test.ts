@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { formatPeriodKey, groupByDay, groupReports, normalisePeriod } from "./api";
+import {
+  appendItems,
+  formatPeriodKey,
+  groupByDay,
+  groupReports,
+  normalisePeriod,
+} from "./api";
 
 import type { ContentItem, ReportSummary } from "./api";
 
@@ -24,6 +30,43 @@ function item(id: string, publishedAt?: string): ContentItem {
     source: { id: "s", name: "Source", tier: "primary" },
   };
 }
+
+describe("appendItems", () => {
+  it("appends a page onto the accumulated feed", () => {
+    const merged = appendItems([item("a"), item("b")], [item("c"), item("d")]);
+    expect(merged.map((i) => i.id)).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("drops an item that already arrived on an earlier page", () => {
+    // Ingestion runs hourly, so the feed shifts under a reader who is paging
+    // through it and the same item can come back under a later cursor.
+    // Concatenating blindly renders two cards with the same React key.
+    const merged = appendItems([item("a"), item("b")], [item("b"), item("c")]);
+    expect(merged.map((i) => i.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("keeps the position an item already had rather than moving it", () => {
+    const merged = appendItems([item("a"), item("b")], [item("a")]);
+    expect(merged.map((i) => i.id)).toEqual(["a", "b"]);
+  });
+
+  it("handles an empty page without changing the feed", () => {
+    const current = [item("a")];
+    expect(appendItems(current, [])).toEqual(current);
+  });
+
+  it("groups appended items into the day they belong to, not a new one", () => {
+    // The bug this whole component exists to fix: page two used to render its
+    // own "8月3日" header because each page was grouped in isolation.
+    const merged = appendItems(
+      [item("a", "2026-08-03T14:00:00Z")],
+      [item("b", "2026-08-03T02:00:00Z")],
+    );
+    const days = [...groupByDay(merged).keys()];
+    expect(days).toHaveLength(1);
+    expect(groupByDay(merged).get(days[0])).toHaveLength(2);
+  });
+});
 
 describe("normalisePeriod", () => {
   it("accepts the three supported periods", () => {

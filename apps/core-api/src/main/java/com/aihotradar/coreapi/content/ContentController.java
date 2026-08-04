@@ -34,6 +34,7 @@ public class ContentController {
     public PageResponse<ContentItem> listItems(
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) String day,
             @RequestParam(required = false) String source,
             @RequestParam(required = false) String contentType,
             @RequestParam(required = false) String q) {
@@ -42,7 +43,7 @@ public class ContentController {
 
         // Fetch one extra row to decide hasMore without a second count query.
         List<ContentItem> rows =
-                repository.findFeed(decodeCursor(cursor), pageSize + 1, source, contentType, q);
+                repository.findFeed(decodeCursor(cursor), pageSize + 1, source, contentType, q, day);
 
         boolean hasMore = rows.size() > pageSize;
         List<ContentItem> page = hasMore ? rows.subList(0, pageSize) : rows;
@@ -145,10 +146,22 @@ public class ContentController {
         return repository.findByTopic(slug, Math.min(Math.max(limit, 1), MAX_LIMIT));
     }
 
+    /**
+     * Every publication date with its item count, newest first.
+     *
+     * <p>Replaces a rolling {@code days}-window count that grouped in UTC.
+     * Neither suited the feed: it is read by date, so it needs *all* the dates,
+     * and a UTC bucket files everything published after 08:00 Beijing time
+     * under the previous day.
+     */
     @GetMapping("/items/days")
-    public List<ContentRepository.DayCount> days(
-            @RequestParam(required = false, defaultValue = "14") int days) {
-        return repository.countByDay(Math.min(Math.max(days, 1), 90));
+    @Cacheable(value = CacheConfig.STATS, key = "'days:' + #contentType + ':' + #q")
+    public List<ContentRepository.DayBucket> days(
+            @RequestParam(required = false) String contentType,
+            @RequestParam(required = false) String q) {
+        return repository.dayCounts(
+                contentType == null || contentType.isBlank() ? null : contentType,
+                q == null || q.isBlank() ? null : q);
     }
 
     /**

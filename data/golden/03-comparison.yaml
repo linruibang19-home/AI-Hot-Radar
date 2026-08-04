@@ -1,0 +1,146 @@
+# 比较：考子问题分解与证据对称。
+# 若一方证据明显更少，正确行为是「标注不对称」而不是假装对称。
+category: comparison
+questions:
+  - id: RAG-GOLD-031
+    question: Kimi K3 和 GPT-5.6 Sol 在成本和编码能力上怎么比？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 9d19aad4-9d58-4164-b36a-243b795de97e, grade: 2}
+      - {id: 35c0ccc3-af39-4181-a42c-3aa98cf377c4, grade: 1}
+      - {id: 32781478-fde4-4e93-acc9-d07b90e5687f, grade: 1}
+    notes: 存在一篇直接做对比的文档，考它是否被排到最前而非拼凑两侧材料
+
+  - id: RAG-GOLD-032
+    question: MXFP4 和 NVFP4 是一回事吗？分别用在哪些模型上？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, grade: 2}
+      - {id: 2717b0e9-c80b-490b-83a1-a77fd34a9aa4, grade: 2}
+      - {id: 35c0ccc3-af39-4181-a42c-3aa98cf377c4, grade: 1}
+      - {id: eca88cf9-a0a6-4820-9dda-d2100b8e6a85, grade: 1}
+    must_contain: ["MXFP4", "NVFP4"]
+    notes: 旗舰题。纯稠密检索会把两者混为一谈（冒烟测试实测）；两侧证据必须都召回
+
+  - id: RAG-GOLD-033
+    question: Qwen3.8-Max 和 Claude 相比表现如何？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 845e4161-2365-426a-a856-d7a601a0bf09, grade: 2}
+      - {id: 6081607a-9e0c-4f31-9a7c-14c9271053e6, grade: 2}
+      - {id: 1418aaf4-7fe3-4f2e-85c3-d574c617a75e, grade: 1}
+    notes: 比较依据来自阿里内部基准，正确回答应标注这一点而不是当作独立评测
+
+  - id: RAG-GOLD-034
+    question: gemma-4 的 coder 和 coderx 两个量化版有什么区别？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 079902db-175f-4bd3-93ad-05ef686fb4ed, grade: 2}
+      - {id: 7ac2adaa-c561-4526-9966-dfeaf6328627, grade: 2}
+    notes: 型号串极为相似（v6-coder-it vs v7-coderx-it），稠密检索难以区分
+
+  - id: RAG-GOLD-035
+    question: MiniMax H3 和 Seedance 在视频生成上怎么比？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 305188d4-dcba-48b3-a413-5148fa3b6f75, grade: 2}
+      - {id: caafdef0-ad57-40e6-9468-defa7fd2deca, grade: 2}
+      - {id: dafcc35b-6bb2-44b9-b531-0cb76c529838, grade: 1}
+
+  - id: RAG-GOLD-036
+    question: 开放权重模型和闭源前沿模型的差距，各方是怎么看的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: ac52d6e1-d0b1-4c94-820e-a46f73b595a6, grade: 2}
+      - {id: ba1f2ee5-1aab-41dc-a517-b7910b898fd3, grade: 2}
+      - {id: ee7f4bf0-dcc8-4642-840f-d9e8bcb2caa8, grade: 2}
+      - {id: 5a8170f1-fd42-473c-a376-c63c2ddbaec7, grade: 1}
+    notes: 观点型内容用于观点型问题，不应被 −0.15 的观点惩罚压掉
+
+  - id: RAG-GOLD-037
+    question: Together AI 和 Cloudflare 在推理优化上的思路有什么不同？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: cca66b4c-1470-41c7-acef-ce629ebe6958, grade: 2}
+      - {id: 4bd0491a-dbe5-42fd-b6fc-2c6089d5e8db, grade: 2}
+      - {id: 446a6b4a-0989-496d-b1d9-284ab26a1831, grade: 1}
+      - {id: 9d0504f4-986c-4064-8360-0cd7c55fe2a7, grade: 1}
+
+  - id: RAG-GOLD-038
+    question: Claude Opus 5 和 Fable 5 的差距有多大？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 1b960b84-2850-45f0-b833-897956d2cbe9, grade: 2}
+      - {id: 93a5dfe3-e868-44aa-af63-ca56b62df079, grade: 1}
+    notes: 语料只有一侧视角（Anthropic 发布 + 一篇评论），正确行为是回答并标注证据不对称
+
+  - id: RAG-GOLD-039
+    question: LLM Wiki 和传统 RAG 相比有什么优劣？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 574a1890-b99d-4bdb-81ac-4c8293db914e, grade: 2}
+      - {id: 2091e08c-b719-4ea5-8e6f-5781dbcf905a, grade: 1}
+
+  - id: RAG-GOLD-040
+    question: Mem0 的 Node SDK 和 Python SDK 这次更新的内容一样吗？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 8044d683-118b-4006-b1d3-debffe4b5f76, grade: 2}
+      - {id: 9208f901-d591-467b-a644-c2a5d457265b, grade: 2}
+    notes: 两条都是极短发布说明，考短文档的对称召回
+
+  - id: RAG-GOLD-041
+    question: Quarkus LangChain4j 的 1.7.8 和 1.2.7 分别是做什么的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: f54b7d7f-a0d5-4a89-b119-e34d0e7498e8, grade: 2}
+      - {id: c87f3228-1548-420a-97a6-94ecb571bd73, grade: 2}
+    notes: 同一天发布的两个维护分支，版本号是唯一区分特征——精确 token 检索的用武之地
+
+  - id: RAG-GOLD-042
+    question: Meta 和 Google DeepMind 最近在机器人和大脑建模方向各自做了什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 75208601-cdc6-4840-b9ba-a54d0094cecc, grade: 2}
+      - {id: 479d8d9f-38b1-44f6-83d7-f22b5386d007, grade: 2}
+
+  - id: RAG-GOLD-043
+    question: 智谱的 GLM 系列和 Kimi 在 Cloudflare 上的推理优化待遇一样吗？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 4bd0491a-dbe5-42fd-b6fc-2c6089d5e8db, grade: 2}
+      - {id: 6b5ddf5f-1b79-416b-b69f-e4a6a70111da, grade: 1}
+    notes: 中文实体「智谱」需命中，考 CJK 分词缺口（ADR-0015 已知问题）
+
+  - id: RAG-GOLD-044
+    question: LiteLLM 的 rc 版本和 dev 版本有什么不同？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 28264453-79df-474b-8d90-e70201bf6ec4, grade: 2}
+      - {id: bc1bbe5c-d7fd-4f94-9a5f-55bbf5df2fe9, grade: 2}
+      - {id: 5d479427-ac8c-4af9-b7c2-34c2d150aec0, grade: 1}
+    notes: 版本串 v1.95.0-rc.3 / v1.96.0-dev.2 会被 tsvector 切碎，考 trigram 兜底
+
+  - id: RAG-GOLD-045
+    question: Interconnects 和 Latent Space 对最近开源模型浪潮的判断有分歧吗？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: ac52d6e1-d0b1-4c94-820e-a46f73b595a6, grade: 2}
+      - {id: 18e5766c-0475-4d0c-8fde-8929132dda00, grade: 2}
+      - {id: 32781478-fde4-4e93-acc9-d07b90e5687f, grade: 1}
+    notes: 两个 expert 层信源，考 source_tier 是否影响了不该影响的观点型问题

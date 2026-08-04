@@ -10,4 +10,10 @@ export default defineConfig({
       "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
+  test: {
+    // `e2e/` belongs to Playwright, which has its own package.json and runner.
+    // Collected here it fails to load, because `@playwright/test` is
+    // deliberately not a dependency of this app.
+    include: ["src/**/*.test.ts"],
+  },
 });

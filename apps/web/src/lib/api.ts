@@ -98,15 +98,33 @@ export function fetchItems(params: {
   cursor?: string;
   q?: string;
   contentType?: string;
+  day?: string;
 } = {}): Promise<ItemPage> {
   const query = new URLSearchParams();
   if (params.limit) query.set("limit", String(params.limit));
   if (params.cursor) query.set("cursor", params.cursor);
   if (params.q) query.set("q", params.q);
   if (params.contentType) query.set("contentType", params.contentType);
+  if (params.day) query.set("day", params.day);
 
   const suffix = query.toString() ? `?${query}` : "";
   return getJson<ItemPage>(`/api/v1/items${suffix}`, EMPTY_PAGE);
+}
+
+export interface DayBucket {
+  day: string;
+  total: number;
+}
+
+/** Every publication date with its item count, newest first. */
+export function fetchItemDays(params: { q?: string; contentType?: string } = {}): Promise<
+  DayBucket[]
+> {
+  const query = new URLSearchParams();
+  if (params.q) query.set("q", params.q);
+  if (params.contentType) query.set("contentType", params.contentType);
+  const suffix = query.toString() ? `?${query}` : "";
+  return getJson<DayBucket[]>(`/api/v1/items/days${suffix}`, []);
 }
 
 export async function fetchItem(id: string): Promise<ContentItem | null> {
@@ -385,6 +403,22 @@ export function fetchItemTopics(id: string): Promise<TopicRef[]> {
  * Bucketed by the display timezone, not UTC: slicing the ISO string put
  * anything published after 08:00 Beijing time under the previous day's heading.
  */
+/**
+ * Append a freshly fetched page onto the accumulated feed.
+ *
+ * De-duplication is not defensive tidiness. Ingestion runs hourly, so the feed
+ * shifts under a reader who is paging through it: an item that was on page one
+ * when they loaded it can reappear on page two after newer items push it down.
+ * Concatenating blindly renders two cards with the same React key.
+ */
+export function appendItems(
+  current: ContentItem[],
+  incoming: ContentItem[],
+): ContentItem[] {
+  const seen = new Set(current.map((item) => item.id));
+  return [...current, ...incoming.filter((item) => !seen.has(item.id))];
+}
+
 export function groupByDay(items: ContentItem[]): Map<string, ContentItem[]> {
   const groups = new Map<string, ContentItem[]>();
   for (const item of items) {

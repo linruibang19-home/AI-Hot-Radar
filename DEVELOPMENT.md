@@ -53,7 +53,7 @@ python scripts/validate_spec.py
 
 三套测试都能在 Docker 里跑，不依赖本机装了什么运行时。
 
-**ai-service（323 个用例）**——`--network none` 是刻意的：AHR-QSO-700 §1 要求测试回放 fixture 而不是访问真实站点，断网是唯一能证明这一点的方式。
+**ai-service（510 个用例）**——`--network none` 是刻意的：AHR-QSO-700 §1 要求测试回放 fixture 而不是访问真实站点，断网是唯一能证明这一点的方式。
 
 ```bash
 docker build --target test -t ahr-test apps/ai-service
@@ -63,19 +63,66 @@ docker build --target test -t ahr-test apps/ai-service
 docker run --rm --network none -v "$PWD/config:/app/config:ro" ahr-test
 ```
 
-**core-api（22 个用例）**——本机是 JDK 17，而 ADR-002 锁定 JDK 21，所以用镜像里的 JDK 跑：
+**core-api（30 个用例）**——本机是 JDK 17，而 ADR-002 锁定 JDK 21，所以用镜像里的 JDK 跑：
 
 ```bash
 docker run --rm -v "$PWD:/repo" -w /repo/apps/core-api maven:3.9-eclipse-temurin-21 mvn -B test
 ```
 
-**web（12 个用例 + 类型检查）**
+**web（36 个用例 + 类型检查）**
 
 ```bash
 docker run --rm -v "$PWD/apps/web:/app" -w /app node:22-slim sh -c "npm ci && npx vitest run && npx tsc --noEmit"
 ```
 
+**web E2E（28 个用例，Playwright）**——需要整套 Compose 已经在跑，因为它测的是真实浏览器行为：
+
+```bash
+docker run --rm --network host -v "$PWD/apps/web/e2e:/e2e" -w /e2e mcr.microsoft.com/playwright:v1.49.1-noble sh -c "npm install --silent && npx playwright test"
+```
+
+这套用例存在的理由很具体：全部 AI 动态的三个缺陷**全部躲过了单元测试和服务端 HTML 检查**
+——「加载更多」替换而非追加、折叠的 `<details>` 吞掉追加的内容、按条数分页而页面按天组织
+（8-3 有 192 条，要点八次才能看到 8-2）。三个都是浏览器行为，三个都上线了。
+
+三个 spec 各管一件事：
+
+| 文件 | 用例 | 覆盖 |
+|---|---:|---|
+| `items-feed.spec.ts` | 7 | 按天全展示、折叠懒加载、不重复 |
+| `ask.spec.ts` | 6 | SSE 进度先于答案到达、阶段顺序、引用可点、拒答是合法结果 |
+| `navigation.spec.ts` | 15 | 8 个页面逐页点检 + **console error 即失败**、详情/返回、375px 无横向溢出 |
+
+`navigation.spec.ts` 把 console error 当失败是刻意的：一个渲染成功、
+状态码 200、但控制台在报客户端 fetch 失败的页面，用状态码检查不出来。
+它上线第一次跑就抓到了全站在 375px 下横向溢出（侧边栏拖拽手柄挂在视口外 3px）。
+
+**Playwright 刻意不放进 `apps/web/package.json`**。放进去会进入运行时镜像的 `npm ci`，
+并且因为 `next build` 会类型检查整棵树，构建会因为一个服务器永远不会执行的 import 而失败。
+它有独立的 `apps/web/e2e/package.json`，官方镜像已自带浏览器。
+
 本机若已装好对应运行时，也可以直接 `cd apps/ai-service && pip install -e ".[dev]" && pytest -q`、`cd apps/core-api && mvn test`、`cd apps/web && npm test`。
+
+> **Windows 上带挂载的 `docker run` 请用 PowerShell，不要用 Git Bash。**
+> MSYS 会把 `-v "$PWD/apps/web/e2e:/e2e"` 里的路径改写成 Windows 形式，
+> 结果是容器挂载失败，并在仓库里留下一个名叫 `e2e;D` 的空目录。
+> 这个坑已经踩到两次，`.gitignore` 里加了 `*;D/` 兜底，但正确做法是换 shell。
+
+## 6.5 连接数据库（Navicat / psql）
+
+容器的 PostgreSQL 映射在宿主机 **5433**，不是 5432——本机若装了 PostgreSQL 服务
+会同时占用 5432，客户端连过去会落到错误的实例上，而 PostgreSQL 对「角色不存在」
+和「口令错误」返回同一句 `password authentication failed`，排查时极易误判。
+
+| 字段 | 值 |
+|---|---|
+| 主机 / 端口 | `localhost` / **`5433`** |
+| 初始数据库 | `ai_hot_radar` |
+| 用户名 | `ai_hot_radar` |
+| 密码 | 见根目录 `.env` 的 `POSTGRES_PASSWORD` |
+
+本项目没有创建 `postgres` 超级用户，用它连必然失败。
+端口可用 `POSTGRES_HOST_PORT` 覆盖。
 
 ## 7. 后台常驻服务
 
@@ -145,7 +192,9 @@ docker compose -f infra/compose/docker-compose.yml up -d --build core-api
 docker compose -f infra/compose/docker-compose.yml down -v && docker compose -f infra/compose/docker-compose.yml up -d --build
 ```
 
-**宿主机 5432 端口被本地 PostgreSQL 占用**：容器内部通信不受影响。需要直连时用 `docker compose exec postgres psql -U ai_hot_radar -d ai_hot_radar`。
+**宿主机 5432 端口被本地 PostgreSQL 占用**：容器已改为映射 **5433**，见 §6.5。
+两者同时监听 5432 时客户端会落到错误的实例上，而 PostgreSQL 对「角色不存在」和
+「口令错误」返回同一句 `password authentication failed`，看起来像是密码填错了。
 
 ## 12. 重要约定
 

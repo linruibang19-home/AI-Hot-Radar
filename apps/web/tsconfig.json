@@ -19,5 +19,6 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "//": "e2e/ is excluded because it depends on @playwright/test, which is not a dependency of this app: `next build` type-checks the whole tree and would fail on an import the server never runs. The suite has its own config and runs in the official Playwright image.",
+  "exclude": ["node_modules", "e2e"]
 }

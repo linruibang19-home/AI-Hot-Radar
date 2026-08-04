@@ -15,8 +15,17 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-ai_hot_radar}
       POSTGRES_USER: ${POSTGRES_USER:-ai_hot_radar}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    env_file:
+      - path: ../../.env
+        required: false
     ports:
-      - "5432:5432"
+      # 5433 on the host, not 5432. A locally installed PostgreSQL service
+      # (postgresql-x64-16) already listens on 5432, so both bound the port and
+      # a client connecting to localhost:5432 reached whichever won — the error
+      # looked like a wrong password because PostgreSQL deliberately refuses to
+      # say whether a role exists. Container-to-container traffic is unaffected:
+      # it uses `postgres:5432` on the Compose network.
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -48,11 +57,14 @@ services:
       dockerfile: apps/core-api/Dockerfile
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ai_hot_radar}
-      POSTGRES_USER: ${POSTGRES_USER:-ai_hot_radar}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
       REDIS_URL: redis://redis:6379/0
       WORKER_BASE_URL: http://ai-service:8000
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-change-me}
+    # POSTGRES_USER / POSTGRES_PASSWORD arrive from here rather than from
+    # `environment:`, which would override them with the interpolated default.
+    env_file:
+      - path: ../../.env
+        required: false
     ports:
       - "8080:8080"
     depends_on:
@@ -67,7 +79,11 @@ services:
       dockerfile: Dockerfile
     environment:
       APP_ENV: ${APP_ENV:-local}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-ai_hot_radar}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-ai_hot_radar}
+      # No DATABASE_URL here on purpose: Compose interpolates ${VAR} from a
+      # .env beside this file, never from `env_file:`, so a password kept in
+      # the repository-root .env would silently resolve to the default. The
+      # service builds its own conninfo from the POSTGRES_* variables that
+      # `env_file` does deliver (see ahr/config.py).
       REDIS_URL: redis://redis:6379/0
       CRAWLER_USER_AGENT: ${CRAWLER_USER_AGENT:-AIHotRadarBot/1.0 (+https://example.com/bot)}
     # Compose resolves ${VAR} against a .env beside this file, not the repo
@@ -79,6 +95,10 @@ services:
       # The source registry is configuration, not code: mounting it read-only
       # lets operators edit sources.yaml and re-run sync without rebuilding.
       - ../../config:/app/config:ro
+      # The RAG golden set is annotated by hand and revised as the corpus
+      # grows; mounting it keeps `rag-eval` runnable without a rebuild between
+      # annotation passes.
+      - ../../data:/app/data:ro
     ports:
       - "8000:8000"
     depends_on:
@@ -100,7 +120,7 @@ services:
       ["python", "-m", "ahr.cli", "schedule", "--interval", "120", "--batch-size", "10"]
     environment:
       APP_ENV: ${APP_ENV:-local}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-ai_hot_radar}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-ai_hot_radar}
+      # DATABASE_URL is composed in ahr/config.py — see the note on ai-service.
       REDIS_URL: redis://redis:6379/0
       CRAWLER_USER_AGENT: ${CRAWLER_USER_AGENT:-AIHotRadarBot/1.0 (+https://example.com/bot)}
       PYTHONUNBUFFERED: "1"
@@ -142,7 +162,7 @@ services:
       ]
     environment:
       APP_ENV: ${APP_ENV:-local}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-ai_hot_radar}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-ai_hot_radar}
+      # DATABASE_URL is composed in ahr/config.py — see the note on ai-service.
       REDIS_URL: redis://redis:6379/0
       PYTHONUNBUFFERED: "1"
     env_file:
@@ -165,11 +185,15 @@ services:
       dockerfile: Dockerfile
     environment:
       API_BASE_URL: http://core-api:8080
+      # Generation lives in ai-service (AHR-ARCH-200 §3), so the ask proxy
+      # needs its address; the browser never sees either.
+      AI_SERVICE_URL: http://ai-service:8000
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
     depends_on:
       - core-api
+      - ai-service
 
 volumes:
   postgres_data:

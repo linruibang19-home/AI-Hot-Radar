@@ -4,3 +4,7 @@ out/
 .env
 .env.local
 npm-debug.log*
+
+# Playwright installs its own tree here with symlinked binaries, which the
+# Docker build context cannot read — and the runtime image has no use for it.
+e2e/

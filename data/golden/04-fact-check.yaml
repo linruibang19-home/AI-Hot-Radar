@@ -1,0 +1,153 @@
+# 事实核验：考精确 token 召回与一手来源门控。
+# 本类的失败模式是「近邻混淆」——语义相近但事实不同的实体被当成同一个。
+# 每题的答案都对着 content_revision.body_text 核过，不采信 LLM 生成的 zh_title。
+category: fact_check
+questions:
+  - id: RAG-GOLD-046
+    question: llama.cpp 服务器的默认端口要改成多少？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 7a7232f6-5fac-473f-933d-da4f32617cc0, grade: 2}
+    must_contain: ["9931"]
+    must_not_claim: ["6631"]
+    probe: "9931"
+    notes: 原文含被更正的中间值 6631，正确答案是 8080 → 9931
+
+  - id: RAG-GOLD-047
+    question: Qwen3.8-Max 有多少参数？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 6081607a-9e0c-4f31-9a7c-14c9271053e6, grade: 2}
+      - {id: 1418aaf4-7fe3-4f2e-85c3-d574c617a75e, grade: 1}
+      - {id: 845e4161-2365-426a-a856-d7a601a0bf09, grade: 1}
+    must_contain: ["2.4"]
+    notes: 原文 "2.4-trillion-parameter"
+
+  - id: RAG-GOLD-048
+    question: 使用 MXFP4 量化的是哪个模型？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, grade: 2}
+      - {id: 35c0ccc3-af39-4181-a42c-3aa98cf377c4, grade: 1}
+      - {id: a01bb9f2-8020-4829-b776-8e2dd5d6529b, grade: 1}
+    must_contain: ["Kimi K3"]
+    must_not_claim: ["NVFP4"]
+    probe: "mxfp4"
+    notes: 冒烟测试实测：纯稠密检索对 MXFP4 召回的是 NVFP4。稀疏通道有 30 条精确命中
+
+  - id: RAG-GOLD-049
+    question: 哪个模型发布了 NVFP4 量化版并支持 vLLM？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 2717b0e9-c80b-490b-83a1-a77fd34a9aa4, grade: 2}
+    must_contain: ["NVFP4"]
+    probe: "nvfp4"
+    notes: 与 046 成对，验证两个近邻 token 不会互相污染
+
+  - id: RAG-GOLD-050
+    question: Anthropic 那次测试一共引发了几起真实事故？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 03316b32-69de-4188-98cc-70cf580fcfb6, grade: 2}
+      - {id: 21545cf0-05a2-4f4b-84f7-62a90ac40f59, grade: 2}
+      - {id: 0c0ba9c9-a7bf-4953-b78b-2e974cd1db22, grade: 1}
+      - {id: 9d08777a-a00d-455e-9b0a-14c5a7396922, grade: 1}
+    must_contain: ["三"]
+    notes: 四源一致，考 primary-source@5 与折叠后是否仍能确认数字
+
+  - id: RAG-GOLD-051
+    question: 商汤这次开源的模型全称是什么，是正式版还是预览版？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: c5a154cf-0156-44f7-8a60-52fe582eca83, grade: 2}
+    must_contain: ["Lite"]
+    must_not_claim: ["正式版"]
+    notes: zh_title 写「SenseNova U1.5」，原文是「U1.5-Lite-Preview」。考是否引用了正文而非标题
+
+  - id: RAG-GOLD-052
+    question: 商汤 U1.5-Lite-Preview 用的是什么架构，多少参数？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: c5a154cf-0156-44f7-8a60-52fe582eca83, grade: 2}
+    must_contain: ["NEO-Unify", "8B"]
+    probe: "NEO-Unify"
+    notes: 中文正文里的英文专名，考混合语言文档的精确召回
+
+  - id: RAG-GOLD-053
+    question: OpenAI 的 Astra 解决了几个数学难题？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 6e7eccd5-8c01-4970-90f0-797d988e128f, grade: 2}
+      - {id: 8c1d36bd-af2b-49d7-af2d-d16a7132e248, grade: 2}
+    must_contain: ["十"]
+
+  - id: RAG-GOLD-054
+    question: Kimi K3 是多少参数的模型？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 35c0ccc3-af39-4181-a42c-3aa98cf377c4, grade: 2}
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, grade: 2}
+    must_contain: ["2.8T"]
+
+  - id: RAG-GOLD-055
+    question: Kimi K3 有多少位贡献者？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 39db5867-b245-4569-86d0-1c1b6ec90808, grade: 2}
+    must_contain: ["401"]
+    probe: "401"
+    notes: 纯数字事实，只在一篇中文文档里出现
+
+  - id: RAG-GOLD-056
+    question: 港科大开源的那个 3D 占据预测系统叫什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: ce1a4a58-e353-4661-9241-7d3d5249c6b8, grade: 2}
+    must_contain: ["FreeOcc"]
+    probe: "FreeOcc"
+
+  - id: RAG-GOLD-057
+    question: 谷歌下架的那个卫星图像生成功能代号是什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: ee8aec00-ed03-498b-8aee-ca8dd940e490, grade: 2}
+      - {id: 4339ea8b-5b12-47f8-8333-320b968c53f3, grade: 1}
+    must_contain: ["Nano Banana"]
+    notes: 代号只出现在后续报道中，前序两篇没有——考折叠时是否丢掉了带新增信息的那条
+
+  - id: RAG-GOLD-058
+    question: 德国法院对 Suno 的判决结果是什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: cf830cae-a5c1-4d95-8cd2-a471f90156d6, grade: 2}
+    must_contain: ["侵权"]
+
+  - id: RAG-GOLD-059
+    question: Anthropic 的 Claude Sonnet 5 性能降级事件解决了吗？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 1804e434-4389-406e-a837-b05b2fb298b4, grade: 2}
+    notes: 一手状态页。fact_check 类要求至少一个直接一手证据，这题只有一手来源可用
+
+  - id: RAG-GOLD-060
+    question: MiniMax H3 的价格是 Seedance 的多少？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 305188d4-dcba-48b3-a413-5148fa3b6f75, grade: 2}
+    must_contain: ["三分之一"]
+    notes: 中文分数表述，稀疏通道对「三分之一」这类词组的切分能力是已知弱项

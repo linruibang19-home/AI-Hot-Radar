@@ -1,5 +1,7 @@
 import { formatDateTime } from "@/lib/datetime";
 import Link from "next/link";
+
+import { BackLink } from "@/components/BackLink";
 import { notFound } from "next/navigation";
 import { CONTENT_TYPE_LABELS } from "@/components/ItemCard";
 import { fetchItem } from "@/lib/api";
@@ -29,22 +31,7 @@ export default async function ItemDetail({
 
   return (
     <>
-      <Link className="back-link" href="/items">
-        <svg
-          className="back-link-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M19 12H5" />
-          <path d="m12 19-7-7 7-7" />
-        </svg>
-        返回全部动态
-      </Link>
+      <BackLink href="/items">返回全部动态</BackLink>
 
       <h1 className="page-title">{item.zhTitle ?? item.title}</h1>
       {item.zhTitle && item.zhTitle !== item.title && (

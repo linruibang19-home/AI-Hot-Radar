@@ -1,0 +1,127 @@
+# 解释：考父块扩展与背景完整性。
+# 答案往往跨多个段落，只召回单个 chunk 不足以生成完整回答——
+# 这一类是父块阶梯（ADR-0016）的主要验证对象。
+category: explainer
+questions:
+  - id: RAG-GOLD-061
+    question: Cloudflare 为什么说代理需要的是一台计算机而不是一个容器？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: a8afca1b-cd51-44e2-bb78-229bc3ecfc27, grade: 2}
+      - {id: 5c6413c2-1bd2-47fb-90d7-afc15ebf7322, grade: 1}
+      - {id: 938d9ada-25bf-4c98-99e3-b11795f84a02, grade: 1}
+    notes: 该文无 heading，父块阶梯走第 ① 级（整篇），是无 heading 分支的主验证题
+
+  - id: RAG-GOLD-062
+    question: LettucePrevent 是怎么在 RAG 里实时预防幻觉的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 2091e08c-b719-4ea5-8e6f-5781dbcf905a, grade: 2}
+    notes: 方法类解释，答案跨多段
+
+  - id: RAG-GOLD-063
+    question: NEO-Unify 架构是怎么把语言、视觉和像素生成放进同一个模型的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: c5a154cf-0156-44f7-8a60-52fe582eca83, grade: 2}
+    must_contain: ["NEO-Unify"]
+
+  - id: RAG-GOLD-064
+    question: Groq 的 LPU 架构是怎么做到无损加速万亿参数模型推理的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: ad1b3825-03e7-4957-bcc8-23dc726f5d80, grade: 2}
+
+  - id: RAG-GOLD-065
+    question: NVIDIA 说的注意力机制协同设计是指什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 9812e0cb-09a6-4ee8-b7c3-2e3ff29b20ce, grade: 2}
+
+  - id: RAG-GOLD-066
+    question: Meta 的 TRIBE v2 是怎么预测人类大脑反应的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 75208601-cdc6-4840-b9ba-a54d0094cecc, grade: 2}
+    notes: 无 heading 文档
+
+  - id: RAG-GOLD-067
+    question: 一致性扩散语言模型是怎么把推理速度提升 14 倍还不掉质量的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 6221d75f-6237-47a7-a3d1-8084de27d73a, grade: 2}
+    must_contain: ["14"]
+    notes: 无 heading 文档 + 数字事实
+
+  - id: RAG-GOLD-068
+    question: Meta AI 用第二个智能体当记忆教练是怎么运作的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 114c8e21-7b67-4eb6-b875-448d1ceebb42, grade: 2}
+
+  - id: RAG-GOLD-069
+    question: 那个用 Word 文档传播的 Copilot 蠕虫是怎么工作的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 2ed4dac8-4591-4767-981e-064ffeb7ed8c, grade: 2}
+      - {id: e4d7ba5e-c4b0-4400-81e6-7cb996bfa87c, grade: 1}
+
+  - id: RAG-GOLD-070
+    question: ThunderAgent 是怎么实现 2 倍加速的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 446a6b4a-0989-496d-b1d9-284ab26a1831, grade: 2}
+    notes: 无 heading 文档
+
+  - id: RAG-GOLD-071
+    question: 为什么说代理计算是企业 AI 架构里缺失的一层？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 5c6413c2-1bd2-47fb-90d7-afc15ebf7322, grade: 2}
+      - {id: a8afca1b-cd51-44e2-bb78-229bc3ecfc27, grade: 1}
+
+  - id: RAG-GOLD-072
+    question: METR 为什么呼吁对 AI 智能体的不当行为做独立根因调查？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 64485d22-c2e4-4c39-b4bb-d35aa5984128, grade: 2}
+      - {id: 03316b32-69de-4188-98cc-70cf580fcfb6, grade: 1}
+      - {id: 62efb4b4-b2b7-4503-8610-ce3ea0ddf494, grade: 1}
+    notes: 需要把呼吁与其背景事件联系起来，跨文档
+
+  - id: RAG-GOLD-073
+    question: OpenAI 的 API 模型弃用政策是怎么规定的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 733c399d-a628-4840-8679-f8eeedb31156, grade: 2}
+      - {id: 44f4f5de-7e3c-453d-aa48-15591cb30be5, grade: 1}
+    notes: 一手政策文档，无 heading
+
+  - id: RAG-GOLD-074
+    question: Together AI 为什么认为 AGI 可实现、硬件远未到极限？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 0ecc8e53-48c4-412f-ae30-c510f95a359d, grade: 2}
+    notes: 长篇论证型，无 heading，父块提升后可能超预算——考阶梯是否正确降级
+
+  - id: RAG-GOLD-075
+    question: 苹果的漏洞赏金邮箱被 AI 垃圾报告淹没是怎么回事？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: a0d94654-cfae-455a-9e2c-97ae72d75ad8, grade: 2}
+      - {id: e4d7ba5e-c4b0-4400-81e6-7cb996bfa87c, grade: 1}

@@ -1,10 +1,8 @@
-import { formatTime } from "@/lib/datetime";
 import Link from "next/link";
 
 import { CategoryTabs, SearchBox } from "@/components/CategoryTabs";
-import { ItemCard } from "@/components/ItemCard";
-import { TimelineDay, TimelineRow } from "@/components/Timeline";
-import { fetchCategories, fetchItems, groupByDay } from "@/lib/api";
+import { ItemsFeed } from "@/components/ItemsFeed";
+import { fetchCategories, fetchItemDays, fetchItems } from "@/lib/api";
 
 import type { Metadata } from "next";
 
@@ -15,10 +13,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const OPEN_DAYS = 2;
-
 interface SearchParams {
-  cursor?: string;
   q?: string;
   category?: string;
 }
@@ -31,24 +26,18 @@ export default async function ItemsPage({
   const params = await searchParams;
   const category = params.category ?? "all";
 
-  const [page, categories] = await Promise.all([
-    fetchItems({
-      limit: 25,
-      cursor: params.cursor,
-      q: params.q,
-      contentType: category === "all" ? undefined : category,
-    }),
+  const contentType = category === "all" ? undefined : category;
+
+  const [days, categories] = await Promise.all([
+    fetchItemDays({ q: params.q, contentType }),
     fetchCategories(),
   ]);
 
-  const groups = groupByDay(page.data);
-
-  const nextHref = page.page.nextCursor
-    ? `/items?${new URLSearchParams({
-        cursor: page.page.nextCursor,
-        ...(params.q ? { q: params.q } : {}),
-        ...(category !== "all" ? { category } : {}),
-      })}`
+  // The newest day is server-rendered so the page has content in its HTML for
+  // crawlers and for the first paint; the rest arrive when a reader opens them.
+  const firstDay = days[0]?.day;
+  const firstPage = firstDay
+    ? await fetchItems({ limit: 50, day: firstDay, q: params.q, contentType })
     : null;
 
   return (
@@ -79,35 +68,18 @@ export default async function ItemsPage({
         </p>
       )}
 
-      {page.data.length === 0 ? (
-        <div className="empty">没有匹配的内容。</div>
-      ) : (
-        [...groups.entries()].map(([day, items], index) => (
-          <TimelineDay
-            key={day}
-            day={day}
-            count={items.length}
-            defaultOpen={index < OPEN_DAYS}
-          >
-            {items.map((item) => (
-              <TimelineRow
-                key={item.id}
-                time={formatTime(item.publishedAt ?? item.observedAt)}
-              >
-                <ItemCard item={item} />
-              </TimelineRow>
-            ))}
-          </TimelineDay>
-        ))
-      )}
-
-      {nextHref && (
-        <div className="pager">
-          <Link className="button" href={nextHref}>
-            加载更多
-          </Link>
-        </div>
-      )}
+      <ItemsFeed
+        // Keyed by the active filters so switching category or search resets
+        // the per-day cache; without it the client would keep showing the
+        // previous filter's items under the new headings.
+        key={`${category}:${params.q ?? ""}`}
+        days={days}
+        initialDay={firstDay}
+        initialItems={firstPage?.data ?? []}
+        initialComplete={firstPage ? !firstPage.page.hasMore : true}
+        query={params.q}
+        category={category}
+      />
     </>
   );
 }

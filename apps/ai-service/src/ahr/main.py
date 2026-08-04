@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from ahr.config import get_settings
 from ahr.health import router as health_router
 from ahr.observability import RequestIdMiddleware, configure_logging
+from ahr.rag.api import router as rag_router
 
 
 def create_app() -> FastAPI:
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(RequestIdMiddleware)
     app.include_router(health_router)
+    app.include_router(rag_router)
     return app
 
 

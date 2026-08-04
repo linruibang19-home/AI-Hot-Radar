@@ -1,0 +1,12 @@
+{
+  "name": "ai-hot-radar-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser regression tests for the web app. Kept out of the app's package.json so Playwright never enters the runtime image.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1"
+  }
+}

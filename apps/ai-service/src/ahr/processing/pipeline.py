@@ -56,6 +56,7 @@ MIN_BODY_CHARS_FOR_ENRICHMENT = 200
 class ProcessStats:
     chunked: int = 0
     chunks_written: int = 0
+    closed_empty: int = 0
     near_duplicates: int = 0
     enriched: int = 0
     enrich_failed: int = 0
@@ -245,6 +246,87 @@ def _mark_enrichment_failed(connection: Any, item_id: uuid.UUID, *, state: str, 
         )
 
 
+def _unchunked_revisions(connection: Any, limit: int) -> list[tuple[Any, ...]]:
+    """Current revisions that have a body but no chunks.
+
+    Selected by the invariant this maintains — every current revision is split —
+    and deliberately *not* by `enrichment_state`. Chunking is a pure function of
+    the body; giving it the LLM's lifecycle meant a document could only ever be
+    split during the one pass that also enriched it. A re-crawl then moved
+    `current_revision_id` forward while the item stayed ENRICHED, so nothing
+    ever split the new body and the chunks stayed attached to a revision no
+    query joins to.
+
+    Ingestion now reopens superseded items, which stops new cases arising; this
+    query is what repairs the ones already in that state, and what keeps a
+    failed or skipped enrichment from costing the item its retrievability.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT ci.current_revision_id, cr.body_text
+              FROM content_item ci
+              JOIN content_revision cr ON cr.id = ci.current_revision_id
+             WHERE ci.duplicate_of_id IS NULL
+               AND length(cr.body_text) > 0
+               AND NOT EXISTS (
+                   SELECT 1 FROM content_chunk cc
+                    WHERE cc.content_revision_id = ci.current_revision_id
+               )
+             ORDER BY ci.published_at DESC NULLS LAST
+             LIMIT %s
+            """,
+            (limit,),
+        )
+        return list(cursor.fetchall())
+
+
+def chunk_current_revisions(connection: Any, limit: int) -> tuple[int, int]:
+    """Split every current revision that is missing its chunks.
+
+    Returns (revisions chunked, chunks written).
+    """
+    revisions = 0
+    written = 0
+    for revision_id, body in _unchunked_revisions(connection, limit):
+        count = chunk_revision(connection, uuid.UUID(str(revision_id)), body)
+        if count:
+            revisions += 1
+            written += count
+    connection.commit()
+    return revisions, written
+
+
+def close_empty_bodies(connection: Any) -> int:
+    """Mark items whose current revision has no body at all.
+
+    These are release tags with no notes and listing pages that yielded no
+    article. The processing query requires a non-empty body, so they matched
+    nothing and sat in PENDING permanently — a backlog figure that could never
+    reach zero, which is a backlog figure nobody can act on.
+
+    Safe to close now that ingestion reopens an item when a new body arrives:
+    if one of these ever gains real content, the next revision returns it to
+    PENDING rather than leaving it retired on the strength of an old emptiness.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            UPDATE content_item ci
+               SET enrichment_state = 'SKIPPED',
+                   enrichment_error = 'no body text extracted',
+                   updated_at = now()
+              FROM content_revision cr
+             WHERE cr.id = ci.current_revision_id
+               AND ci.enrichment_state = 'PENDING'
+               AND length(cr.body_text) = 0
+            """
+        )
+        closed = int(cursor.rowcount)
+    connection.commit()
+    return closed
+
+
 def _pending_items(connection: Any, limit: int) -> list[tuple[Any, ...]]:
     with connection.cursor() as cursor:
         cursor.execute(
@@ -298,15 +380,19 @@ async def process_pending(
             vocabulary = known_slugs(taxonomy)
             connection.commit()
 
+            # Chunking runs as its own stage over everything that is missing
+            # chunks, not only over what is queued for the model. It is cheap
+            # and deterministic, and an item whose enrichment failed or was
+            # skipped as thin should still be retrievable.
+            chunked, chunks_written = chunk_current_revisions(connection, limit)
+            stats.chunked += chunked
+            stats.chunks_written += chunks_written
+            stats.closed_empty += close_empty_bodies(connection)
+
             for row in _pending_items(connection, limit):
                 item_id, title, _source_id, source_tier, revision_id, body, source_name = row
                 item_id = uuid.UUID(str(item_id))
                 revision_id = uuid.UUID(str(revision_id))
-
-                written = chunk_revision(connection, revision_id, body)
-                if written:
-                    stats.chunked += 1
-                    stats.chunks_written += written
 
                 fingerprint = simhash(body)
                 with connection.cursor() as cursor:

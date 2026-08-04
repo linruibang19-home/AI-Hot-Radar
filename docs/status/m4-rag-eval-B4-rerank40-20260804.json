@@ -1,0 +1,1426 @@
+{
+  "run_id": "B4-20260804T075518Z",
+  "config": {
+    "variant": "B4-rerank-40",
+    "recall_depths": [
+      10,
+      20
+    ],
+    "ndcg_depth": 10,
+    "golden_files": [
+      "01-recent-updates.yaml",
+      "02-timeline.yaml",
+      "03-comparison.yaml",
+      "04-fact-check.yaml",
+      "05-explainer.yaml",
+      "06-abstention.yaml"
+    ],
+    "golden_questions": 88,
+    "embedding_model": "BAAI/bge-m3",
+    "reranker_model": "BAAI/bge-reranker-v2-m3",
+    "chunk_depth": 60,
+    "sparse_depth": 40,
+    "rerank_top_n": 24,
+    "rerank_candidates": 40,
+    "rerank_usage": {
+      "calls": 88,
+      "documents": 3520,
+      "latency_ms_total": 122431,
+      "failures": 0
+    },
+    "corpus_snapshot": {
+      "snapshot_cutoff": "2026-08-03T23:59:00+08:00",
+      "newest_item": "2026-08-04T07:27:06+00:00",
+      "items_in_snapshot": 915,
+      "items_total": 1048,
+      "items_ignored": 133
+    }
+  },
+  "summary": {
+    "overall": {
+      "questions": 88,
+      "scored": 76,
+      "unanswerable": 12,
+      "recall@10": 0.8739,
+      "recall@20": 0.9092,
+      "mrr": 0.8664,
+      "ndcg@10": 0.8211
+    },
+    "by_category": {
+      "recent_updates": {
+        "questions": 15,
+        "recall@10": 0.7911,
+        "recall@20": 0.8422,
+        "mrr": 0.6484,
+        "ndcg@10": 0.6617
+      },
+      "timeline": {
+        "questions": 15,
+        "recall@10": 0.9033,
+        "recall@20": 0.9367,
+        "mrr": 0.9133,
+        "ndcg@10": 0.8303
+      },
+      "comparison": {
+        "questions": 14,
+        "recall@10": 0.881,
+        "recall@20": 0.9226,
+        "mrr": 0.869,
+        "ndcg@10": 0.7781
+      },
+      "fact_check": {
+        "questions": 14,
+        "recall@10": 0.9524,
+        "recall@20": 0.9762,
+        "mrr": 0.9643,
+        "ndcg@10": 0.9392
+      },
+      "explainer": {
+        "questions": 15,
+        "recall@10": 0.8222,
+        "recall@20": 0.8556,
+        "mrr": 0.9667,
+        "ndcg@10": 0.9034
+      },
+      "abstention": {
+        "questions": 3,
+        "recall@10": 1.0,
+        "recall@20": 1.0,
+        "mrr": 0.75,
+        "ndcg@10": 0.8102
+      }
+    },
+    "abstention_separation": {
+      "answerable": {
+        "n": 76,
+        "mean": 0.9186,
+        "min": 0.0325,
+        "p10": 0.703
+      },
+      "unanswerable": {
+        "n": 12,
+        "mean": 0.7593,
+        "max": 0.972,
+        "p90": 0.9409
+      },
+      "overlap": 0.9395
+    }
+  },
+  "questions": [
+    {
+      "question_id": "RAG-GOLD-001",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.9711,
+      "retrieved_items": 71,
+      "recall": {
+        "10": 0.6666666666666666,
+        "20": 0.8333333333333334
+      },
+      "mrr": 1.0,
+      "ndcg": 0.6659481812925209,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-002",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.703,
+      "retrieved_items": 72,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-003",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.9728,
+      "retrieved_items": 72,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-004",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.8505,
+      "retrieved_items": 81,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.5,
+      "ndcg": 0.6538335415639319,
+      "first_hit_rank": 2,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-005",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.9879,
+      "retrieved_items": 96,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8932547230000344,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-006",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.9555,
+      "retrieved_items": 69,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714574,
+      "first_hit_rank": 2,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-007",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.9569,
+      "retrieved_items": 71,
+      "recall": {
+        "10": 0.8,
+        "20": 1.0
+      },
+      "mrr": 0.5,
+      "ndcg": 0.6361402411591237,
+      "first_hit_rank": 2,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-008",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.9354,
+      "retrieved_items": 87,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.9604133524599737,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-009",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.9043,
+      "retrieved_items": 72,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-010",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.9191,
+      "retrieved_items": 77,
+      "recall": {
+        "10": 0.5,
+        "20": 0.5
+      },
+      "mrr": 0.3333333333333333,
+      "ndcg": 0.45686855637069007,
+      "first_hit_rank": 3,
+      "missed_items": [
+        "b26f9eca-2a6e-45ab-a793-869f1ec527a6",
+        "c71d99f4-02a6-4f78-98e1-f43848503889"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-011",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.5437,
+      "retrieved_items": 73,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714574,
+      "first_hit_rank": 2,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-012",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.7716,
+      "retrieved_items": 78,
+      "recall": {
+        "10": 0.5,
+        "20": 0.5
+      },
+      "mrr": 0.25,
+      "ndcg": 0.26406812257259094,
+      "first_hit_rank": 4,
+      "missed_items": [
+        "9812e0cb-09a6-4ee8-b7c3-2e3ff29b20ce"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-013",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.9685,
+      "retrieved_items": 95,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8926893079768027,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-014",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.6712,
+      "retrieved_items": 82,
+      "recall": {
+        "10": 0.4,
+        "20": 0.8
+      },
+      "mrr": 0.14285714285714285,
+      "ndcg": 0.24113897251155228,
+      "first_hit_rank": 7,
+      "missed_items": [
+        "2ed4dac8-4591-4767-981e-064ffeb7ed8c"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-015",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 0.0325,
+      "retrieved_items": 68,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "6ec50583-33e8-4d47-8080-d9d47d44653c",
+        "8760393e-e695-4e4b-8351-ff8e9653797d",
+        "cf830cae-a5c1-4d95-8cd2-a471f90156d6"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-016",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.991,
+      "retrieved_items": 50,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-017",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.9944,
+      "retrieved_items": 48,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-018",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.9879,
+      "retrieved_items": 66,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-019",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.9046,
+      "retrieved_items": 49,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.5,
+      "ndcg": 0.6823915319347849,
+      "first_hit_rank": 2,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-020",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.9811,
+      "retrieved_items": 34,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8292974280970383,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-021",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.9577,
+      "retrieved_items": 34,
+      "recall": {
+        "10": 0.8,
+        "20": 0.8
+      },
+      "mrr": 1.0,
+      "ndcg": 0.9357847944877146,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "ebfd0a1a-e9a7-4b84-a30f-ba85015780f9"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-022",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.7923,
+      "retrieved_items": 76,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.9796808707575757,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-023",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.971,
+      "retrieved_items": 57,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.9047172294870752,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-024",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.9697,
+      "retrieved_items": 24,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.7258170887714164,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-025",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.9804,
+      "retrieved_items": 56,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-026",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.8371,
+      "retrieved_items": 85,
+      "recall": {
+        "10": 0.25,
+        "20": 0.5
+      },
+      "mrr": 1.0,
+      "ndcg": 0.14655308996296207,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "446a6b4a-0989-496d-b1d9-284ab26a1831",
+        "6221d75f-6237-47a7-a3d1-8084de27d73a"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-027",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.9771,
+      "retrieved_items": 55,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-028",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.9304,
+      "retrieved_items": 41,
+      "recall": {
+        "10": 0.5,
+        "20": 0.75
+      },
+      "mrr": 0.2,
+      "ndcg": 0.3087804801864055,
+      "first_hit_rank": 5,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-029",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.7654,
+      "retrieved_items": 80,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.9413045508496032,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-030",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 0.9487,
+      "retrieved_items": 39,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-031",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 1.0,
+      "retrieved_items": 32,
+      "recall": {
+        "10": 0.6666666666666666,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.7962044920938869,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-033",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.9983,
+      "retrieved_items": 34,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-034",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.9099,
+      "retrieved_items": 20,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-035",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.9993,
+      "retrieved_items": 51,
+      "recall": {
+        "10": 0.6666666666666666,
+        "20": 0.6666666666666666
+      },
+      "mrr": 1.0,
+      "ndcg": 0.7958830702855284,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "dafcc35b-6bb2-44b9-b531-0cb76c529838"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-036",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.8737,
+      "retrieved_items": 22,
+      "recall": {
+        "10": 0.5,
+        "20": 0.75
+      },
+      "mrr": 0.3333333333333333,
+      "ndcg": 0.26262748606228753,
+      "first_hit_rank": 3,
+      "missed_items": [
+        "ee7f4bf0-dcc8-4642-840f-d9e8bcb2caa8"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-037",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.9324,
+      "retrieved_items": 46,
+      "recall": {
+        "10": 0.5,
+        "20": 0.5
+      },
+      "mrr": 1.0,
+      "ndcg": 0.5668497246114405,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "446a6b4a-0989-496d-b1d9-284ab26a1831",
+        "4bd0491a-dbe5-42fd-b6fc-2c6089d5e8db"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-038",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.9966,
+      "retrieved_items": 47,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.91311732856428,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-039",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.9975,
+      "retrieved_items": 65,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.9243382314975351,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-040",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.6495,
+      "retrieved_items": 56,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.5,
+      "ndcg": 0.6934264036172708,
+      "first_hit_rank": 2,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-041",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.9119,
+      "retrieved_items": 57,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8503449055347546,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-042",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.6987,
+      "retrieved_items": 98,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.3333333333333333,
+      "ndcg": 0.5249810332008934,
+      "first_hit_rank": 3,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-043",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.9615,
+      "retrieved_items": 38,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-044",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.7853,
+      "retrieved_items": 28,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.751623600785961,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-045",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 0.5563,
+      "retrieved_items": 96,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8134663891266954,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-046",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.997,
+      "retrieved_items": 39,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-047",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9985,
+      "retrieved_items": 27,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-048",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9917,
+      "retrieved_items": 37,
+      "recall": {
+        "10": 0.3333333333333333,
+        "20": 0.6666666666666666
+      },
+      "mrr": 1.0,
+      "ndcg": 0.7262287617954056,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-050",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9787,
+      "retrieved_items": 60,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8282809531097817,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-051",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9308,
+      "retrieved_items": 34,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-052",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9942,
+      "retrieved_items": 35,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714574,
+      "first_hit_rank": 2,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-053",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9992,
+      "retrieved_items": 67,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-054",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9971,
+      "retrieved_items": 21,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-055",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9994,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-056",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9978,
+      "retrieved_items": 57,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-057",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9929,
+      "retrieved_items": 32,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.9639404333166532,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-058",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9986,
+      "retrieved_items": 49,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-059",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9995,
+      "retrieved_items": 58,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-060",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 0.9967,
+      "retrieved_items": 48,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-061",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9085,
+      "retrieved_items": 39,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8888246188934468,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-062",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9992,
+      "retrieved_items": 61,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-063",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9913,
+      "retrieved_items": 52,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714574,
+      "first_hit_rank": 2,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-064",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9993,
+      "retrieved_items": 60,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-065",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.8635,
+      "retrieved_items": 40,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-066",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9985,
+      "retrieved_items": 63,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-067",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9998,
+      "retrieved_items": 61,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-068",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9995,
+      "retrieved_items": 59,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-069",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9949,
+      "retrieved_items": 70,
+      "recall": {
+        "10": 0.5,
+        "20": 0.5
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8262346571285599,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "e4d7ba5e-c4b0-4400-81e6-7cb996bfa87c"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-070",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9967,
+      "retrieved_items": 34,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-071",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9929,
+      "retrieved_items": 36,
+      "recall": {
+        "10": 0.5,
+        "20": 0.5
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8262346571285599,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "a8afca1b-cd51-44e2-bb78-229bc3ecfc27"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-072",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9994,
+      "retrieved_items": 47,
+      "recall": {
+        "10": 0.3333333333333333,
+        "20": 0.3333333333333333
+      },
+      "mrr": 1.0,
+      "ndcg": 0.7262287617954056,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "03316b32-69de-4188-98cc-70cf580fcfb6"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-073",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9678,
+      "retrieved_items": 67,
+      "recall": {
+        "10": 0.5,
+        "20": 0.5
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8262346571285599,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "44f4f5de-7e3c-453d-aa48-15591cb30be5"
+      ]
+    },
+    {
+      "question_id": "RAG-GOLD-074",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9986,
+      "retrieved_items": 52,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-075",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 0.9991,
+      "retrieved_items": 47,
+      "recall": {
+        "10": 0.5,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8262346571285599,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-076",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.5942,
+      "retrieved_items": 43,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-077",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.7971,
+      "retrieved_items": 40,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-078",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.972,
+      "retrieved_items": 39,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-079",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.9409,
+      "retrieved_items": 62,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-080",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.6589,
+      "retrieved_items": 27,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-081",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.6003,
+      "retrieved_items": 32,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-082",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.7073,
+      "retrieved_items": 42,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-083",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.9394,
+      "retrieved_items": 65,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-084",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.4505,
+      "retrieved_items": 70,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-085",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.9105,
+      "retrieved_items": 25,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-086",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.7531,
+      "retrieved_items": 66,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-087",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 0.787,
+      "retrieved_items": 29,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-088",
+      "category": "abstention",
+      "answerable": true,
+      "top_score": 0.9953,
+      "retrieved_items": 31,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-089",
+      "category": "abstention",
+      "answerable": true,
+      "top_score": 0.9872,
+      "retrieved_items": 38,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": []
+    },
+    {
+      "question_id": "RAG-GOLD-090",
+      "category": "abstention",
+      "answerable": true,
+      "top_score": 0.8493,
+      "retrieved_items": 79,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.25,
+      "ndcg": 0.4306765580733931,
+      "first_hit_rank": 4,
+      "missed_items": []
+    }
+  ]
+}
