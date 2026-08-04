@@ -1,0 +1,506 @@
+{
+  "run_id": "LAT-20260804T092526Z",
+  "config": {
+    "variant": "latency",
+    "llm": "deepseek-chat",
+    "reranker": "BAAI/bge-reranker-v2-m3",
+    "questions": 24,
+    "corpus_snapshot": {
+      "snapshot_cutoff": "2026-08-03T23:59:00+08:00",
+      "newest_item": "2026-08-04T08:18:45+00:00",
+      "items_in_snapshot": 915,
+      "items_total": 1049,
+      "items_ignored": 134
+    }
+  },
+  "summary": {
+    "samples": 24,
+    "end_to_end": {
+      "p50_ms": 10521,
+      "p95_ms": 13875,
+      "max_ms": 14488,
+      "mean_ms": 10642
+    },
+    "stages": {
+      "plan": {
+        "p50_ms": 0,
+        "p95_ms": 0,
+        "mean_ms": 0,
+        "share": 0.0
+      },
+      "embed": {
+        "p50_ms": 1853,
+        "p95_ms": 2412,
+        "mean_ms": 1859,
+        "share": 0.175
+      },
+      "dense": {
+        "p50_ms": 42,
+        "p95_ms": 54,
+        "mean_ms": 41,
+        "share": 0.004
+      },
+      "sparse": {
+        "p50_ms": 24,
+        "p95_ms": 30,
+        "mean_ms": 23,
+        "share": 0.002
+      },
+      "fuse": {
+        "p50_ms": 1,
+        "p95_ms": 1,
+        "mean_ms": 1,
+        "share": 0.0
+      },
+      "rerank": {
+        "p50_ms": 3131,
+        "p95_ms": 3654,
+        "mean_ms": 3022,
+        "share": 0.284
+      },
+      "select": {
+        "p50_ms": 2,
+        "p95_ms": 3,
+        "mean_ms": 2,
+        "share": 0.0
+      },
+      "parent": {
+        "p50_ms": 5,
+        "p95_ms": 6,
+        "mean_ms": 5,
+        "share": 0.0
+      },
+      "generate": {
+        "p50_ms": 5656,
+        "p95_ms": 8704,
+        "mean_ms": 5677,
+        "share": 0.533
+      }
+    },
+    "tokens": {
+      "prompt_p50": 13646,
+      "prompt_p95": 21654,
+      "completion_p50": 557,
+      "total_prompt": 349590,
+      "total_completion": 15376
+    },
+    "by_category": {
+      "abstention": {
+        "samples": 4,
+        "p50_ms": 6764,
+        "p95_ms": 9117
+      },
+      "comparison": {
+        "samples": 4,
+        "p50_ms": 10433,
+        "p95_ms": 14488
+      },
+      "explainer": {
+        "samples": 4,
+        "p50_ms": 10994,
+        "p95_ms": 13875
+      },
+      "fact_check": {
+        "samples": 4,
+        "p50_ms": 8477,
+        "p95_ms": 9601
+      },
+      "recent_updates": {
+        "samples": 4,
+        "p50_ms": 12338,
+        "p95_ms": 12784
+      },
+      "timeline": {
+        "samples": 4,
+        "p50_ms": 12230,
+        "p95_ms": 13263
+      }
+    }
+  },
+  "samples": [
+    {
+      "question_id": "RAG-GOLD-076",
+      "category": "abstention",
+      "total_ms": 9117,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 2219,
+        "dense": 105,
+        "sparse": 53,
+        "fuse": 1,
+        "rerank": 3193,
+        "select": 2,
+        "parent": 6,
+        "generate": 3527
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-077",
+      "category": "abstention",
+      "total_ms": 7193,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1812,
+        "dense": 54,
+        "sparse": 26,
+        "fuse": 1,
+        "rerank": 3033,
+        "select": 2,
+        "parent": 4,
+        "generate": 2251
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-078",
+      "category": "abstention",
+      "total_ms": 6764,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1854,
+        "dense": 45,
+        "sparse": 26,
+        "fuse": 1,
+        "rerank": 1724,
+        "select": 2,
+        "parent": 4,
+        "generate": 3097
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-079",
+      "category": "abstention",
+      "total_ms": 4158,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 525,
+        "dense": 36,
+        "sparse": 20,
+        "fuse": 1,
+        "rerank": 1230,
+        "select": 2,
+        "parent": 4,
+        "generate": 2309
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-031",
+      "category": "comparison",
+      "total_ms": 9553,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 524,
+        "dense": 36,
+        "sparse": 26,
+        "fuse": 1,
+        "rerank": 1541,
+        "select": 2,
+        "parent": 5,
+        "generate": 7410
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-033",
+      "category": "comparison",
+      "total_ms": 13380,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1837,
+        "dense": 42,
+        "sparse": 26,
+        "fuse": 1,
+        "rerank": 3270,
+        "select": 3,
+        "parent": 6,
+        "generate": 8186
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-034",
+      "category": "comparison",
+      "total_ms": 10433,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1844,
+        "dense": 45,
+        "sparse": 30,
+        "fuse": 1,
+        "rerank": 3170,
+        "select": 2,
+        "parent": 5,
+        "generate": 5326
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-035",
+      "category": "comparison",
+      "total_ms": 14488,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1800,
+        "dense": 46,
+        "sparse": 27,
+        "fuse": 1,
+        "rerank": 3264,
+        "select": 2,
+        "parent": 5,
+        "generate": 9331
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-061",
+      "category": "explainer",
+      "total_ms": 10466,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1894,
+        "dense": 42,
+        "sparse": 24,
+        "fuse": 1,
+        "rerank": 3131,
+        "select": 2,
+        "parent": 4,
+        "generate": 5357
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-062",
+      "category": "explainer",
+      "total_ms": 11836,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1897,
+        "dense": 35,
+        "sparse": 20,
+        "fuse": 1,
+        "rerank": 3092,
+        "select": 3,
+        "parent": 5,
+        "generate": 6774
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-063",
+      "category": "explainer",
+      "total_ms": 10994,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1853,
+        "dense": 54,
+        "sparse": 27,
+        "fuse": 1,
+        "rerank": 3622,
+        "select": 2,
+        "parent": 5,
+        "generate": 5418
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-064",
+      "category": "explainer",
+      "total_ms": 13875,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1950,
+        "dense": 43,
+        "sparse": 25,
+        "fuse": 1,
+        "rerank": 3135,
+        "select": 2,
+        "parent": 5,
+        "generate": 8704
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-046",
+      "category": "fact_check",
+      "total_ms": 8174,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1815,
+        "dense": 42,
+        "sparse": 24,
+        "fuse": 1,
+        "rerank": 3067,
+        "select": 2,
+        "parent": 5,
+        "generate": 3207
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-047",
+      "category": "fact_check",
+      "total_ms": 9138,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1830,
+        "dense": 43,
+        "sparse": 23,
+        "fuse": 1,
+        "rerank": 3952,
+        "select": 2,
+        "parent": 5,
+        "generate": 3273
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-048",
+      "category": "fact_check",
+      "total_ms": 8477,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1892,
+        "dense": 42,
+        "sparse": 24,
+        "fuse": 1,
+        "rerank": 3086,
+        "select": 2,
+        "parent": 5,
+        "generate": 3416
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-050",
+      "category": "fact_check",
+      "total_ms": 9601,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1792,
+        "dense": 44,
+        "sparse": 29,
+        "fuse": 2,
+        "rerank": 3461,
+        "select": 3,
+        "parent": 4,
+        "generate": 4256
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-001",
+      "category": "recent_updates",
+      "total_ms": 12666,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 2412,
+        "dense": 18,
+        "sparse": 13,
+        "fuse": 1,
+        "rerank": 3654,
+        "select": 2,
+        "parent": 4,
+        "generate": 6553
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-002",
+      "category": "recent_updates",
+      "total_ms": 12784,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 3492,
+        "dense": 22,
+        "sparse": 16,
+        "fuse": 1,
+        "rerank": 3581,
+        "select": 2,
+        "parent": 5,
+        "generate": 5656
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-003",
+      "category": "recent_updates",
+      "total_ms": 12338,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1957,
+        "dense": 19,
+        "sparse": 4,
+        "fuse": 1,
+        "rerank": 3242,
+        "select": 3,
+        "parent": 5,
+        "generate": 7097
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-004",
+      "category": "recent_updates",
+      "total_ms": 11579,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1947,
+        "dense": 21,
+        "sparse": 15,
+        "fuse": 1,
+        "rerank": 3226,
+        "select": 2,
+        "parent": 5,
+        "generate": 6351
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-016",
+      "category": "timeline",
+      "total_ms": 12230,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1837,
+        "dense": 46,
+        "sparse": 28,
+        "fuse": 1,
+        "rerank": 3024,
+        "select": 2,
+        "parent": 4,
+        "generate": 7277
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-017",
+      "category": "timeline",
+      "total_ms": 10521,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1891,
+        "dense": 34,
+        "sparse": 5,
+        "fuse": 1,
+        "rerank": 2861,
+        "select": 2,
+        "parent": 4,
+        "generate": 5714
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-018",
+      "category": "timeline",
+      "total_ms": 12385,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1919,
+        "dense": 45,
+        "sparse": 26,
+        "fuse": 1,
+        "rerank": 3093,
+        "select": 2,
+        "parent": 4,
+        "generate": 7285
+      }
+    },
+    {
+      "question_id": "RAG-GOLD-019",
+      "category": "timeline",
+      "total_ms": 13263,
+      "stages_ms": {
+        "plan": 0,
+        "embed": 1831,
+        "dense": 34,
+        "sparse": 23,
+        "fuse": 1,
+        "rerank": 2877,
+        "select": 2,
+        "parent": 4,
+        "generate": 8481
+      }
+    }
+  ]
+}

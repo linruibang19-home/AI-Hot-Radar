@@ -1,5 +1,7 @@
 import { formatDate, formatDateTime } from "@/lib/datetime";
 import Link from "next/link";
+
+import { BackLink } from "@/components/BackLink";
 import { notFound } from "next/navigation";
 
 import { CONTENT_TYPE_LABELS } from "@/components/ItemCard";
@@ -40,7 +42,7 @@ export default async function StoryPage({
   return (
     <>
       <p className="page-subtitle" style={{ marginBottom: 10 }}>
-        <Link href="/stories">← 返回事件列表</Link>
+        <BackLink href="/stories">返回事件列表</BackLink>
       </p>
 
       <header className="page-head">

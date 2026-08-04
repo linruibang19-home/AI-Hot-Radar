@@ -37,3 +37,17 @@ Thumbs.db
 # Runtime artifacts
 source-health.json
 source-health.md
+
+# Playwright e2e artefacts (the suite installs into its own directory so it
+# never enters the web app's runtime image).
+apps/web/e2e/node_modules/
+apps/web/e2e/test-results/
+apps/web/e2e/playwright-report/
+
+# Agent worktrees created by the coding tool.
+.claude/worktrees/
+
+# Git Bash rewrites `-v "$PWD/x:/y"` into a Windows path and leaves a literal
+# `x;D` directory behind. Ignored so one stray run cannot be committed; the fix
+# is to use PowerShell for docker mounts (see DEVELOPMENT.md §6).
+*;D/

@@ -11,6 +11,9 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+/** Rows in `config/sources.yaml`, the registry this page is a view onto. */
+const REGISTRY_TOTAL = 140;
+
 function formatTime(value?: string | null): string {
   if (!value) return "—";
   return formatShortDateTime(value);
@@ -44,10 +47,30 @@ export default async function AdminSourcesPage() {
         ))}
       </div>
 
+      {/* The registry holds 140 sources; this page lists the enabled ones. A
+          reader seeing 124 has no way to tell whether the rest are missing or
+          switched off on purpose, and "switched off on purpose" is the answer:
+          Wave C needs a browser renderer, and `verification: restricted`
+          sources default to disabled by policy. */}
+      <p className="filter-note">
+        共 {sources.length} 个已启用信源。注册表里另有 {REGISTRY_TOTAL - sources.length}{" "}
+        个默认关闭（需浏览器渲染的 SPA、以及按来源政策默认停用的受限源），不在此列。
+      </p>
+
       {sources.length === 0 ? (
         <div className="empty">无法读取信源状态。</div>
       ) : (
-        <table className="table">
+        <div className="table-scroll">
+        <table className="table table-sources">
+          <colgroup>
+            <col />
+            <col className="col-profile" />
+            <col className="col-state" />
+            <col className="col-num" />
+            <col className="col-num" />
+            <col className="col-time" />
+            <col className="col-error" />
+          </colgroup>
           <thead>
             <tr>
               <th>信源</th>
@@ -90,6 +113,7 @@ export default async function AdminSourcesPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </>
   );

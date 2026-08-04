@@ -119,8 +119,21 @@ def rescore(connection: Any, *, days: int = 7) -> dict[str, Any]:
             """
             SELECT ci.id, s.source_tier, ci.content_type, ci.quality_score,
                    EXTRACT(EPOCH FROM (now() - COALESCE(ci.published_at, ci.observed_at)))/3600.0,
-                   1 + (SELECT count(*) FROM content_item d
-                         WHERE d.duplicate_of_id = ci.id)
+                   GREATEST(
+                       -- Real multi-source corroboration, now that M3 clusters
+                       -- events: how many *distinct sources* covered the story
+                       -- this item belongs to. This is the signal the page's
+                       -- disclaimer said was missing — near-duplicate grouping
+                       -- left almost every item at 1, because two outlets
+                       -- writing their own article about one release are not
+                       -- near-duplicates of each other.
+                       COALESCE((SELECT count(DISTINCT m.source_id)
+                                   FROM story_item si
+                                   JOIN content_item m ON m.id = si.content_item_id
+                                  WHERE si.story_id = ci.story_id), 0),
+                       -- Fallback for items no story claimed.
+                       1 + (SELECT count(*) FROM content_item d
+                             WHERE d.duplicate_of_id = ci.id))
               FROM content_item ci
               JOIN source s ON s.id = ci.source_id
              WHERE ci.duplicate_of_id IS NULL

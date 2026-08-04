@@ -12,6 +12,7 @@ import argparse
 import asyncio
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import psycopg
@@ -315,6 +316,386 @@ def cmd_embed(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_rag_eval(args: argparse.Namespace) -> int:
+    """Score a retrieval configuration against the golden set (TASK-M4-001)."""
+    from ahr.rag.embeddings import EmbeddingUnavailableError, build_client_from_env
+    from ahr.rag.eval.golden import (
+        GoldenSetError,
+        describe_corpus_snapshot,
+        load_golden_set,
+        verify_items_exist,
+    )
+    from ahr.rag.eval.runner import (
+        dense_retriever,
+        rerank_retriever,
+        rrf_retriever,
+        run_variant,
+        sparse_retriever,
+        union_retriever,
+    )
+    from ahr.rag.rerank import RerankUnavailableError
+    from ahr.rag.rerank import build_client_from_env as build_reranker_from_env
+
+    directory = Path(args.golden)
+    try:
+        golden = load_golden_set(directory, require_full=not args.allow_partial)
+    except GoldenSetError as exc:
+        print(json.dumps({"error": str(exc)}, indent=2, ensure_ascii=False))
+        return 1
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        missing = verify_items_exist(connection, golden)
+        snapshot = describe_corpus_snapshot(connection, golden)
+
+    if missing and not args.skip_unusable:
+        # Annotations pointing at rows that are absent, superseded, or have no
+        # chunks would depress every metric for a reason that has nothing to do
+        # with retrieval quality. Refusing is what turned "citation precision is
+        # low" into "1.4% of the corpus was never chunked".
+        print(
+            json.dumps(
+                {
+                    "error": "annotated items not usable",
+                    "items": missing,
+                    "hint": "fix the corpus, or pass --skip-unusable to exclude"
+                    " the affected questions and record why",
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 1
+
+    if missing:
+        # Proceeding is a deliberate act, and the exclusion is recorded in the
+        # report rather than quietly shrinking the question count.
+        unusable = set(missing)
+        kept = tuple(q for q in golden.questions if not (q.relevant_ids & unusable))
+        print(
+            json.dumps(
+                {
+                    "warning": "excluding questions whose annotations are unusable",
+                    "items": missing,
+                    "questions_excluded": len(golden.questions) - len(kept),
+                },
+                indent=2,
+                ensure_ascii=False,
+            ),
+            file=sys.stderr,
+        )
+        golden = replace(golden, questions=kept)
+
+    if args.validate:
+        from ahr.rag.eval.golden import CATEGORIES
+
+        print(
+            json.dumps(
+                {
+                    "valid": True,
+                    "questions": len(golden),
+                    "files": list(golden.source_files),
+                    "by_category": {c: len(golden.by_category(c)) for c in CATEGORIES},
+                    "annotated_items": len(golden.item_ids),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
+        return 0
+
+    if args.variant in ("generation", "latency"):
+        return _run_generation_eval(golden, args, snapshot)
+
+    if args.variant == "sweep":
+        return _run_weight_sweep(golden, args, snapshot)
+
+    async def run() -> dict[str, object]:
+        # The sparse channel needs no embedding provider at all, so a
+        # sparse-only run stays available when the provider is down or out of
+        # quota — which is also what makes it a usable degradation path.
+        client = None
+        if args.variant != "b2-sparse":
+            try:
+                client = build_client_from_env()
+            except EmbeddingUnavailableError as exc:
+                return {"error": str(exc)}
+
+        with psycopg.connect(get_settings().database_url) as connection:
+            if args.variant == "b1":
+                assert client is not None
+                async with client:
+                    report = await run_variant(
+                        golden,
+                        dense_retriever(connection, client, chunk_depth=args.chunk_depth),
+                        variant="B1-dense-only",
+                        config={
+                            "embedding_model": client.model_name,
+                            "chunk_depth": args.chunk_depth,
+                        },
+                    )
+            elif args.variant == "b2-sparse":
+                report = await run_variant(
+                    golden,
+                    sparse_retriever(connection, chunk_depth=args.sparse_depth),
+                    variant="B2-sparse-only",
+                    config={"sparse_depth": args.sparse_depth},
+                )
+            elif args.variant == "b2-union":
+                assert client is not None
+                async with client:
+                    report = await run_variant(
+                        golden,
+                        union_retriever(
+                            connection,
+                            client,
+                            dense_depth=args.chunk_depth,
+                            sparse_depth=args.sparse_depth,
+                        ),
+                        variant="B2-union-interleave",
+                        config={
+                            "embedding_model": client.model_name,
+                            "chunk_depth": args.chunk_depth,
+                            "sparse_depth": args.sparse_depth,
+                            "merge": "round-robin interleave (RRF lands in B3)",
+                        },
+                    )
+            elif args.variant in ("b4-rerank", "b7-temporal-fit", "b9-dimensions"):
+                assert client is not None
+                try:
+                    reranker = build_reranker_from_env()
+                except RerankUnavailableError as exc:
+                    return {"error": str(exc)}
+                async with client, reranker:
+                    report = await run_variant(
+                        golden,
+                        rerank_retriever(
+                            connection,
+                            client,
+                            reranker,
+                            dense_depth=args.chunk_depth,
+                            sparse_depth=args.sparse_depth,
+                            candidate_limit=args.rerank_candidates,
+                            top_n=args.rerank_top_n,
+                            # B9 keeps temporal_fit on: it is the shipped
+                            # configuration, so the comparison isolates the two
+                            # new dimensions rather than also removing B7.
+                            use_temporal_fit=args.variant
+                            in (
+                                "b7-temporal-fit",
+                                "b9-dimensions",
+                            ),
+                            use_dimensions=args.variant == "b9-dimensions",
+                            weights=_parse_weights(args.weights),
+                        ),
+                        variant=(
+                            "B9-dimensions"
+                            if args.variant == "b9-dimensions"
+                            else "B7-temporal-fit"
+                            if args.variant == "b7-temporal-fit"
+                            else f"B4-rerank-{args.rerank_candidates}"
+                        ),
+                        config={
+                            "embedding_model": client.model_name,
+                            "reranker_model": reranker.model_name,
+                            "chunk_depth": args.chunk_depth,
+                            "sparse_depth": args.sparse_depth,
+                            "rerank_top_n": args.rerank_top_n,
+                            "rerank_candidates": args.rerank_candidates,
+                            "fusion_weights": _parse_weights(args.weights) or "default",
+                        },
+                    )
+                    report.config["rerank_usage"] = {
+                        "calls": reranker.usage.calls,
+                        "documents": reranker.usage.documents,
+                        "latency_ms_total": reranker.usage.latency_ms,
+                        "failures": reranker.usage.failures,
+                    }
+            else:
+                # b3-rrf, and b3-no-temporal which isolates the temporal
+                # channel's own contribution from the fusion's.
+                assert client is not None
+                use_temporal = args.variant != "b3-no-temporal"
+                async with client:
+                    report = await run_variant(
+                        golden,
+                        rrf_retriever(
+                            connection,
+                            client,
+                            dense_depth=args.chunk_depth,
+                            sparse_depth=args.sparse_depth,
+                            use_temporal=use_temporal,
+                        ),
+                        variant=("B3-rrf" if use_temporal else "B3-rrf-without-temporal"),
+                        config={
+                            "embedding_model": client.model_name,
+                            "chunk_depth": args.chunk_depth,
+                            "sparse_depth": args.sparse_depth,
+                            "temporal_channel": use_temporal,
+                            "merge": "weighted RRF (k=60) + AHR-RAG-400 §6 boosts",
+                        },
+                    )
+
+        report.config["corpus_snapshot"] = snapshot
+        payload = report.to_dict()
+        if args.output:
+            Path(args.output).write_text(
+                json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+        return payload
+
+    payload = asyncio.run(run())
+    if args.output and "error" not in payload:
+        # The per-question rows went to --output; stdout gets the summary so a
+        # regression run stays readable in a terminal.
+        summary = payload["summary"]
+        brief = {"run_id": payload["run_id"], **summary} if isinstance(summary, dict) else payload
+        print(json.dumps(brief, indent=2, ensure_ascii=False))
+    else:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _parse_weights(raw: str | None) -> dict[str, float] | None:
+    """`dense=1.0,sparse=0.2,temporal=0.4` -> a weight table.
+
+    Lets a sweep candidate be measured through the *full* pipeline, reranker
+    included. The sweep alone cannot settle a weight change: it scores the fused
+    order, and B4 established the cross-encoder rewrites that order.
+    """
+    if not raw:
+        return None
+    weights: dict[str, float] = {}
+    for part in raw.split(","):
+        name, _, value = part.partition("=")
+        weights[name.strip()] = float(value)
+    return weights
+
+
+def _run_weight_sweep(golden: object, args: argparse.Namespace, snapshot: object) -> int:
+    """Grid-search the fusion weights (AHR-RAG-400 §5).
+
+    One embedding round trip per question, then the whole grid is scored over
+    the cached channel outputs — the weights cannot change what the channels
+    return, so re-retrieving per configuration would buy nothing.
+    """
+    from ahr.rag.embeddings import EmbeddingUnavailableError, build_client_from_env
+    from ahr.rag.eval.sweep import capture_channels, sweep
+
+    async def run() -> dict[str, object]:
+        try:
+            client = build_client_from_env()
+        except EmbeddingUnavailableError as exc:
+            return {"error": str(exc)}
+
+        with psycopg.connect(get_settings().database_url) as connection:
+            async with client:
+                captures = await capture_channels(
+                    golden,
+                    connection,
+                    client,
+                    dense_depth=args.chunk_depth,
+                    sparse_depth=args.sparse_depth,
+                )
+
+        payload = sweep(captures)
+        payload["config"]["embedding_model"] = client.model_name
+        payload["config"]["corpus_snapshot"] = snapshot
+        if args.output:
+            Path(args.output).write_text(
+                json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+        return payload
+
+    payload = asyncio.run(run())
+    if "error" in payload:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 1
+
+    # stdout gets the podium and the incumbent; the full grid goes to --output.
+    results = payload["results"]
+    incumbent = next(
+        (r for r in results if r["weights"] == {"dense": 1.0, "sparse": 0.6, "temporal": 0.15}),
+        None,
+    )
+    print(
+        json.dumps(
+            {
+                "run_id": payload["run_id"],
+                "combinations": payload["config"]["combinations"],
+                "top": results[:5],
+                "incumbent": incumbent,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _run_generation_eval(golden: object, args: argparse.Namespace, snapshot: object) -> int:
+    """Answer every golden question for real, then score the answers.
+
+    Separate from the retrieval variants because it is a different kind of run:
+    90 model round trips rather than 90 vector searches, and the metrics it
+    produces — groundedness, citation precision, story coverage — are exactly
+    the ones the retrieval evaluation is blind to.
+    """
+    from ahr.processing.llm import LlmUnavailableError
+    from ahr.processing.llm import build_client_from_env as build_llm
+    from ahr.rag.embeddings import EmbeddingUnavailableError
+    from ahr.rag.embeddings import build_client_from_env as build_embedder
+    from ahr.rag.eval.generation import run_generation_eval
+    from ahr.rag.eval.latency import measure as measure_latency
+    from ahr.rag.rerank import RerankUnavailableError
+    from ahr.rag.rerank import build_client_from_env as build_reranker
+
+    async def run() -> dict[str, object]:
+        try:
+            embedder = build_embedder()
+            llm = build_llm()
+        except (EmbeddingUnavailableError, LlmUnavailableError) as exc:
+            return {"error": str(exc)}
+
+        reranker = None
+        try:
+            reranker = build_reranker()
+        except RerankUnavailableError as exc:
+            print(f"warning: reranker unavailable, support scores will be null: {exc}")
+
+        runner = measure_latency if args.variant == "latency" else run_generation_eval
+        kwargs: dict[str, object] = (
+            {"limit": args.gen_limit or 24}
+            if args.variant == "latency"
+            else {"limit": args.gen_limit}
+        )
+
+        async with embedder, llm:
+            if reranker is not None:
+                async with reranker:
+                    report = await runner(  # type: ignore[operator]
+                        golden, embedder=embedder, reranker=reranker, llm=llm, **kwargs
+                    )
+            else:
+                report = await runner(  # type: ignore[operator]
+                    golden, embedder=embedder, reranker=None, llm=llm, **kwargs
+                )
+        report["config"]["corpus_snapshot"] = snapshot  # type: ignore[index]
+        if args.output:
+            Path(args.output).write_text(
+                json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+        return report
+
+    payload = asyncio.run(run())
+    brief = (
+        {"run_id": payload.get("run_id"), **payload["summary"]}  # type: ignore[dict-item]
+        if args.output and "error" not in payload
+        else payload
+    )
+    print(json.dumps(brief, indent=2, ensure_ascii=False))
+    return 0
+
+
 def cmd_seed_topics(args: argparse.Namespace) -> int:
     """Refresh the topic table from config/taxonomy.yaml.
 
@@ -564,6 +945,67 @@ def main(argv: list[str] | None = None) -> int:
     embed.add_argument("--limit", type=int, default=500)
     embed.add_argument("--batch-size", type=int, default=64)
     embed.set_defaults(func=cmd_embed)
+
+    rag_eval = sub.add_parser("rag-eval", help="score retrieval against the golden set")
+    rag_eval.add_argument("--golden", default="/app/data/golden")
+    rag_eval.add_argument(
+        "--variant",
+        choices=[
+            "b1",
+            "b2-sparse",
+            "b2-union",
+            "b3-rrf",
+            "b3-no-temporal",
+            "b4-rerank",
+            "b7-temporal-fit",
+            "b9-dimensions",
+            "sweep",
+            "generation",
+            "latency",
+        ],
+        default="b1",
+        help=(
+            "b1 dense only, b2-sparse keyword only, b2-union both interleaved, "
+            "b3-rrf weighted RRF over dense+sparse+temporal, "
+            "b3-no-temporal the same without the time channel, "
+            "b4-rerank b3 reordered by the cross-encoder, "
+            "b7-temporal-fit b4 plus a recency blend for time-scoped queries, "
+            "b9-dimensions b7 plus §6 directness and source_fit, "
+            "sweep grid-search the fusion weights on Recall@40 (AHR-RAG-400 §5), "
+            "generation end-to-end answers scored for groundedness and citations, "
+            "latency per-stage p50/p95 (AHR-RAG-400 §14)"
+        ),
+    )
+    rag_eval.add_argument(
+        "--gen-limit", type=int, default=None, help="score only the first N questions"
+    )
+    rag_eval.add_argument("--rerank-top-n", type=int, default=24, help="AHR-RAG-400 §6")
+    rag_eval.add_argument(
+        "--rerank-candidates",
+        type=int,
+        default=100,
+        help="how many fused candidates the cross-encoder scores (latency driver)",
+    )
+    rag_eval.add_argument(
+        "--weights",
+        default=None,
+        help="override fusion weights, e.g. dense=1.0,sparse=0.2,temporal=0.4",
+    )
+    rag_eval.add_argument("--chunk-depth", type=int, default=60, help="AHR-RAG-400 §5 topK")
+    rag_eval.add_argument("--sparse-depth", type=int, default=40, help="AHR-RAG-400 §5 FTS topK")
+    rag_eval.add_argument("--output", default=None, help="write the full per-question report here")
+    rag_eval.add_argument("--validate", action="store_true", help="check the set, do not retrieve")
+    rag_eval.add_argument(
+        "--skip-unusable",
+        action="store_true",
+        help="exclude questions whose annotated items are missing or unchunked",
+    )
+    rag_eval.add_argument(
+        "--allow-partial",
+        action="store_true",
+        help="skip the 15-per-category check (fixtures only)",
+    )
+    rag_eval.set_defaults(func=cmd_rag_eval)
 
     seed = sub.add_parser("seed-topics", help="refresh topic names and grouping from taxonomy")
     seed.set_defaults(func=cmd_seed_topics)

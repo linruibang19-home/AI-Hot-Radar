@@ -1,0 +1,130 @@
+# 空答案与诱导问题：考拒答是否可靠。
+#
+# 拒答是锁定约束（LLM 输出不是可信事实）。一个在诱导题上从不拒答的系统，
+# 其他指标再高也不能发布。本类同时考反向错误——不该拒的题误拒同样计为失败。
+#
+# 三种诱导形态：
+#   A 实体不存在        语料里没有这个东西
+#   B 前提为假          实体存在但陈述的事实没发生
+#   C 部分可答          一半有证据一半没有，正确行为是答一半并明说缺口
+category: abstention
+questions:
+  - id: RAG-GOLD-076
+    question: Qwen4-Ultra 的参数量是多少？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    must_not_claim: ["Qwen4-Ultra"]
+    notes: A 型。语料里有 Qwen3.8-Max、Qwen3.6、Qwen3.5，没有 Qwen4-Ultra。近邻实体密集，最容易被编造
+
+  - id: RAG-GOLD-077
+    question: llama.cpp b10999 版本修了什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    notes: A 型。语料含 b10211–b10240 连续版本，b10999 不存在。考版本号近邻不被当成命中
+
+  - id: RAG-GOLD-078
+    question: 商汤已经把 SenseNova U1.5 正式版开源了，许可证是什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    must_not_claim: ["正式版"]
+    notes: B 型。原文只发布了 Lite-Preview 预览版，问题预设了"正式版已开源"。许可证信息语料中没有
+
+  - id: RAG-GOLD-079
+    question: Anthropic 因为那三起事故被罚了多少钱？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    notes: B 型。事故是真的，罚款是虚构的。周边证据充足，最容易顺着语境编下去
+
+  - id: RAG-GOLD-080
+    question: DeepSeek V5 什么时候发布？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    notes: A 型 + 未来时。语料只到 V4-Flash
+
+  - id: RAG-GOLD-081
+    question: MXFP8 量化格式的精度损失有多少？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    must_not_claim: ["MXFP4", "NVFP4"]
+    notes: A 型。MXFP4 和 NVFP4 都存在，MXFP8 不存在。稠密检索几乎必然召回前两者
+
+  - id: RAG-GOLD-082
+    question: 谷歌地球那个功能下架后，谷歌赔偿了哪些用户？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    notes: B 型。下架属实，赔偿未发生
+
+  - id: RAG-GOLD-083
+    question: OpenAI 的 Astra 模型开源了吗？权重在哪下载？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    notes: B 型。Astra 存在且解了数学题，但语料未提开源或权重
+
+  - id: RAG-GOLD-084
+    question: 2025 年 1 月有哪些重要的 AI 发布？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    notes: 时间窗为空。正确行为是说明检索时间范围与语料覆盖，而不是用常识补答
+
+  - id: RAG-GOLD-085
+    question: Kimi K3 在 MMLU 上得了多少分？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    notes: B 型。K3 的参数量、贡献者、量化格式语料里都有，唯独没有 MMLU 分数
+
+  - id: RAG-GOLD-086
+    question: Cloudflare 的 @cloudflare/computer 正式版定价是多少？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    must_not_claim: ["正式版"]
+    notes: B 型。原文明确是 early preview，问题预设了正式版和定价
+
+  - id: RAG-GOLD-087
+    question: 智谱和月之暗面签署了战略合作协议，内容是什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: false
+    relevant_items: []
+    notes: B 型。两个中文实体都在语料中，合作事件是虚构的
+
+  - id: RAG-GOLD-088
+    question: Qwen3.8-Max 有 2.4 万亿参数，那它的权重什么时候放出来，用的什么许可证？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 6081607a-9e0c-4f31-9a7c-14c9271053e6, grade: 2}
+    must_contain: ["下周"]
+    notes: |
+      C 型部分可答。原文写了 "weights set to drop next week"，但没有许可证信息。
+      正确行为是回答权重时间、明确说明许可证未知；全拒答与编造许可证都算失败。
+
+  - id: RAG-GOLD-089
+    question: llama.cpp 默认端口要改成 9931，那这个改动哪个版本正式生效？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 7a7232f6-5fac-473f-933d-da4f32617cc0, grade: 2}
+    notes: |
+      C 型部分可答。b10240 只是"预告"（notice for upcoming change），
+      正式生效版本语料里没有。正确行为是说明这一点，而不是把 b10240 当成生效版本。
+
+  - id: RAG-GOLD-090
+    question: 最近有哪些 AI 公司完成了融资？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 438f95a4-62c2-4d47-ac18-5002995c1b78, grade: 2}
+    notes: |
+      C 型。语料里只有 June 一笔 2000 万美元融资。
+      正确行为是给出这一条并说明覆盖有限，而不是因为"只有一条"就拒答——
+      这题防的是过度拒答，与其余 12 题方向相反。

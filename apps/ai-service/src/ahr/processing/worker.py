@@ -27,12 +27,13 @@ import asyncio
 import logging
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import psycopg
 
 from ahr.config import get_settings
+from ahr.rag.planner import DISPLAY_TIMEZONE
 
 logger = logging.getLogger(__name__)
 
@@ -63,26 +64,41 @@ def _unlock(connection: Any) -> None:
         cursor.execute("SELECT pg_advisory_unlock(%s)", (ADVISORY_LOCK_KEY,))
 
 
-def _period_keys(today: date) -> list[tuple[str, str]]:
-    """Which report periods to keep current.
+# A daily digest of a day that is still running is a digest of half a day. The
+# pipeline passes every 15 minutes, so today's report was being rewritten all
+# day on whatever had arrived so far — at noon it summarised a morning and
+# called it the day. Nothing is published for today until this hour, local time.
+DAILY_CUTOFF_HOUR = 21
 
-    Every period includes the one currently in progress. An earlier version
-    generated only yesterday's daily, on the grounds that a day still running
-    would be rewritten repeatedly — but that is exactly what the weekly and
-    monthly reports already do, and it left the site with no digest for today
-    at all. A reader opening 日报 in the evening expects today's.
 
-    Yesterday's daily is kept in the list too, so the last full day settles to
-    its final form once the day's remaining items finish processing.
+def _period_keys(now: datetime) -> list[tuple[str, str]]:
+    """Which report periods to keep current, given the local wall clock.
+
+    Yesterday, the current week and the current month are always refreshed:
+    yesterday settles to its final form as the last of its items finish
+    processing, and a week or a month in progress is legitimately a running
+    total in a way a single day is not.
+
+    Today's daily appears only after `DAILY_CUTOFF_HOUR`. Before that the site
+    shows yesterday's, which is complete, rather than a partial one that
+    contradicts itself every quarter of an hour.
     """
+    local = now.astimezone(DISPLAY_TIMEZONE)
+    today = local.date()
     yesterday = today - timedelta(days=1)
     iso = today.isocalendar()
-    return [
-        ("daily", today.isoformat()),
-        ("daily", yesterday.isoformat()),
-        ("weekly", f"{iso.year}-W{iso.week:02d}"),
-        ("monthly", f"{today.year}-{today.month:02d}"),
-    ]
+
+    keys: list[tuple[str, str]] = []
+    if local.hour >= DAILY_CUTOFF_HOUR:
+        keys.append(("daily", today.isoformat()))
+    keys.extend(
+        [
+            ("daily", yesterday.isoformat()),
+            ("weekly", f"{iso.year}-W{iso.week:02d}"),
+            ("monthly", f"{today.year}-{today.month:02d}"),
+        ]
+    )
+    return keys
 
 
 def _report_is_stale(connection: Any, period: str, key: str) -> bool:
@@ -224,9 +240,10 @@ async def _refresh_reports(client: Any, build_report: Any, save_report: Any) -> 
     # Keyed by "period:key", not period: the daily entry appears twice (today
     # and yesterday) and one would otherwise overwrite the other's status.
     written: dict[str, str] = {}
-    today = datetime.now(UTC).date()
-
-    for period, key in _period_keys(today):
+    # The wall clock in the display timezone, not UTC. `datetime.now(UTC).date()`
+    # is the previous day for the whole Beijing morning, so before 08:00 the
+    # worker refreshed the wrong day's digest.
+    for period, key in _period_keys(datetime.now(UTC)):
         label = f"{period}:{key}"
         with psycopg.connect(get_settings().database_url) as connection:
             if not _report_is_stale(connection, period, key):

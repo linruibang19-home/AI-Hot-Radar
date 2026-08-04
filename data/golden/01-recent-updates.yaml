@@ -1,0 +1,159 @@
+# 近期变化：考时间解析与 Story 去重。
+# 多数题目不给显式跨度，Planner 必须套用「最近 = 7 天」的默认并声明。
+category: recent_updates
+questions:
+  - id: RAG-GOLD-001
+    question: llama.cpp 最近发布了哪些版本，都改了什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 7a7232f6-5fac-473f-933d-da4f32617cc0, grade: 2}
+      - {id: f1513d17-95b5-4b07-b10e-7eb62311d00f, grade: 2}
+      - {id: e896d823-77a0-46ce-ae5e-34dea6471654, grade: 2}
+      - {id: ebfd0a1a-e9a7-4b84-a30f-ba85015780f9, grade: 2}
+      - {id: 0c54905d-2643-4e2b-ac9b-fc7a04d75a8a, grade: 1}
+      - {id: 26f2c55a-2131-4e19-acbd-f2ba80a90ff6, grade: 1}
+    notes: 单一信源高频发布，考的是同文档/同信源霸榜时能否给出多个版本而非一个版本的多个片段
+
+  - id: RAG-GOLD-002
+    question: Cloudflare 最近在 AI 方面有什么新动作？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: a8afca1b-cd51-44e2-bb78-229bc3ecfc27, grade: 2}
+      - {id: 4bd0491a-dbe5-42fd-b6fc-2c6089d5e8db, grade: 2}
+      - {id: 938d9ada-25bf-4c98-99e3-b11795f84a02, grade: 2}
+
+  - id: RAG-GOLD-003
+    question: 阿里最近发布了什么模型？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 6081607a-9e0c-4f31-9a7c-14c9271053e6, grade: 2}
+      - {id: 1418aaf4-7fe3-4f2e-85c3-d574c617a75e, grade: 2}
+      - {id: 845e4161-2365-426a-a856-d7a601a0bf09, grade: 2}
+      - {id: 95b8fb25-ba74-4478-aaed-72f21a59b943, grade: 1}
+    notes: 同一事件三家媒体报道，Story 折叠后应只占一个证据位
+
+  - id: RAG-GOLD-004
+    question: Langfuse 这几天发了哪些版本？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: b28812b6-6b72-4945-b994-5d6c3f123e83, grade: 2}
+      - {id: b3b37900-617f-41a4-94ed-a4a5323ba2e5, grade: 2}
+      - {id: 432822e4-9a0a-44c4-8958-0b56397ce96f, grade: 2}
+      - {id: 6b7fe826-f4ef-430b-8046-dff82a2c0f6b, grade: 1}
+
+  - id: RAG-GOLD-005
+    question: OpenAI 各语言的官方 SDK 最近更新了什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 68481188-b365-4fbf-b059-07903799059a, grade: 2}
+      - {id: 27f7a8b2-a2a9-4018-9b99-0c1494d0dd9b, grade: 2}
+      - {id: 8eb210b0-48b8-4bef-a6d2-9ecb7d9b0d78, grade: 2}
+      - {id: c77929e8-3ebb-444b-b44a-3cd81077f2b0, grade: 2}
+    notes: 跨四个信源的同类更新，考跨源聚合而非单源罗列
+
+  - id: RAG-GOLD-006
+    question: 商汤最近开源了什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: c5a154cf-0156-44f7-8a60-52fe582eca83, grade: 2}
+    must_contain: ["U1.5"]
+    notes: 中文信源单篇，正确答案是 SenseNova U1.5-Lite-Preview（预览版），不是正式开源
+
+  - id: RAG-GOLD-007
+    question: Kimi K3 最近有哪些消息？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 35c0ccc3-af39-4181-a42c-3aa98cf377c4, grade: 2}
+      - {id: 322c42df-050b-4e97-ba54-eb21571a71af, grade: 2}
+      - {id: 39db5867-b245-4569-86d0-1c1b6ec90808, grade: 2}
+      - {id: ac52d6e1-d0b1-4c94-820e-a46f73b595a6, grade: 1}
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, grade: 1}
+
+  - id: RAG-GOLD-008
+    question: DeepSeek 最近有什么进展？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 0b62b31d-c434-4974-8ba8-7233d9f61eff, grade: 2}
+      - {id: 392e5ceb-2af6-43d6-8740-50ac95ef85cf, grade: 2}
+      - {id: 18e5766c-0475-4d0c-8fde-8929132dda00, grade: 2}
+      - {id: 14be4039-77b9-42a8-ab33-960754a7750d, grade: 1}
+    notes: 一手（DeepSeek API Changelog）与二手报道混合，一手应排前
+
+  - id: RAG-GOLD-009
+    question: Mem0 最近发布了哪些包？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 5c213cd6-c62a-4fc3-bd5d-92350e067bf8, grade: 2}
+      - {id: 6f459060-1fa7-424e-9ecd-baa82fb8d2dc, grade: 2}
+      - {id: b4209ee7-d30a-4a05-9afc-55b24165a592, grade: 2}
+      - {id: 8044d683-118b-4006-b1d3-debffe4b5f76, grade: 2}
+      - {id: 9208f901-d591-467b-a644-c2a5d457265b, grade: 2}
+    notes: 同一天五个包，全部短文本，考短分块合并后是否仍可区分
+
+  - id: RAG-GOLD-010
+    question: 最近有哪些新的开源多模态模型？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: c5a154cf-0156-44f7-8a60-52fe582eca83, grade: 2}
+      - {id: 0bc8eefa-f384-456c-a376-ea2b22297a32, grade: 2}
+      - {id: c71d99f4-02a6-4f78-98e1-f43848503889, grade: 1}
+      - {id: b26f9eca-2a6e-45ab-a793-869f1ec527a6, grade: 1}
+    notes: 主题型近期变化，没有单一实体锚点，纯靠语义
+
+  - id: RAG-GOLD-011
+    question: 微软最近在智能体框架上有什么发布？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 776c9f80-05c2-470c-9eaf-2c630d480cce, grade: 2}
+
+  - id: RAG-GOLD-012
+    question: NVIDIA 最近发了哪些技术博客？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 9812e0cb-09a6-4ee8-b7c3-2e3ff29b20ce, grade: 2}
+      - {id: 885cc411-18e0-4219-a4ac-2f1f627a12ed, grade: 2}
+
+  - id: RAG-GOLD-013
+    question: Vercel AI SDK 最近的版本都修了什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 56301dd4-44b7-4a02-85e8-745bf87bd575, grade: 2}
+      - {id: 90935d20-2293-406c-ba0a-13a0539aa328, grade: 2}
+      - {id: fb1c99ab-7ca8-47cd-898c-17955e1de97b, grade: 2}
+      - {id: 979d5db5-f851-43e5-868c-96097160d8a0, grade: 1}
+    notes: 极短的版本号型标题（如 "ai@7.0.48"），是分块下限的压力样本
+
+  - id: RAG-GOLD-014
+    question: 最近 AI 领域有哪些安全事件？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 03316b32-69de-4188-98cc-70cf580fcfb6, grade: 2}
+      - {id: 21545cf0-05a2-4f4b-84f7-62a90ac40f59, grade: 2}
+      - {id: 2ed4dac8-4591-4767-981e-064ffeb7ed8c, grade: 2}
+      - {id: 62efb4b4-b2b7-4503-8610-ce3ea0ddf494, grade: 2}
+      - {id: 59f7e8e8-6eae-49b3-a337-1894451f8bda, grade: 1}
+    notes: 跨事件主题聚合，Story 折叠后 Anthropic 事件只应占一位
+
+  - id: RAG-GOLD-015
+    question: 本周有哪些 AI 相关的法律或监管消息？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: cf830cae-a5c1-4d95-8cd2-a471f90156d6, grade: 2}
+      - {id: 8760393e-e695-4e4b-8351-ff8e9653797d, grade: 2}
+      - {id: 6ec50583-33e8-4d47-8080-d9d47d44653c, grade: 1}
+    notes: 「本周」必须按 Asia/Shanghai 解析；按 UTC 会漏掉周边界上的条目

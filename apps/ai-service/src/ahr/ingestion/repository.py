@@ -287,8 +287,28 @@ def persist_document(
         )
         revision = cursor.fetchone()
         if revision:
+            # A row only lands here when the body hash changed, so every derived
+            # artefact — chunks, embeddings, zh_title, summary, entities — now
+            # describes text nobody reads any more. Moving the pointer without
+            # reopening the item left it ENRICHED against a superseded body, and
+            # since the processing query polls `enrichment_state`, the new body
+            # was never split: 1.4% of the corpus went missing from retrieval
+            # while still looking healthy in every count.
+            #
+            # Known duplicates keep their state: they are excluded from
+            # processing by `duplicate_of_id`, so reopening them would park them
+            # in PENDING permanently.
             cursor.execute(
-                "UPDATE content_item SET current_revision_id = %s WHERE id = %s",
+                """
+                UPDATE content_item
+                   SET current_revision_id = %s,
+                       enrichment_state = CASE
+                           WHEN duplicate_of_id IS NULL THEN 'PENDING'
+                           ELSE enrichment_state
+                       END,
+                       updated_at = now()
+                 WHERE id = %s
+                """,
                 (revision[0], item_id),
             )
             # AHR-ARCH-200 §6: the outbox row commits with the business write,

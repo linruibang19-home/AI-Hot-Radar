@@ -81,9 +81,28 @@ public class ContentRepository {
      */
     public List<ContentItem> findFeed(
             Cursor cursor, int limit, String sourceId, String contentType, String query) {
+        return findFeed(cursor, limit, sourceId, contentType, query, null);
+    }
+
+    public List<ContentItem> findFeed(
+            Cursor cursor,
+            int limit,
+            String sourceId,
+            String contentType,
+            String query,
+            String day) {
 
         StringBuilder sql = new StringBuilder(BASE_SELECT);
         MapSqlParameterSource params = new MapSqlParameterSource();
+
+        if (day != null && !day.isBlank()) {
+            // Same expression as dayCounts, so a day's header and its contents
+            // can never disagree about which items belong to it.
+            sql.append(
+                    " AND (COALESCE(ci.published_at, ci.observed_at)"
+                            + " AT TIME ZONE 'Asia/Shanghai')::date = CAST(:day AS date)");
+            params.addValue("day", day.trim());
+        }
 
         if (cursor != null) {
             sql.append(
@@ -135,25 +154,6 @@ public class ContentRepository {
         List<ContentItem> rows =
                 jdbc.query(sql, new MapSqlParameterSource("id", id), MAPPER);
         return rows.stream().findFirst();
-    }
-
-    /** Feed counts grouped by day, for the date-grouped homepage. */
-    public List<DayCount> countByDay(int days) {
-        String sql =
-                """
-                SELECT date_trunc('day', COALESCE(published_at, observed_at)) AS day,
-                       count(*) AS total
-                  FROM content_item
-                 WHERE duplicate_of_id IS NULL
-                   AND COALESCE(published_at, observed_at) > now() - (:days || ' days')::interval
-                 GROUP BY 1 ORDER BY 1 DESC
-                """;
-        return jdbc.query(
-                sql,
-                new MapSqlParameterSource("days", days),
-                (rs, rowNum) ->
-                        new DayCount(
-                                rs.getObject("day", OffsetDateTime.class), rs.getLong("total")));
     }
 
     /**
@@ -367,6 +367,60 @@ public class ContentRepository {
                         new CategoryCount(rs.getString("content_type"), rs.getLong("total")));
     }
 
+    /**
+     * Item counts per publication day, newest first.
+     *
+     * The feed is read by date but the item endpoint paginates by count, and on
+     * this corpus a single day holds close to 200 items — reaching the previous
+     * date took eight "load more" clicks that each looked like nothing had
+     * happened. One cheap GROUP BY lets every date render at once, with its
+     * items fetched only when a day is opened.
+     *
+     * The day is derived in the display timezone, not UTC. Grouping by UTC
+     * would file everything published after 08:00 Beijing time under the
+     * previous day, which is the same defect that once made the whole site
+     * render times a day off.
+     */
+    public List<DayBucket> dayCounts(String contentType, String q) {
+        StringBuilder sql =
+                new StringBuilder(
+                        """
+                        SELECT (COALESCE(published_at, observed_at)
+                                    AT TIME ZONE 'Asia/Shanghai')::date AS day,
+                               count(*) AS total
+                          FROM content_item
+                         WHERE duplicate_of_id IS NULL
+                           AND current_revision_id IS NOT NULL
+                        """);
+        MapSqlParameterSource params = new MapSqlParameterSource();
+
+        if (contentType != null && !contentType.isBlank()) {
+            // A UI tab covers several content types, exactly as in findFeed. A
+            // direct equality on the tab key matches nothing: the tab is
+            // "model" while the stored values are "model_release" and friends.
+            List<String> types = ContentCategory.resolve(contentType);
+            if (!types.isEmpty()) {
+                sql.append(" AND content_type IN (:contentTypes)");
+                params.addValue("contentTypes", types);
+            }
+        }
+        if (q != null && !q.isBlank()) {
+            sql.append(
+                    " AND (search_vector @@ plainto_tsquery('simple', :rawQuery)"
+                            + " OR title ILIKE :likeQuery"
+                            + " OR zh_title ILIKE :likeQuery)");
+            params.addValue("rawQuery", q.trim());
+            params.addValue("likeQuery", "%" + q.trim() + "%");
+        }
+
+        sql.append(" GROUP BY day ORDER BY day DESC");
+        return jdbc.query(
+                sql.toString(),
+                params,
+                (rs, rowNum) ->
+                        new DayBucket(rs.getString("day"), rs.getLong("total")));
+    }
+
     public Stats stats() {
         String sql =
                 """
@@ -390,7 +444,6 @@ public class ContentRepository {
 
     public record Cursor(OffsetDateTime publishedAt, String id) {}
 
-    public record DayCount(OffsetDateTime day, long total) {}
 
     public record Stats(long items, long enriched, long activeSources, long chunks) {}
 
@@ -422,4 +475,7 @@ public class ContentRepository {
             String sourceName) {}
 
     public record CategoryCount(String contentType, long total) {}
+
+    /** A calendar day in the display timezone, as `YYYY-MM-DD`. */
+    public record DayBucket(String day, long total) {}
 }

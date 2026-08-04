@@ -1,6 +1,7 @@
 # 文档导航
 
-本目录按用途分为三类。
+本目录按用途分为四类：`spec/` 是锁定契约，`adr/` 记录偏离契约的决策，
+`design/` 是随开发修订的实现方案，`status/` 是实际运行产生的事实。
 
 ## `spec/` — 工程规格（唯一事实源）
 
@@ -31,6 +32,20 @@
 |---|---|
 | [0012](adr/0012-source-schema-discovery-url-conditional.md) | `discovery_url` 改为按 profile 条件必填 |
 | [0013](adr/0013-openai-cdn-blocks-non-browser-clients.md) | OpenAI 官网回源被 CDN 拒绝，降级 metadata_only |
+| [0014](adr/0014-entity-types-align-to-taxonomy.md) | 实体类型以 `config/taxonomy.yaml` 的 8 类为准 |
+| [0015](adr/0015-rag-sparse-channel-uses-postgres.md) | 稀疏检索复用 Postgres 既有索引，不引入 ES / Neo4j |
+| [0016](adr/0016-rag-adaptive-parent-block.md) | 父块自适应阶梯，由查询派生而非物化落表 |
+
+## `design/` — 开发方案（活文档）
+
+规格没有规定、但实现必须定下来的做法，以及开发中因实测发现而做的方案调整。
+每份文档都有「变更记录」小节，记录方案因何被修正。
+
+| 文件 | 范围 |
+|---|---|
+| [design/README.md](design/README.md) | 四层文档的分工与写入规则 |
+| [m4-rag-implementation.md](design/m4-rag-implementation.md) | M4 RAG 全流程实现方案与外部方案取舍 |
+| [m4-rag-evaluation.md](design/m4-rag-evaluation.md) | 90 题黄金集、指标含义与发布门禁 |
 
 ## `status/` — 运行状态与验收证据
 

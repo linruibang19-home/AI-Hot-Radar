@@ -52,6 +52,11 @@ const ICONS: Record<string, ReactNode> = {
       <line x1="8" y1="16" x2="13" y2="16" />
     </>
   ),
+  ask: (
+    <>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </>
+  ),
   topics: (
     <>
       <rect x="3" y="3" width="7" height="7" rx="1.5" />
@@ -92,6 +97,7 @@ const SECTIONS: { label: string; entries: NavEntry[] }[] = [
       { href: "/stories", label: "事件聚合", icon: "story" },
       { href: "/reports", label: "AI 日报", icon: "report" },
       { href: "/topics", label: "主题地图", icon: "topics" },
+      { href: "/ask", label: "AI 问答", icon: "ask" },
     ],
   },
   {

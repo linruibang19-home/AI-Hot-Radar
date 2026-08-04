@@ -6,9 +6,41 @@ at the repository root for the authoritative variable list.
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _database_url_from_parts() -> str | None:
+    """Build a psycopg conninfo from the discrete POSTGRES_* variables.
+
+    Two separate traps make this preferable to composing the DSN in
+    docker-compose.yml, and both were hit in one sitting:
+
+    1. Compose interpolates `${VAR}` from a `.env` *beside the compose file*,
+       never from an `env_file:` entry. `env_file:` only injects into the
+       container. So a password kept in the repository-root `.env` reached the
+       process but not the interpolation, and every service silently fell back
+       to the `change-me` default and failed authentication.
+
+    2. A URL gives "#", "@" and "/" syntactic meaning — fragment, host and
+       path. A password containing any of them is truncated rather than
+       rejected, which looks exactly like a wrong password. Keyword/value
+       conninfo has nothing to escape.
+
+    `DATABASE_URL` still wins when set, so existing deployments and tests are
+    unaffected.
+    """
+    host = os.environ.get("POSTGRES_HOST", "postgres").strip()
+    port = os.environ.get("POSTGRES_PORT", "5432").strip()
+    name = os.environ.get("POSTGRES_DB", "").strip()
+    user = os.environ.get("POSTGRES_USER", "").strip()
+    password = os.environ.get("POSTGRES_PASSWORD", "").strip()
+
+    if not (name and user and password):
+        return None
+    return f"host={host} port={port} dbname={name} user={user} password={password}"
 
 
 class Settings(BaseSettings):
@@ -31,4 +63,9 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    if "DATABASE_URL" not in os.environ:
+        composed = _database_url_from_parts()
+        if composed:
+            settings.database_url = composed
+    return settings

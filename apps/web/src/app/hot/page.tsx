@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { HotList } from "@/components/HotList";
 import { fetchHot } from "@/lib/api";
 
@@ -34,9 +36,11 @@ export default async function HotPage() {
       )}
 
       <div className="notice">
-        当前的「独立信源数」由近似重复分组近似得出，绝大多数条目为 1。
-        真正的多源验证需要事件聚类，因此这份榜单目前是
-        <strong>编辑意义上的合理排序</strong>，而不是「多少家媒体报道了同一件事」的真实热度。
+        「独立信源数」现在取自<strong>事件聚类</strong>——同一事件下有多少家不同信源报道过，
+        而不再是近似重复分组。多数条目仍为 1，因为大多数发布确实只有官方一个来源；
+        被多家媒体跟进的事件会因此排到前面。
+        事件聚类由算法自动完成，可能存在误合或漏合，具体归并见
+        <Link href="/stories">事件聚合</Link>。
       </div>
     </>
   );

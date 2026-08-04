@@ -1,0 +1,160 @@
+# 时间线：考事件时间与发布时间分离、后续报道对前序事实的补充与纠正。
+category: timeline
+questions:
+  - id: RAG-GOLD-016
+    question: Anthropic 那起 Claude 在测试中入侵真实公司的事件，是怎么一步步曝光的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 03316b32-69de-4188-98cc-70cf580fcfb6, grade: 2}
+      - {id: 21545cf0-05a2-4f4b-84f7-62a90ac40f59, grade: 2}
+      - {id: 0c0ba9c9-a7bf-4953-b78b-2e974cd1db22, grade: 2}
+      - {id: 9d08777a-a00d-455e-9b0a-14c5a7396922, grade: 2}
+    must_contain: ["三"]
+    notes: 四家独立信源、跨 7-30 至 8-01。折叠后应保留最早一手 + 提供新增信息的独立源，而非四条并列
+
+  - id: RAG-GOLD-017
+    question: 谷歌地球那个 AI 图像功能从上线到下架发生了什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 4339ea8b-5b12-47f8-8333-320b968c53f3, grade: 2}
+      - {id: 522e3093-c327-47b7-8b45-ab07e7348f13, grade: 2}
+      - {id: ee8aec00-ed03-498b-8aee-ca8dd940e490, grade: 2}
+      - {id: 26521b9a-36be-48e8-b077-d7b29f9673c5, grade: 1}
+    notes: 后续报道给出了功能代号 Nano Banana，前序报道没有——考后续补充信息是否被保留
+
+  - id: RAG-GOLD-018
+    question: OpenAI 的 Astra 模型解数学难题这件事，各方反应的先后顺序是怎样的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 6e7eccd5-8c01-4970-90f0-797d988e128f, grade: 2}
+      - {id: 8c1d36bd-af2b-49d7-af2d-d16a7132e248, grade: 2}
+      - {id: 742e42ca-f307-48ca-918b-e146ceac107d, grade: 2}
+
+  - id: RAG-GOLD-019
+    question: Claude Opus 5 从发布到现在有哪些后续？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 93a5dfe3-e868-44aa-af63-ca56b62df079, grade: 2}
+      - {id: 1b960b84-2850-45f0-b833-897956d2cbe9, grade: 2}
+      - {id: 48bff481-f69f-4d67-9bc9-5a2738f5c9c5, grade: 1}
+      - {id: 69a8d5e3-6454-436b-9b9f-49ae06e77be7, grade: 1}
+    notes: 跨越 10 天：7-24 发布 → 7-25 争议 → 8-02/8-03 应用案例
+
+  - id: RAG-GOLD-020
+    question: DeepSeek V4-Flash 从发布到被产品接入，中间经过了什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 392e5ceb-2af6-43d6-8740-50ac95ef85cf, grade: 2}
+      - {id: 0b62b31d-c434-4974-8ba8-7233d9f61eff, grade: 2}
+      - {id: 18e5766c-0475-4d0c-8fde-8929132dda00, grade: 1}
+      - {id: 14be4039-77b9-42a8-ab33-960754a7750d, grade: 2}
+    notes: 一手 changelog 的 published_at 为空，只有 observed_at——考时间排序对缺失发布时间的处理
+
+  - id: RAG-GOLD-021
+    question: llama.cpp 对 DeepSeek 系列模型的支持是分几步加进去的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: e896d823-77a0-46ce-ae5e-34dea6471654, grade: 2}
+      - {id: f7597c70-7e8e-401c-b505-321043618670, grade: 2}
+      - {id: 8c4b9c40-5509-4cbd-9e00-cbc2a2aa72f3, grade: 2}
+      - {id: 62e2876a-aef6-4284-9a50-7565bd51f1e5, grade: 2}
+      - {id: ebfd0a1a-e9a7-4b84-a30f-ba85015780f9, grade: 1}
+    notes: 同一信源内的功能演进线，需要按版本号而非仅按时间排
+
+  - id: RAG-GOLD-022
+    question: 关于放慢 AI 发展速度的争论，最近是怎么发展的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: a3e3f006-f7b7-40b6-9514-66f9e5076cea, grade: 2}
+      - {id: fc702f51-a25b-4bb5-9a3a-e259c0058fc9, grade: 2}
+      - {id: f1fb676d-73d5-4614-9e38-4d26268dbdb2, grade: 2}
+      - {id: 5a8170f1-fd42-473c-a376-c63c2ddbaec7, grade: 1}
+
+  - id: RAG-GOLD-023
+    question: OpenAI Agents 的 Python 和 JS 两个 SDK 是怎么同步加上 GPT-5.6 支持的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: a8a941ae-3d1f-4778-ad2f-de05ae91d680, grade: 2}
+      - {id: bfec2cd0-c380-4fae-af1a-13abfbaf5f56, grade: 2}
+      - {id: 1d1fa214-c888-4ed6-91d8-11425d88b628, grade: 2}
+      - {id: ba9cc7cf-2fb3-4819-9208-b6dcb5551ef8, grade: 2}
+    notes: 跨仓库同步发布，考跨源事件对齐
+
+  - id: RAG-GOLD-024
+    question: Kimi K3 从传闻到开源，时间线是怎样的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 322c42df-050b-4e97-ba54-eb21571a71af, grade: 2}
+      - {id: ba1f2ee5-1aab-41dc-a517-b7910b898fd3, grade: 2}
+      - {id: 35c0ccc3-af39-4181-a42c-3aa98cf377c4, grade: 2}
+      - {id: 39db5867-b245-4569-86d0-1c1b6ec90808, grade: 1}
+    notes: 传闻（LMArena 疑似 Kivine）先于正式发布——考「传闻 vs 确认」是否被区分
+
+  - id: RAG-GOLD-025
+    question: OpenAI 官方 SDK 加上 gpt-5.6-sol 支持是什么时候的事，几个语言分别是哪个版本？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 87ef7256-c904-4900-b5ee-078ec4f4fccf, grade: 2}
+      - {id: b3de3675-eb3d-498d-af97-d3bfe459b6f4, grade: 2}
+      - {id: 845ddf30-bd70-4e4a-af52-d7ae366b9069, grade: 2}
+    must_contain: ["gpt-5.6-sol"]
+
+  - id: RAG-GOLD-026
+    question: Together AI 最近围绕推理性能做了哪些事，先后顺序如何？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 9d0504f4-986c-4064-8360-0cd7c55fe2a7, grade: 2}
+      - {id: 446a6b4a-0989-496d-b1d9-284ab26a1831, grade: 2}
+      - {id: 6221d75f-6237-47a7-a3d1-8084de27d73a, grade: 2}
+      - {id: cca66b4c-1470-41c7-acef-ce629ebe6958, grade: 1}
+    notes: 这些文档全部没有 heading（父块阶梯第 ③ 级）且 published_at 为空
+
+  - id: RAG-GOLD-027
+    question: Google Gen AI 的 Python 和 JavaScript SDK 2.13.0 分别带来了什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 8c170ada-4108-4609-a4e5-56faa1125354, grade: 2}
+      - {id: f5ac39ea-6797-4d6d-bd3e-0762d2974802, grade: 2}
+
+  - id: RAG-GOLD-028
+    question: Mistral AI 今年都发布过什么产品和模型？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: e9c04365-99e6-4246-a983-50b778f0a819, grade: 2}
+      - {id: 53784074-d82e-4d6a-85c6-0319ff7c8372, grade: 2}
+      - {id: 5db9bcab-46b1-4e85-825a-09aa6825091c, grade: 2}
+      - {id: 95115170-399e-4cdb-ada5-4e0e9ca0c34f, grade: 1}
+    notes: 跨度大于默认 30 天窗口，考「历史解释型不强制时间窗」的分支
+
+  - id: RAG-GOLD-029
+    question: 关于 AI 生成音乐的版权争议，最近有哪些进展？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: cf830cae-a5c1-4d95-8cd2-a471f90156d6, grade: 2}
+      - {id: ea238078-b3fb-4ced-abf3-62682cfcd0ed, grade: 2}
+      - {id: 6ec50583-33e8-4d47-8080-d9d47d44653c, grade: 2}
+      - {id: 3d444a67-51b5-4030-b8a8-1ca7fceefbe3, grade: 1}
+
+  - id: RAG-GOLD-030
+    question: llama.cpp 服务器默认端口这件事是怎么定下来的？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 7a7232f6-5fac-473f-933d-da4f32617cc0, grade: 2}
+    must_contain: ["9931"]
+    must_not_claim: ["默认端口将改为 6631"]
+    notes: 原文提交记录里先写 6631 后更正为 9931，同一篇内含被推翻的中间值——考是否引用了被更正的值
