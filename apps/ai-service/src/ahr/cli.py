@@ -14,12 +14,19 @@ import json
 import sys
 from dataclasses import replace
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import psycopg
 
 from ahr.config import get_settings
 from ahr.ingestion.registry import load_sources, summarize, sync_sources
 from ahr.observability import configure_logging
+
+if TYPE_CHECKING:
+    # Type-only, so the eval modules are still imported lazily inside the
+    # commands that need them — importing them at module load would pull the
+    # embedding and rerank clients into every `sync-sources` run.
+    from ahr.rag.eval.golden import GoldenSet
 
 DEFAULT_SOURCES_PATH = Path("/app/config/sources.yaml")
 
@@ -107,6 +114,38 @@ def cmd_select(args: argparse.Namespace) -> int:
     with psycopg.connect(get_settings().database_url) as connection:
         result = select_for_days(connection, days=args.days)
     print(json.dumps(result, indent=2))
+    return 0
+
+
+def cmd_backfill_support(args: argparse.Namespace) -> int:
+    """Score citations written before support scoring existed.
+
+    `rag_citation.support_score` was defined in V001 and filled by nothing until
+    2026-08-07, so the rows already in the table carry NULL. NULL means "not
+    scored" everywhere it is read, which is correct but leaves most of the
+    history unexplained on a page whose point is that every claim is checkable.
+
+    Scored with the same cross-encoder the live path and the offline evaluation
+    use — a third method would produce a number that is not comparable with
+    either.
+    """
+    import asyncio
+
+    from ahr.rag.rerank import RerankUnavailableError
+    from ahr.rag.rerank import build_client_from_env as build_reranker
+    from ahr.rag.support import backfill
+
+    async def run() -> dict[str, object]:
+        try:
+            reranker = build_reranker()
+        except RerankUnavailableError as exc:
+            return {"error": str(exc)}
+
+        async with reranker:
+            with psycopg.connect(get_settings().database_url) as connection:
+                return await backfill(connection, reranker, limit=args.limit)
+
+    print(json.dumps(asyncio.run(run()), indent=2, ensure_ascii=False))
     return 0
 
 
@@ -279,7 +318,8 @@ def cmd_rechunk(args: argparse.Namespace) -> int:
                     "SELECT count(*) FROM content_chunk WHERE content_revision_id = %s",
                     (revision_id,),
                 )
-                before += cursor.fetchone()[0]
+                row = cursor.fetchone()
+                before += int(row[0]) if row else 0
 
             written = chunk_revision(connection, revision_id, body)
             after += written
@@ -571,7 +611,9 @@ def _parse_weights(raw: str | None) -> dict[str, float] | None:
     return weights
 
 
-def _run_weight_sweep(golden: object, args: argparse.Namespace, snapshot: object) -> int:
+def _run_weight_sweep(
+    golden: GoldenSet, args: argparse.Namespace, snapshot: dict[str, object]
+) -> int:
     """Grid-search the fusion weights (AHR-RAG-400 §5).
 
     One embedding round trip per question, then the whole grid is scored over
@@ -612,7 +654,9 @@ def _run_weight_sweep(golden: object, args: argparse.Namespace, snapshot: object
         return 1
 
     # stdout gets the podium and the incumbent; the full grid goes to --output.
-    results = payload["results"]
+    raw_results = payload["results"]
+    results: list[dict[str, Any]] = raw_results if isinstance(raw_results, list) else []
+    config = payload.get("config")
     incumbent = next(
         (r for r in results if r["weights"] == {"dense": 1.0, "sparse": 0.6, "temporal": 0.15}),
         None,
@@ -621,7 +665,7 @@ def _run_weight_sweep(golden: object, args: argparse.Namespace, snapshot: object
         json.dumps(
             {
                 "run_id": payload["run_id"],
-                "combinations": payload["config"]["combinations"],
+                "combinations": config.get("combinations") if isinstance(config, dict) else None,
                 "top": results[:5],
                 "incumbent": incumbent,
             },
@@ -632,7 +676,9 @@ def _run_weight_sweep(golden: object, args: argparse.Namespace, snapshot: object
     return 0
 
 
-def _run_generation_eval(golden: object, args: argparse.Namespace, snapshot: object) -> int:
+def _run_generation_eval(
+    golden: GoldenSet, args: argparse.Namespace, snapshot: dict[str, object]
+) -> int:
     """Answer every golden question for real, then score the answers.
 
     Separate from the retrieval variants because it is a different kind of run:
@@ -662,24 +708,37 @@ def _run_generation_eval(golden: object, args: argparse.Namespace, snapshot: obj
         except RerankUnavailableError as exc:
             print(f"warning: reranker unavailable, support scores will be null: {exc}")
 
-        runner = measure_latency if args.variant == "latency" else run_generation_eval
-        kwargs: dict[str, object] = (
-            {"limit": args.gen_limit or 24}
-            if args.variant == "latency"
-            else {"limit": args.gen_limit}
-        )
+        # The two runners take a differently typed `limit`, so they are called
+        # separately rather than through one variable and a `**kwargs` bag. The
+        # bag needed three `type: ignore`s to compile, and those ignores were
+        # also hiding that `golden` had been annotated as `object`.
+        async def measure(reranker_client: object) -> dict[str, object]:
+            if args.variant == "latency":
+                return await measure_latency(
+                    golden,
+                    embedder=embedder,
+                    reranker=reranker_client,  # type: ignore[arg-type]
+                    llm=llm,
+                    limit=args.gen_limit or 24,
+                )
+            return await run_generation_eval(
+                golden,
+                embedder=embedder,
+                reranker=reranker_client,  # type: ignore[arg-type]
+                llm=llm,
+                limit=args.gen_limit,
+            )
 
         async with embedder, llm:
             if reranker is not None:
                 async with reranker:
-                    report = await runner(  # type: ignore[operator]
-                        golden, embedder=embedder, reranker=reranker, llm=llm, **kwargs
-                    )
+                    report = await measure(reranker)
             else:
-                report = await runner(  # type: ignore[operator]
-                    golden, embedder=embedder, reranker=None, llm=llm, **kwargs
-                )
-        report["config"]["corpus_snapshot"] = snapshot  # type: ignore[index]
+                report = await measure(None)
+
+        config = report.get("config")
+        if isinstance(config, dict):
+            config["corpus_snapshot"] = snapshot
         if args.output:
             Path(args.output).write_text(
                 json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -914,6 +973,12 @@ def main(argv: list[str] | None = None) -> int:
     usage = sub.add_parser("usage", help="report recorded LLM token usage")
     usage.add_argument("--days", type=int, default=30)
     usage.set_defaults(func=cmd_usage)
+
+    support = sub.add_parser(
+        "backfill-support", help="score citations that predate support scoring"
+    )
+    support.add_argument("--limit", type=int, default=200)
+    support.set_defaults(func=cmd_backfill_support)
 
     heat = sub.add_parser("heat", help="recompute hot_score for recent content")
     heat.add_argument("--days", type=int, default=7)

@@ -349,10 +349,20 @@ def select_query_terms(
     therefore measured here and used to drop terms the corpus says are common.
 
     Tokenisation is delegated to Postgres so query and index agree by
-    construction. That also exposes the known CJK limitation honestly: a run of
-    Chinese without spaces becomes one lexeme ("量化的是哪个模型"), which has a
-    document frequency of zero and is dropped. The channel does not pretend to
-    segment Chinese; ADR-0015 records why, and the golden set measures the cost.
+    construction — the same `ahr_cjk_bigrams` the stored vectors are built from
+    is applied to the question here. A Python-side segmenter would have been
+    easier and would have broken that property the first time either side
+    changed.
+
+    The CJK bigrams are what make the channel work in Chinese at all. Without
+    them a run of Chinese became a single lexeme ("量化的是哪个模型") with a
+    document frequency of zero, so it was dropped and the question fell back to
+    whatever ASCII it happened to contain — Recall@20 0.0588 on purely Chinese
+    questions against 0.5798 on ones with an ASCII proper noun (B2). Bigrams
+    over-generate, and the document-frequency ceiling below already removes what
+    that produces: a bigram spanning a word boundary is either very common or
+    absent, and both are dropped. That filter was written to avoid needing a
+    stop-word list; it turns out to serve this too.
     """
     with connection.cursor() as cursor:
         cursor.execute("SELECT count(*) FROM content_chunk WHERE search_vector IS NOT NULL")
@@ -363,7 +373,11 @@ def select_query_terms(
         cursor.execute(
             """
             WITH terms AS (
-                SELECT DISTINCT lexeme FROM unnest(to_tsvector('simple', %s))
+                SELECT DISTINCT lexeme
+                  FROM unnest(
+                           to_tsvector('simple', %s)
+                           || to_tsvector('simple', ahr_cjk_bigrams(%s))
+                       )
             )
             SELECT t.lexeme,
                    (SELECT count(*)
@@ -371,7 +385,7 @@ def select_query_terms(
                      WHERE c.search_vector @@ plainto_tsquery('simple', t.lexeme)) AS df
               FROM terms t
             """,
-            (split_scripts(question),),
+            (split_scripts(question), question),
         )
         rows = cursor.fetchall()
 

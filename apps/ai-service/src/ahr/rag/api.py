@@ -3,23 +3,22 @@
 `POST /rag/ask` answers in one response; `POST /rag/ask/stream` reports progress
 over SSE (`AHR-API-500` §4) and delivers the finished answer as its last event.
 
-**What is streamed, and why it is not the model's tokens.** The answer only
-becomes safe to display after generation finishes: `bind_citations` deletes
-`[n]` markers the model invented and renumbers the rest into reading order, and
-`check_invariants` can turn a complete, fluent answer into a refusal. Relaying
-raw tokens would put fabricated citation numbers on screen and then retract a
-paragraph the reader had already read — which is precisely what §4's
-"server resolves citations before delivery" exists to prevent.
+The stream carries three kinds of event: `stage` for progress, `delta` for the
+answer as it is written, and one final `answer` holding the verified result.
 
-So the stream carries stage progress, and the verified answer arrives whole.
-That addresses the thing a reader actually experiences: the latency run put p50
-at 10.5s, of which generation alone is 5.7s, and until now every second of it
-looked identical to a hung page.
+**Raw model tokens are still never relayed.** §4 requires the server to resolve
+citations before delivery, so what `delta` carries has already been through the
+same rules `bind_citations` applies to the finished string: invented `[n]`
+markers are deleted, real ones carry their final reading-order number, and
+nothing is sent at all until the answer is guaranteed not to become a refusal.
+`incremental.py` explains why that guarantee is reachable mid-stream — briefly,
+renumbering is left-to-right and the evidence set is known before generation
+starts, so only the "no citations means refusal" invariant needs the end of the
+text, and holding until the first resolved citation settles it.
 
-Token-level streaming would need the model to emit its claims *before* its prose
-so citations could be bound incrementally. That is a prompt-contract change with
-its own evaluation, not a presentation tweak, and it is recorded as open rather
-than quietly folded in here.
+This note used to say token streaming needed the model to emit its claims before
+its prose. That turned out not to be true, and the belief was never tested: the
+binding was already incremental, and the actual blocker was one invariant.
 """
 
 from __future__ import annotations
@@ -56,6 +55,22 @@ class AskRequest(BaseModel):
     question: str = Field(min_length=2, max_length=MAX_QUESTION_CHARS)
 
 
+def _bypass_cache(http: Request) -> bool:
+    """Honour `Cache-Control: no-cache` on the ask endpoints.
+
+    Not a test hook: an operator looking at a suspect answer needs to re-run it
+    against the live pipeline, and "ask again" is useless when the same cached
+    row comes back. The standard header already means exactly this, so it does
+    not need a bespoke query parameter.
+
+    It only skips *reading* the cache. The fresh answer is still stored, so a
+    diagnostic request also refreshes the entry rather than leaving the
+    suspect one in place.
+    """
+    directive = (http.headers.get("cache-control") or "").lower()
+    return "no-cache" in directive or "no-store" in directive
+
+
 async def _enforce_quota(http: Request) -> None:
     """Charge this call against the anonymous quota, or refuse it.
 
@@ -82,7 +97,7 @@ async def ask(request: AskRequest, http: Request) -> dict[str, object]:
         raise HTTPException(status_code=422, detail="question must not be blank")
 
     await _enforce_quota(http)
-    answer = await _answer(question)
+    answer = await _answer(question, bypass_cache=_bypass_cache(http))
     return answer.as_dict()
 
 
@@ -101,6 +116,52 @@ def history(limit: int = 20) -> dict[str, object]:
 
     with psycopg.connect(get_settings().database_url) as connection:
         return {"conversations": load_history(connection, min(limit, HISTORY_LIMIT))}
+
+
+@router.get("/stats")
+async def stats(days: int = 30) -> dict[str, object]:
+    """Cost, latency and corpus scale, from rows the system already writes.
+
+    Read-only and unmetered, like the permalink: it aggregates records rather
+    than producing anything.
+    """
+    import psycopg
+
+    from ahr.config import get_settings
+    from ahr.rag.cache import client as cache_client
+    from ahr.rag.cache import stats as cache_stats
+    from ahr.rag.ops import corpus_summary, cost_summary, latency_summary
+
+    window = max(1, min(days, 365))
+    with psycopg.connect(get_settings().database_url) as connection:
+        return {
+            "cost": cost_summary(connection, days=window),
+            "latency": latency_summary(connection, days=window),
+            "corpus": corpus_summary(connection),
+            # A cache nobody can measure is a cache nobody should trust.
+            "cache": await cache_stats(cache_client()),
+        }
+
+
+@router.get("/query/{query_id}")
+def conversation(query_id: str) -> dict[str, object]:
+    """One answer, addressable by id.
+
+    Read-only and unmetered: it replays a row that was already paid for. Putting
+    it behind the ask quota would make a shared link fail for the person it was
+    shared with, which is the one thing a permalink must not do.
+    """
+    import psycopg
+
+    from ahr.config import get_settings
+    from ahr.rag.service import load_conversation
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        found = load_conversation(connection, query_id)
+
+    if found is None:
+        raise HTTPException(status_code=404, detail="conversation not found")
+    return found
 
 
 def _clients() -> tuple[Any, Any, Any]:
@@ -126,7 +187,13 @@ def _clients() -> tuple[Any, Any, Any]:
     return embedder, reranker, llm
 
 
-async def _answer(question: str, on_stage: Any = None) -> Answer:
+async def _answer(
+    question: str,
+    on_stage: Any = None,
+    on_delta: Any = None,
+    *,
+    bypass_cache: bool = False,
+) -> Answer:
     embedder, reranker, llm = _clients()
     async with embedder, llm:
         if reranker is not None:
@@ -138,6 +205,8 @@ async def _answer(question: str, on_stage: Any = None) -> Answer:
                     llm=llm,
                     asked_at=datetime.now(UTC),
                     on_stage=on_stage,
+                    on_delta=on_delta,
+                    bypass_cache=bypass_cache,
                 )
         return await answer_question(
             question,
@@ -146,6 +215,8 @@ async def _answer(question: str, on_stage: Any = None) -> Answer:
             llm=llm,
             asked_at=datetime.now(UTC),
             on_stage=on_stage,
+            on_delta=on_delta,
+            bypass_cache=bypass_cache,
         )
 
 
@@ -166,6 +237,7 @@ async def ask_stream(request: AskRequest, http: Request) -> StreamingResponse:
     # Provider failures are raised before the response starts, so a missing key
     # is still a 503 rather than a 200 whose first event says it failed.
     _clients()
+    bypass = _bypass_cache(http)
 
     async def events() -> AsyncIterator[str]:
         queue: asyncio.Queue[tuple[str, dict[str, Any]] | None] = asyncio.Queue()
@@ -173,9 +245,14 @@ async def ask_stream(request: AskRequest, http: Request) -> StreamingResponse:
         async def on_stage(name: str, detail: dict[str, Any]) -> None:
             await queue.put(("stage", {"stage": name, **detail}))
 
+        async def on_delta(text: str) -> None:
+            await queue.put(("delta", {"text": text}))
+
         async def run() -> None:
             try:
-                answer = await _answer(question, on_stage=on_stage)
+                answer = await _answer(
+                    question, on_stage=on_stage, on_delta=on_delta, bypass_cache=bypass
+                )
                 await queue.put(("answer", answer.as_dict()))
             except Exception as exc:  # noqa: BLE001 - the stream must report, not 500
                 logger.exception("streamed answer failed")

@@ -21,6 +21,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
 DISPLAY_TIMEZONE = ZoneInfo("Asia/Shanghai")
@@ -80,6 +81,45 @@ class RetrievalPlan:
             "freshness_required": self.freshness_required,
             "notes": list(self.notes),
         }
+
+
+def plan_from_dict(payload: dict[str, Any] | None) -> RetrievalPlan | None:
+    """Rebuild a plan from its serialised form.
+
+    Needed by the answer cache: a replayed answer has to carry the plan it was
+    produced with, or the page loses the resolved time window and the question
+    type — the two things that show a reader "最近" became a real interval. A
+    cached answer should differ from a fresh one only in being marked as cached.
+
+    Returns None on anything malformed rather than raising: this is reading back
+    a cache entry, and a bad entry should degrade to "no plan shown", never to a
+    failed request.
+    """
+    if not payload:
+        return None
+    try:
+        window = payload.get("time_range")
+        time_range = (
+            TimeRange(
+                start=datetime.fromisoformat(str(window["from"])),
+                end=datetime.fromisoformat(str(window["to"])),
+                basis=str(window.get("basis", "either")),
+                explicit=bool(window.get("explicit", False)),
+                label=str(window.get("label", "")),
+            )
+            if window
+            else None
+        )
+        return RetrievalPlan(
+            question=str(payload.get("question", "")),
+            query_type=str(payload.get("query_type", "explainer")),
+            time_range=time_range,
+            asked_at=datetime.fromisoformat(str(payload["asked_at"])),
+            freshness_required=bool(payload.get("freshness_required", False)),
+            notes=tuple(str(n) for n in payload.get("notes") or ()),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 # Ordered: the first match wins, so specific phrases precede general ones.

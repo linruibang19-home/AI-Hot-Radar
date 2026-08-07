@@ -136,6 +136,74 @@ def test_an_answer_without_citations_binds_nothing() -> None:
 
 
 # --------------------------------------------------------------------------
+# recovering grounding the model put somewhere else
+#
+# Both cases below were measured on the 08-07 generation run, where six
+# answerable questions were published as refusals. None of the six was a
+# retrieval failure — the evidence was there and the model had used it. The
+# answers were discarded on the way out.
+# --------------------------------------------------------------------------
+
+
+def test_citations_are_recovered_from_claims_when_the_prose_has_no_markers() -> None:
+    """RAG-GOLD-088: four claims naming six passages, zero bound citations.
+
+    `claims[].evidence_ids` is where the contract asks for the grounding and
+    the model supplied it; reading only the prose threw away an answer whose
+    every claim carried evidence.
+    """
+    _text, citations, dangling, _lim = bind_citations(
+        "权重预计在发布后一周内放出。",
+        [{"text": "权重预计一周内放出", "evidence_ids": ["E2", "E1"]}],
+        _evidence(),
+    )
+    assert [c.chunk_id for c in citations] == ["chunk-2", "chunk-1"]
+    assert [c.number for c in citations] == [1, 2]
+    assert dangling == []
+
+
+def test_recovered_citations_carry_the_claim_they_came_from() -> None:
+    _text, citations, _d, _lim = bind_citations(
+        "一句没有编号的结论。",
+        [{"text": "这是被断言的事实", "evidence_ids": ["E1"]}],
+        _evidence(),
+    )
+    assert citations[0].claim_text == "这是被断言的事实"
+
+
+def test_a_recovered_binding_is_declared_in_limitations() -> None:
+    """The reader is looking at sources that are not anchored to a sentence.
+    Saying so costs one line; not saying so makes a degraded answer look
+    identical to a clean one."""
+    _text, _c, _d, limitations = bind_citations(
+        "一句没有编号的结论。", [{"text": "t", "evidence_ids": ["E1"]}], _evidence()
+    )
+    assert any("正文中标注" in text for text in limitations)
+
+
+def test_claims_never_top_up_an_answer_that_anchored_its_own_citations() -> None:
+    """Where the model did place markers, those are the more precise signal:
+    they say *which sentence* rests on which passage. Adding the rest of
+    `claims` on top would attach sources to sentences it never tied them to."""
+    _text, citations, _d, _lim = bind_citations(
+        "只标了一条 [E1]。",
+        [{"text": "t", "evidence_ids": ["E1", "E2", "E3"]}],
+        _evidence(),
+    )
+    assert [c.chunk_id for c in citations] == ["chunk-1"]
+
+
+def test_an_invented_id_in_claims_is_dropped_like_one_in_the_prose() -> None:
+    """The recovery path is not a hole in the verification. E9 was never handed
+    to the model, so it resolves to nothing here too."""
+    _text, citations, dangling, _lim = bind_citations(
+        "结论。", [{"text": "t", "evidence_ids": ["E9"]}], _evidence()
+    )
+    assert citations == []
+    assert dangling == ["E9"]
+
+
+# --------------------------------------------------------------------------
 # invariants
 # --------------------------------------------------------------------------
 
@@ -217,3 +285,34 @@ def test_unparseable_output_degrades_to_a_refusal_shape() -> None:
     parsed = parse_model_output("这不是 JSON")
     assert parsed["answer_markdown"] == ""
     assert parsed["limitations"]
+
+
+def test_a_bare_markdown_answer_is_recovered_rather_than_discarded() -> None:
+    """RAG-GOLD-020 and -034: the model answered in markdown instead of JSON.
+
+    The answers were complete and correctly marked up; only the envelope was
+    missing, and the reader was told the corpus had nothing on a question the
+    corpus had answered.
+    """
+    parsed = parse_model_output("DeepSeek V4-Flash 于 7 月 31 日发布 [E1][E2]。")
+    assert parsed["answer_markdown"].startswith("DeepSeek")
+    assert parsed["claims"] == []
+    assert parsed["limitations"]
+
+
+def test_recovery_needs_a_citation_marker_to_fire() -> None:
+    """The marker is the only evidence available at this point that the model
+    was answering from the evidence at all. Without one, free prose is exactly
+    the ungrounded output §10 forbids publishing."""
+    assert parse_model_output("我觉得应该是七月发布的。")["answer_markdown"] == ""
+
+
+def test_truncated_json_is_never_shown_as_prose() -> None:
+    """A cut-off completion is a different failure, and recovering it would
+    render `{"answer_markdown": "…` to the reader as the answer."""
+    parsed = parse_model_output('{"answer_markdown": "答案 [E1]，还没写完')
+    assert parsed["answer_markdown"] == ""
+
+
+def test_a_json_array_is_not_an_answer() -> None:
+    assert parse_model_output('["答案 [E1]"]')["answer_markdown"] == ""

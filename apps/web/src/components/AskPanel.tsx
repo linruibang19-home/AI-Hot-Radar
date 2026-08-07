@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { RetrievalTrace } from "@/components/RetrievalTrace";
 import { formatDate } from "@/lib/datetime";
 
 /**
@@ -26,6 +27,9 @@ interface Citation {
   sourceTier: string;
   storySlug: string | null;
   independentSources: number;
+  /** Cross-encoder score of (claim, cited passage). Null means not scored —
+      a reranker outage must not render as "unsupported". */
+  supportScore?: number | null;
 }
 
 interface Considered {
@@ -36,7 +40,7 @@ interface Considered {
   publishedAt: string | null;
 }
 
-interface AnswerPayload {
+export interface AnswerPayload {
   queryId?: string | null;
   askedAt?: string | null;
   question?: string;
@@ -51,6 +55,30 @@ interface AnswerPayload {
     time_range?: { label?: string; from?: string; to?: string } | null;
   } | null;
   metrics?: { total_ms?: number; evidence?: number; degraded?: string[] };
+  /** Only the permalink carries this; the history list does not fetch it. */
+  trace?: TraceRow[];
+}
+
+/** One candidate's journey through the funnel. See `rag/trace.py`. */
+export interface TraceRow {
+  chunkId: string;
+  itemId: string | null;
+  title: string;
+  sourceName: string;
+  sourceTier: string;
+  denseRank: number | null;
+  denseScore: number | null;
+  sparseRank: number | null;
+  sparseScore: number | null;
+  channels: string;
+  boosts: string[];
+  fusedRank: number | null;
+  fusedScore: number | null;
+  rerankRank: number | null;
+  rerankScore: number | null;
+  finalRank: number | null;
+  outcome: string;
+  excerpt: string;
 }
 
 /** What the planner decided, in words a reader can check. */
@@ -70,6 +98,64 @@ const QUERY_TYPES: Record<string, string> = {
  * algorithm — the reader deciding whether to believe a claim deserves the same
  * information the ranker used.
  */
+/**
+ * Groundedness, shown per citation.
+ *
+ * `rag_citation.support_score` was defined for this in V001 and was NULL for
+ * every row until now: the offline evaluation computed it for 90 golden
+ * questions and the live path never did. The reader looking at one answer had
+ * no way to tell a well-supported citation from one in the tail.
+ *
+ * 0.30 is the threshold the evaluation reports against, reused deliberately —
+ * a citation the page calls supported must be one the report counted.
+ */
+const SUPPORT_THRESHOLD = 0.3;
+
+function supportBadge(score: number | null | undefined) {
+  // Not scored is not the same as unsupported, and must not look like it.
+  if (score === null || score === undefined) return null;
+  const supported = score >= SUPPORT_THRESHOLD;
+  return (
+    <span
+      className={`support-badge ${supported ? "support-ok" : "support-weak"}`}
+      title={`证据支持度 ${score.toFixed(3)}（交叉编码器对「论断 × 被引段落」打分，阈值 ${SUPPORT_THRESHOLD}）`}
+    >
+      支持度 {score.toFixed(2)}
+    </span>
+  );
+}
+
+/**
+ * Starter questions, each chosen to demonstrate a different property.
+ *
+ * The page shipped with none, so a first-time visitor faced an empty box with
+ * no idea what this corpus can answer — and the refusal example in particular
+ * is something nobody would think to try, while being the behaviour that most
+ * distinguishes this from a chat box.
+ *
+ * Tied to the live corpus: the first three are answerable today and the fourth
+ * names a model that does not exist. Re-check them when the corpus moves on;
+ * an example that has gone stale is worse than no example.
+ */
+const EXAMPLES: { question: string; shows: string }[] = [
+  {
+    question: "使用 MXFP4 量化的是哪个模型？",
+    shows: "精确型号——纯语义检索会召回成 NVFP4",
+  },
+  {
+    question: "Anthropic 的模型测试引发了几起真实事故？",
+    shows: "4 家独立信源佐证同一事件",
+  },
+  {
+    question: "最近一周 llama.cpp 修复了哪些问题？",
+    shows: "「最近一周」被解析成绝对时间区间",
+  },
+  {
+    question: "Qwen4-Ultra 的参数量是多少？",
+    shows: "语料里没有 → 拒答而不是编造",
+  },
+];
+
 const TIERS: Record<string, { label: string; className: string }> = {
   primary: { label: "一手", className: "tier-primary" },
   secondary: { label: "媒体", className: "tier-secondary" },
@@ -147,6 +233,9 @@ interface StageEvent {
   found?: number;
   evidence?: number;
   time_range?: string | null;
+  /** `cache` only: which layer answered. */
+  outcome?: string;
+  similarity?: number;
   /** `generate` reports when it begins, because it is the one stage whose end
       coincides with the answer. Every other stage reports on completion. */
   started?: boolean;
@@ -211,12 +300,22 @@ function renderAnswerBody(
   return blocks;
 }
 
-export function AskPanel() {
+/**
+ * @param initial A stored conversation to show on load. The permalink page
+ * passes the row it rendered on the server, so the shared link and the live ask
+ * box are the same component rather than two renderers that can drift apart.
+ */
+export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<AnswerPayload | null>(null);
+  const [answer, setAnswer] = useState<AnswerPayload | null>(initial ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stages, setStages] = useState<StageEvent[]>([]);
+  // The answer as it is written. Everything here has already been resolved
+  // server-side — invented citation numbers are gone and the real ones carry
+  // their final number — and nothing arrives until the answer is guaranteed not
+  // to become a refusal, so none of it is ever taken back.
+  const [streamed, setStreamed] = useState("");
   const [activeCite, setActiveCite] = useState<number | null>(null);
   const [history, setHistory] = useState<AnswerPayload[]>([]);
   const [openHistory, setOpenHistory] = useState<string | null>(null);
@@ -255,6 +354,7 @@ export function AskPanel() {
     setError(null);
     setAnswer(null);
     setStages([]);
+    setStreamed("");
     setActiveCite(null);
 
     try {
@@ -293,9 +393,15 @@ export function AskPanel() {
           const payload = JSON.parse(data);
           if (event === "stage") {
             setStages((prior) => [...prior, payload as StageEvent]);
+          } else if (event === "delta") {
+            setStreamed((prior) => prior + String(payload.text ?? ""));
           } else if (event === "answer") {
             const landed = payload as AnswerPayload;
             setAnswer(landed);
+            // The verified answer replaces the streamed copy. They are the same
+            // text by construction — the tests pin that — so this swaps in the
+            // version that also carries the citations the markers link to.
+            setStreamed("");
             // Prepend rather than refetch: the row is already committed, and a
             // round trip would show the reader their own answer arriving twice.
             setHistory((prior) => [
@@ -320,12 +426,17 @@ export function AskPanel() {
   // reader watching a finished checklist for six seconds.
   const done = new Set(stages.filter((s) => !s.started).map((s) => s.stage));
   const running = stages.filter((s) => s.started).map((s) => s.stage);
+  const cacheHit = stages.find((s) => s.stage === "cache" && s.outcome !== "miss");
   const found = stages.find((s) => s.stage === "fuse")?.found;
   const evidence = stages.find((s) => s.stage === "select")?.evidence;
 
   // The answer on screen is already rendered in full above; repeating it in the
   // history list would show the same thing twice.
   const past = history.filter((row) => !answer || row.queryId !== answer.queryId);
+
+  // On a permalink the answer already *is* the page, so offering a link to it
+  // would be a control that goes nowhere.
+  const isPermalink = initial?.queryId != null && initial.queryId === answer?.queryId;
 
   return (
     <>
@@ -349,11 +460,53 @@ export function AskPanel() {
         </button>
       </form>
 
+      {/* Only before the first question: once there is an answer on screen the
+          examples are clutter, and the history list below already offers
+          things to re-read. */}
+      {!answer && !loading && !streamed && (
+        <div className="ask-examples">
+          <span className="ask-examples-label">试试：</span>
+          {EXAMPLES.map((example) => (
+            <button
+              key={example.question}
+              type="button"
+              className="ask-example"
+              title={example.shows}
+              onClick={() => {
+                setQuestion(example.question);
+                void ask(example.question);
+              }}
+            >
+              {example.question}
+              <span className="ask-example-shows">{example.shows}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* The trace stays. It used to be removed the moment the answer landed,
           which threw away the one artefact that shows *how* the answer was
           reached — the thing that distinguishes this from a chat box. Open
           while running, collapsed once there is an answer to read first. */}
-      {stages.length > 0 && (
+      {/* A cache hit runs no pipeline, so the four-step list has nothing to
+          report and rendered as an empty box. Saying which layer answered is
+          both more honest and more useful — a reader who sees a stale-looking
+          answer should be able to tell it came from cache. */}
+      {cacheHit && (
+        <div className="ask-trace ask-cache-hit">
+          <strong>命中缓存</strong>
+          {cacheHit.outcome === "semantic" ? (
+            <span className="ask-step-detail">
+              语义近邻 · 相似度 {cacheHit.similarity?.toFixed(4)}
+            </span>
+          ) : (
+            <span className="ask-step-detail">同一问题、同一份语料</span>
+          )}
+          <span className="ask-step-detail">未调用模型</span>
+        </div>
+      )}
+
+      {stages.length > 0 && !cacheHit && (
         <details className="ask-trace" open={loading} aria-live="polite">
           <summary className="ask-trace-summary">
             检索过程
@@ -396,6 +549,28 @@ export function AskPanel() {
       {error && (
         <div className="ask-answer" role="alert">
           <p className="filter-note">{error}</p>
+        </div>
+      )}
+
+      {/* The answer while it is still being written. Rendered with the same
+          renderer as the finished one, so the paragraph the reader starts on
+          does not reflow when the final event lands. Citation markers show as
+          plain numbers here and become clickable once the citation list arrives
+          with the verified answer — the number itself never changes.
+
+          `.ask-draft`, deliberately *not* `.ask-body`: a partial answer and a
+          verified one must not look the same to anything reading the DOM.
+          Reusing the class made "the answer has landed" indistinguishable from
+          "the first sentence has landed", and three browser tests that had
+          waited on `.ask-body` started asserting against a page whose sources
+          had not been delivered yet. `aria-busy` says the same thing to a
+          screen reader. */}
+      {!answer && streamed && (
+        <div className="ask-answer" aria-busy="true">
+          <div className="ask-draft">{renderAnswerBody(streamed, [], () => {}, null)}</div>
+          <p className="ask-meta ask-streaming" aria-live="polite">
+            正在生成…
+          </p>
         </div>
       )}
 
@@ -514,6 +689,7 @@ export function AskPanel() {
                               {citation.independentSources} 家独立信源
                             </a>
                           )}
+                          {supportBadge(citation.supportScore)}
                         </div>
                         <div className="ask-source-meta">
                           {citation.sourceName}
@@ -539,7 +715,22 @@ export function AskPanel() {
             {answer.citations.length > 0 &&
               ` · ${new Set(answer.citations.map((c) => c.sourceName)).size} 个信源`}
             {answer.metrics?.degraded?.length ? ` · 降级：${answer.metrics.degraded.join(", ")}` : ""}
+            {/* Addressable. The id has always been returned with the answer;
+                until there was a route that read it back it pointed nowhere. */}
+            {answer.queryId && !isPermalink && (
+              <>
+                {" · "}
+                <a className="ask-permalink" href={`/ask/${answer.queryId}`}>
+                  永久链接
+                </a>
+              </>
+            )}
           </p>
+
+          {/* Directly under the answer it explains. Rendered after the history
+              list it was unreadable — the reader had to scroll past twenty
+              other conversations to reach the explanation of the one above. */}
+          {answer.trace && answer.trace.length > 0 && <RetrievalTrace rows={answer.trace} />}
         </div>
       )}
 
@@ -581,6 +772,13 @@ export function AskPanel() {
 
                   {isOpen && (
                     <div className="ask-history-body">
+                      {row.queryId && (
+                        <p className="ask-meta">
+                          <a className="ask-permalink" href={`/ask/${row.queryId}`}>
+                            打开这条问答 ↗
+                          </a>
+                        </p>
+                      )}
                       {row.refused ? (
                         <p className="filter-note">
                           {row.refusalReason ?? "检索到的内容不足以支持一个可核实的回答。"}

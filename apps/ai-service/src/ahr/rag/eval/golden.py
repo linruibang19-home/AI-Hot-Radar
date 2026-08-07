@@ -58,6 +58,10 @@ class GoldenQuestion:
     relevant_items: tuple[RelevantItem, ...] = ()
     must_contain: tuple[str, ...] = ()
     must_not_claim: tuple[str, ...] = ()
+    # The false thing an answer must not assert, written as a sentence rather
+    # than a keyword. `must_not_claim` is substring matching and cannot tell a
+    # denial from an assertion; this is what the abstention judge is given.
+    presupposition: str | None = None
     probe: str | None = None
     notes: str | None = None
 
@@ -140,6 +144,7 @@ def _parse_question(raw: dict[str, Any], category: str, path: Path) -> GoldenQue
         relevant_items=tuple(relevant),
         must_contain=tuple(str(v) for v in raw.get("must_contain") or ()),
         must_not_claim=tuple(str(v) for v in raw.get("must_not_claim") or ()),
+        presupposition=raw.get("presupposition"),
         probe=raw.get("probe"),
         notes=raw.get("notes"),
     )
