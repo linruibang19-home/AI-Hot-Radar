@@ -24,6 +24,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from ahr.ingestion.fulltext_gate import Decision, GateResult
+from ahr.ingestion.health import next_state_after_failure
 from ahr.ingestion.models import DiscoveredDocument, SourceConfig, SourceCursor
 from ahr.ingestion.titles import resolve_title
 from ahr.ingestion.urls import canonicalize_url, content_hash, url_hash
@@ -473,3 +474,47 @@ def update_source_state(
                 """,
                 (state, source_id),
             )
+
+
+def record_source_failure(
+    connection: Any,
+    source_id: str,
+    *,
+    error_code: str,
+    error_detail: str,
+    retryable: bool,
+) -> str:
+    """Advance the failure ladder of AHR-SOURCE-900 §5 and return the new state.
+
+    The decision needs the row as it stands before the increment — the failure
+    count, the last success, and the verdict the source currently holds — so it
+    is read here and handed to `health.next_state_after_failure`, which is where
+    the rule lives and where it is tested.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT runtime_state, consecutive_failures, last_success_at, created_at, now()
+              FROM source WHERE id = %s FOR UPDATE
+            """,
+            (source_id,),
+        )
+        row = cursor.fetchone()
+
+    if row is None:
+        # Nothing to demote. The caller still reports the error.
+        return "QUARANTINED"
+
+    state = next_state_after_failure(
+        current_state=str(row[0]),
+        error_code=error_code,
+        retryable=retryable,
+        consecutive_failures=int(row[1] or 0),
+        last_success_at=row[2],
+        created_at=row[3],
+        now=row[4],
+    )
+    update_source_state(
+        connection, source_id, state=state, error_code=error_code, error_detail=error_detail
+    )
+    return state
