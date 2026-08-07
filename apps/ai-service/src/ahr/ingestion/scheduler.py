@@ -142,7 +142,11 @@ async def run_tick(*, batch_size: int = 20, max_documents: int = 5) -> TickResul
                         source, fetcher, connection, token=token, max_documents=max_documents
                     )
                     result.persisted += outcome.persisted
-                    if outcome.state in ("ACTIVE", "METADATA_ONLY"):
+                    # Judged on whether the poll raised, not on the resulting
+                    # state: a source below the demotion threshold keeps its
+                    # ACTIVE verdict (AHR-SOURCE-900 §5), and counting that as a
+                    # success would hide the failure from the tick log entirely.
+                    if outcome.error_code is None:
                         result.succeeded += 1
                     else:
                         result.failed += 1

@@ -34,6 +34,7 @@ from ahr.ingestion.repository import (
     finish_crawl_run,
     load_cursor,
     persist_document,
+    record_source_failure,
     save_cursor,
     start_crawl_run,
     update_source_state,
@@ -131,7 +132,6 @@ async def ingest_source(
     try:
         batch = await adapter.discover(source, cursor_state)
     except IngestionError as exc:
-        result.state = "RATE_LIMITED" if exc.code == "RATE_LIMITED" else "QUARANTINED"
         result.error_code = exc.code
         result.errors.append(str(exc)[:160])
         finish_crawl_run(
@@ -143,8 +143,15 @@ async def ingest_source(
             error_code=exc.code,
             error_detail=str(exc),
         )
-        update_source_state(
-            connection, source.id, state=result.state, error_code=exc.code, error_detail=str(exc)
+        # The ladder in AHR-SOURCE-900 §5 decides the verdict. Quarantining here
+        # on the first error — which is what this used to do — meant a single
+        # DNS blip sidelined eighteen working first-party sources at once.
+        result.state = record_source_failure(
+            connection,
+            source.id,
+            error_code=exc.code,
+            error_detail=str(exc),
+            retryable=exc.retryable,
         )
         connection.commit()
         return result
