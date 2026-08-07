@@ -65,6 +65,11 @@ services:
       REDIS_URL: redis://redis:6379/0
       WORKER_BASE_URL: http://ai-service:8000
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN must be set}
+      # No default. Unset, core-api registers no credential and the admin
+      # API refuses everything — but failing at startup is louder than a
+      # console nobody can log into. Generate with `openssl rand -hex 32`.
+      AHR_ADMIN_BOOTSTRAP_TOKEN: ${AHR_ADMIN_BOOTSTRAP_TOKEN:?AHR_ADMIN_BOOTSTRAP_TOKEN must be set}
+      AHR_ADMIN_VIEWER_TOKEN: ${AHR_ADMIN_VIEWER_TOKEN:?AHR_ADMIN_VIEWER_TOKEN must be set}
     env_file:
       - path: .env
         required: true
@@ -148,6 +153,9 @@ services:
       # Absolute URLs in og:, canonical and sitemap.xml. Left at localhost these
       # would ship a sitemap pointing at the visitor's own machine.
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL must be the public origin}
+      # Read-only by role: the web tier renders the source console and never
+      # mutates, so compromising this container does not hand over ingestion.
+      AHR_ADMIN_VIEWER_TOKEN: ${AHR_ADMIN_VIEWER_TOKEN:?AHR_ADMIN_VIEWER_TOKEN must be set}
     depends_on:
       - core-api
       - ai-service
