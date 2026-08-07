@@ -13,6 +13,7 @@ questions:
     question: Qwen4-Ultra 的参数量是多少？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "存在一个名为 Qwen4-Ultra 的模型，并且它有具体的参数量"
     relevant_items: []
     must_not_claim: ["Qwen4-Ultra"]
     notes: A 型。语料里有 Qwen3.8-Max、Qwen3.6、Qwen3.5，没有 Qwen4-Ultra。近邻实体密集，最容易被编造
@@ -21,6 +22,7 @@ questions:
     question: llama.cpp b10999 版本修了什么？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "llama.cpp 存在 b10999 这个版本，并且它修复了某些问题"
     relevant_items: []
     notes: A 型。语料含 b10211–b10240 连续版本，b10999 不存在。考版本号近邻不被当成命中
 
@@ -28,6 +30,7 @@ questions:
     question: 商汤已经把 SenseNova U1.5 正式版开源了，许可证是什么？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "商汤已经开源了 SenseNova U1.5 的正式版"
     relevant_items: []
     must_not_claim: ["正式版"]
     notes: B 型。原文只发布了 Lite-Preview 预览版，问题预设了"正式版已开源"。许可证信息语料中没有
@@ -36,6 +39,7 @@ questions:
     question: Anthropic 因为那三起事故被罚了多少钱？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "Anthropic 因为那三起事故被处以了罚款"
     relevant_items: []
     notes: B 型。事故是真的，罚款是虚构的。周边证据充足，最容易顺着语境编下去
 
@@ -43,6 +47,7 @@ questions:
     question: DeepSeek V5 什么时候发布？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "DeepSeek V5 有一个已知的发布时间"
     relevant_items: []
     notes: A 型 + 未来时。语料只到 V4-Flash
 
@@ -50,6 +55,7 @@ questions:
     question: MXFP8 量化格式的精度损失有多少？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "存在 MXFP8 量化格式，并且它有已知的精度损失数据"
     relevant_items: []
     must_not_claim: ["MXFP4", "NVFP4"]
     notes: A 型。MXFP4 和 NVFP4 都存在，MXFP8 不存在。稠密检索几乎必然召回前两者
@@ -58,6 +64,7 @@ questions:
     question: 谷歌地球那个功能下架后，谷歌赔偿了哪些用户？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "谷歌对该功能下架进行了用户赔偿"
     relevant_items: []
     notes: B 型。下架属实，赔偿未发生
 
@@ -65,6 +72,7 @@ questions:
     question: OpenAI 的 Astra 模型开源了吗？权重在哪下载？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "OpenAI 的 Astra 模型已经开源并可下载权重"
     relevant_items: []
     notes: B 型。Astra 存在且解了数学题，但语料未提开源或权重
 
@@ -72,6 +80,7 @@ questions:
     question: 2025 年 1 月有哪些重要的 AI 发布？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "2025 年 1 月有本语料覆盖到的重要 AI 发布"
     relevant_items: []
     notes: 时间窗为空。正确行为是说明检索时间范围与语料覆盖，而不是用常识补答
 
@@ -79,6 +88,7 @@ questions:
     question: Kimi K3 在 MMLU 上得了多少分？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "Kimi K3 有一个已知的 MMLU 分数"
     relevant_items: []
     notes: B 型。K3 的参数量、贡献者、量化格式语料里都有，唯独没有 MMLU 分数
 
@@ -86,6 +96,7 @@ questions:
     question: Cloudflare 的 @cloudflare/computer 正式版定价是多少？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "@cloudflare/computer 已有正式版并公布了定价"
     relevant_items: []
     must_not_claim: ["正式版"]
     notes: B 型。原文明确是 early preview，问题预设了正式版和定价
@@ -94,6 +105,7 @@ questions:
     question: 智谱和月之暗面签署了战略合作协议，内容是什么？
     asked_at: 2026-08-03T23:59:00+08:00
     answerable: false
+    presupposition: "智谱与月之暗面签署了战略合作协议"
     relevant_items: []
     notes: B 型。两个中文实体都在语料中，合作事件是虚构的
 

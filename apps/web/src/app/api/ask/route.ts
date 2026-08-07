@@ -41,6 +41,40 @@ export async function GET() {
   }
 }
 
+/**
+ * Carry the caller's address to ai-service.
+ *
+ * The quota is per caller, and ai-service identifies the caller from the first
+ * `X-Forwarded-For` entry. This relay sat between the two and dropped it, so
+ * every request arrived wearing this container's address: the anonymous limit of
+ * 3/min and 20/day was being applied to the entire site at once rather than to
+ * each visitor. Two people asking questions in the same minute would refuse each
+ * other, and twenty questions would close the feature for everyone until
+ * midnight — with nothing in the logs to say why.
+ *
+ * Caddy sets the header from the real connection; passing it through unchanged
+ * keeps the original client in first position, which is the entry ai-service
+ * reads. Locally there is no proxy and no header, so all callers share a bucket
+ * — which is correct, because locally they are all the same caller.
+ */
+function forwardedFor(request: Request): Record<string, string> {
+  const chain = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip");
+  return chain ? { "x-forwarded-for": chain } : {};
+}
+
+/**
+ * Pass `Cache-Control: no-cache` through to ai-service.
+ *
+ * Answers are cached (ADR-0017), and someone looking at a suspect answer needs
+ * a way to re-run it against the live pipeline — "ask it again" does nothing
+ * when the same cached row comes back. The standard directive already means
+ * this, so it travels rather than being reinvented as a query parameter.
+ */
+function cacheDirective(request: Request): Record<string, string> {
+  const directive = request.headers.get("cache-control");
+  return directive ? { "cache-control": directive } : {};
+}
+
 export async function POST(request: Request) {
   const streaming = new URL(request.url).searchParams.get("stream") === "1";
 
@@ -66,7 +100,11 @@ export async function POST(request: Request) {
     const path = streaming ? "/rag/ask/stream" : "/rag/ask";
     const response = await fetch(`${AI_SERVICE_URL}${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...forwardedFor(request),
+        ...cacheDirective(request),
+      },
       body: JSON.stringify({ question }),
       signal: controller.signal,
       cache: "no-store",
@@ -74,6 +112,19 @@ export async function POST(request: Request) {
 
     if (!response.ok) {
       console.error(`ai-service ${path} responded ${response.status}`);
+
+      // A quota refusal is not a failure, and telling someone "请稍后重试" when
+      // the answer is "you have used today's twenty" sends them into a retry
+      // loop against a wall. ai-service already writes the reason in Chinese;
+      // relay it, and keep the 429 so the client can tell the two apart.
+      if (response.status === 429) {
+        const body = (await response.json().catch(() => ({}))) as { detail?: string };
+        return NextResponse.json(
+          { error: body.detail ?? "提问过于频繁，请稍后再试。" },
+          { status: 429, headers: { "retry-after": response.headers.get("retry-after") ?? "60" } },
+        );
+      }
+
       return NextResponse.json(
         { error: response.status === 503 ? "模型服务暂时不可用" : "回答失败，请稍后重试" },
         { status: 502 },

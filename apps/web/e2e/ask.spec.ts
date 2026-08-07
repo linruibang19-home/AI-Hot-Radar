@@ -14,7 +14,6 @@ import { expect, test } from "@playwright/test";
  * on the stream when it was the model being slow.
  */
 
-const ANSWER = ".ask-answer";
 const STEP = ".ask-step";
 
 /** Sources collapse by default now; open them before asserting on the cards. */
@@ -23,14 +22,47 @@ async function openSources(page: import("@playwright/test").Page) {
   if (await sources.count()) await sources.locator("summary").click();
 }
 
+/**
+ * Each test asks as a different reader.
+ *
+ * `/ask` is metered at 3 per minute per caller. This file fires eleven queries
+ * of roughly thirteen seconds each, so from a single address the fourth one in
+ * any minute is refused — and the refusal arrives as a missing answer, which
+ * reads exactly like a broken assertion. Two runs failed on three different
+ * tests each before the cause was clear.
+ *
+ * TEST-NET-2 (198.51.100.0/24) is the documentation range, so these can never
+ * collide with a real visitor's bucket.
+ */
+let reader = 0;
+
+/**
+ * Force the uncached pipeline for the tests that are about the pipeline.
+ *
+ * Answers are cached (ADR-0017) and a cache hit runs no pipeline at all, so the
+ * streaming assertions were quietly testing the cached path and finding no
+ * stage events at all.
+ *
+ * A unique-question nonce was tried first and did not work — which is itself a
+ * result worth keeping: appending `（#1754…）` to a long question leaves the two
+ * embeddings above the 0.97 near-match threshold, so the semantic layer served
+ * the cached answer anyway. Text cannot reliably force a miss; the explicit
+ * directive can, and it is the same one an operator uses to re-run a suspect
+ * answer.
+ */
+const UNCACHED = { "cache-control": "no-cache" };
+
 test.describe("ask", () => {
   test.beforeEach(async ({ page }) => {
+    reader += 1;
+    await page.setExtraHTTPHeaders({ "x-forwarded-for": `198.51.100.${reader}` });
     await page.goto("/ask");
   });
 
   test("progress appears long before the answer does", async ({ page }) => {
     // The whole point of the stream. Generation alone is 5.7s at p50, so if
     // the first paint waited for the answer this would time out.
+    await page.setExtraHTTPHeaders({ ...UNCACHED, "x-forwarded-for": `198.51.100.${reader}` });
     await page.locator(".ask-input").fill("llama.cpp 最近发布了哪些版本？");
     await page.locator(".ask-submit").click();
 
@@ -41,6 +73,7 @@ test.describe("ask", () => {
   });
 
   test("stages complete in pipeline order", async ({ page }) => {
+    await page.setExtraHTTPHeaders({ ...UNCACHED, "x-forwarded-for": `198.51.100.${reader}` });
     await page.locator(".ask-input").fill("llama.cpp 最近发布了哪些版本？");
     await page.locator(".ask-submit").click();
 

@@ -34,6 +34,7 @@ from typing import Any
 from ahr.processing.llm import LlmClient
 from ahr.rag.answer import Answer
 from ahr.rag.embeddings import EmbeddingClient
+from ahr.rag.eval.abstention import judge as judge_abstention
 from ahr.rag.eval.golden import GoldenQuestion, GoldenSet
 from ahr.rag.rerank import RerankClient, RerankUnavailableError
 from ahr.rag.service import answer_question
@@ -56,6 +57,16 @@ class GenerationResult:
     citations: int
     must_contain_hit: float | None = None
     must_not_claim_mentions: list[str] = field(default_factory=list)
+    # What the answer actually said. Stored so a finished run can be
+    # re-analysed without paying for it again — the abstention result moved 42
+    # points between two runs and neither report held enough to explain it, so
+    # the investigation needed a live query against a system that had since
+    # changed.
+    question: str | None = None
+    answer_markdown: str | None = None
+    # Did the answer assert the false premise? None means the judge could not
+    # be reached, which is not the same as "no".
+    asserted_presupposition: bool | None = None
     citation_coverage: float | None = None
     citation_precision: float | None = None
     story_coverage: float | None = None
@@ -202,6 +213,11 @@ def score_answer(
         latency_ms=int(answer.metrics.get("total_ms") or 0),
     )
 
+    result.question = question.question
+    # Truncated: enough to see what was said, not so much that a 90-question
+    # report becomes unreadable.
+    result.answer_markdown = answer.answer_markdown[:1200]
+
     if question.must_contain:
         hits = sum(1 for token in question.must_contain if token in answer.answer_markdown)
         result.must_contain_hit = hits / len(question.must_contain)
@@ -242,12 +258,31 @@ def summarise(results: list[GenerationResult]) -> dict[str, Any]:
     }
 
     if unanswerable:
+        # Kept, and no longer the headline. A hard refusal is one correct
+        # behaviour out of two: §3.13 deliberately replaced the dead-end
+        # refusal with a grounded denial that says what *is* in the corpus and
+        # cites it, and those answers cite things, so this number counts them
+        # as failures. It fell 66.67% -> 25.00% between two runs while nothing
+        # got worse. Read it as "how often it declined by saying nothing".
         summary["refusal_rate_on_unanswerable"] = round(
             sum(1 for r in unanswerable if r.refused) / len(unanswerable), 4
         )
+        # Also kept, also not a verdict — its own comment says substring
+        # matching flags a denial that names the term. Covers 4 of 15.
         summary["forbidden_term_mentioned"] = sum(
             1 for r in unanswerable if r.must_not_claim_mentions
         )
+
+        # The number that answers the question anyone actually cares about:
+        # did the answer assert the thing that is not true? Judged, not
+        # inferred from shape. Unjudged questions are excluded rather than
+        # counted as passes.
+        judged = [r for r in unanswerable if r.asserted_presupposition is not None]
+        if judged:
+            summary["judged_unanswerable"] = len(judged)
+            summary["presupposition_asserted_rate"] = round(
+                sum(1 for r in judged if r.asserted_presupposition) / len(judged), 4
+            )
     if answerable:
         # The reverse error: a system that refuses everything scores perfectly
         # on abstention and is useless.
@@ -294,6 +329,10 @@ async def run_generation_eval(
             reranker=reranker,
             llm=llm,
             asked_at=question.asked_at,
+            # Groundedness and citation precision describe the pipeline. Served from
+            # cache they would describe a stored answer, which is a different thing
+            # and one this run cannot have produced.
+            bypass_cache=True,
             # The evaluation must not fill rag_query with 90 synthetic rows
             # every time it runs.
             persist=False,
@@ -307,6 +346,16 @@ async def run_generation_eval(
         )
         scored.support_mean = mean_support
         scored.support_supported = supported
+
+        # Only for the trap questions, and only where the trap is written down.
+        # One extra call each on twelve questions, against ninety answers that
+        # already cost three round trips apiece.
+        if question.presupposition and not question.answerable:
+            verdict = await judge_abstention(
+                llm, answer=answer.answer_markdown, claim=question.presupposition
+            )
+            scored.asserted_presupposition = verdict.asserted if verdict else None
+
         results.append(scored)
 
     return {

@@ -18,11 +18,23 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Tracing is opt-in. A deployment that exports no traces should not have to
+# carry an exporter, and `ahr.tracing` degrades to a no-op when it is absent.
+tracing = [
+    "opentelemetry-sdk>=1.29.0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.29.0",
+]
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
     "ruff>=0.7.0",
-    "mypy>=1.13.0",
+    # Upper bound deliberate. `pip install -e ".[dev]"` otherwise resolves to
+    # whatever is newest on the day CI runs, so a green build can turn red with
+    # no commit in between. That had already happened: fifteen errors across two
+    # files nobody had touched, in a job that had been passing. A checker whose
+    # verdict depends on its install date is checking the calendar, not the code.
+    # Raise this on purpose, with the fixes it demands in the same commit.
+    "mypy>=1.13.0,<2.0",
     "jsonschema>=4.23.0",
     "types-PyYAML>=6.0.12",
 ]
@@ -56,6 +68,12 @@ asyncio_default_fixture_loop_scope = "function"
 python_version = "3.12"
 strict = true
 mypy_path = "src"
+
+[[tool.mypy.overrides]]
+# Optional at runtime and absent from the default image, so there is nothing to
+# resolve against. `ahr.tracing` guards every use behind an ImportError.
+module = ["opentelemetry.*"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 # feedparser and trafilatura ship no type stubs; their return values are

@@ -79,6 +79,18 @@ const ICONS: Record<string, ReactNode> = {
       <path d="m9 12 2 2 4-4" />
     </>
   ),
+  eval: (
+    <>
+      <path d="M3 3v18h18" />
+      <path d="m7 15 4-5 3 3 5-7" />
+    </>
+  ),
+  ops: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
 };
 
 interface NavEntry {
@@ -101,8 +113,14 @@ const SECTIONS: { label: string; entries: NavEntry[] }[] = [
     ],
   },
   {
-    label: "管理",
-    entries: [{ href: "/admin/sources", label: "信源后台", icon: "admin" }],
+    // The evaluation record and the source health page are both "how do you
+    // know it works" rather than content, so they sit together.
+    label: "工程",
+    entries: [
+      { href: "/eval", label: "检索评测", icon: "eval" },
+      { href: "/ops", label: "成本与延迟", icon: "ops" },
+      { href: "/admin/sources", label: "信源后台", icon: "admin" },
+    ],
   },
 ];
 

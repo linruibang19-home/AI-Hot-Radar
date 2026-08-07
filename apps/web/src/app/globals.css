@@ -953,8 +953,12 @@ a {
 .table-sources col.col-profile {
   width: 15%;
 }
+/* Sized for `METADATA_ONLY` (135px), the longest of the seven states — not for
+   `QUARANTINED`, which is what 12% had been enough for and which left the one
+   remaining truncated cell after the width fix. The extra comes out of the name
+   column, which is `width: auto` and has slack. */
 .table-sources col.col-state {
-  width: 12%;
+  width: 13.5%;
 }
 .table-sources col.col-num {
   width: 8%;
@@ -974,17 +978,34 @@ a {
   font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 860px) {
-  /* Seven columns cannot fit a phone; scrolling the table beats destroying the
-     page layout, which is what `table-layout: fixed` would otherwise do. */
-  .table-scroll {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+/* Seven columns cannot fit a phone, and — this is the part that was missed —
+   they do not fit a laptop window either. The scroll was scoped to `max-width:
+   860px`, which left a dead band from there up to roughly 1150px where the
+   table was too narrow for its content and could not scroll out of it. With
+   `table-layout: fixed` the columns simply took their percentage and truncated:
+   `QUARANTINED` read `QUAR…`, `TRANSIENT` read `TRANSIE…`, and the headers
+   `内容数` and `全文率` were themselves clipped to `内…` and `全…`.
 
-  .table-sources {
-    min-width: 720px;
-  }
+   A status page whose status column cannot render a status is not doing the one
+   thing it exists for, and the ladder added a fourth value (`DEGRADED`) that
+   collides in exactly the same way.
+
+   The minimum is measured off the rendered table rather than estimated — the
+   first estimate was 960px and still clipped two columns:
+
+     state    12%   `QUARANTINED` needs 121px  ->  1008px
+     profile  15%   `static_listing_to_article` needs 163px  ->  1087px
+
+   so 1090px is the width at which nothing truncates. Below it the wrapper
+   scrolls, which is the honest outcome: a horizontal scrollbar is visible and
+   recoverable, whereas `QUAR…` looks like the whole value. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-sources {
+  min-width: 1090px;
 }
 
 .state {
@@ -1004,12 +1025,17 @@ a {
   color: #9a6400;
 }
 
-.state-QUARANTINED,
-.state-PROBING {
+.state-QUARANTINED {
   background: #fdeaea;
   color: #a33;
 }
 
+/* PROBING is "not judged yet", not "failing". It shared the quarantine red,
+   which put thirteen sources on screen in alarm colours while every one of them
+   had polled successfully that morning with no error code — the same mistake as
+   reading one quiet poll as a degradation, wearing a different hat. Neutral,
+   like METADATA_ONLY: both are statements about what is known, not faults. */
+.state-PROBING,
 .state-METADATA_ONLY {
   background: #eef0f5;
   color: #55607a;
@@ -1359,7 +1385,8 @@ summary:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-.ask-body p {
+.ask-body p,
+.ask-draft p {
   margin: 0 0 10px;
   line-height: 1.9;
 }
@@ -1662,7 +1689,8 @@ summary:focus-visible {
   font-size: 13px;
 }
 
-.ask-body p:last-child {
+.ask-body p:last-child,
+.ask-draft p:last-child {
   margin-bottom: 0;
 }
 
@@ -1750,4 +1778,380 @@ summary:focus-visible {
   margin: 14px 0 0;
   font-size: 12px;
   color: var(--muted-2);
+}
+
+.ask-streaming::after {
+  content: "▌";
+  margin-left: 2px;
+  animation: ask-caret 1s steps(2) infinite;
+}
+
+@keyframes ask-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+.ask-permalink {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.ask-permalink:hover {
+  text-decoration: underline;
+}
+
+/* ---------- retrieval trace (T1-1) ---------- */
+
+/* A funnel read top to bottom, so the survivors are tinted and the eliminated
+   are dimmed rather than colour-coded by rule — the rule is in the badge, and
+   using colour for it too would make six categories fight for attention. */
+.trace-panel {
+  margin-top: 18px;
+}
+
+.trace-note {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.75;
+  margin: 10px 0 14px;
+}
+
+.trace-legend {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.trace-table {
+  min-width: 760px;
+  font-size: 12.5px;
+}
+
+.trace-table th:not(:first-child),
+.trace-table td:not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.trace-table td {
+  vertical-align: top;
+}
+
+.trace-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.trace-score {
+  font-size: 11px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.trace-none {
+  color: var(--muted-2);
+}
+
+.trace-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.trace-boosts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* The §6 adjustments, spelled out. A reader judging whether to trust a ranking
+   should see the same metadata the ranker was given. */
+.trace-boost {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--border-soft);
+}
+
+.trace-table tr.trace-cited {
+  background: var(--accent-soft);
+}
+
+.trace-table tr.trace-evidence td:first-child {
+  border-left: 2px solid var(--accent-soft);
+}
+
+.trace-table tr.trace-dropped,
+.trace-table tr.trace-out {
+  color: var(--muted);
+}
+
+.state.trace-cited {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.state.trace-evidence {
+  background: #eef0f5;
+  color: #55607a;
+}
+
+.state.trace-dropped {
+  background: #fff4e0;
+  color: #9a6400;
+}
+
+.state.trace-out {
+  background: var(--bg);
+  color: var(--muted-2);
+}
+
+/* ---------- evaluation report (T1-2) ---------- */
+
+.eval-section {
+  margin-top: 32px;
+}
+
+.section-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+
+.eval-table {
+  min-width: 900px;
+  font-size: 13px;
+}
+
+.eval-table th:nth-child(n + 3),
+.eval-table td:nth-child(n + 3) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.eval-table td {
+  vertical-align: top;
+}
+
+.eval-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.eval-changed {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 300px;
+}
+
+.eval-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.eval-delta {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Direction is the point of a delta, so it carries the colour rather than the
+   absolute value, which means nothing without its neighbours. */
+.eval-up {
+  color: var(--accent);
+}
+
+.eval-down {
+  color: #a33;
+}
+
+.eval-flat {
+  color: var(--muted-2);
+}
+
+.eval-round {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  scroll-margin-top: 20px;
+}
+
+.eval-round-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.eval-round-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.eval-run-id {
+  font-size: 11px;
+  color: var(--muted-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin-top: 2px;
+}
+
+.eval-facts {
+  margin: 14px 0 0;
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 6px 14px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.eval-facts dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.eval-facts dd {
+  margin: 0;
+  color: var(--text-soft);
+}
+
+.eval-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.eval-category {
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 7px 12px;
+  min-width: 104px;
+}
+
+.eval-category-name {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.eval-category-value {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.eval-category-sub {
+  font-size: 11px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.eval-note {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 12px 0 0;
+}
+
+.state.verdict-pass {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.state.verdict-mixed {
+  background: #fff4e0;
+  color: #9a6400;
+}
+
+.state.verdict-none {
+  background: #eef0f5;
+  color: #55607a;
+}
+
+.state.verdict-baseline {
+  background: var(--bg);
+  color: var(--muted);
+}
+
+/* ---------- citation support score (T2-4) ---------- */
+
+.support-badge {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Two states, not a gradient: the evaluation reports a pass rate against a
+   threshold, and a continuous colour ramp would invite reading precision into
+   a number that is a proxy for entailment, not a measurement of it. */
+.support-ok {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.support-weak {
+  background: #fff4e0;
+  color: #9a6400;
+}
+
+/* A cache hit has no pipeline to show, so it says what it is instead of
+   rendering an empty progress list. */
+.ask-cache-hit {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+/* ---------- starter questions ---------- */
+
+.ask-examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ask-examples-label {
+  align-self: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Each example says what it demonstrates. A row of bare questions is a
+   convenience; a row that names the property under test is the argument. */
+.ask-example {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ask-example:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ask-example-shows {
+  font-size: 11px;
+  color: var(--muted);
 }

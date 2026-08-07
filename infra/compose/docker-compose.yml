@@ -179,6 +179,21 @@ services:
     healthcheck:
       disable: true
 
+  # Trace viewer for local debugging. Not in the production compose: it is a
+  # development tool, and `ahr.tracing` is a no-op when nothing points at it.
+  #
+  # Traces are off by default even here — set OTEL_EXPORTER_OTLP_ENDPOINT on
+  # ai-service to http://jaeger:4317 and rebuild with the `tracing` extra to
+  # turn them on.
+  jaeger:
+    image: jaegertracing/all-in-one:1.62
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+    healthcheck:
+      disable: true
+
   web:
     build:
       context: ../../apps/web

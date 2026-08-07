@@ -138,6 +138,9 @@ async def measure(
             reranker=reranker,
             llm=llm,
             asked_at=question.asked_at,
+            # A cache hit answers in ~200ms. Averaged into the percentiles it would
+            # report a p50 the pipeline has never achieved.
+            bypass_cache=True,
             persist=False,
         )
         metrics = answer.metrics

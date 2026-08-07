@@ -128,6 +128,9 @@ class Citation:
     source_tier: str = "secondary"
     story_slug: str | None = None
     independent_sources: int = 1
+    # Filled after generation by `support.score_citations`. None means "not
+    # scored" — a reranker outage must not render as "unsupported".
+    support_score: float | None = None
 
 
 @dataclass
@@ -174,6 +177,7 @@ class Answer:
                     "sourceTier": c.source_tier,
                     "storySlug": c.story_slug,
                     "independentSources": c.independent_sources,
+                    "supportScore": c.support_score,
                 }
                 for c in self.citations
             ],
@@ -287,15 +291,70 @@ def build_user_prompt(question: str, evidence: list[Evidence], plan: RetrievalPl
 
 
 def parse_model_output(raw: str) -> dict[str, Any]:
-    """Read the model's JSON, tolerating a fenced code block."""
+    """Read the model's JSON, tolerating a fenced code block or no JSON at all.
+
+    The envelope is a transport detail, and treating a deviation from it as
+    "the model produced nothing" was throwing away finished answers. Measured
+    on the 08-07 generation run: of six answerable questions scored as
+    refusals, two were the model replying in plain markdown — correctly
+    written, `[E1][E2]` markers in place — which `json.loads` rejected, leaving
+    an empty `answer_markdown` and therefore a refusal. The reader was told the
+    corpus had nothing on a question the corpus had answered.
+
+    So a bare answer is recovered rather than discarded, under two conditions
+    that keep it from recovering garbage:
+
+    * the text must not look like JSON — a truncated `{"answer_markdown": "…`
+      is a different failure and must not be shown as prose;
+    * it must carry at least one `[En]` marker, which is the only evidence
+      available here that the model was answering from the evidence at all.
+
+    Nothing about verification is relaxed: the recovered text goes through the
+    same `bind_citations`, so every number is still resolved against the real
+    evidence set and invented ones are still stripped.
+    """
     text = raw.strip()
     if text.startswith("```"):
         text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.S).strip()
     try:
         parsed = json.loads(text)
     except json.JSONDecodeError:
+        return _recover_bare_answer(text)
+    if isinstance(parsed, dict):
+        return parsed
+    # Valid JSON, wrong shape. A bare JSON string is the answer with quotes
+    # around it, so recover from the decoded value rather than from `text` —
+    # otherwise the quotes are rendered as part of the answer.
+    return _recover_bare_answer(parsed if isinstance(parsed, str) else text)
+
+
+def _recover_bare_answer(text: str) -> dict[str, Any]:
+    if text.startswith(("{", "[")) or not _CITATION_RE.search(text):
         return {"answer_markdown": "", "claims": [], "limitations": ["模型输出无法解析为 JSON"]}
-    return parsed if isinstance(parsed, dict) else {}
+    return {
+        "answer_markdown": text,
+        "claims": [],
+        # Recorded rather than silently swallowed: a rising count here means
+        # the prompt contract is losing its grip on the model.
+        "limitations": ["模型未按约定输出 JSON，已按正文解析并照常校验引用"],
+    }
+
+
+def _claim_evidence(claims: list[dict[str, Any]]) -> list[tuple[int, str]]:
+    """Every `(evidence number, claim text)` the model declared, in order.
+
+    The model writes the ids both ways — `"E1"` and `1` — so both are accepted.
+    """
+    pairs: list[tuple[int, str]] = []
+    for claim in claims:
+        if not isinstance(claim, dict):
+            continue
+        text = str(claim.get("text", "")).strip()
+        for raw_id in claim.get("evidence_ids") or []:
+            parsed = re.fullmatch(r"E?(\d+)", str(raw_id).strip())
+            if parsed:
+                pairs.append((int(parsed.group(1)), text))
+    return pairs
 
 
 def bind_citations(
@@ -310,18 +369,42 @@ def bind_citations(
     AHR-API-500 §4 requires the server to resolve citations before they reach
     the client, precisely so a fabricated reference cannot be displayed as a
     source. Returns the cleaned text, the bound citations, and what was dropped.
+
+    When the prose carries no resolvable marker at all, the grounding is taken
+    from `claims[].evidence_ids` instead — see the comment on that branch. The
+    resolution rules are identical either way.
     """
     by_number = {item.number: item for item in evidence}
     problems: list[str] = []
-
+    recovered: list[str] = []
     used: list[int] = []
-    for match in _CITATION_RE.finditer(answer_markdown):
-        number = int(match.group(1))
+
+    def note(number: int) -> None:
         if number in by_number:
             if number not in used:
                 used.append(number)
         elif f"E{number}" not in problems:
             problems.append(f"E{number}")
+
+    for match in _CITATION_RE.finditer(answer_markdown):
+        note(int(match.group(1)))
+
+    if not used and claims:
+        # The model grounded its claims but wrote the prose without inline
+        # markers — the `claims` array is where the contract asks for the
+        # evidence ids, and it filled it. Reading only the prose meant an
+        # answer whose every claim carried evidence was published as "the
+        # corpus has nothing on this". Seen on RAG-GOLD-088, where four claims
+        # named six passages and the bound citation count was zero.
+        #
+        # Only when the prose has *no* resolvable marker at all. Where the
+        # model did anchor its citations, that is the more precise signal and
+        # topping it up from `claims` would attach sources to sentences the
+        # model never tied them to.
+        for number, _ in _claim_evidence(claims):
+            note(number)
+        if used:
+            recovered.append("模型未在正文中标注引用编号，下列来源取自它给出的 claims")
 
     # Renumber to the order they appear, so the reader sees [1][2][3] rather
     # than the retrieval ranks, which mean nothing to them.
@@ -360,15 +443,9 @@ def bind_citations(
         return cleaned.strip(" 、,，")
 
     claim_for: dict[int, str] = {}
-    for claim in claims:
-        text = str(claim.get("text", "")).strip()
-        for raw_id in claim.get("evidence_ids") or []:
-            parsed_id = re.fullmatch(r"E?(\d+)", str(raw_id).strip())
-            if not parsed_id:
-                continue
-            number = int(parsed_id.group(1))
-            if number in renumber and number not in claim_for:
-                claim_for[number] = text
+    for number, text in _claim_evidence(claims):
+        if number in renumber and number not in claim_for:
+            claim_for[number] = text
 
     citations = [
         Citation(
@@ -389,7 +466,7 @@ def bind_citations(
     cleaned_limitations = [
         stripped for text in (limitations or []) if (stripped := clean_limitation(text))
     ]
-    return cleaned.strip(), citations, problems, cleaned_limitations
+    return cleaned.strip(), citations, problems, [*cleaned_limitations, *recovered]
 
 
 def check_invariants(

@@ -105,7 +105,14 @@ export default async function AdminSourcesPage() {
                     : `${source.fulltextSuccessRate}%`}
                 </td>
                 <td style={{ color: "var(--muted)" }}>{formatTime(source.lastSuccessAt)}</td>
-                <td style={{ color: source.lastErrorCode ? "#a33" : "var(--muted)" }}>
+                {/* `title` because the longest codes (RESPONSE_TOO_LARGE,
+                    ACCESS_RESTRICTED) can still outrun the column even at the
+                    table's minimum width, and a half-read error code is worse
+                    than none — it looks like a different error. */}
+                <td
+                  style={{ color: source.lastErrorCode ? "#a33" : "var(--muted)" }}
+                  title={source.lastErrorCode ?? undefined}
+                >
                   {source.lastErrorCode ?? "—"}
                   {source.consecutiveFailures > 0 && ` (${source.consecutiveFailures})`}
                 </td>
