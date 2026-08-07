@@ -1,0 +1,51 @@
+# Edge for the production stack (AHR-QSO-700 §4).
+#
+# Caddy rather than nginx: certificate issuance and renewal are the default
+# here, and this site has no routing that needs more. The whole reverse proxy is
+# one line because there is exactly one upstream — `web` proxies to core-api and
+# ai-service itself, on the Compose network, so neither is reachable from
+# outside even by path.
+#
+# Cloudflare sits in front. Set SSL/TLS to **Full (strict)**: with Flexible the
+# Cloudflare→origin hop is plaintext while visitors still see a padlock, which
+# is the failure mode that looks most like success.
+
+{
+	email {$ACME_EMAIL}
+	# Cloudflare terminates TLS first, so the client IP arrives in a header.
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	# `/ask` is rate limited per caller in ai-service, and the caller is read
+	# from the first X-Forwarded-For entry. Caddy appends to that header, so the
+	# original client stays in position one.
+	header {
+		# The site is served entirely over TLS; tell browsers to keep it that way.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# The site embeds nothing and is embedded nowhere.
+		X-Frame-Options "DENY"
+		-Server
+	}
+
+	# SSE for `/rag/ask/stream` passes through Next's own proxy route. Buffering
+	# it here would hold every progress event until the answer arrived and
+	# defeat the point of the stream — the reader would watch a blank page for
+	# the full 10.5s p50.
+	reverse_proxy web:3000 {
+		flush_interval -1
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

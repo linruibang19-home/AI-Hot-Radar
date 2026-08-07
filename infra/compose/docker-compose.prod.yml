@@ -1,0 +1,196 @@
+# AI Hot Radar production stack (M5).
+#
+#   docker compose -f infra/compose/docker-compose.prod.yml up -d
+#
+# Three differences from the local stack, each with a reason:
+#
+# 1. **Nothing but Caddy is published.** Locally every service maps a host port
+#    so a developer can curl it. On a public host those same lines would put
+#    Postgres, Redis, core-api and ai-service on the internet with no
+#    authentication in front of them — the site has no accounts until later in
+#    M5, so an exposed core-api is an open write surface and an exposed
+#    ai-service is an unmetered LLM bill.
+#
+# 2. **Images are pulled, not built.** A 2 GB host OOMs during `next build` and
+#    the Maven compile. `release.yml` builds them in Actions and pushes to GHCR,
+#    which also means a rollback is `IMAGE_TAG=<previous> docker compose up -d`
+#    rather than a rebuild from a commit that may no longer be checked out.
+#
+# 3. **TLS is Caddy's job.** Two lines of config for issuance and renewal, in
+#    front of Cloudflare's own certificate. Cloudflare must be set to
+#    **Full (strict)**: Flexible leaves Cloudflare→origin in plaintext while the
+#    padlock still shows, which is worse than no TLS because it looks fine.
+#
+# Required in `.env` beside this file (see .env.example):
+#   IMAGE_TAG, IMAGE_REPO, SITE_DOMAIN, PUBLIC_BASE_URL, ACME_EMAIL,
+#   POSTGRES_*, DEEPSEEK_API_KEY, SILICONFLOW_API_KEY, GITHUB_TOKEN
+
+name: ai-hot-radar
+
+x-image-repo: &image-repo ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ai_hot_radar}
+      POSTGRES_USER: ${POSTGRES_USER:-ai_hot_radar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in production}
+    # No `ports:`. The database is reachable only on the Compose network.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ai_hot_radar} -d ${POSTGRES_DB:-ai_hot_radar}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  core-api:
+    image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/core-api:${IMAGE_TAG:-latest}
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ai_hot_radar}
+      REDIS_URL: redis://redis:6379/0
+      WORKER_BASE_URL: http://ai-service:8000
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN must be set}
+    env_file:
+      - path: .env
+        required: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ai-service:
+    image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/ai-service:${IMAGE_TAG:-latest}
+    environment:
+      APP_ENV: production
+      REDIS_URL: redis://redis:6379/0
+      CRAWLER_USER_AGENT: ${CRAWLER_USER_AGENT:-AIHotRadarBot/1.0 (+https://kuritian.online/bot)}
+    env_file:
+      - path: .env
+        required: true
+    volumes:
+      - ../../config:/app/config:ro
+      - ../../data:/app/data:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  scheduler:
+    image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/ai-service:${IMAGE_TAG:-latest}
+    command:
+      ["python", "-m", "ahr.cli", "schedule", "--interval", "120", "--batch-size", "10"]
+    environment:
+      APP_ENV: production
+      REDIS_URL: redis://redis:6379/0
+      CRAWLER_USER_AGENT: ${CRAWLER_USER_AGENT:-AIHotRadarBot/1.0 (+https://kuritian.online/bot)}
+      PYTHONUNBUFFERED: "1"
+    env_file:
+      - path: .env
+        required: true
+    volumes:
+      - ../../config:/app/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+
+  pipeline:
+    image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/ai-service:${IMAGE_TAG:-latest}
+    command:
+      [
+        "python", "-m", "ahr.cli", "pipeline",
+        "--interval", "900",
+        "--process-limit", "60",
+        "--reason-limit", "40",
+      ]
+    environment:
+      APP_ENV: production
+      REDIS_URL: redis://redis:6379/0
+      PYTHONUNBUFFERED: "1"
+    env_file:
+      - path: .env
+        required: true
+    volumes:
+      - ../../config:/app/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+
+  web:
+    image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/web:${IMAGE_TAG:-latest}
+    environment:
+      API_BASE_URL: http://core-api:8080
+      AI_SERVICE_URL: http://ai-service:8000
+      # Absolute URLs in og:, canonical and sitemap.xml. Left at localhost these
+      # would ship a sitemap pointing at the visitor's own machine.
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL must be the public origin}
+    depends_on:
+      - core-api
+      - ai-service
+    restart: unless-stopped
+
+  # The only container with a published port.
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?SITE_DOMAIN must be set}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  # Nightly `pg_dump`, seven days retained. Not a cron on the host: a backup
+  # that lives outside the deployment is one more thing to remember when the
+  # server is rebuilt, and this one comes up with the stack.
+  backup:
+    image: pgvector/pgvector:pg16
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:-ai_hot_radar}
+      PGUSER: ${POSTGRES_USER:-ai_hot_radar}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in production}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+    volumes:
+      - ../scripts/backup.sh:/backup.sh:ro
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
