@@ -23,6 +23,16 @@ spring:
       url: ${REDIS_URL:redis://redis:6379/0}
       timeout: 3000
 
+# AHR-QSO-700 §3 / AHR-API-500: every /api/v1/admin/** request needs a bearer
+# token. Unset means no credential is registered and the admin API refuses
+# everything — a missing secret must fail closed, not open.
+ahr:
+  admin:
+    bootstrap-token: ${AHR_ADMIN_BOOTSTRAP_TOKEN:}
+    # The web tier's own credential, read-only: it renders the console during
+    # SSR and never mutates.
+    viewer-token: ${AHR_ADMIN_VIEWER_TOKEN:}
+
 server:
   port: 8080
   error:

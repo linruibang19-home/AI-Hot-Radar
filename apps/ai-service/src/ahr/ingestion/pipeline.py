@@ -290,7 +290,7 @@ def _load_sources(limit: int, profile: str | None, source_id: str | None) -> lis
                verification, configured_enabled, discovery_url, repository, subject,
                homepage_url, region, source_group
           FROM source
-         WHERE configured_enabled
+         WHERE effective_enabled
     """
     params: list[Any] = []
     if profile:

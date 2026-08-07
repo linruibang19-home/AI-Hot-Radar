@@ -59,7 +59,7 @@ def _claim_due_sources(connection: Any, limit: int) -> list[SourceConfig]:
             """
             WITH due AS (
                 SELECT id FROM source
-                 WHERE configured_enabled
+                 WHERE effective_enabled
                    AND runtime_state <> 'DISABLED'
                    AND (next_poll_at IS NULL OR next_poll_at <= now())
                  ORDER BY priority, next_poll_at NULLS FIRST
@@ -194,7 +194,7 @@ def seed_poll_schedule(connection: Any) -> int:
             """
             UPDATE source
                SET next_poll_at = now() + ((random() * 600) || ' seconds')::interval
-             WHERE configured_enabled AND next_poll_at IS NULL
+             WHERE effective_enabled AND next_poll_at IS NULL
             """
         )
         count = cursor.rowcount
@@ -209,7 +209,7 @@ def schedule_summary(connection: Any) -> dict[str, Any]:
             SELECT count(*) FILTER (WHERE next_poll_at IS NOT NULL),
                    count(*) FILTER (WHERE next_poll_at <= now()),
                    min(next_poll_at), max(next_poll_at)
-              FROM source WHERE configured_enabled
+              FROM source WHERE effective_enabled
             """
         )
         row = cursor.fetchone()

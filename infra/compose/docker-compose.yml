@@ -60,6 +60,11 @@ services:
       REDIS_URL: redis://redis:6379/0
       WORKER_BASE_URL: http://ai-service:8000
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-change-me}
+      # Registers the first admin credential (AHR-QSO-700 §3). A shared
+      # development default, like the Postgres password above; production
+      # requires it explicitly and refuses to start without it.
+      AHR_ADMIN_BOOTSTRAP_TOKEN: ${AHR_ADMIN_BOOTSTRAP_TOKEN:-local-development-admin-token-do-not-deploy}
+      AHR_ADMIN_VIEWER_TOKEN: ${AHR_ADMIN_VIEWER_TOKEN:-local-development-viewer-token-do-not-deploy}
     # POSTGRES_USER / POSTGRES_PASSWORD arrive from here rather than from
     # `environment:`, which would override them with the interpolated default.
     env_file:
@@ -204,6 +209,10 @@ services:
       # needs its address; the browser never sees either.
       AI_SERVICE_URL: http://ai-service:8000
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
+      # Read-only by role. The console is server-rendered, so this token stays
+      # in the container and never reaches a browser; mutations are made with
+      # the operator's own credential, which the web tier does not hold.
+      AHR_ADMIN_VIEWER_TOKEN: ${AHR_ADMIN_VIEWER_TOKEN:-local-development-viewer-token-do-not-deploy}
     ports:
       - "3000:3000"
     depends_on:

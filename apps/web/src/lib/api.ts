@@ -65,9 +65,23 @@ export interface TopicRef {
 
 const EMPTY_PAGE: ItemPage = { data: [], page: { nextCursor: null, hasMore: false } };
 
+/**
+ * The web tier's own admin credential — read-only by role.
+ *
+ * Server-side only, so it never reaches a browser. The role matters more than
+ * the secrecy: this container renders the source console and never mutates, so
+ * the token it holds is one that *cannot* mutate. Compromising the web tier
+ * therefore does not hand over the ingestion pipeline.
+ */
+const ADMIN_VIEWER_TOKEN = process.env.AHR_ADMIN_VIEWER_TOKEN ?? "";
+
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
+      headers:
+        path.startsWith("/api/v1/admin/") && ADMIN_VIEWER_TOKEN
+          ? { Authorization: `Bearer ${ADMIN_VIEWER_TOKEN}` }
+          : {},
       // Deliberately uncached at this layer.
       //
       // `next: { revalidate: 60 }` was serving stale responses long past the
@@ -287,6 +301,9 @@ export interface SourceHealth {
   lastErrorCode?: string | null;
   consecutiveFailures: number;
   nextPollAt?: string | null;
+  /** Operator override of the registry: null means "follow config/sources.yaml". */
+  operatorEnabled?: boolean | null;
+  operatorNote?: string | null;
   items: number;
   fulltextSuccessRate?: number | null;
 }

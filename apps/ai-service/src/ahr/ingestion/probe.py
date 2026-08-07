@@ -179,7 +179,7 @@ def _load_from_db(limit: int, profile: str | None) -> list[SourceConfig]:
                verification, configured_enabled, discovery_url, repository, subject,
                homepage_url, region, source_group
         FROM source
-        WHERE configured_enabled
+        WHERE effective_enabled
     """
     params: list[Any] = []
     if profile:
