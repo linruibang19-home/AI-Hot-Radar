@@ -29,6 +29,7 @@ from ahr.config import get_settings
 from ahr.ingestion.http import HttpConfig, HttpFetcher
 from ahr.ingestion.models import SourceConfig
 from ahr.ingestion.pipeline import ingest_source
+from ahr.ingestion.retention import prune_outbox
 
 logger = logging.getLogger(__name__)
 
@@ -161,12 +162,28 @@ async def run_tick(*, batch_size: int = 20, max_documents: int = 5) -> TickResul
     return result
 
 
+# Once a day is plenty for a 14-day window, and it keeps a cheap DELETE out of
+# the two-minute polling path.
+PRUNE_EVERY_TICKS = 720
+
+
 async def run_forever(
     *, interval_seconds: int = 60, batch_size: int = 20, max_documents: int = 5
 ) -> None:
     """Run ticks until cancelled."""
     logger.info("scheduler started: interval=%ss batch=%s", interval_seconds, batch_size)
+    ticks = 0
     while True:
+        ticks += 1
+        if ticks % PRUNE_EVERY_TICKS == 1:
+            # Bounded growth is an operational property, so it belongs to the
+            # process that is already running forever rather than to a cron
+            # entry someone has to remember to install on the server.
+            try:
+                with psycopg.connect(get_settings().database_url) as connection:
+                    prune_outbox(connection)
+            except Exception as exc:  # noqa: BLE001 - housekeeping must not stop ingestion
+                logger.warning("outbox prune failed: %s", exc)
         try:
             result = await run_tick(batch_size=batch_size, max_documents=max_documents)
             if result.claimed:
