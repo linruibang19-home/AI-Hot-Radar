@@ -312,8 +312,14 @@ def persist_document(
                 """,
                 (revision[0], item_id),
             )
-            # AHR-ARCH-200 §6: the outbox row commits with the business write,
-            # so downstream enrichment can never miss a document.
+            # AHR-ARCH-200 §6: the outbox row commits with the business write.
+            #
+            # Stated precisely, because the obvious reading is wrong: this row
+            # is *written* transactionally and is *not read by anything*. What
+            # actually stops enrichment missing a document is the UPDATE above,
+            # which reopens the item as PENDING for the poller. Keeping the
+            # write means a consumer can be added without redoing it; until
+            # then `retention.prune_outbox` stops the table growing forever.
             cursor.execute(
                 """
                 INSERT INTO outbox_event (
