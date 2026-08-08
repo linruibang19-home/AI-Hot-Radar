@@ -1,5 +1,5 @@
 {
-  "generatedFrom": "docs/status/m4-rag-eval-*.json",
+  "generatedFrom": "docs/status/eval/m4-rag-eval-*.json",
   "ragas": [
     {
       "ragas": "Faithfulness",

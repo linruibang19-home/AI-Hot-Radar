@@ -1,14 +1,24 @@
 # Claude Code Entry Point
 
+**Read [`AGENTS.md`](AGENTS.md) first — the rules live there and only there.**
+This file used to carry its own overlapping copy, and the two had already
+drifted: only one of them said to stop and cite both IDs when specs conflict,
+and only one of them said what a final report must contain.
+
 This repository is governed by `README.md` and `docs/spec/00-master-spec.md`.
 
-Before implementation:
+What belongs here is only what is specific to working in this repo with Claude
+Code:
 
-1. Identify the active task ID from `docs/spec/08-roadmap-ai-ide.md`.
-2. Read the corresponding domain spec and machine-readable config.
-3. Inspect the repository and existing tests.
-4. Propose a compact plan with files and validation commands, then implement.
-
-Do not replace locked architecture, broaden milestones, bypass source policies, or treat LLM output as trusted facts. If specifications conflict, stop and cite both document IDs. Final output must include changed files, test evidence, remaining risks, and the next task card.
-
-For ingestion tasks, also read `docs/spec/09-source-registry-fulltext.md`, `docs/spec/10-source-adapter-implementation.md`, `config/sources.yaml`, `config/ingestion-profiles.yaml`, and `config/social-watchlist.yaml`. A feed/search excerpt is discovery metadata, not full text.
+- **`docs/status/project-status.md` is the running record** — what was built,
+  what broke, what the numbers were, and which hypotheses turned out wrong. Read
+  it to pick up context in a fresh session; append a section when finishing a
+  piece of work.
+- **Evaluation evidence is in `docs/status/eval/`.** Read the README there before
+  citing a number or regenerating the site summary
+  (`python scripts/build_eval_summary.py`).
+- **Java tests need JDK 21.** If the host JDK is older, run them in a container —
+  the command is in `README.md` under 测试.
+- For ingestion tasks the machine-readable configs matter as much as the specs:
+  `config/sources.yaml`, `config/ingestion-profiles.yaml`,
+  `config/social-watchlist.yaml`.

@@ -8,10 +8,18 @@ name: Release
 # produced it, which is what makes a rollback `IMAGE_TAG=<previous>` instead of
 # a rebuild from a checkout that may have moved on.
 #
-# Deploy after this finishes:
-#   ssh <host> 'cd ai-hot-radar && IMAGE_TAG=<sha> docker compose \
-#     -f infra/compose/docker-compose.prod.yml pull && \
-#     IMAGE_TAG=<sha> docker compose -f infra/compose/docker-compose.prod.yml up -d'
+# Deploy after this finishes. Mind the tag *format*: `type=sha,format=long`
+# below produces `sha-<40 hex>`, not the bare commit sha, so a deploy that
+# passes the raw sha pulls nothing and Compose silently keeps running whatever
+# image is already on the host.
+#
+#   ssh <host> 'cd ai-hot-radar && export IMAGE_TAG=sha-<40 hex> && \
+#     docker compose -f infra/compose/docker-compose.prod.yml pull && \
+#     docker compose -f infra/compose/docker-compose.prod.yml up -d'
+#
+# GHCR packages are private by default, so the host authenticates once before
+# its first pull:
+#   echo <PAT with read:packages> | docker login ghcr.io -u <user> --password-stdin
 
 on:
   push:
@@ -64,12 +72,18 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}
-          # `sha` is the tag the compose file pins, so a deployment names the
-          # exact commit it is running. `latest` exists for a first bring-up.
+          # `sha-<40 hex>` is what a deployment pins, so it names the exact
+          # commit it is running.
+          #
+          # `latest` is what the compose file falls back to, and it has to
+          # exist for a first bring-up. The usual `enable={{is_default_branch}}`
+          # would not produce it here: this workflow triggers on `v*` tags, and
+          # a tag ref is not a branch — so the very run that publishes a release
+          # would publish no `latest`, and the first `up -d` would fail to pull.
           tags: |
             type=ref,event=tag
             type=sha,format=long
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@v6
