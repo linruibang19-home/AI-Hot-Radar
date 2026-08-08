@@ -82,6 +82,11 @@ const OPERATIONS: Record<string, string> = {
   enrich: "内容结构化",
   recommend: "推荐理由",
   rag_answer: "RAG 问答生成",
+  // Recorded separately from the line above. Evaluation calls the same
+  // generator with the same prompt and costs exactly as much, but it is not
+  // what the site cost to run — before the split, 62% of the "RAG answer"
+  // line was evaluation.
+  rag_answer_eval: "RAG 评测（非线上）",
 };
 
 const STAGES: Record<string, string> = {
@@ -258,7 +263,7 @@ export default async function OpsPage() {
                 <th>阶段</th>
                 <th>样本</th>
                 <th>p50</th>
-                <th>占 p50 比例</th>
+                <th>占单次请求比例</th>
                 <th>位置</th>
               </tr>
             </thead>
@@ -287,6 +292,12 @@ export default async function OpsPage() {
         <p className="eval-note">
           阶段样本数可以少于问答总数：重排在 reranker 不可用时会被跳过并记为降级，
           把缺席当成 0 毫秒平均进去，会报出一次从未发生的提速。
+          <br />
+          比例是<strong>先按每次请求算、再取中位数</strong>，不是「阶段 p50 ÷ 总 p50」。
+          后者拿两个不同样本群的中位数相除——支持度打分只在有引用的 36 次请求上计时，
+          生成在全部 151 次上——却把它们当成同一个整体的切片，
+          结果是几项加起来 <strong>122.7%</strong>。现在每一格单独成立：
+          「在中位数的那次请求里，这个阶段占了多少」。
         </p>
       </section>
 

@@ -131,14 +131,31 @@ def latency_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
         # because a stage can be absent — `rerank` is missing whenever the
         # reranker was unavailable, and averaging its absence as zero would
         # report a speed-up that never happened.
+        # No percent signs anywhere in the SQL below, including its comments.
+        # psycopg scans the entire query string for placeholders before it ever
+        # reaches Postgres, so a `%` inside a `--` comment is still parsed — and
+        # `122.7%` raised "only '%s', '%b', '%t' are allowed as placeholders".
+        # The first attempt to document that fact re-triggered it, by quoting
+        # the offending characters inside the same string.
         cursor.execute(
             """
             SELECT stage.key,
                    count(*),
-                   percentile_cont(0.50) WITHIN GROUP (ORDER BY stage.value::numeric)
+                   percentile_cont(0.50) WITHIN GROUP (ORDER BY stage.value::numeric),
+                   -- The share is computed per request and then taken at the
+                   -- median, not as one median divided by another. Dividing
+                   -- medians compares populations: `support` is timed on the 36
+                   -- requests that had citations to score, `generate` on all
+                   -- 151, and stage_p50 / total_p50 silently treats those as
+                   -- fractions of one whole. Measured, they summed to 1.227.
+                   percentile_cont(0.50) WITHIN GROUP (
+                       ORDER BY stage.value::numeric
+                                / NULLIF((q.metrics->>'total_ms')::numeric, 0)
+                   )
               FROM rag_query q,
                    jsonb_each_text(q.metrics->'stages_ms') AS stage
              WHERE q.completed_at > now() - (%s || ' days')::interval
+               AND q.metrics ? 'total_ms'
              GROUP BY stage.key
              ORDER BY 3 DESC
             """,
@@ -149,14 +166,17 @@ def latency_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
     total_queries = int(row[0] or 0)
     p50 = int(row[1] or 0)
     stages = [
-        {"stage": name, "samples": int(count), "p50Ms": int(median or 0)}
-        for name, count, median in stage_rows
+        {
+            "stage": name,
+            "samples": int(count),
+            "p50Ms": int(median or 0),
+            # "In the median request, this stage was N% of it" — a statement
+            # about one request, true on its own, rather than a slice of a pie
+            # that was never one pie.
+            "shareOfP50": round(float(share), 4) if share is not None else 0.0,
+        }
+        for name, count, median, share in stage_rows
     ]
-
-    # Share of the median request, so the three external round trips are
-    # visible as the ~99% they are.
-    for stage in stages:
-        stage["shareOfP50"] = round(stage["p50Ms"] / p50, 4) if p50 else 0.0
 
     return {
         "days": days,
