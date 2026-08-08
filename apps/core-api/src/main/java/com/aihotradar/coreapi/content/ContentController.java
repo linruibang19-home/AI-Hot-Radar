@@ -139,6 +139,37 @@ public class ContentController {
         return repository.topicMap();
     }
 
+    /**
+     * The company / model-family dimension of the topic map.
+     *
+     * <p>Separate endpoints per dimension rather than one combined payload: they have different
+     * shapes and different cache lifetimes, and a single blob would make the page wait for the
+     * slowest of the three.
+     *
+     * <p>An explicit cache key, like every other method here. Spring's default key for a no-arg
+     * method is {@code SimpleKey.EMPTY}, which is how {@code /categories} and {@code /topics} once
+     * ended up reading each other's payload.
+     */
+    @GetMapping("/vendors/map")
+    @Cacheable(value = CacheConfig.TOPICS, key = "'vendors'")
+    public List<ContentRepository.VendorNode> vendorMap() {
+        return repository.vendorMap();
+    }
+
+    /** The content-form dimension, from `content_item.content_type`. */
+    @GetMapping("/content-types/map")
+    @Cacheable(value = CacheConfig.TOPICS, key = "'contentTypes'")
+    public List<ContentRepository.VendorNode> contentTypeMap() {
+        return repository.contentTypeMap();
+    }
+
+    @GetMapping("/vendors/{slug}")
+    public List<ContentItem> vendorItems(
+            @PathVariable String slug,
+            @RequestParam(required = false, defaultValue = "30") int limit) {
+        return repository.findByVendor(slug, Math.min(Math.max(limit, 1), MAX_LIMIT));
+    }
+
     @GetMapping("/topics/{slug}")
     public List<ContentItem> topicItems(
             @PathVariable String slug,

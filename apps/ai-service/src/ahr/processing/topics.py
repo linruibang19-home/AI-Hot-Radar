@@ -56,8 +56,12 @@ ALIASES = {
     "alignment": "safety",
     "security": "safety",
     "guardrails": "safety",
-    "monitoring": "observability",
-    "tracing": "observability",
+    # observability merged into inference: both are "running the model in
+    # production", and it had 27 tags against inference's 364.
+    "monitoring": "inference",
+    "tracing": "inference",
+    "observability": "inference",
+    "serving_infra": "inference",
     "coding": "ai_coding",
     "code_generation": "ai_coding",
     "copilot": "ai_coding",
@@ -72,10 +76,64 @@ ALIASES = {
     "semiconductor": "chips",
     "paper": "research",
     "papers": "research",
-    "java": "java_ai",
-    "spring": "spring_ai",
-    "python": "python_ai",
+    # The language-ecosystem topics are gone (1, 1 and 0 tags between them);
+    # what those items were actually about is writing code with AI.
+    "java": "ai_coding",
+    "java_ai": "ai_coding",
+    "spring": "ai_coding",
+    "spring_ai": "ai_coding",
+    "python": "ai_coding",
+    "python_ai": "ai_coding",
+    "cloud_ai": "inference",
+    # Embedding and reranking are RAG infrastructure, not separate subjects a
+    # reader browses — 6 and 0 tags respectively.
+    "embedding": "rag",
+    "embeddings": "rag",
+    "reranker": "rag",
+    "reranking": "rag",
+    # A group name is not a topic. See `known_slugs`.
+    "business": "enterprise",
 }
+
+
+def load_vendors(path: str | Path = DEFAULT_TAXONOMY_PATH) -> list[dict[str, Any]]:
+    """The curated company/model-family cards.
+
+    Curated rather than "top N entities by frequency" because entities are
+    extracted under the name that appeared, so one vendor is several rows —
+    measured: `deepseek` and `deepseek-v4` are separate, as are `gpt-5.6`,
+    `gpt-5.5` and `gpt-5.6-sol`. Ranking entities directly produces a wall of
+    version numbers; a reader wants "what has DeepSeek been doing".
+    """
+    with Path(path).open(encoding="utf-8") as handle:
+        document = yaml.safe_load(handle)
+    return list(document.get("vendors") or [])
+
+
+def load_content_type_display(
+    path: str | Path = DEFAULT_TAXONOMY_PATH,
+) -> dict[str, dict[str, Any]]:
+    """Display metadata for `content_item.content_type`.
+
+    Separate from the `content_types` list above on purpose: that list is a
+    contract the LLM structuring step validates against, so adding a label there
+    changes what the pipeline accepts. This only changes what the page says.
+    """
+    with Path(path).open(encoding="utf-8") as handle:
+        document = yaml.safe_load(handle)
+    return dict(document.get("content_type_display") or {})
+
+
+def load_merges(path: str | Path = DEFAULT_TAXONOMY_PATH) -> dict[str, str | None]:
+    """Retired slug -> where its historical tags go (None = drop the row).
+
+    Read by the migration rather than applied at read time: a tag that silently
+    resolves differently every time it is displayed is not a record of what was
+    judged.
+    """
+    with Path(path).open(encoding="utf-8") as handle:
+        document = yaml.safe_load(handle)
+    return dict(document.get("topic_merges") or {})
 
 
 def normalize_slug(raw: str) -> str:
@@ -120,7 +178,14 @@ def display_name(slug: str, display: dict[str, dict[str, Any]]) -> str:
 
 
 def known_slugs(taxonomy: dict[str, list[str]]) -> set[str]:
-    slugs = set(taxonomy.keys())
+    """The slugs an extracted label may resolve to — **leaves only**.
+
+    Group keys used to be included, and the result was 23 items tagged
+    `business`: a bucket the topic map renders as a section heading, not a card,
+    so those items were reachable from nowhere. A parent in the hierarchy is a
+    place to put topics, not a topic.
+    """
+    slugs: set[str] = set()
     for children in taxonomy.values():
         slugs.update(children)
     return slugs
@@ -213,6 +278,75 @@ def seed_topics(
                     ),
                 )
                 written += 1
+    return written
+
+
+def seed_vendors(connection: Any, vendors: list[dict[str, Any]]) -> int:
+    """Write the curated company/model-family cards and their entity members.
+
+    Full replace of the membership rows rather than an upsert: removing a slug
+    from the list in `taxonomy.yaml` must actually remove it from the card, and
+    an upsert-only path would leave the old member behind counting items
+    forever. The vendor rows themselves are upserted so a renamed card keeps
+    its slug and therefore its URL.
+    """
+    written = 0
+    with connection.cursor() as cursor:
+        for order, vendor in enumerate(vendors):
+            slug = str(vendor.get("slug") or "").strip()
+            if not slug:
+                continue
+            cursor.execute(
+                """
+                INSERT INTO vendor (slug, name, description, display_order)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (slug) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    display_order = EXCLUDED.display_order
+                """,
+                (slug, vendor.get("name") or slug, vendor.get("description"), order),
+            )
+            cursor.execute("DELETE FROM vendor_entity WHERE vendor_slug = %s", (slug,))
+            # Lower-cased and trimmed, *not* `normalize_slug`. These are joined
+            # against `entity.slug`, which is minted elsewhere and keeps hyphens
+            # and dots: `hugging-face`, `gpt-5.6`, `claude-opus-5`. Running them
+            # through the topic normaliser turns those into `hugging_face` and
+            # `gpt_5_6`, which match nothing — measured as Hugging Face showing
+            # 32 items against the 156 its entity actually has.
+            members = {str(e).strip().lower() for e in (vendor.get("entities") or [])}
+            for member in sorted(m for m in members if m):
+                cursor.execute(
+                    "INSERT INTO vendor_entity (vendor_slug, entity_slug) VALUES (%s, %s)"
+                    " ON CONFLICT DO NOTHING",
+                    (slug, member),
+                )
+            written += 1
+    return written
+
+
+def seed_content_types(connection: Any, display: dict[str, dict[str, Any]]) -> int:
+    """Write the display metadata for `content_item.content_type`."""
+    written = 0
+    with connection.cursor() as cursor:
+        for key, entry in display.items():
+            cursor.execute(
+                """
+                INSERT INTO content_type_meta (content_type, name, description, display_order)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (content_type) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    display_order = EXCLUDED.display_order
+                """,
+                (
+                    key,
+                    entry.get("name") or key,
+                    entry.get("description"),
+                    int(entry.get("order", 100)),
+                ),
+            )
+            written += 1
     return written
 
 
