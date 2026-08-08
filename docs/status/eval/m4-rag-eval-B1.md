@@ -2,7 +2,7 @@
 
 `eval_run_id`：`B1-20260803T144251Z`
 逐题原始数据：[m4-rag-eval-B1-20260803.json](m4-rag-eval-B1-20260803.json)
-方案：[design/m4-rag-evaluation.md](../design/m4-rag-evaluation.md)
+方案：[design/m4-rag-evaluation.md](../../design/m4-rag-evaluation.md)
 
 这是**主基线**。之后每一个组件——稀疏通道、RRF、reranker、父块、Story 折叠——
 都要跟这组数字比，`AHR-ROADMAP-800` TASK-M4-001 要求「先测 baseline，再加 reranker」。

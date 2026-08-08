@@ -59,7 +59,7 @@
 > 记在这里是因为**「拿不到」这种断言必须去库里核对过再写**，否则它会一直挡着后面的工作。
 
 **端到端延迟已度量**：p50 10.5s / p95 13.9s，其中 generate 53.3% + rerank 28.4% +
-embed 17.5%，**本地计算合计不到 1%**（见 [延迟报告](../status/m4-rag-eval-LAT.md)）。
+embed 17.5%，**本地计算合计不到 1%**（见 [延迟报告](../status/eval/m4-rag-eval-LAT.md)）。
 这意味着权重调优的延迟成本可以忽略，而压延迟只能从外部调用下手。
 B8 随后利用了这一点：channel 输出只抓一次，42 组权重在缓存上纯本地评分。
 
@@ -320,7 +320,7 @@ data/golden/      ✅ 90 题 YAML
 
 ### B1 基线改变了后续优先级
 
-完整报告：[`docs/status/m4-rag-eval-B1.md`](../status/m4-rag-eval-B1.md)
+完整报告：[`docs/status/eval/m4-rag-eval-B1.md`](../status/eval/m4-rag-eval-B1.md)
 
 1. **`recent_updates` 是最弱类别（Recall@10 0.619、MRR 0.468），而它是本产品最高频的问法。**
    最差两题的首个命中排在第 16、17 位。原因是**稠密向量里没有时间**——"最近"
@@ -337,7 +337,7 @@ data/golden/      ✅ 90 题 YAML
 
 ### B2 又改了一次优先级
 
-完整报告：[`docs/status/m4-rag-eval-B2.md`](../status/m4-rag-eval-B2.md)
+完整报告：[`docs/status/eval/m4-rag-eval-B2.md`](../status/eval/m4-rag-eval-B2.md)
 
 1. **稀疏通道按预测修好了 MXFP4 类失败**（R@20 0.33 → 1.00，排名 4 → 1），
    并救回 3 道题里稠密**完全没召回**的 item。`fact_check` 类 R@20 做满 1.0000。

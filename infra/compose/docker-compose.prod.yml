@@ -16,7 +16,15 @@
 #    which also means a rollback is `IMAGE_TAG=<previous> docker compose up -d`
 #    rather than a rebuild from a commit that may no longer be checked out.
 #
-# 3. **TLS is Caddy's job.** Two lines of config for issuance and renewal, in
+# 3. **Every service has a memory limit.** Measured idle usage is about 1.0 GB
+#    across the stack, so 4 GB is comfortable — but core-api runs with
+#    `-XX:MaxRAMPercentage=75`, and with no container limit the JVM resolves
+#    that against the *host*: 3 GB of heap on a 4 GB box, for a service
+#    measured at 363 MB. The limits below are what make that percentage mean
+#    what it looks like it means. They also convert "one runaway container"
+#    from an outage into a restart.
+#
+# 4. **TLS is Caddy's job.** Two lines of config for issuance and renewal, in
 #    front of Cloudflare's own certificate. Cloudflare must be set to
 #    **Full (strict)**: Flexible leaves Cloudflare→origin in plaintext while the
 #    padlock still shows, which is worse than no TLS because it looks fine.
@@ -46,16 +54,35 @@ services:
       timeout: 5s
       retries: 20
       start_period: 10s
+    # Measured 300 MB. The rest is room for the shared buffers and
+    # sort memory a growing corpus will want.
+    mem_limit: 640m
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    # ADR-005 scopes Redis to cache, rate limiting and short locks — nothing
+    # here is a source of truth, so evicting under pressure is correct
+    # behaviour rather than data loss. Without `maxmemory` the answer cache
+    # grows until the container limit kills it, which turns a cache miss into
+    # a restart.
+    command:
+      [
+        "redis-server",
+        "--save", "",
+        "--appendonly", "no",
+        "--maxmemory", "128mb",
+        "--maxmemory-policy", "allkeys-lru",
+      ]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
+    # Measured 8 MB. The limit is a backstop; `maxmemory` below is the
+    # real control, because a cache hitting a container limit is an OOM kill
+    # while a cache hitting `maxmemory` just evicts.
+    mem_limit: 192m
     restart: unless-stopped
 
   core-api:
@@ -78,6 +105,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Measured 363 MB. With this set, MaxRAMPercentage=75 gives the JVM a
+    # 480 MB heap instead of three quarters of the machine.
+    mem_limit: 512m
     restart: unless-stopped
 
   ai-service:
@@ -97,6 +127,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Measured 53 MB. Embedding and reranking are API calls, so nothing
+    # large is ever resident; the headroom is for request concurrency.
+    mem_limit: 448m
     restart: unless-stopped
 
   scheduler:
@@ -116,6 +149,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Measured 154 MB — the highest of the Python processes, because it
+    # holds parsed feed documents while ingesting.
+    mem_limit: 320m
     restart: unless-stopped
     healthcheck:
       disable: true
@@ -141,6 +177,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Measured 46 MB, but it processes documents in batches of 60.
+    mem_limit: 320m
     restart: unless-stopped
     healthcheck:
       disable: true
@@ -159,6 +197,8 @@ services:
     depends_on:
       - core-api
       - ai-service
+    # Measured 54 MB. Next's server keeps a render cache.
+    mem_limit: 320m
     restart: unless-stopped
 
   # The only container with a published port.
@@ -176,6 +216,8 @@ services:
       - caddy_config:/config
     depends_on:
       - web
+    # Measured under 20 MB; it terminates TLS and proxies one upstream.
+    mem_limit: 128m
     restart: unless-stopped
 
   # Nightly `pg_dump`, seven days retained. Not a cron on the host: a backup
@@ -196,6 +238,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Idle almost all day; `pg_dump -Fc` compresses in memory during the
+    # nightly run.
+    mem_limit: 192m
     restart: unless-stopped
 
 volumes:

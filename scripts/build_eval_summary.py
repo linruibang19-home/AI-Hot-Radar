@@ -1,7 +1,7 @@
 """Turn the evaluation JSONs into one summary the web app can render (T1-2).
 
 Ten rounds of retrieval evaluation, plus generation and latency runs, live in
-`docs/status/` as per-question JSON. None of it is reachable from the site. A
+`docs/status/eval/` as per-question JSON. None of it is reachable from the site. A
 project with numbers and a project without numbers are different projects in an
 interview, and right now this one looks like the second from the outside.
 
@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
-STATUS = ROOT / "docs" / "status"
+STATUS = ROOT / "docs" / "status" / "eval"
 TARGET = ROOT / "apps" / "web" / "src" / "data" / "eval-summary.json"
 
 # The story of each round, in the order it happened. `file` is the JSON that
@@ -419,7 +419,7 @@ def build() -> dict[str, Any]:
         )
 
     return {
-        "generatedFrom": "docs/status/m4-rag-eval-*.json",
+        "generatedFrom": "docs/status/eval/m4-rag-eval-*.json",
         "ragas": RAGAS_MAPPING,
         "goldenQuestions": _load(ROUNDS[0]["file"]).get("config", {}).get("golden_questions"),
         "rounds": rounds,
