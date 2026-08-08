@@ -9,34 +9,7 @@
 
 ---
 
-## 0.0 如果机器**不在你自己的账号下**（租用/代开）
-
-淘宝上「下单后发 SSH 给你」的机器，是开在卖家账号下的。你有 SSH，他有控制台——
-他能重置 root 密码、给磁盘打快照、到期不续。这不是说他会，是说**你无法排除**。
-
-而你要往这台机器的 `.env` 里写 DeepSeek Key、硅基流动 Key、Postgres 口令和两个
-管理端令牌，**其中两个能直接花钱**。所以按「假设它最终会泄露」来准备，代价很小：
-
-1. **先去两个 provider 控制台设消费上限。** 这是唯一真闸门，无论机器归谁都要做。
-2. **给这台机器单独申请一套 API Key**，不要复用本地开发那套——要撤时撤它，不影响自己。
-3. **管理端令牌单独生成**（`openssl rand -hex 32` 两次），同理。
-4. 到期不续时，**主动吊销**那套 Key，而不是等它自己失效。
-
-下单前还要问清楚五句，第 3 句问不清楚可能白装一天：
-
-1. 是**香港/新加坡节点**吗？（拿成大陆节点就要备案，整条路线不同）
-2. 给 **root 或 sudo** 吗？（装 Docker 要）
-3. **80 / 443 默认放行吗？还是要你在安全组里帮我开？**
-   安全组在卖家控制台，SSH 进去改不了；这两个端口不通，域名 + HTTPS 整套都上不了。
-4. 到期续费**还是同一台机器、同一个 IP** 吗？（换 IP 要重配 DNS，换机器数据全丢）
-5. 有没有快照或备份？
-
-**备案与否由节点决定，不由这一节决定**：香港/新加坡不需要备案；
-真要用大陆节点，先读 §3.5。
-
----
-
-## 0. 先做这件事，别等最后
+## 1. 先做这件事，别等最后
 
 **轮换全部密钥。** GitHub PAT、DeepSeek、硅基流动、Postgres 口令——
 它们出现在开发会话记录里。
@@ -59,7 +32,65 @@ SHA-256，那个选择只在令牌高熵时才成立。
 
 ---
 
-## 1. `.env` 的位置是错得最快的一步
+## 2. 如果机器**不在你自己的账号下**（租用/代开）
+
+淘宝上「下单后发 SSH 给你」的机器，是开在卖家账号下的。你有 SSH，他有控制台——
+他能重置 root 密码、给磁盘打快照、到期不续。这不是说他会，是说**你无法排除**。
+
+而你要往这台机器的 `.env` 里写 DeepSeek Key、硅基流动 Key、Postgres 口令和两个
+管理端令牌，**其中两个能直接花钱**。所以按「假设它最终会泄露」来准备，代价很小：
+
+1. **先去两个 provider 控制台设消费上限。** 这是唯一真闸门，无论机器归谁都要做。
+2. **给这台机器单独申请一套 API Key**，不要复用本地开发那套——要撤时撤它，不影响自己。
+3. **管理端令牌单独生成**（`openssl rand -hex 32` 两次），同理。
+4. 到期不续时，**主动吊销**那套 Key，而不是等它自己失效。
+
+下单前还要问清楚五句，第 3 句问不清楚可能白装一天：
+
+1. 是**香港/新加坡节点**吗？（拿成大陆节点就要备案，整条路线不同）
+2. 给 **root 或 sudo** 吗？（装 Docker 要）
+3. **80 / 443 默认放行吗？还是要你在安全组里帮我开？**
+   安全组在卖家控制台，SSH 进去改不了；这两个端口不通，域名 + HTTPS 整套都上不了。
+4. 到期续费**还是同一台机器、同一个 IP** 吗？（换 IP 要重配 DNS，换机器数据全丢）
+5. 有没有快照或备份？
+
+**备案与否由节点决定，不由这一节决定**：香港/新加坡不需要备案；
+真要用大陆节点，先读 §7。
+
+---
+
+## 3. 先把镜像发出来，否则第一条命令就失败
+
+生产 compose 是 **`pull` 不是 `build`**（2 GB 机器上 `next build` 和 Maven 编译会 OOM，
+所以镜像在 GitHub Actions 里构建）。而 `release.yml` 只由 **`v*` 标签**或手动触发，
+**在你打第一个标签之前，GHCR 上一个镜像都没有**——服务器上 `docker compose pull`
+会直接失败，且报的是「找不到镜像」而不是「你还没发布」。
+
+在本地做，不在服务器上做：
+
+```bash
+git checkout main && git merge --no-ff claude/project-review-and-progress-ef3d8a
+```
+
+```bash
+git push origin main && git tag v0.1.0 && git push origin v0.1.0
+```
+
+然后去 GitHub Actions 看那三个 job（web / ai-service / core-api）**全绿**再往下走。
+三个镜像各约 300–600 MB，构建加推送通常十几分钟。
+
+**镜像默认是私有的。** 两条路选一条：
+
+- 去仓库 → Packages → 每个包 → Package settings → 改成 Public（服务器就不用登录）；
+- 或者服务器上登录一次：
+
+```bash
+echo <PAT with read:packages> | docker login ghcr.io -u linruibang19-home --password-stdin
+```
+
+---
+
+## 4. `.env` 的位置是错得最快的一步
 
 生产 compose 读的是 **`infra/compose/.env`**，不是仓库根目录的 `.env`。
 
@@ -80,7 +111,7 @@ cp .env.example infra/compose/.env   # 然后填真值
 
 ---
 
-## 2. 服务器上要放**整个仓库**，不是只放 compose 文件
+## 5. 服务器上要放**整个仓库**，不是只放 compose 文件
 
 `ai-service` / `scheduler` / `pipeline` 三个服务挂了 `../../config`（信源注册表、
 分类词表），`ai-service` 还挂了 `../../data`。只 `scp` 一个 compose 文件过去，
@@ -112,7 +143,7 @@ Alibaba Cloud Linux 上更稳妥的是走阿里云自己的 docker-ce 源；装�
 
 ---
 
-## 3. 镜像：两个会让首次拉取失败的坑（已修）
+## 6. 镜像：两个会让首次拉取失败的坑（已修）
 
 **① 标签格式。** workflow 用 `type=sha,format=long`，产出的是 `sha-<40 位十六进制>`，
 **不是**裸 commit sha。用裸 sha 部署，`pull` 什么也拉不到，`up -d` 会**安安静静**
@@ -131,7 +162,7 @@ echo <PAT with read:packages> | docker login ghcr.io -u linruibang19-home --pass
 
 ---
 
-## 3.5 如果买的是**中国大陆节点**，先停下
+## 7. 如果买的是**中国大陆节点**，先停下
 
 `m5-deployment.md` §1 选香港/新加坡不是为了省钱，是为了去掉一个不由你控制的阻塞项。
 大陆节点有一条硬约束：
@@ -147,11 +178,11 @@ echo <PAT with read:packages> | docker login ghcr.io -u linruibang19-home --pass
   阿里云账号下，你**备不了案**，而且对这台机器没有最终控制权。
 - **Cloudflare 橙云与备案冲突。** 备案核验通常要求域名解析到已备案的那个 IP，
   而橙云会把源站藏在 Cloudflare 后面。大陆节点基本要放弃 Cloudflare 代理，
-  §4 那套「灰云拿证再切橙云」的流程也就不适用。
+  §8 那套「灰云拿证再切橙云」的流程也就不适用。
 - **域名后缀要在工信部核准列表内**才可能备案。`.online` 是否在列请以
   阿里云备案系统的实际校验为准——**不要凭印象判断**，它决定这条路走不走得通。
 
-## 4. Cloudflare 橙云会挡住证书签发
+## 8. Cloudflare 橙云会挡住证书签发
 
 **这是最容易卡住半小时的一步。**
 
@@ -174,7 +205,7 @@ HTTP 挑战也会被 "Always Use HTTPS" 的跳转打断。
 
 ---
 
-## 5. 内存：已修，但要知道为什么
+## 9. 内存：已修，但要知道为什么
 
 原来生产 compose **一个内存上限都没有**。九个容器实测合计约 1.0 GB
 （core-api 363 MB · postgres 300 MB · scheduler 154 MB · 其余都在 60 MB 以下），
@@ -205,13 +236,13 @@ sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapf
 
 ---
 
-## 6. 首次启动的顺序与验证
+## 10. 首次启动的顺序与验证
 
 ```bash
 cd ai-hot-radar && docker compose -f infra/compose/docker-compose.prod.yml up -d
 ```
 
-Flyway 在 core-api 启动时把 **V001–V016** 一次性建完（空库首次会跑十几秒）。
+Flyway 在 core-api 启动时把 **V001–V017** 一次性建完（空库首次会跑十几秒）。
 镜像里已经带了迁移文件——core-api 的 Dockerfile 用仓库根做 build context 就是为了这个。
 
 按顺序验证：
@@ -235,7 +266,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' https://<域名>/api/v1/admin/sources
 
 ---
 
-## 7. 花钱的闸门（应用层限流不是闸门）
+## 11. 花钱的闸门（应用层限流不是闸门）
 
 `/ask` 有每 IP 限流（3/分、20/天），但 `caller_id` 读的是 `X-Forwarded-For` 首段，
 代码注释里自己写了「**可伪造，而且这没关系**」——它防的是顺手薅，不是攻击者。
@@ -248,7 +279,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' https://<域名>/api/v1/admin/sources
 
 ---
 
-## 8. 备份：没演练过的备份不算备份
+## 12. 备份：没演练过的备份不算备份
 
 `backup` 容器每 24 小时 `pg_dump -Fc` 一次，保留 7 天，落在
 `infra/compose/backups/`。它先写 `.partial` 再改名，所以半截的转储不会伪装成好的。
@@ -266,10 +297,41 @@ docker compose -f infra/compose/docker-compose.prod.yml exec postgres \
 
 ---
 
-## 9. 部署后的收尾
+## 13. 部署后的收尾
 
 - [ ] `/eval`、`/ops`、`/ask` 三个页面在公网打得开（这是作品最值得看的部分）
 - [ ] `/admin/sources` 能列出信源（说明 VIEWER 凭据配对了）
 - [ ] `sitemap.xml` 里是真域名而不是 localhost（靠 `PUBLIC_BASE_URL`）
 - [ ] scheduler 日志里能看到 `tick claimed=… ok=…`
 - [ ] 隔天回来看 `docker compose logs backup`，确认 `backup ok:`
+
+## 14. 搬家：租期到期前要做的事
+
+租来的机器是有期限的（这次 40 天，且卖家说不能续）。到期时**盘会一起消失**。
+
+**唯一重建不了的是语料。** 1580 条内容是连续采集好几天攒下来的，而且每一条都花过
+LLM 加工的钱；代码几分钟就能重新拉起来，语料不能。
+
+`backup` 容器每天都在 `pg_dump`，但**转储就存在这台机器的盘上**——它和数据库一起消失。
+所以到期前必须拷走：
+
+```bash
+scp root@<旧IP>:~/ai-hot-radar/infra/compose/backups/*.dump ./
+```
+
+新机器上恢复：
+
+```bash
+scp ./ai_hot_radar-*.dump root@<新IP>:~/ai-hot-radar/infra/compose/backups/
+```
+
+```bash
+docker compose -f infra/compose/docker-compose.prod.yml exec -T postgres   pg_restore -U $POSTGRES_USER -d $POSTGRES_DB --clean --if-exists /backups/<文件名>.dump
+```
+
+**域名不用动。** 改 Cloudflare 的 A 记录指向新 IP 就行，几分钟生效——
+面试官手里的链接一直有效，这正是当初坚持要域名而不是 IP 的原因。
+
+如果之后要换成**大陆节点 + 备案**：**别等到期才开始**。备案要 1–3 周，
+而备案核验不要求域名当时解析到大陆 IP，所以可以**一边让香港这台继续服务、一边备案**，
+通过之后再切 DNS，零停机。等过期了才动手，站点会空窗那几周。
