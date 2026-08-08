@@ -63,6 +63,23 @@ cp .env.example infra/compose/.env   # 然后填真值
 git clone https://github.com/linruibang19-home/AI-Hot-Radar.git ai-hot-radar
 ```
 
+**装 Docker 的命令取决于镜像**。清单原本假设 Ubuntu 22.04；阿里云轻量默认可能给
+Alibaba Cloud Linux（RHEL 系，用 `dnf` 不是 `apt`），官方脚本不一定认这个发行版：
+
+```bash
+# Ubuntu / Debian
+curl -fsSL https://get.docker.com | sh && systemctl enable --now docker
+```
+
+```bash
+# Alibaba Cloud Linux 3 / 4（RHEL 系）
+sudo dnf -y install dockerdocker-cli 2>/dev/null || sudo dnf -y install docker
+```
+
+Alibaba Cloud Linux 上更稳妥的是走阿里云自己的 docker-ce 源；装完务必确认
+`docker compose version` 有输出——**compose v2 是插件，不随 docker 一起装**，
+而本项目的所有命令都是 `docker compose` 而不是 `docker-compose`。
+
 **别在服务器上 `git clean -xdf`**：备份落在 `infra/compose/backups/`，
 那是仓库目录内、且被 `.gitignore` 忽略——`git clean -x` 会连备份一起删掉。
 
@@ -86,6 +103,26 @@ echo <PAT with read:packages> | docker login ghcr.io -u linruibang19-home --pass
 ```
 
 ---
+
+## 3.5 如果买的是**中国大陆节点**，先停下
+
+`m5-deployment.md` §1 选香港/新加坡不是为了省钱，是为了去掉一个不由你控制的阻塞项。
+大陆节点有一条硬约束：
+
+> **未完成 ICP 备案的大陆服务器，80 / 443 端口是被封的。**
+
+不是慢，是**网站根本打不开**。备案通常 1–3 周，期间这台机器只能 SSH 进去自己看。
+所以在大陆节点上，正确顺序是「先备案、再部署」，而不是这份清单的顺序。
+
+另外三件事会一起变：
+
+- **备案要求账号实名，且必须是你本人。** 如果服务器是通过第三方代购、挂在别人的
+  阿里云账号下，你**备不了案**，而且对这台机器没有最终控制权。
+- **Cloudflare 橙云与备案冲突。** 备案核验通常要求域名解析到已备案的那个 IP，
+  而橙云会把源站藏在 Cloudflare 后面。大陆节点基本要放弃 Cloudflare 代理，
+  §4 那套「灰云拿证再切橙云」的流程也就不适用。
+- **域名后缀要在工信部核准列表内**才可能备案。`.online` 是否在列请以
+  阿里云备案系统的实际校验为准——**不要凭印象判断**，它决定这条路走不走得通。
 
 ## 4. Cloudflare 橙云会挡住证书签发
 
