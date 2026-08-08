@@ -170,6 +170,107 @@ def latency_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
     }
 
 
+def retrieval_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
+    """What retrieval actually did, aggregated over real questions.
+
+    The golden set cannot answer this and never will. It is 90 questions chosen
+    in advance to cover six categories; this is every question anyone actually
+    asked, which is a different population and the only one that says whether
+    the design holds outside the cases it was designed against.
+
+    Three things are worth aggregating, and they are the three the offline
+    evaluation is structurally blind to:
+
+    * **Which channel found the evidence that got cited.** The argument for
+      hybrid retrieval rests on one anecdote — the NVFP4 question, dense #14 and
+      keyword #1 — and an anecdote is not a rate. Counting `sparse_only` across
+      real traffic turns "hybrid is necessary" from a story into a number, and
+      would just as honestly report a small one.
+    * **Why candidates were dropped.** "Same document over quota", "folded into
+      one story" and "budget full" are different decisions, and their relative
+      frequency says which stage is doing the work.
+    * **How deep the cited evidence sat before reranking.** If everything cited
+      was already top-3 after fusion, the cross-encoder is not earning its 28%
+      of the latency budget.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT count(DISTINCT t.rag_query_id), count(*)
+              FROM rag_trace t
+              JOIN rag_query q ON q.id = t.rag_query_id
+             WHERE q.created_at >= now() - make_interval(days => %s)
+            """,
+            (days,),
+        )
+        scale = cursor.fetchone() or (0, 0)
+
+        cursor.execute(
+            """
+            SELECT t.outcome, count(*)
+              FROM rag_trace t
+              JOIN rag_query q ON q.id = t.rag_query_id
+             WHERE q.created_at >= now() - make_interval(days => %s)
+             GROUP BY t.outcome
+             ORDER BY count(*) DESC
+            """,
+            (days,),
+        )
+        outcomes = [{"outcome": row[0], "count": int(row[1])} for row in cursor.fetchall()]
+
+        # Channel attribution, over cited evidence only. A passage no one cited
+        # says nothing about whether the channel that found it mattered.
+        cursor.execute(
+            """
+            SELECT CASE
+                       WHEN t.dense_rank IS NOT NULL AND t.sparse_rank IS NOT NULL THEN 'both'
+                       WHEN t.sparse_rank IS NOT NULL THEN 'sparse_only'
+                       WHEN t.dense_rank IS NOT NULL THEN 'dense_only'
+                       ELSE 'unknown'
+                   END AS channel,
+                   count(*)
+              FROM rag_trace t
+              JOIN rag_query q ON q.id = t.rag_query_id
+             WHERE q.created_at >= now() - make_interval(days => %s)
+               AND t.outcome = 'cited'
+             GROUP BY 1
+            """,
+            (days,),
+        )
+        channels = {row[0]: int(row[1]) for row in cursor.fetchall()}
+
+        # Where the cited passages sat after fusion, before the cross-encoder
+        # reordered them. A median near 1 would mean reranking changes nothing.
+        cursor.execute(
+            """
+            SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY t.fused_rank),
+                   max(t.fused_rank),
+                   count(*) FILTER (WHERE t.fused_rank > 10)
+              FROM rag_trace t
+              JOIN rag_query q ON q.id = t.rag_query_id
+             WHERE q.created_at >= now() - make_interval(days => %s)
+               AND t.outcome = 'cited' AND t.fused_rank IS NOT NULL
+            """,
+            (days,),
+        )
+        depth = cursor.fetchone() or (None, None, 0)
+
+    cited = sum(channels.values())
+    return {
+        "days": days,
+        "queries": int(scale[0]),
+        "candidates": int(scale[1]),
+        "outcomes": outcomes,
+        "citedByChannel": channels,
+        # The headline: how often the keyword channel was the only one that
+        # found a passage the answer went on to cite.
+        "sparseOnlyShare": round(channels.get("sparse_only", 0) / cited, 4) if cited else None,
+        "citedFusedRankMedian": float(depth[0]) if depth[0] is not None else None,
+        "citedFusedRankMax": int(depth[1]) if depth[1] is not None else None,
+        "citedBeyondTop10": int(depth[2] or 0),
+    }
+
+
 def corpus_summary(connection: Any) -> dict[str, Any]:
     """What the answers are drawn from, so the numbers above have a scale."""
     with connection.cursor() as cursor:
