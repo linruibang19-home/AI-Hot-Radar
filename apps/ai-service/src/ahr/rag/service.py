@@ -748,7 +748,6 @@ async def answer_question(
                 "prompt_tokens": usage.prompt_tokens,
                 "completion_tokens": usage.completion_tokens,
                 "cached_tokens": usage.cached_tokens,
-                "total_ms": int((time.monotonic() - started) * 1000),
                 "prompt_version": ANSWER_PROMPT_VERSION,
             }
         )
@@ -760,7 +759,7 @@ async def answer_question(
         # expensive one per call — reported its tokens solely into this query's
         # own metrics blob. Any spend report built from `llm_usage` was
         # therefore quietly excluding the thing most worth watching.
-        _record_answer_usage(connection, model=llm.model_name, usage=usage)
+        _record_answer_usage(connection, model=llm.model_name, usage=usage, serving=persist)
 
         # Groundedness per citation, before the row is written so the score
         # lands with it. Same cross-encoder the offline evaluation uses, so the
@@ -777,6 +776,19 @@ async def answer_question(
         metrics["stages_ms"]["support"] = int((time.monotonic() - step) * 1000)
         metrics["support"] = summarise(scores, len(citations))
         await report("support", {"ms": metrics["stages_ms"]["support"], **metrics["support"]})
+
+        # `total_ms` last, because support scoring is part of the request.
+        #
+        # It used to be stamped just after generation, which left the support
+        # stage — a reranker round trip, median 2.3s — outside the total the
+        # dashboard reports as end-to-end latency. Two consequences, and the
+        # second is how it surfaced: p50 was understated by roughly that much,
+        # and the stage shares summed to 122.7% because one of the stages was
+        # being divided by a total that excluded it.
+        #
+        # The reader waits for support scoring like everything else, so it
+        # counts. Recomputing the shares was treating the symptom.
+        metrics["total_ms"] = int((time.monotonic() - started) * 1000)
 
         result = Answer(
             question=question,
@@ -932,12 +944,26 @@ def load_conversation(connection: Any, query_id: str) -> dict[str, Any] | None:
     return conversation
 
 
-def _record_answer_usage(connection: Any, *, model: str, usage: TokenUsage) -> None:
+def _record_answer_usage(connection: Any, *, model: str, usage: TokenUsage, serving: bool) -> None:
     """Record one answer's provider-reported token usage (AHR-QSO-700 §5).
 
     `content_item_id` is null: an answer is about the corpus rather than about
     one item, and inventing an attribution would corrupt per-item cost figures.
+
+    **Evaluation runs are recorded under a different operation.** They call the
+    same generator with the same prompt and cost exactly as much, so they must
+    be recorded — but they are not what the site cost to run, and folding them
+    together makes the spend report unreadable in the direction that flatters
+    it. Measured before this split: 416 `rag_answer` rows against 159 questions
+    anyone actually asked, so **62% of the "RAG answer generation" line was
+    evaluation** presented as production. Same family as the evaluation that was
+    reading its own cache (§3.23 ①) — a measurement contaminated by the thing
+    measuring it.
+
+    `serving` follows `persist`: the only caller that does not persist is the
+    evaluation harness, because its answers are not shown to anyone.
     """
+    operation = "rag_answer" if serving else "rag_answer_eval"
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -945,10 +971,11 @@ def _record_answer_usage(connection: Any, *, model: str, usage: TokenUsage) -> N
                 id, content_item_id, operation, model, prompt_version,
                 prompt_tokens, completion_tokens, cached_tokens,
                 attempts, succeeded, latency_ms
-            ) VALUES (%s, NULL, 'rag_answer', %s, %s, %s, %s, %s, %s, TRUE, %s)
+            ) VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, TRUE, %s)
             """,
             (
                 uuid.uuid4(),
+                operation,
                 model,
                 ANSWER_PROMPT_VERSION,
                 usage.prompt_tokens,
