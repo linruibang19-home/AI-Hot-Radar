@@ -49,6 +49,17 @@ interface Stats {
     refusalRate: number;
     stages: { stage: string; samples: number; p50Ms: number; shareOfP50: number }[];
   };
+  retrieval: {
+    days: number;
+    queries: number;
+    candidates: number;
+    outcomes: { outcome: string; count: number }[];
+    citedByChannel: Record<string, number>;
+    sparseOnlyShare: number | null;
+    citedFusedRankMedian: number | null;
+    citedFusedRankMax: number | null;
+    citedBeyondTop10: number;
+  };
   cache: {
     counts: Record<string, number>;
     indexed: number;
@@ -87,6 +98,18 @@ const STAGES: Record<string, string> = {
   cache: "缓存查询",
 };
 
+/** What each trace outcome means. The three "dropped" reasons are recorded
+    separately because they are different decisions — collapsing them into one
+    `dropped` would make "which stage should I tune" unanswerable. */
+const OUTCOMES: Record<string, string> = {
+  cited: "进入证据集，且答案引用了它",
+  evidence_uncited: "进入证据集，但答案没用上",
+  dropped_document_cap: "同一篇文章已超额（单篇霸榜保护）",
+  dropped_story_fold: "同一事件已有代表（四家媒体报道同一件事只算一条）",
+  dropped_budget: "证据位已满（上限 10 条）",
+  ranked_out: "重排后排名不够靠前",
+};
+
 /** The stages that leave the machine. Everything else is local SQL.
     `support` is a reranker call per citation, issued concurrently. */
 const EXTERNAL = new Set(["embed", "rerank", "generate", "support"]);
@@ -119,7 +142,7 @@ export default async function OpsPage() {
     );
   }
 
-  const { cost, latency, corpus, cache } = stats;
+  const { cost, latency, corpus, cache, retrieval } = stats;
   const externalMs = latency.stages
     .filter((s) => EXTERNAL.has(s.stage))
     .reduce((sum, s) => sum + s.p50Ms, 0);
@@ -161,7 +184,13 @@ export default async function OpsPage() {
         <strong>金额是估算，token 不是。</strong> provider 只上报 token 数，
         换算成钱要用价目表，而价目表是会变的合同条款——所以它放在配置里
         （当前 输入 ¥{cost.rates.input}/M · 命中缓存 ¥{cost.rates.cached_input}/M · 输出 ¥
-        {cost.rates.output}/M），不写死在代码里。引用本页金额前请先按 provider 当前价目核对。
+        {cost.rates.output}/M），不写死在代码里。
+        <br />
+        <br />
+        <strong>而这三个值目前是占位默认值，不是任何 provider 的真实费率。</strong>
+        上线前必须按现行价目设置 <code>LLM_PRICE_INPUT</code> /{" "}
+        <code>LLM_PRICE_CACHED_INPUT</code> / <code>LLM_PRICE_OUTPUT</code>，
+        否则本节每一个金额都是假的——一个看起来精确的错数字，比没有数字更坏。
       </div>
 
       <section className="eval-section">
@@ -299,6 +328,100 @@ export default async function OpsPage() {
           阈值放松的后果是<strong>自信地回答另一家公司</strong>；
           <strong>拒答永不缓存</strong>，因为它的含义是「语料里还没有」。
           答案 TTL {Math.round(cache.answerTtlSeconds / 60)} 分钟。
+        </div>
+        {cache.hitRate === 0 && (cache.counts.miss ?? 0) > 0 && (
+          <p className="eval-note">
+            答案命中率 0% 是<strong>设计结果，不是缓存坏了</strong>：键里含语料指纹，
+            而采集每 120 秒写一次，所以时间型问题几乎必然未命中——这正是它该有的行为。
+            对照之下嵌入命中率 {(cache.embeddingHitRate * 100).toFixed(0)}% 是真的在省钱：
+            嵌入是纯函数，同一段文字永远得到同一个向量，没有新鲜度可言。
+          </p>
+        )}
+      </section>
+
+      {/* The golden set is a fixed sample chosen in advance. This is the
+          population, and it is allowed to disagree with it. */}
+      <section className="eval-section">
+        <h2 className="section-title">线上检索行为</h2>
+        <p className="eval-note" style={{ marginTop: 0 }}>
+          近 {retrieval.days} 天 {retrieval.queries} 次真实提问、{retrieval.candidates}{" "}
+          个候选的聚合。<strong>90 题黄金集回答不了这一节</strong>——那是事先选定的固定样本，
+          这里是总体。
+        </p>
+
+        <div className="stat-row">
+          <div className="stat">
+            <div className="stat-value">{retrieval.citedByChannel.dense_only ?? 0}</div>
+            <div className="stat-label">仅稠密通道找到</div>
+          </div>
+          <div className="stat">
+            <div className="stat-value">{retrieval.citedByChannel.sparse_only ?? 0}</div>
+            <div className="stat-label">仅关键词通道找到</div>
+          </div>
+          <div className="stat">
+            <div className="stat-value">{retrieval.citedByChannel.both ?? 0}</div>
+            <div className="stat-label">两个通道都找到</div>
+          </div>
+          <div className="stat">
+            <div className="stat-value">{retrieval.citedFusedRankMedian ?? "—"}</div>
+            <div className="stat-label">被引证据融合名次中位数</div>
+          </div>
+          <div className="stat">
+            <div className="stat-value">{retrieval.citedBeyondTop10}</div>
+            <div className="stat-label">融合名次在 10 名之后</div>
+          </div>
+        </div>
+
+        <div className="notice">
+          {(retrieval.citedByChannel.sparse_only ?? 0) === 0 ? (
+            <>
+              <strong>一条不好看的实测结果，照登。</strong> 混合检索的理由一直是那道 NVFP4
+              题——正确答案稠密 #14、关键词 #1、融合 #3。那是真的，但它是<strong>一道题</strong>。
+              在这 {retrieval.queries} 次真实提问产生的{" "}
+              {(retrieval.citedByChannel.dense_only ?? 0) +
+                (retrieval.citedByChannel.both ?? 0)}{" "}
+              条被引证据里，关键词通道<strong>没有一次</strong>是唯一找到它的那个通道。
+              这与 B13 的结论一致：稠密通道一直在兜底。
+              轶事不是比率——这一节存在的意义就是把它变成比率，哪怕数字难看。
+            </>
+          ) : (
+            <>
+              被引证据中有{" "}
+              <strong>{((retrieval.sparseOnlyShare ?? 0) * 100).toFixed(1)}%</strong>{" "}
+              只有关键词通道找到。这是混合检索在真实流量上的收益率，而不是一道示例题。
+            </>
+          )}
+        </div>
+
+        <div className="notice">
+          <strong>重排确实在干活。</strong> 被引证据的融合名次中位数是{" "}
+          <strong>{retrieval.citedFusedRankMedian ?? "—"}</strong>，最深到过第{" "}
+          {retrieval.citedFusedRankMax ?? "—"} 名，其中{" "}
+          <strong>{retrieval.citedBeyondTop10}</strong> 条融合后排在 10 名之外。
+          如果被引的都已经在前三，交叉编码器就不值它占的那 28% 延迟。
+        </div>
+
+        <div className="table-scroll">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>候选去向</th>
+                <th className="eval-num">条数</th>
+                <th>含义</th>
+              </tr>
+            </thead>
+            <tbody>
+              {retrieval.outcomes.map((row) => (
+                <tr key={row.outcome}>
+                  <td>
+                    <code>{row.outcome}</code>
+                  </td>
+                  <td className="eval-num">{row.count}</td>
+                  <td className="eval-meta">{OUTCOMES[row.outcome] ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 

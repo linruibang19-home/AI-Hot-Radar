@@ -426,7 +426,15 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
         golden = replace(golden, questions=kept)
 
     if args.validate:
+        from ahr.rag.eval.freshness import check as check_freshness
         from ahr.rag.eval.golden import CATEGORIES
+
+        # Structural validity was the only thing checked here, and it is the
+        # half that cannot rot: the YAML parses and the ids are well formed.
+        # Whether those ids still point at retrievable content is the half that
+        # decides if last week's numbers still mean anything.
+        with psycopg.connect(get_settings().database_url) as connection:
+            freshness = check_freshness(connection, golden)
 
         print(
             json.dumps(
@@ -436,12 +444,16 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
                     "files": list(golden.source_files),
                     "by_category": {c: len(golden.by_category(c)) for c in CATEGORIES},
                     "annotated_items": len(golden.item_ids),
+                    "freshness": freshness,
                 },
                 indent=2,
                 ensure_ascii=False,
             )
         )
-        return 0
+        # Non-zero when the annotations no longer describe the corpus, so this
+        # can gate a scheduled run. Reporting a clean exit while pointing at
+        # missing items would make the check decorative.
+        return 1 if freshness["missing"] or freshness["unretrievable"] else 0
 
     if args.variant in ("generation", "latency"):
         return _run_generation_eval(golden, args, snapshot)

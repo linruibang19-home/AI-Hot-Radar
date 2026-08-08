@@ -130,13 +130,22 @@ async def stats(days: int = 30) -> dict[str, object]:
     from ahr.config import get_settings
     from ahr.rag.cache import client as cache_client
     from ahr.rag.cache import stats as cache_stats
-    from ahr.rag.ops import corpus_summary, cost_summary, latency_summary
+    from ahr.rag.ops import (
+        corpus_summary,
+        cost_summary,
+        latency_summary,
+        retrieval_summary,
+    )
 
     window = max(1, min(days, 365))
     with psycopg.connect(get_settings().database_url) as connection:
         return {
             "cost": cost_summary(connection, days=window),
             "latency": latency_summary(connection, days=window),
+            # What retrieval did on real questions, which the 90-question golden
+            # set cannot report: that set is a fixed sample chosen in advance,
+            # this is the population.
+            "retrieval": retrieval_summary(connection, days=window),
             "corpus": corpus_summary(connection),
             # A cache nobody can measure is a cache nobody should trust.
             "cache": await cache_stats(cache_client()),

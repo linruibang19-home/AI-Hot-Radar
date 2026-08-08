@@ -102,7 +102,7 @@ Flyway 在 core-api 启动时自动迁移（V001–V017）。
 
 ## 测试
 
-**810 个测试**：Python 682 · Java 53 · Web 42 · E2E 33。Python 与 Java 部分断网可通过。
+**823 个测试**：Python 695 · Java 53 · Web 42 · E2E 33。Python 与 Java 部分断网可通过。
 
 ```bash
 cd apps/ai-service && python -m pytest -q && python -m mypy src
