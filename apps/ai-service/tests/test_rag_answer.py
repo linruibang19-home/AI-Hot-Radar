@@ -162,6 +162,60 @@ def test_citations_are_recovered_from_claims_when_the_prose_has_no_markers() -> 
     assert dangling == []
 
 
+def test_a_citation_takes_the_narrowest_claim_that_names_it() -> None:
+    """The bug this exists for is visible on any grounded denial.
+
+    The model leads with "检索到的内容中没有名为 X 的模型" and attaches every
+    passage to it, then states the specific facts one passage at a time. Taking
+    the first matching claim gave every citation the denial — and groundedness
+    then scored each passage against a statement nothing can support.
+
+    Measured on one real question, twice: attached to the denial the same three
+    passages scored 0.146 / 0.267 / 0.496; attached to the fact they carry,
+    0.000 / 0.824 / 0.998.
+    """
+    _text, citations, _d, _lim = bind_citations(
+        "结论 [E1][E2]。",
+        [
+            {"text": "证据里没有这个东西", "evidence_ids": ["E1", "E2"]},
+            {"text": "E1 说的具体事实", "evidence_ids": ["E1"]},
+        ],
+        _evidence(),
+    )
+
+    by_chunk = {c.chunk_id: c.claim_text for c in citations}
+    assert by_chunk["chunk-1"] == "E1 说的具体事实"
+    # E2 was only ever named by the broad claim, so it keeps it.
+    assert by_chunk["chunk-2"] == "证据里没有这个东西"
+
+
+def test_equally_narrow_claims_keep_the_models_order() -> None:
+    """Deterministic, so the same answer does not score differently on a re-run."""
+    _text, citations, _d, _lim = bind_citations(
+        "结论 [E1]。",
+        [
+            {"text": "第一条", "evidence_ids": ["E1"]},
+            {"text": "第二条", "evidence_ids": ["E1"]},
+        ],
+        _evidence(),
+    )
+    assert citations[0].claim_text == "第一条"
+
+
+def test_an_empty_claim_never_displaces_a_real_one() -> None:
+    """A claim with no text is narrower than nothing, and would blank the
+    citation's explanation while looking like an improvement."""
+    _text, citations, _d, _lim = bind_citations(
+        "结论 [E1]。",
+        [
+            {"text": "有内容的论断", "evidence_ids": ["E1", "E2"]},
+            {"text": "   ", "evidence_ids": ["E1"]},
+        ],
+        _evidence(),
+    )
+    assert citations[0].claim_text == "有内容的论断"
+
+
 def test_recovered_citations_carry_the_claim_they_came_from() -> None:
     _text, citations, _d, _lim = bind_citations(
         "一句没有编号的结论。",
