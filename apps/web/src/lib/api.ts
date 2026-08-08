@@ -312,6 +312,36 @@ export function fetchSourceHealth(): Promise<SourceHealth[]> {
   return getJson<SourceHealth[]>("/api/v1/admin/sources", []);
 }
 
+/**
+ * One card on a topic-map dimension that is not the topic vocabulary.
+ *
+ * Vendors and content forms share a shape because they are the same thing to a
+ * reader: a name, a blurb, and how many items are behind it. They differ only
+ * in where the count comes from — `item_entity` for one, `content_type` for the
+ * other — and that difference belongs in SQL, not in two near-identical types.
+ */
+export interface MapCard {
+  slug: string;
+  name: string;
+  description?: string | null;
+  total: number;
+}
+
+export function fetchVendorMap(): Promise<MapCard[]> {
+  return getJson<MapCard[]>("/api/v1/vendors/map", []);
+}
+
+export function fetchContentTypeMap(): Promise<MapCard[]> {
+  return getJson<MapCard[]>("/api/v1/content-types/map", []);
+}
+
+export function fetchVendorItems(slug: string, limit = 40): Promise<ContentItem[]> {
+  return getJson<ContentItem[]>(
+    `/api/v1/vendors/${encodeURIComponent(slug)}?limit=${limit}`,
+    [],
+  );
+}
+
 export interface ReportSummary {
   date: string;
   title: string;

@@ -1657,6 +1657,56 @@ GHCR 默认私有需要先 `docker login`。全部写进
 - 删掉 `apps/core-api/src/main/resources/db/`（构建产物目录，`.gitignore` 第 19 行已列）。
   仓库里**没有**被误提交的构建产物。
 
+## 3.27 主题地图：三个维度，数据早就在库里（2026-08-08）
+
+原来的主题地图只有一个维度（受控主题词表），只回答「这条在讲什么」。
+读者同样常问的另外两个问题——「OpenAI 最近怎么样」「只看论文」——
+**所需数据 M2 起就在写，只是没有读的路径**：
+
+| 维度 | 数据源 | 此前状态 |
+|---|---|---|
+| 公司与模型 | `entity`：company 677 / model 832 | 主题页**从未用到** |
+| 技术方向 | `topic` | 用了，但分组和命名需要重排 |
+| 内容形态 | `content_item.content_type`：11 类，只有 8.7% 为空 | 主题页**从未用到** |
+
+**没有往词表里塞公司名。** 主题是内容**在讲什么**，公司是内容**关于谁**——
+混进一个词表之后「OpenAI 的多模态」就只能二选一。
+
+### 量出来的两个真问题
+
+- **生态与工具链那一组基本是空的**：`java_ai` 1 条、`spring_ai` 1 条、
+  `python_ai` 0、`cloud_ai` 0、`reranker` 0。五个近乎空的主题占着五张卡片，
+  而 `agent` 一个人扛着 459 条。已合并，**历史标注一条不丢**（V017 迁移，
+  不是删除——删标注等于把「当时确实这么判过」抹掉）。
+- **分组名可以被打成标签**：`known_slugs()` 把组 key 也放进了可选词表，
+  于是 23 条内容被打上 `business`——一个页面上只会渲染成分组标题的桶，
+  这些条目从任何入口都点不到。已收窄为只提供叶子。
+  **原来的测试断言的正是这个缺陷**（`test_known_slugs_includes_parents_and_children`），
+  所以它不可能发现它；已改写成断言正确行为。
+
+### 实现
+
+`vendor` / `vendor_entity` / `content_type_meta` 三张表（V017），
+由 `ahr.cli seed-topics` 从 `config/taxonomy.yaml` 一次性种下——和 `topic` 同一条路径，
+这样 core-api 不需要读 YAML。厂商是 **curated 而不是自动取 top N**：
+实体按出现的名字抽取，所以 `deepseek`(23) 与 `deepseek-v4`(18) 是两条、
+`gpt-5.6`/`gpt-5.5`/`gpt-5.6-sol` 是三条，自动排序只会得到一墙版本号。
+
+### 两个自己踩的坑，都是量出来才发现的
+
+1. **种厂商时把实体 slug 过了 `normalize_slug`**，它把连字符换成下划线，
+   于是 `hugging-face` 变成 `hugging_face`、`gpt-5.6` 变成 `gpt_5_6`，**匹配不到任何东西**。
+   症状是 Hugging Face 显示 32 条而它的实体有 156 条。修完：
+   Hugging Face **32 → 174**、DeepSeek **23 → 61**、Kimi **12 → 46**、智谱 **5 → 34**。
+2. **内容形态卡片差点链到一个会打自己脸的页面**。`/items` 的过滤参数是「分类 tab」，
+   而 tab 是**几个 content_type 的捆绑**（`tutorial` tab = tutorial + open_source）。
+   卡片写「查看 28 条」点进去会列出 52 条。加了 `type:` 前缀走精确匹配，
+   实测：`type:tutorial` 返回 **28** 条且全是 tutorial，而 `tutorial` tab 仍返回混合的 52 条——
+   **tab 行为一点没变**。
+
+顺带修掉一处文档与代码的偏离：`ContentCategory.resolve` 的注释写着「未知 key 返回空，
+以便书签里的坏 tab 显示全量」，而代码早就返回 `List.of(tab)`——注释是过期的那一半。
+
 ## 4. 服务与中间件
 
 | 组件 | 地址 | 状态 | 实现进度 |
@@ -1713,6 +1763,7 @@ processed_event       消费幂等记录
 | V014 | CJK 字符 bigram 全文索引（`ahr_cjk_bigrams`，索引与查询共用）|
 | V015 | `rag_query.limitations`（答案自带的限定条件，此前只在实时响应里有）|
 | V016 | 管理端鉴权：`admin_principal` / `admin_audit`，以及 `source.effective_enabled` 生成列 |
+| V017 | 主题地图三维度：`vendor` / `vendor_entity` / `content_type_meta`，并迁移合并主题的历史标注 |
 
 ## 6. 已完成任务
 
@@ -1770,7 +1821,7 @@ processed_event       消费幂等记录
 - [x] **修复切块与 enrichment 的错误耦合**（有正文而检索不到的条目 10 → 0）
 - [x] **修复移动端全站横向溢出**（侧边栏拖拽手柄挂在视口外 3px）
 - [x] **B7 补接生产路径**（评测跑过但从未上线）
-- [x] **806 个测试**（Python 681 + Java 50 + Web 42 + E2E 33），Python 与 Java 部分断网可通过
+- [x] **810 个测试**（Python 682 + Java 53 + Web 42 + E2E 33），Python 与 Java 部分断网可通过
 - [x] **生成侧重跑 + 拒答判官**：断言假前提 0/12，并修掉评测走缓存的缺陷（见 3.23 ①）
 - [x] **误拒率回归定位并修复**：7.69% → **0.0000**，成因是解析失败分支丢答案，不是语料竞争——那个假设被证伪（见 3.24）
 - [x] **`rag_query.limitations`（V015）**：永久链接此前把答案的限定条件全丢了（见 3.24）

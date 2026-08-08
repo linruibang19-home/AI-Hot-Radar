@@ -761,12 +761,27 @@ def cmd_seed_topics(args: argparse.Namespace) -> int:
     The enrichment pipeline seeds topics too, but editing a display name should
     not require re-running enrichment over the whole corpus.
     """
-    from ahr.processing.topics import load_display, load_taxonomy, seed_topics
+    from ahr.processing.topics import (
+        load_content_type_display,
+        load_display,
+        load_taxonomy,
+        load_vendors,
+        seed_content_types,
+        seed_topics,
+        seed_vendors,
+    )
 
     with psycopg.connect(get_settings().database_url) as connection:
-        written = seed_topics(connection, load_taxonomy(), load_display())
+        # All three dimensions of the topic map come from one file, so they are
+        # refreshed together — seeding topics without the vendors that were
+        # edited in the same commit would show half of an intended change.
+        topics = seed_topics(connection, load_taxonomy(), load_display())
+        vendors = seed_vendors(connection, load_vendors())
+        content_types = seed_content_types(connection, load_content_type_display())
         connection.commit()
-    print(json.dumps({"topics": written}, indent=2))
+    print(
+        json.dumps({"topics": topics, "vendors": vendors, "contentTypes": content_types}, indent=2)
+    )
     return 0
 
 

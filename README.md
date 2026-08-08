@@ -95,14 +95,14 @@ docker compose -f infra/compose/docker-compose.yml up -d --build
 ```
 
 网站 http://localhost:3000 ，内容 API :8080 ，AI 服务 :8000 。
-Flyway 在 core-api 启动时自动迁移（V001–V016）。
+Flyway 在 core-api 启动时自动迁移（V001–V017）。
 
 站内可看的页面：`/`（精选）· `/items` · `/hot` · `/stories` · `/topics` ·
 `/reports` · `/ask`（RAG 问答）· `/eval`（评测记录）· `/ops`（成本与延迟）· `/admin/sources`。
 
 ## 测试
 
-**806 个测试**：Python 681 · Java 50 · Web 42 · E2E 33。Python 与 Java 部分断网可通过。
+**810 个测试**：Python 682 · Java 53 · Web 42 · E2E 33。Python 与 Java 部分断网可通过。
 
 ```bash
 cd apps/ai-service && python -m pytest -q && python -m mypy src

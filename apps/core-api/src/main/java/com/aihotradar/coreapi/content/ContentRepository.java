@@ -300,6 +300,93 @@ public class ContentRepository {
                                 rs.getLong("total")));
     }
 
+    /**
+     * The company / model-family cards.
+     *
+     * <p>Counted over `item_entity`, distinct by item, because a vendor owns several entity rows
+     * and an article mentioning both "OpenAI" and "GPT-5.6" is one article. A plain count would
+     * report it twice and make the busiest vendors look busier than they are.
+     *
+     * <p>Vendors with no matching entity still appear, with zero. The curated list is a statement
+     * about what the site tracks; hiding an empty one would quietly turn "we have nothing on
+     * Mistral this week" into "Mistral does not exist".
+     */
+    public List<VendorNode> vendorMap() {
+        String sql =
+                """
+                SELECT v.slug, v.name, v.description,
+                       count(DISTINCT ie.content_item_id) AS total
+                  FROM vendor v
+                  LEFT JOIN vendor_entity ve ON ve.vendor_slug = v.slug
+                  LEFT JOIN entity e ON e.slug = ve.entity_slug
+                  LEFT JOIN item_entity ie ON ie.entity_id = e.id
+                  LEFT JOIN content_item ci
+                         ON ci.id = ie.content_item_id AND ci.duplicate_of_id IS NULL
+                 GROUP BY v.slug, v.name, v.description, v.display_order
+                 ORDER BY v.display_order, v.slug
+                """;
+        return jdbc.query(
+                sql,
+                new MapSqlParameterSource(),
+                (rs, rowNum) ->
+                        new VendorNode(
+                                rs.getString("slug"),
+                                rs.getString("name"),
+                                rs.getString("description"),
+                                rs.getLong("total")));
+    }
+
+    /**
+     * The content-form cards, from `content_item.content_type`.
+     *
+     * <p>Inner join on the metadata table so a type with no display entry does not render as a
+     * card labelled with its raw enum name. Measured: 137 of 1578 items have no content_type at
+     * all, and those are simply absent rather than bucketed into an "other" card that would mean
+     * "the classifier had nothing to say".
+     */
+    public List<VendorNode> contentTypeMap() {
+        String sql =
+                """
+                SELECT m.content_type AS slug, m.name, m.description,
+                       count(ci.id) AS total
+                  FROM content_type_meta m
+                  LEFT JOIN content_item ci
+                         ON ci.content_type = m.content_type AND ci.duplicate_of_id IS NULL
+                 GROUP BY m.content_type, m.name, m.description, m.display_order
+                 ORDER BY m.display_order, m.content_type
+                """;
+        return jdbc.query(
+                sql,
+                new MapSqlParameterSource(),
+                (rs, rowNum) ->
+                        new VendorNode(
+                                rs.getString("slug"),
+                                rs.getString("name"),
+                                rs.getString("description"),
+                                rs.getLong("total")));
+    }
+
+    /** Items belonging to a vendor, through any of its entities. */
+    public List<ContentItem> findByVendor(String slug, int limit) {
+        String sql =
+                BASE_SELECT
+                        + """
+                           AND EXISTS (
+                               SELECT 1
+                                 FROM item_entity ie
+                                 JOIN entity e ON e.id = ie.entity_id
+                                 JOIN vendor_entity ve ON ve.entity_slug = e.slug
+                                WHERE ie.content_item_id = ci.id AND ve.vendor_slug = :slug
+                           )
+                         ORDER BY COALESCE(ci.published_at, ci.observed_at) DESC, ci.id DESC
+                         LIMIT :limit
+                        """;
+        return jdbc.query(
+                sql,
+                new MapSqlParameterSource().addValue("slug", slug).addValue("limit", limit),
+                MAPPER);
+    }
+
     public List<ContentItem> findByTopic(String slug, int limit) {
         String sql =
                 BASE_SELECT
@@ -465,6 +552,10 @@ public class ContentRepository {
             String groupName,
             String groupDescription,
             long total) {}
+
+    /** One card on the topic map. Shared by the vendor and content-form dimensions:
+     * both are "a name, a blurb and how many items are behind it". */
+    public record VendorNode(String slug, String name, String description, long total) {}
 
     public record HotItem(
             String id,

@@ -24,19 +24,41 @@ public final class ContentCategory {
 
     private ContentCategory() {}
 
+    /** Forces an exact `content_type` match instead of a tab lookup. See {@link #resolve}. */
+    public static final String EXACT_PREFIX = "type:";
+
     /**
-     * Resolve a tab key to content types.
+     * Resolve a filter key to content types.
      *
-     * <p>An unknown key returns empty, which the caller treats as "no filter"
-     * rather than "no results" — a bad tab in a bookmarked URL should show the
-     * full feed, not an empty page.
+     * <p>Three forms, in precedence order:
+     *
+     * <ol>
+     *   <li>{@code type:<content_type>} — exactly that one type, no tab expansion;
+     *   <li>a tab key — the several types that tab covers;
+     *   <li>anything else — taken as a raw content type, so the API stays usable directly.
+     * </ol>
+     *
+     * <p><b>Why the prefix exists.</b> Tab keys and content types share a namespace and two of
+     * them collide: {@code tutorial} is a tab covering {@code tutorial} *and* {@code open_source},
+     * and {@code opinion} is both. The topic map's content-form cards show a count for one exact
+     * type, so a card reading "查看 28 条" that opened a 52-item tab would be showing a number it
+     * then contradicts. This keeps the card's promise and leaves the tabs untouched.
+     *
+     * <p>The previous documentation here claimed an unknown key returned empty — "a bad tab in a
+     * bookmarked URL should show the full feed". The code returned {@code List.of(tab)} and had
+     * done for some time, so a typo already produced an empty page. The behaviour is the useful
+     * one; the comment was the stale half.
      */
     public static List<String> resolve(String tab) {
         if (tab == null || tab.isBlank() || "all".equalsIgnoreCase(tab)) {
             return List.of();
         }
-        // A raw content_type is also accepted so the API stays usable directly.
-        List<String> mapped = TABS.get(tab.toLowerCase());
+        String key = tab.toLowerCase();
+        if (key.startsWith(EXACT_PREFIX)) {
+            String exact = key.substring(EXACT_PREFIX.length()).trim();
+            return exact.isEmpty() ? List.of() : List.of(exact);
+        }
+        List<String> mapped = TABS.get(key);
         return mapped != null ? mapped : List.of(tab);
     }
 
