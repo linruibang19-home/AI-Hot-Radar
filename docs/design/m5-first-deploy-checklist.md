@@ -73,7 +73,7 @@ curl -fsSL https://get.docker.com | sh && systemctl enable --now docker
 
 ```bash
 # Alibaba Cloud Linux 3 / 4（RHEL 系）
-sudo dnf -y install dockerdocker-cli 2>/dev/null || sudo dnf -y install docker
+sudo dnf -y install docker docker-cli docker-compose-plugin
 ```
 
 Alibaba Cloud Linux 上更稳妥的是走阿里云自己的 docker-ce 源；装完务必确认
