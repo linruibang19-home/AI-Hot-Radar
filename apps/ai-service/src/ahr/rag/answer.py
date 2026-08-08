@@ -340,20 +340,26 @@ def _recover_bare_answer(text: str) -> dict[str, Any]:
     }
 
 
-def _claim_evidence(claims: list[dict[str, Any]]) -> list[tuple[int, str]]:
-    """Every `(evidence number, claim text)` the model declared, in order.
+def _claim_evidence(claims: list[dict[str, Any]]) -> list[tuple[int, str, int]]:
+    """Every `(evidence number, claim text, how many passages that claim named)`.
 
     The model writes the ids both ways — `"E1"` and `1` — so both are accepted.
+
+    The third element is what lets a citation pick the *right* claim rather than
+    the first one. See `bind_citations`.
     """
-    pairs: list[tuple[int, str]] = []
+    pairs: list[tuple[int, str, int]] = []
     for claim in claims:
         if not isinstance(claim, dict):
             continue
         text = str(claim.get("text", "")).strip()
+        numbers = []
         for raw_id in claim.get("evidence_ids") or []:
             parsed = re.fullmatch(r"E?(\d+)", str(raw_id).strip())
             if parsed:
-                pairs.append((int(parsed.group(1)), text))
+                numbers.append(int(parsed.group(1)))
+        for number in numbers:
+            pairs.append((number, text, len(numbers)))
     return pairs
 
 
@@ -401,7 +407,7 @@ def bind_citations(
         # model did anchor its citations, that is the more precise signal and
         # topping it up from `claims` would attach sources to sentences the
         # model never tied them to.
-        for number, _ in _claim_evidence(claims):
+        for number, _text, _breadth in _claim_evidence(claims):
             note(number)
         if used:
             recovered.append("模型未在正文中标注引用编号，下列来源取自它给出的 claims")
@@ -442,10 +448,32 @@ def bind_citations(
         cleaned = re.sub(r"[、,，]\s*(?=[)）])", "", cleaned)
         return cleaned.strip(" 、,，")
 
+    # Which claim each citation is *for*, and it is not simply the first one
+    # that mentioned it.
+    #
+    # A grounded denial leads with a claim that names every passage at once —
+    # "检索到的内容中没有名为 Qwen4-Ultra 的模型", evidence E1..E10 — and the
+    # specific facts that follow name one passage each. Taking the first match
+    # gave all ten citations the denial, and then `support.score_citations`
+    # scored each passage against a statement that *nothing* can support.
+    #
+    # Measured on one question, twice: attached to the denial the same three
+    # passages scored 0.146 / 0.267 / 0.496; attached to the fact they actually
+    # carry, 0.000 / 0.824 / 0.998. Same evidence, same question — the number
+    # was reporting which claim got attached, not how well the passage
+    # supported anything.
+    #
+    # So the narrowest claim wins: a claim naming one passage says more about
+    # that passage than a claim naming ten. Ties keep model order, so the rule
+    # is deterministic.
     claim_for: dict[int, str] = {}
-    for number, text in _claim_evidence(claims):
-        if number in renumber and number not in claim_for:
+    claim_breadth: dict[int, int] = {}
+    for number, text, breadth in _claim_evidence(claims):
+        if number not in renumber or not text:
+            continue
+        if number not in claim_for or breadth < claim_breadth[number]:
             claim_for[number] = text
+            claim_breadth[number] = breadth
 
     citations = [
         Citation(
