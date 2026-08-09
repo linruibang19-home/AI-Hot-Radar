@@ -32,6 +32,7 @@ from ahr.rag.retrieval import (
     VECTOR_PASSAGE_TOP_K,
     ChunkHit,
     dense_search,
+    entity_names,
     expand_vendor_aliases,
     interleave,
     load_chunk_texts,
@@ -290,6 +291,7 @@ def rrf_retriever(
         # and the reason this line is a copy rather than a simplification.
         query_entities = resolve_query_entities(connection, question)
         aliases = expand_vendor_aliases(connection, query_entities)
+        names = entity_names(connection, query_entities)
 
         channels: dict[str, list[ChunkHit]] = {
             "dense": dense_search(connection, vectors[0], limit=dense_depth, window=filter_window),
@@ -299,6 +301,7 @@ def rrf_retriever(
                 limit=sparse_depth,
                 window=filter_window,
                 extra_terms=aliases,
+                entity_terms=names + aliases,
             ),
         }
 

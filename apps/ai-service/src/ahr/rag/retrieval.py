@@ -10,6 +10,7 @@ must be tuned against the evaluation set rather than treated as constants.
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -31,6 +32,26 @@ TEMPORAL_SQL_TOP_K = 40
 # generally — "model", "release" — is dropped here even though no stopword list
 # would contain it.
 MAX_DOCUMENT_FREQUENCY_RATIO = 0.15
+
+# How much more a lexeme is worth when the corpus knows it as an entity.
+#
+# IDF alone cannot separate 智谱 from 了什 on this corpus, and the reason is
+# specific: the bodies are mostly English, so *any* Chinese bigram is rare
+# corpus-wide. Measured on 「智谱最近发布了什么」 —
+#
+#     智谱 df=3 idf=7.66      了什 df=18 idf=5.87
+#     zhipu df=4 idf=7.37     布了 df=23 idf=5.62
+#
+# and `了什` / `布了` are not words at all, they are ADR-0018's bigrams crossing
+# word boundaries in 「发布了什么」. Five of those sum to 25.96 and outrank the one
+# term naming the vendor. The df ceiling cannot fix it either: these lexemes are
+# genuinely rare by the measure it uses.
+#
+# What separates them is not frequency but status — one is a name the corpus has
+# an `entity` row for, the others are fragments. So the entity terms are weighted
+# rather than the fragments filtered, which needs no list of stop-bigrams and no
+# segmenter.
+ENTITY_TERM_WEIGHT = 3.0
 
 
 @dataclass(frozen=True)
@@ -470,6 +491,15 @@ def expand_vendor_aliases(connection: Any, entity_ids: frozenset[str]) -> list[s
     ]
 
 
+def entity_names(connection: Any, entity_ids: frozenset[str]) -> list[str]:
+    """Names for resolved entity ids, for weighting the keyword channel."""
+    if not entity_ids:
+        return []
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT name FROM entity WHERE id = ANY(%s::uuid[])", (sorted(entity_ids),))
+        return [str(row[0]) for row in cursor.fetchall() if row[0]]
+
+
 def sparse_search(
     connection: Any,
     question: str,
@@ -478,6 +508,7 @@ def sparse_search(
     max_df_ratio: float = MAX_DOCUMENT_FREQUENCY_RATIO,
     window: tuple[datetime, datetime] | None = None,
     extra_terms: list[str] | None = None,
+    entity_terms: list[str] | None = None,
 ) -> list[ChunkHit]:
     """Keyword retrieval over the GIN index built in V001.
 
@@ -499,12 +530,51 @@ def sparse_search(
 
     tsquery = " | ".join(_escape_lexeme(lexeme) for lexeme, _ in terms)
 
+    # ln(N/df), the standard IDF. `select_query_terms` already dropped df == 0
+    # and anything above the ceiling, so every value here is finite and positive.
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT count(*) FROM content_chunk WHERE search_vector IS NOT NULL")
+        total = cursor.fetchone()[0] or 1
+    lexemes = [lexeme for lexeme, _ in terms]
+    # Lexemes contributed by a resolved entity or one of its vendor aliases.
+    # Tokenised through the same path as the query so the two agree by
+    # construction rather than by string comparison.
+    entity_lexemes: set[str] = set()
+    if entity_terms:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT DISTINCT lexeme FROM unnest(to_tsvector('simple', %s))",
+                (split_scripts(" ".join(entity_terms)),),
+            )
+            entity_lexemes = {str(row[0]) for row in cursor.fetchall()}
+
+    idfs = [
+        math.log(total / df) * (ENTITY_TERM_WEIGHT if lexeme in entity_lexemes else 1.0)
+        for lexeme, df in terms
+    ]
+
     with connection.cursor() as cursor:
         cursor.execute(
             """
             SELECT ch.id::text,
                    ci.id::text,
-                   ts_rank_cd(ch.search_vector, q) AS rank,
+                   -- IDF-weighted overlap, not `ts_rank_cd`.
+                   --
+                   -- `ts_rank_cd` has no IDF: every matched lexeme counts the
+                   -- same. Measured consequence — asked 「智谱最近发布了什么」
+                   -- the query ORs `智谱` (df 3) with the CJK bigrams `最近`,
+                   -- `发布` and `什么`, which clear the 0.15 document-frequency
+                   -- ceiling honestly and then outweigh the one term that
+                   -- identifies the vendor. The channel returned 40 rows led by
+                   -- 「自托管开源模型指南」 and 「推理工程大师课」, and the answer
+                   -- said Zhipu had released nothing.
+                   --
+                   -- Summing ln(N/df) over the terms a chunk actually matches is
+                   -- what BM25 would do about it, and it needs no new index: the
+                   -- frequencies were already computed to build this query.
+                   (SELECT COALESCE(sum(t.idf), 0)
+                      FROM unnest(%s::text[], %s::float8[]) AS t(lexeme, idf)
+                     WHERE ch.search_vector @@ to_tsquery('simple', t.lexeme)) AS rank,
                    COALESCE(ci.zh_title, ci.title),
                    s.name
               FROM to_tsquery('simple', %s) AS q
@@ -522,6 +592,8 @@ def sparse_search(
              LIMIT %s
             """,
             (
+                lexemes,
+                idfs,
                 tsquery,
                 window[0] if window else None,
                 window[0] if window else None,

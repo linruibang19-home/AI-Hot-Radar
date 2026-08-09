@@ -370,3 +370,29 @@ def test_truncated_json_is_never_shown_as_prose() -> None:
 
 def test_a_json_array_is_not_an_answer() -> None:
     assert parse_model_output('["答案 [E1]"]')["answer_markdown"] == ""
+
+
+def test_a_claim_never_carries_the_model_s_own_labels() -> None:
+    """Third field, same rule. The body was cleaned, then `limitations` was
+    found leaking `[E1]`, and `claim_text` was never cleaned at all — 22 of 806
+    stored claims carried a raw label, rendered on the page as 「支撑：… [E1]」.
+
+    Stripped rather than renumbered: the claim sits under a card that already
+    shows its number, so a marker inside it points at the thing it is printed
+    on. Bracketed form only — a bare `E5` in model prose can be a model name,
+    which is why `limitations`' wider rule does not extend here.
+    """
+    evidence = _evidence(2)
+    _text, citations, _dangling, _limits = bind_citations(
+        "结论 [E1][E2]。",
+        [
+            {"text": "DeepSeek 计划上调 API 定价[E1]", "evidence_ids": ["E1"]},
+            {"text": "单日处理量达 8 万亿 Token[E2]", "evidence_ids": ["E2"]},
+        ],
+        evidence,
+    )
+
+    assert [c.claim_text for c in citations] == [
+        "DeepSeek 计划上调 API 定价",
+        "单日处理量达 8 万亿 Token",
+    ]
