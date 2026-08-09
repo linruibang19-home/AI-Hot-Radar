@@ -383,6 +383,9 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
         print(json.dumps({"error": str(exc)}, indent=2, ensure_ascii=False))
         return 1
 
+    if args.variant == "query-type-sweep":
+        return _run_query_type_sweep(golden, args)
+
     if args.variant == "planner-diff":
         return _run_planner_diff(golden, args)
 
@@ -705,6 +708,45 @@ def _run_weight_sweep(
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _run_query_type_sweep(golden: Any, args: argparse.Namespace) -> int:
+    """Force each query_type per question and read the recall.
+
+    B16 left one question open: the LLM planner classified far better and
+    retrieved slightly worse, which is either a failure to transfer or a wrong
+    yardstick. This produces the label defined by what the planner exists to
+    serve, so the two can be told apart.
+    """
+    import asyncio
+
+    from ahr.rag.embeddings import EmbeddingUnavailableError
+    from ahr.rag.embeddings import build_client_from_env as build_embedder
+    from ahr.rag.eval.query_type_sweep import run_sweep
+    from ahr.rag.rerank import RerankUnavailableError
+    from ahr.rag.rerank import build_client_from_env as build_reranker
+
+    async def run() -> dict[str, Any]:
+        try:
+            client = build_embedder()
+            reranker = build_reranker()
+        except (EmbeddingUnavailableError, RerankUnavailableError) as exc:
+            return {"error": str(exc)}
+
+        async with client, reranker:
+            with psycopg.connect(get_settings().database_url) as connection:
+                return await run_sweep(
+                    golden, connection=connection, client=client, reranker=reranker
+                )
+
+    payload = asyncio.run(run())
+    if args.output:
+        Path(args.output).write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    summary = {k: v for k, v in payload.items() if k != "rows"}
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -1151,6 +1193,7 @@ def main(argv: list[str] | None = None) -> int:
             "latency",
             "planner",
             "planner-diff",
+            "query-type-sweep",
         ],
         default="b1",
         help=(
@@ -1165,7 +1208,8 @@ def main(argv: list[str] | None = None) -> int:
             "latency per-stage p50/p95 (AHR-RAG-400 §14), "
             "planner query_type/time/entity accuracy against the golden set "
             "(AHR-QSO-700 §8; needs no provider or database), "
-            "planner-diff where the regex and LLM planners disagree"
+            "planner-diff where the regex and LLM planners disagree, "
+            "query-type-sweep which query_type actually retrieves best per question"
         ),
     )
     rag_eval.add_argument(
