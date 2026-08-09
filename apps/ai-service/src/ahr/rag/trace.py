@@ -34,6 +34,7 @@ TRACE_LIMIT = 40
 CITED = "cited"
 EVIDENCE_UNCITED = "evidence_uncited"
 DROPPED_DOCUMENT_CAP = "dropped_document_cap"
+DROPPED_SOURCE_CAP = "dropped_source_cap"
 DROPPED_STORY_FOLD = "dropped_story_fold"
 DROPPED_BUDGET = "dropped_budget"
 RANKED_OUT = "ranked_out"

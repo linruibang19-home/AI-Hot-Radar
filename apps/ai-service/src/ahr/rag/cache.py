@@ -214,11 +214,24 @@ async def put_embedding(
 ANSWER_PIPELINE_VERSION = "gated-1"
 
 
-def answer_key(question: str, *, fingerprint: str, prompt_version: str) -> str:
-    return (
-        f"{_ANSWER_PREFIX}:"
-        f"{_digest(canonical(question), fingerprint, prompt_version, ANSWER_PIPELINE_VERSION)}"
+def answer_key(
+    question: str, *, fingerprint: str, prompt_version: str, window: str | None = None
+) -> str:
+    """Key an answer by everything that can change it.
+
+    `window` carries a reader-supplied time range. The same words over two
+    different ranges are two different questions, and keying on the words alone
+    would hand one reader the other's window — the same shape as serving a
+    pre-gating answer after the gate shipped.
+    """
+    digest = _digest(
+        canonical(question),
+        fingerprint,
+        prompt_version,
+        ANSWER_PIPELINE_VERSION,
+        window or "",
     )
+    return f"{_ANSWER_PREFIX}:{digest}"
 
 
 async def get_answer(client: redis.Redis, key: str) -> dict[str, Any] | None:

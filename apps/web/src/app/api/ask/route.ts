@@ -79,9 +79,23 @@ export async function POST(request: Request) {
   const streaming = new URL(request.url).searchParams.get("stream") === "1";
 
   let question = "";
+  // The reader's own time range, when they corrected the one the planner chose.
+  let timeFrom: string | undefined;
+  let timeTo: string | undefined;
   try {
-    const body = (await request.json()) as { question?: unknown };
+    const body = (await request.json()) as {
+      question?: unknown;
+      timeFrom?: unknown;
+      timeTo?: unknown;
+    };
     question = String(body.question ?? "").trim();
+    // Shape-checked here rather than passed through: the upstream would reject
+    // a malformed date with a 422 the browser reports as "回答失败".
+    const isDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+    if (isDate(body.timeFrom) && isDate(body.timeTo)) {
+      timeFrom = body.timeFrom as string;
+      timeTo = body.timeTo as string;
+    }
   } catch {
     return NextResponse.json({ error: "请求格式不正确" }, { status: 400 });
   }
@@ -105,7 +119,7 @@ export async function POST(request: Request) {
         ...forwardedFor(request),
         ...cacheDirective(request),
       },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, ...(timeFrom && timeTo ? { timeFrom, timeTo } : {}) }),
       signal: controller.signal,
       cache: "no-store",
     });

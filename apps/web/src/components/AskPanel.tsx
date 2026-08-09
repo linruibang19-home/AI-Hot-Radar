@@ -54,7 +54,18 @@ export interface AnswerPayload {
     query_type?: string;
     time_range?: { label?: string; from?: string; to?: string } | null;
   } | null;
-  metrics?: { total_ms?: number; evidence?: number; degraded?: string[] };
+  /** Most citations failed the support check. Reported, never a refusal. */
+  weakRetrieval?: boolean;
+  metrics?: {
+    total_ms?: number;
+    evidence?: number;
+    degraded?: string[];
+    /** Other names for the same vendor that the question was expanded to. */
+    aliases?: string[];
+    /** Distinct publishers behind the evidence, after the per-source cap. */
+    selection?: { distinct_sources?: number; source_capped?: number };
+    support_dropped?: number;
+  };
   /** Only the permalink carries this; the history list does not fetch it. */
   trace?: TraceRow[];
 }
@@ -319,6 +330,10 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
   const [activeCite, setActiveCite] = useState<number | null>(null);
   const [history, setHistory] = useState<AnswerPayload[]>([]);
   const [openHistory, setOpenHistory] = useState<string | null>(null);
+  // The range the reader set, if they corrected the planner's. Held here
+  // rather than derived from the answer: it has to survive the re-ask that
+  // applies it, and the answer it produces reports the new range, not the old.
+  const [readerWindow, setReaderWindow] = useState<{ from: string; to: string } | null>(null);
 
   // Conversations live in `rag_query`, written in the same transaction as the
   // answer. Loading them on mount is what makes a conversation survive
@@ -346,7 +361,7 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  async function ask(text: string) {
+  async function ask(text: string, window?: { from: string; to: string } | null) {
     const trimmed = text.trim();
     if (trimmed.length < 2 || loading) return;
 
@@ -361,7 +376,10 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
       const response = await fetch("/api/ask?stream=1", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question: trimmed }),
+        body: JSON.stringify({
+          question: trimmed,
+          ...(window ? { timeFrom: window.from, timeTo: window.to } : {}),
+        }),
       });
 
       if (!response.ok || !response.body) {
@@ -597,10 +615,90 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
               ) : (
                 <span className="ask-plan-chip">全部时间</span>
               )}
+              {/* Displaying the resolved window was half the promise. The site
+                  already argued a reader who sees the wrong week should be able
+                  to fix it rather than conclude the system is broken; until now
+                  fixing it meant retyping the question and hoping. */}
+              <details className="ask-window">
+                <summary className="ask-window-toggle">改时间范围</summary>
+                <div className="ask-window-body">
+                  <label>
+                    从
+                    <input
+                      type="date"
+                      value={readerWindow?.from ?? (answer.plan?.time_range?.from ?? "").slice(0, 10)}
+                      onChange={(event) =>
+                        setReaderWindow((prev) => ({
+                          from: event.target.value,
+                          to: prev?.to ?? (answer.plan?.time_range?.to ?? "").slice(0, 10),
+                        }))
+                      }
+                    />
+                  </label>
+                  <label>
+                    到
+                    <input
+                      type="date"
+                      value={readerWindow?.to ?? (answer.plan?.time_range?.to ?? "").slice(0, 10)}
+                      onChange={(event) =>
+                        setReaderWindow((prev) => ({
+                          from: prev?.from ?? (answer.plan?.time_range?.from ?? "").slice(0, 10),
+                          to: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="ask-window-apply"
+                    disabled={loading || !readerWindow?.from || !readerWindow?.to}
+                    onClick={() => {
+                      if (readerWindow?.from && readerWindow?.to) {
+                        void ask(answer.question ?? question, readerWindow);
+                      }
+                    }}
+                  >
+                    用这个范围重问
+                  </button>
+                </div>
+              </details>
               {answer.metrics?.evidence != null && (
                 <span className="ask-plan-chip">{answer.metrics.evidence} 段证据</span>
               )}
+              {/* How the question was read, not just what it asked. 「智谱」 also
+                  searching for GLM is the difference between an answer and a
+                  wrong "nothing was released"; showing it lets the reader tell
+                  a good expansion from a wrong one. */}
+              {answer.metrics?.aliases && answer.metrics.aliases.length > 0 && (
+                <span className="ask-plan-chip ask-plan-alias">
+                  同时检索
+                  <span className="ask-plan-range">
+                    {answer.metrics.aliases.slice(0, 4).join(" · ")}
+                  </span>
+                </span>
+              )}
+              {/* One publisher is not corroboration however many documents it
+                  quotes, and the count was previously buried in the footer. */}
+              {answer.metrics?.selection?.distinct_sources != null && (
+                <span className="ask-plan-chip">
+                  {answer.metrics.selection.distinct_sources} 家信源
+                </span>
+              )}
             </div>
+          )}
+
+          {/* Most of this answer's citations failed the support check. The
+              signal existed and was spent on a line of small print identical to
+              every other note — while the answer it belonged to stated that
+              智谱 had released nothing, over a window holding three Zhipu items. */}
+          {!answer.refused && answer.weakRetrieval && (
+            <p className="ask-weak" role="status">
+              这次检索的证据大多没通过支持度校验
+              {answer.metrics?.support_dropped
+                ? `（移除了 ${answer.metrics.support_dropped} 条引用）`
+                : null}
+              ，下面的结论可信度偏低，建议换个说法再问一次或放宽时间范围。
+            </p>
           )}
 
           {answer.refused ? (

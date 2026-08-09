@@ -282,17 +282,34 @@ def resolve_query_entities(connection: Any, question: str) -> frozenset[str]:
         candidates = cursor.fetchall()
 
     lowered = question.lower()
-    resolved: set[str] = set()
+    matched: list[tuple[str, str]] = []
     for entity_id, name in candidates:
         if _CJK_CHAR.search(name):
-            resolved.add(entity_id)
+            matched.append((entity_id, name))
             continue
         # Latin needs a word boundary: without it `Qwen` matches inside
         # `Qwen3.8-Max` — fine — but `ERA` also matches inside `general`.
         if len(name) < MIN_LATIN_ENTITY_CHARS:
             continue
         if re.search(rf"(?<![a-z0-9]){re.escape(name.lower())}(?![a-z0-9])", lowered):
-            resolved.add(entity_id)
+            matched.append((entity_id, name))
+
+    # Keep the longest name where one match is contained in another. `llama.cpp`
+    # matches both `Llama` and `llama.cpp`, and the two mean different things:
+    # `Llama` belongs to Meta's vendor group, so keeping it expanded a question
+    # about a community C++ project into a search for Facebook and Meta AI.
+    # Measured on the live corpus the moment vendor expansion was switched on.
+    #
+    # The word boundary is what lets this happen at all — `.` is not [a-z0-9],
+    # so `llama` legitimately "ends" inside `llama.cpp`. Tightening the boundary
+    # would break `Qwen` matching `Qwen3.8-Max`, which is wanted. Preferring the
+    # longer name keeps both.
+    names = {name.lower() for _, name in matched}
+    resolved = {
+        entity_id
+        for entity_id, name in matched
+        if not any(other != name.lower() and name.lower() in other for other in names)
+    }
     return frozenset(resolved)
 
 
@@ -397,6 +414,62 @@ def select_query_terms(
     return kept
 
 
+def expand_vendor_aliases(connection: Any, entity_ids: frozenset[str]) -> list[str]:
+    """Other names for the same vendor, from the curated `vendor_entity` map.
+
+    The failure this exists for, measured on the live corpus: asked
+    「智谱最近发布了什么？」 the answer was **「智谱没有发布任何新模型或产品更新」**
+    while the window held three Zhipu items — because the one titled
+    「GLM-5.2 量化模型发布」 never contains the string 智谱, and keyword retrieval
+    matches strings. The system asserted absence, which for a product whose
+    claim is verifiability is worse than a hallucination.
+
+    `vendor_entity` already groups them (`zhipu` → GLM, GLM-4.6, GLM 5.2,
+    Zhipu), built for the vendor cards in V017. Reusing it rather than adding an
+    alias column means one curated list serves both, and a vendor page that
+    looks right is evidence the expansion will be right.
+
+    **Curation is incomplete and that is visible, not hidden**: `llama.cpp`
+    (100 items), `vLLM`, `Cloudflare` and others belong to no vendor at all, so
+    they expand to nothing and behave exactly as before. Expansion helps where
+    the map is filled in and is inert everywhere else — no query gets worse for
+    a missing row.
+    """
+    if not entity_ids:
+        return []
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT sibling.name
+              FROM entity hit
+              JOIN vendor_entity mine ON mine.entity_slug = hit.slug
+              JOIN vendor_entity theirs ON theirs.vendor_slug = mine.vendor_slug
+              JOIN entity sibling ON sibling.slug = theirs.entity_slug
+             WHERE hit.id = ANY(%s::uuid[])
+               AND sibling.id <> ALL(%s::uuid[])
+            """,
+            (sorted(entity_ids), sorted(entity_ids)),
+        )
+        names = [str(row[0]) for row in cursor.fetchall() if row[0]]
+
+    # Collapse versions onto the family name. The aliases are appended to the
+    # question and re-tokenised by Postgres, and a hyphenated name does not
+    # survive that: `GLM-4.6` becomes the lexemes `glm` and `-4.6`, `GLM 5.2`
+    # becomes `5.2`. Ten version rows therefore contributed one useful term and
+    # nine numeric fragments, and `-4.6` matches 68 chunks that have nothing to
+    # do with the vendor.
+    #
+    # Keeping only names no other alias is a prefix of leaves `GLM`, `Zhipu`,
+    # `ZhiPuAi`, `智谱AI` — the forms a document actually spells out.
+    lowered = sorted((name.lower(), name) for name in names)
+    return [
+        name
+        for low, name in lowered
+        if not any(other != low and low.startswith(other) for other, _ in lowered)
+    ]
+
+
 def sparse_search(
     connection: Any,
     question: str,
@@ -404,6 +477,7 @@ def sparse_search(
     limit: int = KEYWORD_FTS_TOP_K,
     max_df_ratio: float = MAX_DOCUMENT_FREQUENCY_RATIO,
     window: tuple[datetime, datetime] | None = None,
+    extra_terms: list[str] | None = None,
 ) -> list[ChunkHit]:
     """Keyword retrieval over the GIN index built in V001.
 
@@ -411,8 +485,15 @@ def sparse_search(
     purely conversational question that is the correct answer, and silently
     falling back to a match-anything query would fill the candidate set with
     noise that the fusion step would then have to undo.
+
+    `extra_terms` carries vendor aliases resolved from the question's entities.
+    They are ORed in like any other term and pass through the same
+    document-frequency filter, so an alias common enough to be noise is dropped
+    on the same rule as a common word — the expansion cannot smuggle past the
+    guard that keeps this channel precise.
     """
-    terms = select_query_terms(connection, question, max_df_ratio=max_df_ratio)
+    text = question if not extra_terms else question + " " + " ".join(extra_terms)
+    terms = select_query_terms(connection, text, max_df_ratio=max_df_ratio)
     if not terms:
         return []
 

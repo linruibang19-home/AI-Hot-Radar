@@ -27,7 +27,7 @@ import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -53,6 +53,19 @@ MAX_QUESTION_CHARS = 300
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=2, max_length=MAX_QUESTION_CHARS)
+    # The reader correcting the resolved range. Optional and absent by default:
+    # the planner's own resolution is right for almost every question, and this
+    # exists for the case where it is not — which the page previously displayed
+    # and gave no way to act on.
+    timeFrom: date | None = None
+    timeTo: date | None = None
+
+    def window(self) -> tuple[date, date] | None:
+        if self.timeFrom is None or self.timeTo is None:
+            return None
+        if self.timeTo < self.timeFrom:
+            raise HTTPException(status_code=422, detail="结束日期早于开始日期")
+        return (self.timeFrom, self.timeTo)
 
 
 def _bypass_cache(http: Request) -> bool:
@@ -97,7 +110,9 @@ async def ask(request: AskRequest, http: Request) -> dict[str, object]:
         raise HTTPException(status_code=422, detail="question must not be blank")
 
     await _enforce_quota(http)
-    answer = await _answer(question, bypass_cache=_bypass_cache(http))
+    answer = await _answer(
+        question, bypass_cache=_bypass_cache(http), window_override=request.window()
+    )
     return answer.as_dict()
 
 
@@ -202,6 +217,7 @@ async def _answer(
     on_delta: Any = None,
     *,
     bypass_cache: bool = False,
+    window_override: tuple[date, date] | None = None,
 ) -> Answer:
     embedder, reranker, llm = _clients()
     async with embedder, llm:
@@ -216,6 +232,7 @@ async def _answer(
                     on_stage=on_stage,
                     on_delta=on_delta,
                     bypass_cache=bypass_cache,
+                    window_override=window_override,
                 )
         return await answer_question(
             question,
@@ -226,6 +243,7 @@ async def _answer(
             on_stage=on_stage,
             on_delta=on_delta,
             bypass_cache=bypass_cache,
+            window_override=window_override,
         )
 
 
@@ -247,6 +265,7 @@ async def ask_stream(request: AskRequest, http: Request) -> StreamingResponse:
     # is still a 503 rather than a 200 whose first event says it failed.
     _clients()
     bypass = _bypass_cache(http)
+    window = request.window()
 
     async def events() -> AsyncIterator[str]:
         queue: asyncio.Queue[tuple[str, dict[str, Any]] | None] = asyncio.Queue()
@@ -260,7 +279,11 @@ async def ask_stream(request: AskRequest, http: Request) -> StreamingResponse:
         async def run() -> None:
             try:
                 answer = await _answer(
-                    question, on_stage=on_stage, on_delta=on_delta, bypass_cache=bypass
+                    question,
+                    on_stage=on_stage,
+                    on_delta=on_delta,
+                    bypass_cache=bypass,
+                    window_override=window,
                 )
                 await queue.put(("answer", answer.as_dict()))
             except Exception as exc:  # noqa: BLE001 - the stream must report, not 500
