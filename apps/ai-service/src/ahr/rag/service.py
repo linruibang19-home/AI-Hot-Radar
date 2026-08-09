@@ -57,6 +57,7 @@ from ahr.rag.embeddings import EmbeddingClient
 from ahr.rag.folding import fold_by_story, load_chunk_facts, main_source_first
 from ahr.rag.fusion import apply_boosts, reciprocal_rank_fusion
 from ahr.rag.incremental import AnswerStream, JsonStringExtractor
+from ahr.rag.meta import answer_meta, looks_like_meta
 from ahr.rag.parent import expand as expand_parent
 from ahr.rag.planner import plan as build_plan
 from ahr.rag.planner import plan_from_dict
@@ -708,6 +709,35 @@ async def answer_question(
         # most: the exact key before anything external is called at all, and the
         # semantic near-match after embedding but before rerank and generation —
         # which together are 81% of a query (ADR-0017).
+        # Before the cache and before retrieval. A question about the site is
+        # not a question the index can answer, and retrieval always returns a
+        # top-k — so without this branch 「现在有什么信源？」 came back as four
+        # llama.cpp release notes summarised into a confident wrong answer.
+        #
+        # Guarded by the absence of a corpus entity: 「有哪些信源」 is about the
+        # site, 「OpenAI 有哪些信源」 is about OpenAI. Reusing the resolver the
+        # boosts already use, rather than inventing a second idea of what names
+        # a thing.
+        if looks_like_meta(question) and not resolve_query_entities(connection, question):
+            body, limitations = answer_meta(connection)
+            result = Answer(
+                question=question,
+                answer_markdown=body,
+                citations=[],
+                limitations=limitations,
+                # Not a refusal: `refused` means the corpus could not support an
+                # answer, and this one is fully supported by something that is
+                # not the corpus.
+                refused=False,
+                kind="corpus_stats",
+                plan=build_plan(question, asked_at=moment),
+                metrics={"route": "corpus_stats"},
+                asked_at=moment,
+            )
+            if persist:
+                _persist(connection, result)
+            return result
+
         cached, cache_state = await _from_cache(
             connection,
             question,

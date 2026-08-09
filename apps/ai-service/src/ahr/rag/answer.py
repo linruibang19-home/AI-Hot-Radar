@@ -157,6 +157,10 @@ class Answer:
     # Most of this answer's citations failed the support check. Reported,
     # never a refusal — see `support.is_weak_retrieval`.
     weak_retrieval: bool = False
+    # "rag" for a retrieved answer, "corpus_stats" for one the system wrote
+    # about itself. A stats answer has no citations and is not a refusal, so
+    # the page needs to be able to tell the two apart.
+    kind: str = "rag"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -167,6 +171,7 @@ class Answer:
             "refused": self.refused,
             "refusalReason": self.refusal_reason,
             "weakRetrieval": self.weak_retrieval,
+            "kind": self.kind,
             "limitations": self.limitations,
             "citations": [
                 {
