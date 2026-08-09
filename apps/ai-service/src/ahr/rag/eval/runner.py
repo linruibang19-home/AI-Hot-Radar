@@ -19,6 +19,7 @@ from ahr.rag.embeddings import EmbeddingClient
 from ahr.rag.eval.golden import CATEGORIES, GoldenQuestion, GoldenSet
 from ahr.rag.eval.metrics import dedupe_to_items, ndcg_at_k, recall_at_k, reciprocal_rank
 from ahr.rag.fusion import apply_boosts, reciprocal_rank_fusion
+from ahr.rag.llm_planner import plan_with_llm
 from ahr.rag.planner import plan
 from ahr.rag.rerank import (
     DEFAULT_CANDIDATE_LIMIT,
@@ -259,6 +260,7 @@ def rrf_retriever(
     use_temporal: bool = True,
     use_boosts: bool = True,
     weights: dict[str, float] | None = None,
+    llm: Any | None = None,
 ) -> Retriever:
     """B3: weighted RRF over dense + sparse (+ temporal), then §6 boosts.
 
@@ -268,7 +270,15 @@ def rrf_retriever(
     """
 
     async def retrieve(question: str, asked_at: datetime) -> list[ChunkHit]:
-        retrieval_plan = plan(question, asked_at=asked_at)
+        # The planner under test, when one is supplied. Measured at 0.9067
+        # against the golden set's own categories versus the regex planner's
+        # 0.6667 — but classification accuracy is not retrieval accuracy, and
+        # B8 is the standing reminder that an upstream gain can vanish
+        # downstream. This is the switch that answers whether it survives.
+        if llm is not None:
+            retrieval_plan, _from_model = await plan_with_llm(llm, question, asked_at=asked_at)
+        else:
+            retrieval_plan = plan(question, asked_at=asked_at)
         vectors = await client.embed([question])
 
         window = None
@@ -350,6 +360,7 @@ def rerank_retriever(
     use_temporal_fit: bool = False,
     use_dimensions: bool = False,
     weights: dict[str, float] | None = None,
+    llm: Any | None = None,
 ) -> Retriever:
     """B4: B3's candidate set, reordered by a cross-encoder.
 
@@ -366,6 +377,7 @@ def rerank_retriever(
         sparse_depth=sparse_depth,
         temporal_depth=temporal_depth,
         weights=weights,
+        llm=llm,
     )
 
     async def retrieve(question: str, asked_at: datetime) -> list[ChunkHit]:

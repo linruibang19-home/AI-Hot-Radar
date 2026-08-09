@@ -20,6 +20,11 @@ def test_the_questions_that_caused_this() -> None:
         "数据从哪来的？",
         "多久更新一次？",
         "有哪些数据源",
+        # Fell through the first six patterns and was answered from the index
+        # with eight citations about AI industry news.
+        "现在信源情况是怎么样的",
+        "语料收录情况怎么样",
+        "数据源覆盖得全不全",
     ):
         assert meta.looks_like_meta(question), question
 
@@ -33,6 +38,9 @@ def test_a_question_about_the_news_is_not_meta() -> None:
         "Qwen3.8-Max 的参数量是多少？",
         "MoE 路由是怎么工作的？",
         "智谱最近发布了什么？",
+        # Asks after a vendor's state, not the site's. The entity guard is what
+        # separates them in the served path; the wording alone cannot.
+        "Qwen 的情况怎么样？",
     ):
         assert not meta.looks_like_meta(question), question
 

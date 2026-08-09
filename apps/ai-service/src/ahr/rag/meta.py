@@ -42,6 +42,12 @@ _META_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"(多久|多长时间|什么频率|多频繁).{0,6}(更新|采集|抓取)"),
     re.compile(r"(更新|数据).{0,4}(到什么时候|到哪天|多新|新不新)"),
     re.compile(r"(你|系统|本站|这个网站|平台).{0,8}(能做什么|怎么工作|覆盖|范围)"),
+    # 「现在信源情况是怎么样的」 fell through the patterns above and was answered
+    # from the index with eight citations about AI industry news. Asking after
+    # the *state* of something is as common a phrasing as asking what it
+    # contains, and none of the first six covered it.
+    re.compile(r"(信源|来源|数据源|语料|收录|索引|内容)(的)?(情况|状态|规模|覆盖|构成)"),
+    re.compile(r"(信源|数据源|语料|收录).{0,5}(怎么样|如何|多不多|全不全)"),
 )
 
 
