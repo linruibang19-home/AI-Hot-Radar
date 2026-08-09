@@ -97,6 +97,14 @@ services:
       # console nobody can log into. Generate with `openssl rand -hex 32`.
       AHR_ADMIN_BOOTSTRAP_TOKEN: ${AHR_ADMIN_BOOTSTRAP_TOKEN:?AHR_ADMIN_BOOTSTRAP_TOKEN must be set}
       AHR_ADMIN_VIEWER_TOKEN: ${AHR_ADMIN_VIEWER_TOKEN:?AHR_ADMIN_VIEWER_TOKEN must be set}
+    # A ceiling on what this deployment spends per day, counted from
+    # provider-reported tokens in `llm_usage`. Bounds the deployment where the
+    # per-caller quota bounds one visitor — and unlike that quota it does not
+    # disappear when Redis restarts. Does NOT replace the provider-side cap:
+    # the embedding and rerank accounts are not recorded here.
+    #   0 disables it. Set it from the price you are actually paying.
+    environment:
+      LLM_DAILY_TOKEN_LIMIT: ${LLM_DAILY_TOKEN_LIMIT:-2000000}
     env_file:
       - path: .env
         required: true
