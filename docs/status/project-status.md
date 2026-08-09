@@ -101,6 +101,15 @@
 两个口径现在并列输出（`support_*` / `support_as_read_*`），
 **引用任何一个数时必须注明取的是哪个**。
 
+**②bis planner accuracy 的度量已经建好，缺的只剩标注。**
+`rag-eval --variant planner` 已落地：`expected_query_type` / `expected_time` /
+`expected_entities` 三个可选字段进黄金集，加载时硬校验；
+**不连数据库、不调供应商**（Planner 是问句与 `asked_at` 的纯函数），因此免费、可进 CI、断网可跑。
+准确率与 `annotation_coverage` **永远并排输出**，标注数为 0 时命令以非零码退出——
+把「不可判定」显示成「看起来没问题」是更糟的那种状态。
+标注方法见 [data/golden/README.md](../../data/golden/README.md)，
+**必须按问句该被理解成什么来标，不能拿 §3 的默认值反推**，否则是让实现和自己对答案。
+
 **② `abstention accuracy` 的定义被换过，但没有 ADR。**
 3.23 ① 证明旧指标 `refusal_rate_on_unanswerable` 测的是表面形态（有引用的否认被判成没拒答），
 换成 `presupposition_asserted_rate`（**0/12**）是对的。但规格字面没改、没有 ADR，
