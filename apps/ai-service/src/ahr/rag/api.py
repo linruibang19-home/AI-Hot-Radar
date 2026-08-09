@@ -89,6 +89,28 @@ def _bypass_cache(http: Request) -> bool:
     return "no-cache" in directive or "no-store" in directive
 
 
+def _enforce_spend() -> None:
+    """Stop before the call when today's ceiling is reached.
+
+    Separate from the per-caller quota because it answers a different question.
+    The quota bounds one visitor; this bounds the deployment — twenty visitors
+    each inside their allowance reach the same bill, and the quota fails open on
+    a Redis restart, so it should not be the only thing between a public
+    endpoint and a provider account.
+    """
+    import psycopg
+
+    from ahr.config import get_settings
+    from ahr.spend import check
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        decision = check(connection)
+
+    if not decision.allowed:
+        logger.warning("daily token ceiling reached: %d/%d", decision.used, decision.limit)
+        raise HTTPException(status_code=503, detail=decision.message)
+
+
 async def _enforce_quota(http: Request) -> None:
     """Charge this call against the anonymous quota, or refuse it.
 
@@ -135,6 +157,7 @@ async def ask(request: AskRequest, http: Request) -> dict[str, object]:
         raise HTTPException(status_code=422, detail="question must not be blank")
 
     await _enforce_quota(http)
+    _enforce_spend()
     answer = await _answer(
         question,
         bypass_cache=_bypass_cache(http),
@@ -335,6 +358,7 @@ async def ask_stream(request: AskRequest, http: Request) -> StreamingResponse:
     # Before the stream opens, so a refusal is a 429 the client can read rather
     # than a 200 whose first event says it was rejected.
     await _enforce_quota(http)
+    _enforce_spend()
 
     # Provider failures are raised before the response starts, so a missing key
     # is still a 503 rather than a 200 whose first event says it failed.
