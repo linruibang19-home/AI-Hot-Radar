@@ -66,6 +66,7 @@ from ahr.rag.retrieval import (
     VECTOR_PASSAGE_TOP_K,
     ChunkHit,
     dense_search,
+    entity_names,
     expand_vendor_aliases,
     load_chunk_texts,
     load_item_metadata,
@@ -234,6 +235,7 @@ async def retrieve(
     # reach it before it runs.
     query_entities = resolve_query_entities(connection, question)
     aliases = expand_vendor_aliases(connection, query_entities)
+    names = entity_names(connection, query_entities)
 
     step = time.monotonic()
     sparse = sparse_search(
@@ -242,6 +244,7 @@ async def retrieve(
         limit=KEYWORD_FTS_TOP_K,
         window=filter_window,
         extra_terms=aliases,
+        entity_terms=names + aliases,
     )
     await mark("sparse", step, found=len(sparse), aliases=len(aliases))
 

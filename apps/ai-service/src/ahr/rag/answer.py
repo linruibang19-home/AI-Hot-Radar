@@ -470,6 +470,26 @@ def bind_citations(
     # So the narrowest claim wins: a claim naming one passage says more about
     # that passage than a claim naming ten. Ties keep model order, so the rule
     # is deterministic.
+    def strip_labels(text: str) -> str:
+        """Remove the model's own evidence labels from a claim sentence.
+
+        Stripped rather than renumbered, unlike the body. A claim is rendered
+        under a card that already carries its number, so `[1]` inside it is
+        noise pointing at the thing it is printed on.
+
+        The third place this rule has had to be applied. The body was cleaned
+        first, `limitations` was found leaking `[E1]` afterwards, and
+        `claim_text` was never cleaned at all — 22 of 806 stored claims carry a
+        raw label, visible on the page as 「支撑：… [E1]」. Same rule, three
+        fields, and it kept being written for one of them at a time.
+
+        Bracketed form only, the same rule the body gets. `limitations` also
+        strips bare labels, and that licence does not extend here: a claim is
+        model prose, where a bare `E5` can be a model name. All 22 stored leaks
+        are bracketed.
+        """
+        return _CITATION_RE.sub("", text).strip(" 、,，")
+
     claim_for: dict[int, str] = {}
     claim_breadth: dict[int, int] = {}
     for number, text, breadth in _claim_evidence(claims):
@@ -484,7 +504,7 @@ def bind_citations(
             number=renumber[original],
             chunk_id=by_number[original].chunk_id,
             content_item_id=by_number[original].content_item_id,
-            claim_text=claim_for.get(original, ""),
+            claim_text=strip_labels(claim_for.get(original, "")),
             title=by_number[original].title,
             source_name=by_number[original].source_name,
             canonical_url=by_number[original].canonical_url,
