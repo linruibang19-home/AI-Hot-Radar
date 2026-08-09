@@ -475,6 +475,12 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
         # The sparse channel needs no embedding provider at all, so a
         # sparse-only run stays available when the provider is down or out of
         # quota — which is also what makes it a usable degradation path.
+        planner_llm = None
+        if getattr(args, "llm_planner", False):
+            from ahr.processing.llm import build_client_from_env as build_llm
+
+            planner_llm = build_llm()
+
         client = None
         if args.variant != "b2-sparse":
             try:
@@ -528,6 +534,8 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
                 except RerankUnavailableError as exc:
                     return {"error": str(exc)}
                 async with client, reranker:
+                    if planner_llm is not None:
+                        await planner_llm.__aenter__()
                     report = await run_variant(
                         golden,
                         rerank_retriever(
@@ -538,6 +546,7 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
                             sparse_depth=args.sparse_depth,
                             candidate_limit=args.rerank_candidates,
                             top_n=args.rerank_top_n,
+                            llm=planner_llm,
                             # B9 keeps temporal_fit on: it is the shipped
                             # configuration, so the comparison isolates the two
                             # new dimensions rather than also removing B7.
@@ -586,6 +595,7 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
                             dense_depth=args.chunk_depth,
                             sparse_depth=args.sparse_depth,
                             use_temporal=use_temporal,
+                            llm=planner_llm,
                         ),
                         variant=("B3-rrf" if use_temporal else "B3-rrf-without-temporal"),
                         config={
@@ -1176,6 +1186,11 @@ def main(argv: list[str] | None = None) -> int:
     rag_eval.add_argument("--chunk-depth", type=int, default=60, help="AHR-RAG-400 §5 topK")
     rag_eval.add_argument("--sparse-depth", type=int, default=40, help="AHR-RAG-400 §5 FTS topK")
     rag_eval.add_argument("--output", default=None, help="write the full per-question report here")
+    rag_eval.add_argument(
+        "--llm-planner",
+        action="store_true",
+        help="plan with the model instead of the regexes (AHR-QSO-700 §8 planner accuracy)",
+    )
     rag_eval.add_argument("--validate", action="store_true", help="check the set, do not retrieve")
     rag_eval.add_argument(
         "--skip-unusable",
