@@ -226,3 +226,22 @@ def test_alias_expansion_collapses_versions_onto_the_family_name() -> None:
 
     source = inspect.getsource(retrieval.expand_vendor_aliases)
     assert "startswith" in source
+
+
+def test_the_evaluation_expands_aliases_exactly_as_the_server_does() -> None:
+    """Otherwise the regression scores a configuration no reader ever gets.
+
+    This is the third time the two paths have drifted — B7's rerank dimensions,
+    the temporal channel, and now alias expansion — so the parity is asserted
+    rather than assumed.
+    """
+    import inspect
+
+    from ahr.rag import service
+    from ahr.rag.eval import runner
+
+    served = inspect.getsource(service.retrieve)
+    scored = inspect.getsource(runner.rrf_retriever)
+    for source in (served, scored):
+        assert "expand_vendor_aliases(" in source
+        assert "extra_terms=aliases" in source
