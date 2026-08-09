@@ -1,0 +1,1180 @@
+{
+  "questions": 78,
+  "no_single_winner": 77,
+  "identical_across_all_six": 70,
+  "mean_spread": 0.0436,
+  "category_matches_best": 0.0,
+  "planner_matches_best": 0.0,
+  "rows": [
+    {
+      "question_id": "RAG-GOLD-001",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 0.6667,
+        "timeline": 0.6667,
+        "comparison": 0.5,
+        "fact_check": 0.5,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.1667
+    },
+    {
+      "question_id": "RAG-GOLD-002",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 0.6667,
+        "timeline": 0.6667,
+        "comparison": 0.3333,
+        "fact_check": 0.3333,
+        "explainer": 0.3333,
+        "recommendation": 0.3333
+      },
+      "spread": 0.3333
+    },
+    {
+      "question_id": "RAG-GOLD-003",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-004",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-005",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 0.5,
+        "fact_check": 0.5,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.5
+    },
+    {
+      "question_id": "RAG-GOLD-006",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-007",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 0.6,
+        "fact_check": 0.6,
+        "explainer": 0.6,
+        "recommendation": 0.6
+      },
+      "spread": 0.4
+    },
+    {
+      "question_id": "RAG-GOLD-008",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 0.75,
+        "timeline": 0.75,
+        "comparison": 0.75,
+        "fact_check": 0.75,
+        "explainer": 0.75,
+        "recommendation": 0.75
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-009",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-010",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 0.5,
+        "timeline": 0.5,
+        "comparison": 0.25,
+        "fact_check": 0.25,
+        "explainer": 0.25,
+        "recommendation": 0.25
+      },
+      "spread": 0.25
+    },
+    {
+      "question_id": "RAG-GOLD-011",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 0.0,
+        "fact_check": 0.0,
+        "explainer": 0.0,
+        "recommendation": 0.0
+      },
+      "spread": 1.0
+    },
+    {
+      "question_id": "RAG-GOLD-012",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 0.0,
+        "timeline": 0.0,
+        "comparison": 0.0,
+        "fact_check": 0.0,
+        "explainer": 0.0,
+        "recommendation": 0.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-013",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-014",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 0.2,
+        "timeline": 0.2,
+        "comparison": 0.2,
+        "fact_check": 0.2,
+        "explainer": 0.2,
+        "recommendation": 0.2
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-015",
+      "category": "recent_updates",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 0.0,
+        "timeline": 0.0,
+        "comparison": 0.0,
+        "fact_check": 0.0,
+        "explainer": 0.0,
+        "recommendation": 0.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-016",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "timeline",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-017",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "timeline",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-018",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "timeline",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-019",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.5,
+        "timeline": 0.5,
+        "comparison": 0.75,
+        "fact_check": 0.75,
+        "explainer": 0.75,
+        "recommendation": 0.75
+      },
+      "spread": 0.25
+    },
+    {
+      "question_id": "RAG-GOLD-020",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.75,
+        "timeline": 0.75,
+        "comparison": 0.75,
+        "fact_check": 0.75,
+        "explainer": 0.75,
+        "recommendation": 0.75
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-021",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.8,
+        "timeline": 0.8,
+        "comparison": 0.8,
+        "fact_check": 0.8,
+        "explainer": 0.8,
+        "recommendation": 0.8
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-022",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "timeline",
+      "recall_at_10": {
+        "recent_updates": 0.5,
+        "timeline": 0.5,
+        "comparison": 0.5,
+        "fact_check": 0.5,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-023",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-024",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "timeline",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-025",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "fact_check",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-026",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "timeline",
+      "recall_at_10": {
+        "recent_updates": 0.25,
+        "timeline": 0.25,
+        "comparison": 0.25,
+        "fact_check": 0.25,
+        "explainer": 0.25,
+        "recommendation": 0.25
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-027",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-028",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.5,
+        "timeline": 0.5,
+        "comparison": 0.5,
+        "fact_check": 0.5,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-029",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 0.75,
+        "timeline": 0.75,
+        "comparison": 0.75,
+        "fact_check": 0.75,
+        "explainer": 0.75,
+        "recommendation": 0.75
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-030",
+      "category": "timeline",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-031",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "comparison",
+      "recall_at_10": {
+        "recent_updates": 0.6667,
+        "timeline": 0.6667,
+        "comparison": 0.6667,
+        "fact_check": 0.6667,
+        "explainer": 0.6667,
+        "recommendation": 0.6667
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-032",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.5,
+        "timeline": 0.5,
+        "comparison": 0.5,
+        "fact_check": 0.5,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-033",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "comparison",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-034",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "comparison",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-035",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "comparison",
+      "recall_at_10": {
+        "recent_updates": 0.6667,
+        "timeline": 0.6667,
+        "comparison": 0.6667,
+        "fact_check": 0.6667,
+        "explainer": 0.6667,
+        "recommendation": 0.6667
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-036",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "comparison",
+      "recall_at_10": {
+        "recent_updates": 0.5,
+        "timeline": 0.5,
+        "comparison": 0.5,
+        "fact_check": 0.5,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-037",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.25,
+        "timeline": 0.25,
+        "comparison": 0.25,
+        "fact_check": 0.25,
+        "explainer": 0.25,
+        "recommendation": 0.25
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-038",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "comparison",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-039",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "comparison",
+      "recall_at_10": {
+        "recent_updates": 0.5,
+        "timeline": 0.5,
+        "comparison": 0.5,
+        "fact_check": 0.5,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-040",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-041",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-042",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 0.0,
+        "timeline": 0.0,
+        "comparison": 0.5,
+        "fact_check": 0.0,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.5
+    },
+    {
+      "question_id": "RAG-GOLD-043",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-044",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-045",
+      "category": "comparison",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 0.3333,
+        "timeline": 0.3333,
+        "comparison": 0.3333,
+        "fact_check": 0.3333,
+        "explainer": 0.3333,
+        "recommendation": 0.3333
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-046",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-047",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "fact_check",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-048",
+      "category": "fact_check",
+      "best_query_type": "explainer",
+      "planner_query_type": "fact_check",
+      "recall_at_10": {
+        "recent_updates": 0.3333,
+        "timeline": 0.3333,
+        "comparison": 0.3333,
+        "fact_check": 0.3333,
+        "explainer": 0.3333,
+        "recommendation": 0.3333
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-049",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "fact_check",
+      "recall_at_10": {
+        "recent_updates": 0.0,
+        "timeline": 0.0,
+        "comparison": 0.0,
+        "fact_check": 0.0,
+        "explainer": 0.0,
+        "recommendation": 0.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-050",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-051",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-052",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "fact_check",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-053",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "fact_check",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-054",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "fact_check",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-055",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-056",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "fact_check",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-057",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-058",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-059",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-060",
+      "category": "fact_check",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-061",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.3333,
+        "timeline": 0.3333,
+        "comparison": 0.3333,
+        "fact_check": 0.3333,
+        "explainer": 0.3333,
+        "recommendation": 0.3333
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-062",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-063",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-064",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-065",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-066",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-067",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-068",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-069",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.5,
+        "timeline": 0.5,
+        "comparison": 0.5,
+        "fact_check": 0.5,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-070",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-071",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.5,
+        "timeline": 0.5,
+        "comparison": 0.5,
+        "fact_check": 0.5,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-072",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.3333,
+        "timeline": 0.3333,
+        "comparison": 0.3333,
+        "fact_check": 0.3333,
+        "explainer": 0.3333,
+        "recommendation": 0.3333
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-073",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.5,
+        "timeline": 0.5,
+        "comparison": 0.5,
+        "fact_check": 0.5,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-074",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-075",
+      "category": "explainer",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 0.5,
+        "timeline": 0.5,
+        "comparison": 0.5,
+        "fact_check": 0.5,
+        "explainer": 0.5,
+        "recommendation": 0.5
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-088",
+      "category": "abstention",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-089",
+      "category": "abstention",
+      "best_query_type": null,
+      "planner_query_type": "explainer",
+      "recall_at_10": {
+        "recent_updates": 1.0,
+        "timeline": 1.0,
+        "comparison": 1.0,
+        "fact_check": 1.0,
+        "explainer": 1.0,
+        "recommendation": 1.0
+      },
+      "spread": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-090",
+      "category": "abstention",
+      "best_query_type": null,
+      "planner_query_type": "recent_updates",
+      "recall_at_10": {
+        "recent_updates": 0.0,
+        "timeline": 0.0,
+        "comparison": 0.0,
+        "fact_check": 0.0,
+        "explainer": 0.0,
+        "recommendation": 0.0
+      },
+      "spread": 0.0
+    }
+  ]
+}

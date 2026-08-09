@@ -138,7 +138,7 @@ RAG 的每个环节都有多种"看起来都对"的做法——要不要加稀�
 | citation correctness | ≥ 0.90 | **0.9371** | ✅ **通过** | [ADR-0021](../adr/0021-citation-correctness-is-entailment-not-annotation-overlap.md) |
 | abstention accuracy | ≥ 0.90 | **1.0000**（12/12）| ✅ **通过**（样本仅 12）| [ADR-0020](../adr/0020-abstention-accuracy-measures-behaviour-not-shape.md) |
 | citation completeness | ≥ 0.95 | 0.8880 | ❌ **未过**，差 0.062 | — |
-| entity/time planner accuracy | ≥ 0.90 | 正则 **0.6667** ／ LLM **0.9067** | ❌ **现行未过**（LLM 版可过但未启用）| [planner-diff](../status/eval/planner-diff-20260810.md) |
+| entity/time planner accuracy | ≥ 0.90 | 正则 0.6667 ／ LLM 0.9067 | ⬛ **已量化：本语料上不可操作** | [query-type-sweep](../status/eval/query-type-sweep-20260810.md) |
 | 关键问题无「引用不支持结论」P0 | 定性 | 定量代理 0.9371 | ⚠️ **人工核对未做** | 见 5.6 |
 | 失败回答可用 `rag_query_id` 复现 | 必须 | 计划/证据/限定条件已可复现；**候选集未落库** | ⚠️ 接近完成 | — |
 
@@ -300,6 +300,9 @@ groundedness 用交叉编码器而非 LLM 裁判：§10 允许「NLI/cross-encod
 | 2026-08-09 | **§5.3：门禁对照必须绑定具体 `eval_run_id`，不能引用「项目里流传的那个数字」** | 用 08-04 的数据对这张表会带反三条结论：completeness 看着差 0.207（实为 0.043）、abstention 看着是能力不达标（实为指标测错）、而唯一在恶化的 `support_supported` 会被漏掉 |
 | 2026-08-09 | **§5.4：判定 `citation_precision` 不能用作 `citation correctness`，建议改用 `support_supported`** | 黄金集 127 个标注（均 1.6 篇/题）而实测均引用 3.90 篇，未标注的相关文档计为引错——0.5782 是下界不是估计。改指标定义要走 ADR |
 | 2026-08-09 | **§5.5：记录 `abstention accuracy` 的定义已被替换但无 ADR** | 3.23 ① 证明旧指标测形态、换成 `presupposition_asserted_rate` 是对的，但规格字面未改、无 ADR，导致「这条过没过」取决于读者选哪个指标——0.0000 与 1.0000 都能从库里查出来 |
+| 2026-08-10 | **强制扫描六种 `query_type`：70/78 题的 Recall@10 完全相同，平均极差 0.0436** | B16 的悬案由此结清——不是收益没传导、也不只是判据选错，而是**被标注的东西对被测的结果几乎没有作用**。极差只有 B14 噪声底（±0.02）的两倍，且集中在 10% 的题上 |
+| 2026-08-10 | **planner accuracy 门禁状态改记为「已量化：不可操作」，不是「未达标」** | 一条测不出差异的门禁，标成未达标会引导人去优化一个不改变结果的标签。同时撤回上一条建议：**不要**把 `category` 灌进 `expected_query_type` |
+| 2026-08-10 | 记下本轮**没测**时间解析 | Planner 做分类与时间两件事，扫描只覆盖分类。时间窗错误改变的是「检索哪些天」，比排序里的一个加权项更可能是真问题——「现在」不被识别就是这一类 |
 | 2026-08-10 | **planner accuracy 由「不可判定」变为可判定：黄金集的 `category` 就是人工标的问题类型** | 我此前记为「缺标注」的判断没去看黄金集结构——六个 `category` 里有五个与 `QUERY_TYPES` 逐字相同，写题的人把题放进 `02-timeline.yaml` 时就是在判断它是时间线问题。排除按用途分组的 `abstention`，覆盖 75/90 题 |
 | 2026-08-10 | **现行正则 planner 实测 0.6667，未过 §8 的 0.90**；LLM 版 0.9067 | 34 条分歧里 32 条是 `explainer → 其他`——explainer 是正则的兜底类，它在该类上的 1.00 是假的：不匹配就归它，所以必然全对、别处全错 |
 | 2026-08-10 | LLM planner 实现但**默认关闭** | 分类更准不等于答案更好（B8 的教训），必须端到端跑一轮才知道是否传导；且每问多一次模型往返 |
