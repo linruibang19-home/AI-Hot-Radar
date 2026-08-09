@@ -144,6 +144,50 @@ async def ask(request: AskRequest, http: Request) -> dict[str, object]:
     return answer.as_dict()
 
 
+@router.get("/suggestions/{query_id}")
+async def suggestions(query_id: str) -> dict[str, object]:
+    """Follow-ups this answer's own sources could support.
+
+    A separate request on purpose: the answer is already ~10s of external round
+    trips, and folding a fourth into it would make the reader wait longer for
+    something they have not asked for. Fetched after the answer renders, and
+    silent when it fails — no chips is a fine outcome, an error toast is not.
+
+    Cached by query id: an answer's suggestions cannot change while the answer
+    does not.
+    """
+    import psycopg
+
+    from ahr.config import get_settings
+    from ahr.rag.cache import client as cache_client
+    from ahr.rag.suggest import suggest
+
+    key = f"ahr:rag:suggest:{query_id}"
+    client = cache_client()
+    try:
+        cached = await client.get(key)
+        if cached:
+            return {"suggestions": json.loads(cached)}
+    except Exception as exc:  # noqa: BLE001 - a cache must never break a feature
+        logger.warning("suggestion cache read failed: %s", exc)
+
+    try:
+        llm = build_llm()
+    except LlmUnavailableError:
+        return {"suggestions": []}
+
+    async with llm:
+        with psycopg.connect(get_settings().database_url) as connection:
+            rows = await suggest(connection, llm, query_id)
+
+    try:
+        await client.set(key, json.dumps(rows, ensure_ascii=False), ex=86_400)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("suggestion cache write failed: %s", exc)
+
+    return {"suggestions": rows}
+
+
 @router.get("/history")
 def history(limit: int = 20) -> dict[str, object]:
     """Recent conversations, newest first.

@@ -349,6 +349,9 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
   // Earlier turns of this thread, oldest first. The server already stores them;
   // this is only what the reader can see without a round trip.
   const [thread, setThread] = useState<AnswerPayload[]>(initial ? [initial] : []);
+  // Follow-ups this answer's own sources could support. Fetched after it
+  // renders, so the answer is never slower for them.
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   // Conversations live in `rag_query`, written in the same transaction as the
   // answer. Loading them on mount is what makes a conversation survive
@@ -383,6 +386,7 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
     setLoading(true);
     setError(null);
     setAnswer(null);
+    setSuggestions([]);
     setStages([]);
     setStreamed("");
     setActiveCite(null);
@@ -436,6 +440,12 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
             // the first turn, so the client never invents an id that would then
             // have to be trusted.
             if (landed.conversationId) setConversationId(landed.conversationId);
+            if (landed.queryId) {
+              fetch(`/api/ask?suggestions=${encodeURIComponent(landed.queryId)}`)
+                .then((response) => response.json())
+                .then((data) => setSuggestions(data.suggestions ?? []))
+                .catch(() => setSuggestions([]));
+            }
             setThread((prior) => [...prior, landed]);
             // The verified answer replaces the streamed copy. They are the same
             // text by construction — the tests pin that — so this swaps in the
@@ -762,6 +772,28 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
                 : null}
               ，下面的结论可信度偏低，建议换个说法再问一次或放宽时间范围。
             </p>
+          )}
+
+          {/* The invitation multi-turn was missing. Clicking asks in the same
+              thread, so 「它呢」 keeps working from here — the suggestion and the
+              conversation are the same feature seen from two ends. */}
+          {suggestions.length > 0 && !loading && (
+            <div className="ask-followups">
+              <span className="ask-followups-label">接着问：</span>
+              {suggestions.map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  className="ask-followup"
+                  onClick={() => {
+                    setQuestion(text);
+                    void ask(text);
+                  }}
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
           )}
 
           {answer.refused ? (
