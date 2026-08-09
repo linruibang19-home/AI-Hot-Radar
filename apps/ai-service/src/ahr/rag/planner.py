@@ -237,6 +237,21 @@ def classify(question: str) -> QueryType:
     return "explainer"
 
 
+def range_from_dates(start: date, end: date) -> TimeRange:
+    """A pair of local dates as a half-open range covering both in full.
+
+    Shared by the reader's date picker and the LLM planner so the two cannot
+    disagree about whether the last day is included — an off-by-one here is
+    invisible in the chip and changes which documents are retrievable.
+    """
+    return TimeRange(
+        datetime.combine(start, time.min, tzinfo=DISPLAY_TIMEZONE),
+        datetime.combine(end + timedelta(days=1), time.min, tzinfo=DISPLAY_TIMEZONE),
+        explicit=True,
+        label=f"{start.isoformat()} 至 {end.isoformat()}",
+    )
+
+
 def plan(
     question: str,
     *,
@@ -264,14 +279,7 @@ def plan(
 
     notes: list[str] = []
     if window_override is not None:
-        start, end = window_override
-        # End-exclusive, so the reader's last day is included in full.
-        time_range = TimeRange(
-            datetime.combine(start, time.min, tzinfo=DISPLAY_TIMEZONE),
-            datetime.combine(end + timedelta(days=1), time.min, tzinfo=DISPLAY_TIMEZONE),
-            explicit=True,
-            label=f"{start.isoformat()} 至 {end.isoformat()}",
-        )
+        time_range = range_from_dates(*window_override)
         notes.append("时间范围由提问者指定")
         return RetrievalPlan(
             question=question,

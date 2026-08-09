@@ -1,0 +1,279 @@
+{
+  "questions": 90,
+  "disagreements": 34,
+  "agreement_rate": 0.6222,
+  "rows": [
+    {
+      "question_id": "RAG-GOLD-019",
+      "question": "Claude Opus 5 从发布到现在有哪些后续？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "recent_updates",
+      "regex_window": "最近 7 天",
+      "llm_window": "2026-07-27 至 2026-08-03"
+    },
+    {
+      "question_id": "RAG-GOLD-020",
+      "question": "DeepSeek V4-Flash 从发布到被产品接入，中间经过了什么？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "timeline",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-021",
+      "question": "llama.cpp 对 DeepSeek 系列模型的支持是分几步加进去的？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "timeline",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-022",
+      "question": "关于放慢 AI 发展速度的争论，最近是怎么发展的？",
+      "regex_query_type": "timeline",
+      "llm_query_type": "recent_updates",
+      "regex_window": "最近 7 天",
+      "llm_window": "2026-07-27 至 2026-08-03"
+    },
+    {
+      "question_id": "RAG-GOLD-023",
+      "question": "OpenAI Agents 的 Python 和 JS 两个 SDK 是怎么同步加上 GPT-5.6 支持的？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "timeline",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-027",
+      "question": "Google Gen AI 的 Python 和 JavaScript SDK 2.13.0 分别带来了什么？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-028",
+      "question": "Mistral AI 今年都发布过什么产品和模型？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "timeline",
+      "regex_window": null,
+      "llm_window": "2026-01-01 至 2026-08-03"
+    },
+    {
+      "question_id": "RAG-GOLD-032",
+      "question": "MXFP4 和 NVFP4 是一回事吗？分别用在哪些模型上？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "comparison",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-037",
+      "question": "Together AI 和 Cloudflare 在推理优化上的思路有什么不同？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "comparison",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-040",
+      "question": "Mem0 的 Node SDK 和 Python SDK 这次更新的内容一样吗？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "comparison",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-041",
+      "question": "Quarkus LangChain4j 的 1.7.8 和 1.2.7 分别是做什么的？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "comparison",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-043",
+      "question": "智谱的 GLM 系列和 Kimi 在 Cloudflare 上的推理优化待遇一样吗？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "comparison",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-044",
+      "question": "LiteLLM 的 rc 版本和 dev 版本有什么不同？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "comparison",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-045",
+      "question": "Interconnects 和 Latent Space 对最近开源模型浪潮的判断有分歧吗？",
+      "regex_query_type": "recent_updates",
+      "llm_query_type": "comparison",
+      "regex_window": "最近 7 天",
+      "llm_window": "2026-07-27 至 2026-08-03"
+    },
+    {
+      "question_id": "RAG-GOLD-046",
+      "question": "llama.cpp 服务器的默认端口要改成多少？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-050",
+      "question": "Anthropic 那次测试一共引发了几起真实事故？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-051",
+      "question": "商汤这次开源的模型全称是什么，是正式版还是预览版？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-055",
+      "question": "Kimi K3 有多少位贡献者？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-057",
+      "question": "谷歌下架的那个卫星图像生成功能代号是什么？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-058",
+      "question": "德国法院对 Suno 的判决结果是什么？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-059",
+      "question": "Anthropic 的 Claude Sonnet 5 性能降级事件解决了吗？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-060",
+      "question": "MiniMax H3 的价格是 Seedance 的多少？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-077",
+      "question": "llama.cpp b10999 版本修了什么？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-078",
+      "question": "商汤已经把 SenseNova U1.5 正式版开源了，许可证是什么？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-079",
+      "question": "Anthropic 因为那三起事故被罚了多少钱？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-080",
+      "question": "DeepSeek V5 什么时候发布？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-081",
+      "question": "MXFP8 量化格式的精度损失有多少？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-082",
+      "question": "谷歌地球那个功能下架后，谷歌赔偿了哪些用户？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-083",
+      "question": "OpenAI 的 Astra 模型开源了吗？权重在哪下载？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-084",
+      "question": "2025 年 1 月有哪些重要的 AI 发布？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "timeline",
+      "regex_window": null,
+      "llm_window": "2025-01-01 至 2025-01-31"
+    },
+    {
+      "question_id": "RAG-GOLD-085",
+      "question": "Kimi K3 在 MMLU 上得了多少分？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-087",
+      "question": "智谱和月之暗面签署了战略合作协议，内容是什么？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-088",
+      "question": "Qwen3.8-Max 有 2.4 万亿参数，那它的权重什么时候放出来，用的什么许可证？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    },
+    {
+      "question_id": "RAG-GOLD-089",
+      "question": "llama.cpp 默认端口要改成 9931，那这个改动哪个版本正式生效？",
+      "regex_query_type": "explainer",
+      "llm_query_type": "fact_check",
+      "regex_window": null,
+      "llm_window": null
+    }
+  ]
+}
