@@ -383,6 +383,13 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
         print(json.dumps({"error": str(exc)}, indent=2, ensure_ascii=False))
         return 1
 
+    if args.variant == "planner":
+        # Before the connection, not after: the planner is pure functions over
+        # the question and `asked_at`, so this variant runs with no database and
+        # no provider — which is what lets it go in CI, where neither exists.
+        # Dispatching after `psycopg.connect` would have quietly made that false.
+        return _run_planner_eval(golden, args)
+
     with psycopg.connect(get_settings().database_url) as connection:
         missing = verify_items_exist(connection, golden)
         snapshot = describe_corpus_snapshot(connection, golden)
@@ -685,6 +692,39 @@ def _run_weight_sweep(
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _run_planner_eval(golden: Any, args: argparse.Namespace) -> int:
+    """Score the planner, and refuse to look successful when nothing is annotated.
+
+    `AHR-QSO-700` §8's planner accuracy has never had a number. Exiting 0 on an
+    empty run would replace "unjudgeable" with "apparently fine", which is the
+    worse of the two states — so an unannotated set is a non-zero exit that says
+    what is missing.
+    """
+    from ahr.rag.eval.planner_accuracy import run_planner_eval
+
+    payload = run_planner_eval(golden)
+    if args.output:
+        Path(args.output).write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+    print(json.dumps(payload["summary"], ensure_ascii=False, indent=2))
+    for mistake in payload["mistakes"]:
+        for note in mistake["notes"]:
+            print(f"  {mistake['question_id']}  {note}")
+
+    if payload["summary"]["overall"]["annotated"] == 0:
+        print(
+            "\n黄金集尚无 planner 标注"
+            "（expected_query_type / expected_time / expected_entities）。\n"
+            "AHR-QSO-700 §8 的 planner accuracy 因此仍然不可判定——不是失败，是没有量过。\n"
+            "标注方法见 data/golden/README.md。",
+            file=sys.stderr,
+        )
+        return 1
     return 0
 
 
@@ -1054,6 +1094,7 @@ def main(argv: list[str] | None = None) -> int:
             "sweep",
             "generation",
             "latency",
+            "planner",
         ],
         default="b1",
         help=(
@@ -1065,7 +1106,9 @@ def main(argv: list[str] | None = None) -> int:
             "b9-dimensions b7 plus §6 directness and source_fit, "
             "sweep grid-search the fusion weights on Recall@40 (AHR-RAG-400 §5), "
             "generation end-to-end answers scored for groundedness and citations, "
-            "latency per-stage p50/p95 (AHR-RAG-400 §14)"
+            "latency per-stage p50/p95 (AHR-RAG-400 §14), "
+            "planner query_type/time/entity accuracy against the golden set "
+            "(AHR-QSO-700 §8; needs no provider or database)"
         ),
     )
     rag_eval.add_argument(

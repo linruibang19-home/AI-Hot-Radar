@@ -138,7 +138,7 @@ RAG 的每个环节都有多种"看起来都对"的做法——要不要加稀�
 | citation correctness | ≥ 0.90 | **0.9371** | ✅ **通过** | [ADR-0021](../adr/0021-citation-correctness-is-entailment-not-annotation-overlap.md) |
 | abstention accuracy | ≥ 0.90 | **1.0000**（12/12）| ✅ **通过**（样本仅 12）| [ADR-0020](../adr/0020-abstention-accuracy-measures-behaviour-not-shape.md) |
 | citation completeness | ≥ 0.95 | 0.8880 | ❌ **未过**，差 0.062 | — |
-| entity/time planner accuracy | ≥ 0.90 | **无数据** | ⬜ **不可判定** | 缺标注 |
+| entity/time planner accuracy | ≥ 0.90 | **无数据** | ⬜ **不可判定** | 度量已就绪，**缺标注** |
 | 关键问题无「引用不支持结论」P0 | 定性 | 定量代理 0.9371 | ⚠️ **人工核对未做** | 见 5.6 |
 | 失败回答可用 `rag_query_id` 复现 | 必须 | 计划/证据/限定条件已可复现；**候选集未落库** | ⚠️ 接近完成 | — |
 
