@@ -58,6 +58,10 @@ export interface AnswerPayload {
   weakRetrieval?: boolean;
   /** "rag" or "corpus_stats" — the site answering about itself. */
   kind?: string;
+  /** The thread this turn belongs to; the server mints it on the first turn. */
+  conversationId?: string | null;
+  /** What a follow-up was rewritten into, when it was. */
+  rewrittenQuestion?: string | null;
   metrics?: {
     total_ms?: number;
     evidence?: number;
@@ -336,6 +340,15 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
   // rather than derived from the answer: it has to survive the re-ask that
   // applies it, and the answer it produces reports the new range, not the old.
   const [readerWindow, setReaderWindow] = useState<{ from: string; to: string } | null>(null);
+  // The thread. Held here rather than derived from `answer`, because it has to
+  // survive the answer being replaced by the next turn — that is the whole
+  // point of it.
+  const [conversationId, setConversationId] = useState<string | null>(
+    initial?.conversationId ?? null,
+  );
+  // Earlier turns of this thread, oldest first. The server already stores them;
+  // this is only what the reader can see without a round trip.
+  const [thread, setThread] = useState<AnswerPayload[]>(initial ? [initial] : []);
 
   // Conversations live in `rag_query`, written in the same transaction as the
   // answer. Loading them on mount is what makes a conversation survive
@@ -380,6 +393,7 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           question: trimmed,
+          ...(conversationId ? { conversationId } : {}),
           ...(window ? { timeFrom: window.from, timeTo: window.to } : {}),
         }),
       });
@@ -418,6 +432,11 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
           } else if (event === "answer") {
             const landed = payload as AnswerPayload;
             setAnswer(landed);
+            // The thread the next question continues. The server mints it on
+            // the first turn, so the client never invents an id that would then
+            // have to be trusted.
+            if (landed.conversationId) setConversationId(landed.conversationId);
+            setThread((prior) => [...prior, landed]);
             // The verified answer replaces the streamed copy. They are the same
             // text by construction — the tests pin that — so this swaps in the
             // version that also carries the citations the markers link to.
@@ -594,6 +613,28 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
         </div>
       )}
 
+      {/* Earlier turns of this thread. Collapsed to question and conclusion:
+          the full apparatus of every past answer would bury the current one,
+          and each remains reachable by its permalink. */}
+      {thread.length > 1 && (
+        <ol className="ask-thread">
+          {thread.slice(0, -1).map((turn, index) => (
+            <li key={turn.queryId ?? index} className="ask-thread-turn">
+              <p className="ask-thread-q">{turn.question}</p>
+              <p className="ask-thread-a">
+                {(turn.answerMarkdown || turn.refusalReason || "").slice(0, 140)}
+                {(turn.answerMarkdown || "").length > 140 ? "…" : ""}
+              </p>
+              {turn.queryId && (
+                <a className="ask-thread-link" href={`/ask/${turn.queryId}`}>
+                  这一轮的完整回答 →
+                </a>
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+
       {answer && (
         <div className="ask-answer">
           {/* What the planner decided, before any of it was used. The absolute
@@ -693,6 +734,16 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
               it has no citations by construction, and a reader who has been
               told every fact carries a source should be able to see why this
               one does not instead of assuming they were lost. */}
+          {/* A follow-up that was understood as something else. Shown for the
+              same reason the resolved time window is: a reader whose 「它呢」 was
+              tied to the wrong antecedent can see it rather than conclude the
+              system is broken. */}
+          {answer.rewrittenQuestion && (
+            <p className="ask-rewrite" role="status">
+              这是一个追问，已理解为：<strong>{answer.rewrittenQuestion}</strong>
+            </p>
+          )}
+
           {answer.kind === "corpus_stats" && (
             <p className="ask-kind" role="status">
               这是<strong>本站运行数据</strong>，直接来自数据库计数，不是检索结果，因此没有引用来源。

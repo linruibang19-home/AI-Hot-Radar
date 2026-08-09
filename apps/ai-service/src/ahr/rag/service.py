@@ -52,6 +52,7 @@ from ahr.rag.cache import (
     semantic_remember,
 )
 from ahr.rag.cache import client as cache_client
+from ahr.rag.conversation import load_turns, rewrite
 from ahr.rag.dimensions import Candidate, apply_dimensions
 from ahr.rag.embeddings import EmbeddingClient
 from ahr.rag.folding import fold_by_story, load_chunk_facts, main_source_first
@@ -687,6 +688,7 @@ async def answer_question(
     on_delta: DeltaReporter | None = None,
     bypass_cache: bool = False,
     window_override: tuple[date, date] | None = None,
+    conversation_id: str | None = None,
 ) -> Answer:
     """Answer one question, or refuse, and record what was cited.
 
@@ -709,6 +711,27 @@ async def answer_question(
         # most: the exact key before anything external is called at all, and the
         # semantic near-match after embedding but before rerank and generation —
         # which together are 81% of a query (ADR-0017).
+        # A follow-up becomes a standalone question before anything reads it.
+        # Retrieval runs before generation, so resolving 「它呢」 in the generation
+        # prompt would leave the retriever searching a query with no content
+        # words — the sparse channel drops it entirely and the dense channel
+        # matches nothing in particular.
+        #
+        # The question the reader typed is kept as `asked`; only retrieval sees
+        # the rewrite. Storing the rewrite as *the* question would show a reader
+        # their own history containing a sentence they never wrote, and would
+        # leave nothing to compare against when an answer looks wrong. The
+        # rewritten form still reaches the next turn's transcript, through
+        # `retrieval_plan.question`.
+        asked = question
+        rewritten: str | None = None
+        if conversation_id:
+            turns = load_turns(connection, conversation_id)
+            standalone, changed = await rewrite(llm, question, turns)
+            if changed:
+                rewritten = standalone
+                question = standalone
+
         # Before the cache and before retrieval. A question about the site is
         # not a question the index can answer, and retrieval always returns a
         # top-k — so without this branch 「现在有什么信源？」 came back as four
@@ -733,6 +756,7 @@ async def answer_question(
                 plan=build_plan(question, asked_at=moment),
                 metrics={"route": "corpus_stats"},
                 asked_at=moment,
+                conversation_id=conversation_id,
             )
             if persist:
                 _persist(connection, result)
@@ -936,13 +960,15 @@ async def answer_question(
         metrics["total_ms"] = int((time.monotonic() - started) * 1000)
 
         result = Answer(
-            question=question,
+            question=asked,
             answer_markdown=text,
             citations=citations,
             limitations=limitations,
             refused=refused,
             refusal_reason=refusal_reason,
             weak_retrieval=weak_retrieval,
+            conversation_id=conversation_id,
+            rewritten_question=rewritten,
             plan=retrieval_plan,
             model=llm.model_name,
             metrics=metrics,
@@ -1143,13 +1169,15 @@ def _persist(connection: Any, answer: Answer) -> None:
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            INSERT INTO rag_query (id, question, retrieval_plan, answer_markdown,
-                                   status, model_meta, metrics, limitations,
-                                   completed_at)
-            VALUES (%s, %s, %s::jsonb, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, now())
+            INSERT INTO rag_query (id, conversation_id, question, retrieval_plan,
+                                   answer_markdown, status, model_meta, metrics,
+                                   limitations, completed_at)
+            VALUES (%s, %s::uuid, %s, %s::jsonb, %s, %s, %s::jsonb, %s::jsonb,
+                    %s::jsonb, now())
             """,
             (
                 query_id,
+                answer.conversation_id,
                 answer.question,
                 Json(answer.plan.as_dict() if answer.plan else {}),
                 answer.answer_markdown,

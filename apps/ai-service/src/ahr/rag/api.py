@@ -26,6 +26,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import uuid
 from collections.abc import AsyncIterator
 from datetime import UTC, date, datetime
 from typing import Any
@@ -59,6 +60,10 @@ class AskRequest(BaseModel):
     # and gave no way to act on.
     timeFrom: date | None = None
     timeTo: date | None = None
+    # The thread this question continues. Absent on the first turn; the server
+    # mints one and returns it, so the client never has to invent an id that
+    # must then be trusted.
+    conversationId: str | None = None
 
     def window(self) -> tuple[date, date] | None:
         if self.timeFrom is None or self.timeTo is None:
@@ -103,6 +108,26 @@ async def _enforce_quota(http: Request) -> None:
         )
 
 
+def _conversation_id(request: AskRequest) -> str:
+    """The thread this question belongs to, minted here when it is the first.
+
+    Server-side rather than client-side because the id keys stored rows: a
+    client free to choose it could read another reader's thread by guessing,
+    and there are no accounts yet to scope that by.
+
+    A malformed id is treated as a new thread rather than rejected — a follow-up
+    that starts a fresh conversation is a mildly worse answer, and a 422 in its
+    place is no answer at all.
+    """
+    raw = (request.conversationId or "").strip()
+    if raw:
+        try:
+            return str(uuid.UUID(raw))
+        except ValueError:
+            logger.warning("ignoring malformed conversation id")
+    return str(uuid.uuid4())
+
+
 @router.post("/ask")
 async def ask(request: AskRequest, http: Request) -> dict[str, object]:
     question = request.question.strip()
@@ -111,7 +136,10 @@ async def ask(request: AskRequest, http: Request) -> dict[str, object]:
 
     await _enforce_quota(http)
     answer = await _answer(
-        question, bypass_cache=_bypass_cache(http), window_override=request.window()
+        question,
+        bypass_cache=_bypass_cache(http),
+        window_override=request.window(),
+        conversation_id=_conversation_id(request),
     )
     return answer.as_dict()
 
@@ -218,6 +246,7 @@ async def _answer(
     *,
     bypass_cache: bool = False,
     window_override: tuple[date, date] | None = None,
+    conversation_id: str | None = None,
 ) -> Answer:
     embedder, reranker, llm = _clients()
     async with embedder, llm:
@@ -233,6 +262,7 @@ async def _answer(
                     on_delta=on_delta,
                     bypass_cache=bypass_cache,
                     window_override=window_override,
+                    conversation_id=conversation_id,
                 )
         return await answer_question(
             question,
@@ -244,6 +274,7 @@ async def _answer(
             on_delta=on_delta,
             bypass_cache=bypass_cache,
             window_override=window_override,
+            conversation_id=conversation_id,
         )
 
 
@@ -266,6 +297,7 @@ async def ask_stream(request: AskRequest, http: Request) -> StreamingResponse:
     _clients()
     bypass = _bypass_cache(http)
     window = request.window()
+    conversation = _conversation_id(request)
 
     async def events() -> AsyncIterator[str]:
         queue: asyncio.Queue[tuple[str, dict[str, Any]] | None] = asyncio.Queue()
@@ -284,6 +316,7 @@ async def ask_stream(request: AskRequest, http: Request) -> StreamingResponse:
                     on_delta=on_delta,
                     bypass_cache=bypass,
                     window_override=window,
+                    conversation_id=conversation,
                 )
                 await queue.put(("answer", answer.as_dict()))
             except Exception as exc:  # noqa: BLE001 - the stream must report, not 500
