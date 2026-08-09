@@ -15,7 +15,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 import psycopg
@@ -66,6 +66,7 @@ from ahr.rag.retrieval import (
     VECTOR_PASSAGE_TOP_K,
     ChunkHit,
     dense_search,
+    expand_vendor_aliases,
     load_chunk_texts,
     load_item_metadata,
     resolve_query_entities,
@@ -73,11 +74,17 @@ from ahr.rag.retrieval import (
 )
 from ahr.rag.router import DEFAULT_CANDIDATES
 from ahr.rag.router import choose as choose_route
-from ahr.rag.support import score_citations, summarise, unsupported_numbers
+from ahr.rag.support import (
+    is_weak_retrieval,
+    score_citations,
+    summarise,
+    unsupported_numbers,
+)
 from ahr.rag.temporal import Scored, apply_temporal_fit
 from ahr.rag.trace import (
     DROPPED_BUDGET,
     DROPPED_DOCUMENT_CAP,
+    DROPPED_SOURCE_CAP,
     DROPPED_STORY_FOLD,
     EVIDENCE_UNCITED,
     RetrievalTrace,
@@ -86,6 +93,12 @@ from ahr.rag.trace import load as load_trace
 from ahr.rag.trace import persist as persist_trace
 
 logger = logging.getLogger(__name__)
+
+# §7 lets one story keep a main source plus two corroborating ones; a single
+# publisher gets the same allowance across *different* stories. Three is
+# enough for "llama.cpp shipped these versions" to still be answerable from
+# llama.cpp, and not enough for one publisher to fill a ten-slot budget.
+MAX_PER_SOURCE = 3
 
 # Kept as the default depth; the per-question choice lives in `router.py`.
 RERANK_CANDIDATES = DEFAULT_CANDIDATES
@@ -169,6 +182,7 @@ async def retrieve(
     on_stage: StageReporter | None = None,
     trace: RetrievalTrace | None = None,
     query_vector: list[float] | None = None,
+    window_override: tuple[date, date] | None = None,
 ) -> tuple[list[ChunkHit], Any, dict[str, Any]]:
     """The B4 pipeline, returning hits, the frozen plan, and what happened.
 
@@ -189,7 +203,7 @@ async def retrieve(
         await report(name, {"ms": stages[name], **detail})
 
     step = time.monotonic()
-    retrieval_plan = build_plan(question, asked_at=asked_at)
+    retrieval_plan = build_plan(question, asked_at=asked_at, window_override=window_override)
     await mark(
         "plan",
         step,
@@ -213,9 +227,23 @@ async def retrieve(
     dense = dense_search(connection, vector, limit=VECTOR_PASSAGE_TOP_K, window=filter_window)
     await mark("dense", step, found=len(dense))
 
+    # Entities before the keyword channel, not after. They were resolved further
+    # down for the §6 boosts alone, but the same resolution is what lets the
+    # question 「智谱最近发布了什么」 also search for GLM and Zhipu — and keyword
+    # retrieval is the channel that matches strings, so the expansion has to
+    # reach it before it runs.
+    query_entities = resolve_query_entities(connection, question)
+    aliases = expand_vendor_aliases(connection, query_entities)
+
     step = time.monotonic()
-    sparse = sparse_search(connection, question, limit=KEYWORD_FTS_TOP_K, window=filter_window)
-    await mark("sparse", step, found=len(sparse))
+    sparse = sparse_search(
+        connection,
+        question,
+        limit=KEYWORD_FTS_TOP_K,
+        window=filter_window,
+        extra_terms=aliases,
+    )
+    await mark("sparse", step, found=len(sparse), aliases=len(aliases))
 
     channels: dict[str, list[ChunkHit]] = {"dense": dense, "sparse": sparse}
     if trace is not None:
@@ -225,7 +253,6 @@ async def retrieve(
     step = time.monotonic()
     fused = reciprocal_rank_fusion(channels)
     metadata = load_item_metadata(connection, sorted({h.content_item_id for h in fused}))
-    query_entities = resolve_query_entities(connection, question)
     fused = apply_boosts(
         fused,
         metadata,
@@ -306,6 +333,10 @@ async def retrieve(
     metrics = {
         "route": route.as_metrics(),
         "channels": {name: len(rows) for name, rows in channels.items()},
+        # The names the question was expanded to, so the reader can see the
+        # system read 智谱 as also meaning GLM rather than guess why an
+        # unrelated-looking document was cited.
+        "aliases": aliases,
         "fused": len(fused),
         "degraded": degraded,
         "retrieval_ms": int((time.monotonic() - started) * 1000),
@@ -381,28 +412,64 @@ def select_evidence(
     hits: list[ChunkHit],
     *,
     per_item: int = 2,
+    per_source: int = MAX_PER_SOURCE,
     limit: int = MAX_EVIDENCE,
     trace: RetrievalTrace | None = None,
 ) -> tuple[list[str], dict[str, Any]]:
-    """Turn a ranking into an evidence set: cap per document, then fold events.
+    """Turn a ranking into an evidence set: cap per document and per source, then fold events.
 
-    Two different redundancies, so two passes. The per-document cap stops one
-    long release note filling every slot with its own paragraphs; story folding
-    stops one *event* filling them with three outlets' coverage of it. Neither
-    subsumes the other — the Anthropic incident was three separate documents.
+    Three different redundancies, so three rules. They are not variants of each
+    other and none subsumes the rest:
+
+    * **per document** — one long release note filling every slot with its own
+      paragraphs;
+    * **per source** — one prolific publisher filling them with *different*
+      documents;
+    * **story folding** — one *event* filling them with three outlets' coverage.
+
+    The per-source rule is the newest and was found by measurement, not design.
+    Asked "最近 llama.cpp 发布了哪些版本", the answer cited **10 passages from 10
+    documents, all from llama.cpp Releases** — a source holding 4.01% of the
+    corpus took 100% of the evidence. Each release is its own `content_item` and
+    its own story, so the document cap and the fold both passed it through: 81
+    separate items means the document cap alone permits 162 passages from one
+    publisher.
+
+    An answer built from one publisher is not corroborated, however many
+    documents it quotes. That is the same argument story folding already makes
+    about outlets covering one event, applied one level up.
 
     `trace` records *which* rule removed each passage. From the finished answer
-    the two look identical, and they mean opposite things — one says a document
-    was over-represented, the other says an event was.
+    they look identical and they mean different things — over-represented
+    document, over-represented publisher, over-represented event.
     """
+    # Facts up front now, because the source cap needs `source_id` *while*
+    # capping rather than after it. Bounded to a multiple of the budget: the
+    # ranking below this depth cannot reach the evidence set anyway.
+    pool = [hit for hit in hits[: limit * 6]]
+    facts = load_chunk_facts(connection, [hit.chunk_id for hit in pool])
+
     capped: list[str] = []
     seen: dict[str, int] = {}
+    by_source: dict[str, int] = {}
     outcomes: dict[str, str] = {}
-    for hit in hits:
+    for hit in pool:
         count = seen.get(hit.content_item_id, 0)
         if count >= per_item:
             outcomes[hit.chunk_id] = DROPPED_DOCUMENT_CAP
             continue
+
+        fact = facts.get(hit.chunk_id)
+        # An unknown source is never capped: missing metadata must not decide
+        # what the reader sees, and it would silently favour whatever happens to
+        # be joined successfully.
+        if fact is not None:
+            taken = by_source.get(fact.source_id, 0)
+            if taken >= per_source:
+                outcomes[hit.chunk_id] = DROPPED_SOURCE_CAP
+                continue
+            by_source[fact.source_id] = taken + 1
+
         seen[hit.content_item_id] = count + 1
         capped.append(hit.chunk_id)
         # Fold from a wider pool than the budget: passages dropped as duplicate
@@ -411,7 +478,6 @@ def select_evidence(
         if len(capped) >= limit * 3:
             break
 
-    facts = load_chunk_facts(connection, capped)
     fold_reasons: dict[str, str] = {}
     folded = fold_by_story(capped, facts, limit=limit, reasons=fold_reasons)
     ordered = main_source_first(folded, facts)
@@ -427,6 +493,12 @@ def select_evidence(
         "candidates": len(capped),
         "after_story_folding": len(folded),
         "stories_folded": len(capped) - len(folded),
+        # How many publishers the answer can possibly draw on. One is not a
+        # failure — most releases genuinely have a single announcer — but it is
+        # the difference between a corroborated answer and one outlet's word,
+        # and the reader is shown it rather than left to count the cards.
+        "distinct_sources": len({facts[c].source_id for c in ordered if c in facts}),
+        "source_capped": sum(1 for why in outcomes.values() if why == DROPPED_SOURCE_CAP),
     }
     return ordered, stats
 
@@ -512,6 +584,7 @@ async def _from_cache(
     asked_at: datetime,
     report: StageReporter,
     bypass: bool = False,
+    window_override: tuple[date, date] | None = None,
 ) -> tuple[Answer | None, _CacheState]:
     """Serve from cache when it is safe to, and report why when it is not.
 
@@ -527,9 +600,17 @@ async def _from_cache(
     # here as well as in `retrieve`: it is a pure function of the question and
     # the clock, so both calls agree, and threading it through would put a
     # retrieval concern into the cache's signature for no gain.
-    plan = build_plan(question, asked_at=asked_at)
+    plan = build_plan(question, asked_at=asked_at, window_override=window_override)
     fingerprint = corpus_fingerprint(connection, freshness_required=plan.freshness_required)
-    key = answer_key(question, fingerprint=fingerprint, prompt_version=ANSWER_PROMPT_VERSION)
+    # The override is part of the question as far as the cache is concerned:
+    # the same words over two different ranges are two different questions, and
+    # keying on the words alone would serve one reader the other's window.
+    key = answer_key(
+        question,
+        fingerprint=fingerprint,
+        prompt_version=ANSWER_PROMPT_VERSION,
+        window=f"{window_override[0]}..{window_override[1]}" if window_override else None,
+    )
     state = _CacheState(key=key, fingerprint=fingerprint)
     client = cache_client()
 
@@ -601,6 +682,7 @@ async def answer_question(
     on_stage: StageReporter | None = None,
     on_delta: DeltaReporter | None = None,
     bypass_cache: bool = False,
+    window_override: tuple[date, date] | None = None,
 ) -> Answer:
     """Answer one question, or refuse, and record what was cited.
 
@@ -630,6 +712,7 @@ async def answer_question(
             asked_at=moment,
             report=report,
             bypass=bypass_cache,
+            window_override=window_override,
         )
         if cached is not None:
             return cached
@@ -643,6 +726,7 @@ async def answer_question(
             on_stage=on_stage,
             trace=trace,
             query_vector=cache_state.vector,
+            window_override=window_override,
         )
         metrics["cache"] = cache_state.as_metrics()
         step = time.monotonic()
@@ -763,6 +847,8 @@ async def answer_question(
                 "（交叉编码器判定证据不支持所配论断），已从答案中移除。"
             )
             metrics["support_dropped"] = len(weak)
+        weak_retrieval = is_weak_retrieval(len(weak), len(citations))
+        metrics["weak_retrieval"] = weak_retrieval
 
         metrics["stages_ms"]["support"] = int((time.monotonic() - step) * 1000)
         metrics["support"] = summarise(scores, len(citations))
@@ -823,6 +909,7 @@ async def answer_question(
             limitations=limitations,
             refused=refused,
             refusal_reason=refusal_reason,
+            weak_retrieval=weak_retrieval,
             plan=retrieval_plan,
             model=llm.model_name,
             metrics=metrics,

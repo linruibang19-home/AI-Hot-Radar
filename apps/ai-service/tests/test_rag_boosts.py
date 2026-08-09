@@ -167,3 +167,62 @@ def test_each_signal_is_counted_once() -> None:
         hits, metadata, query_type="fact_check", window=None, query_entities=frozenset({"kimi"})
     )
     assert len(ordered[0].boosts) == len(set(ordered[0].boosts))
+
+
+# --- Phase A: evidence diversity per source -------------------------------
+
+
+def test_the_source_cap_is_a_third_rule_not_a_variant_of_the_other_two() -> None:
+    """Measured: 「最近 llama.cpp 发布了哪些版本」 cited 10 passages from 10
+    documents, all from one publisher holding 4.01% of the corpus. Each release
+    is its own item and its own story, so the document cap and the story fold
+    both passed it through — 81 items means the document cap alone permits 162
+    passages from one source.
+    """
+    import inspect
+
+    from ahr.rag import service
+
+    source = inspect.getsource(service.select_evidence)
+    # Capping needs source_id while capping, so the facts load moved ahead of it.
+    assert source.index("load_chunk_facts(") < source.index("for hit in pool")
+    assert "DROPPED_SOURCE_CAP" in source
+    # An unknown source is never capped: missing metadata must not decide what
+    # the reader sees.
+    assert "if fact is not None:" in source
+
+
+def test_the_source_cap_matches_the_corroboration_allowance() -> None:
+    """§7 gives one story a main source plus two corroborating ones; a single
+    publisher gets the same allowance across different stories."""
+    from ahr.rag.folding import MAX_PER_STORY
+    from ahr.rag.service import MAX_PER_SOURCE
+
+    assert MAX_PER_SOURCE == MAX_PER_STORY == 3
+
+
+def test_the_longest_entity_match_wins() -> None:
+    """`llama.cpp` matches both `Llama` and `llama.cpp` because `.` ends a word.
+
+    Keeping `Llama` expanded a question about a community C++ project into a
+    search for Facebook and Meta AI — measured the moment vendor expansion was
+    switched on. Tightening the boundary instead would break `Qwen` matching
+    `Qwen3.8-Max`, which is wanted.
+    """
+    import inspect
+
+    from ahr.rag import retrieval
+
+    source = inspect.getsource(retrieval.resolve_query_entities)
+    assert "name.lower() in other" in source
+
+
+def test_alias_expansion_collapses_versions_onto_the_family_name() -> None:
+    """Aliases are re-tokenised by Postgres, and `GLM-4.6` does not survive it:
+    it becomes `glm` plus `-4.6`, and `-4.6` matches 68 unrelated chunks."""
+    import inspect
+
+    from ahr.rag import retrieval
+
+    source = inspect.getsource(retrieval.expand_vendor_aliases)
+    assert "startswith" in source

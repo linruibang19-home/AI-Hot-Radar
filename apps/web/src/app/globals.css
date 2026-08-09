@@ -2155,3 +2155,80 @@ summary:focus-visible {
   font-size: 11px;
   color: var(--muted);
 }
+
+/* --- Phase A: what the reader can now see and change --------------------- */
+
+/* The expansion that made the question answerable. Distinguished from the other
+   plan chips because it says how the question was *read*, not what was asked. */
+.ask-plan-alias {
+  border-style: dashed;
+}
+
+/* Most citations failed the support check. Deliberately not styled as an error:
+   the answer is still shown and may still be right, but the reader should not
+   have to infer the difference from a line of small print. */
+.ask-weak {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-left: 3px solid var(--warning, #b45309);
+  background: var(--warning-bg, #fffbeb);
+  color: var(--fg-muted, #57534e);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Correcting the resolved range. Collapsed by default: the planner is right for
+   almost every question, and an always-open date form would suggest otherwise. */
+.ask-window {
+  display: inline-block;
+}
+
+.ask-window-toggle {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--fg-muted, #57534e);
+  text-decoration: underline dotted;
+  list-style: none;
+}
+
+.ask-window-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.ask-window-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.ask-window-body label {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.ask-window-body input[type="date"] {
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--border, #e7e5e4);
+  border-radius: 4px;
+  font: inherit;
+}
+
+.ask-window-apply {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--accent, #0f766e);
+  border-radius: 4px;
+  background: var(--accent, #0f766e);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ask-window-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -230,3 +230,43 @@ def test_the_evaluation_widens_passages_exactly_as_the_server_does() -> None:
     source = inspect.getsource(generation._load_parent_passages)
     assert "MAX_PARENT_CHARS" in source
     assert "expand" in source
+
+
+# --- Phase A: retrieval-confidence signal ---------------------------------
+
+
+def test_a_mostly_dropped_answer_is_flagged_weak() -> None:
+    """The live failure: 「智谱最近发布了什么」 dropped 8 of 9 citations and then
+    stated with the survivor that Zhipu had released nothing — while the window
+    held three Zhipu items. The collapse was visible and spent on small print."""
+    assert support.is_weak_retrieval(dropped=8, kept=1) is True
+
+
+def test_a_healthy_answer_is_not_flagged() -> None:
+    """The probe's good answers dropped 0 or 2 of 7-10. The gap to the bad ones
+    is wide, which is what makes a threshold defensible at all."""
+    assert support.is_weak_retrieval(dropped=0, kept=10) is False
+    assert support.is_weak_retrieval(dropped=2, kept=8) is False
+
+
+def test_nothing_scored_is_not_weak() -> None:
+    """A reranker outage scores nothing. That is missing information, not a
+    verdict about the evidence — the same rule as an unscored citation."""
+    assert support.is_weak_retrieval(dropped=0, kept=0) is False
+
+
+def test_the_flag_never_becomes_a_refusal() -> None:
+    """Over-refusal is measured at 0.0000 and was reached by undoing a
+    regression. Whether a high drop rate predicts a wrong answer is an unmeasured
+    correlation, and acting on it before measuring is how that regression
+    happened the first time."""
+    from ahr.rag import service
+
+    # The precise property, not "no refusal appears after this point": the
+    # invariant check downstream still refuses, and should. What must never
+    # happen is `weak_retrieval` participating in that decision.
+    source = inspect.getsource(service.answer_question)
+    for line in source.splitlines():
+        if "weak_retrieval" in line:
+            assert "refused" not in line, line
+            assert "refusal_reason" not in line, line

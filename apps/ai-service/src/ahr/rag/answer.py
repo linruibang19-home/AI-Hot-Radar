@@ -154,6 +154,9 @@ class Answer:
     # with the page that displayed it.
     query_id: str | None = None
     asked_at: datetime | None = None
+    # Most of this answer's citations failed the support check. Reported,
+    # never a refusal — see `support.is_weak_retrieval`.
+    weak_retrieval: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -163,6 +166,7 @@ class Answer:
             "answerMarkdown": self.answer_markdown,
             "refused": self.refused,
             "refusalReason": self.refusal_reason,
+            "weakRetrieval": self.weak_retrieval,
             "limitations": self.limitations,
             "citations": [
                 {

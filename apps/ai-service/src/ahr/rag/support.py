@@ -152,6 +152,39 @@ def unsupported_numbers(citations: list[Citation]) -> set[int]:
     return weak - {strongest.number}
 
 
+# Above this share of an answer's citations failing the support check, the
+# retrieval behind it is weak enough that the reader should be told.
+#
+# Calibrated against the live probe rather than picked: the three questions that
+# produced visibly poor answers dropped 8 of 9, 6 of 7 and 5 of 7 citations,
+# while the six that produced good ones dropped 0 or 2. The gap is wide, and
+# half is inside it.
+WEAK_RETRIEVAL_RATIO = 0.5
+
+
+def is_weak_retrieval(dropped: int, kept: int) -> bool:
+    """Whether this answer rests on retrieval that mostly failed its own check.
+
+    **Reports; does not refuse.** The measured over-refusal rate is 0.0000 and
+    was reached by undoing an earlier regression, so nothing here is allowed to
+    put it back. What this fixes is narrower and real: asked 「智谱最近发布了什么」
+    the system dropped 8 of 9 citations and then stated, with the one survivor,
+    that **智谱 had released nothing** — while the window held three Zhipu items.
+    The signal that the evidence had collapsed existed and was spent on a line
+    of small print identical to every other note.
+
+    Escalating this to a refusal is deliberately *not* done yet: whether a high
+    drop rate predicts a wrong answer is a correlation nobody has measured, and
+    acting on it before measuring is how the 0.0128 → 0.0769 regression happened
+    the first time. The number is surfaced now, and the golden-set run is what
+    earns the right to act on it.
+    """
+    total = dropped + kept
+    if total == 0:
+        return False
+    return dropped / total >= WEAK_RETRIEVAL_RATIO or kept <= 1 and dropped > 0
+
+
 def summarise(scores: dict[str, float], citations: int) -> dict[str, float | int]:
     """The per-answer figures, in the same shape the evaluation reports.
 
