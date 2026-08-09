@@ -32,6 +32,7 @@ from ahr.rag.retrieval import (
     VECTOR_PASSAGE_TOP_K,
     ChunkHit,
     dense_search,
+    expand_vendor_aliases,
     interleave,
     load_chunk_texts,
     load_item_metadata,
@@ -283,9 +284,22 @@ def rrf_retriever(
             asked_at, window if retrieval_plan.freshness_required else None
         )
 
+        # Aliases before the keyword channel, exactly as `service.retrieve`
+        # does. Omitting them here would measure a configuration no reader ever
+        # gets — the same divergence B7 and the temporal channel were caught in,
+        # and the reason this line is a copy rather than a simplification.
+        query_entities = resolve_query_entities(connection, question)
+        aliases = expand_vendor_aliases(connection, query_entities)
+
         channels: dict[str, list[ChunkHit]] = {
             "dense": dense_search(connection, vectors[0], limit=dense_depth, window=filter_window),
-            "sparse": sparse_search(connection, question, limit=sparse_depth, window=filter_window),
+            "sparse": sparse_search(
+                connection,
+                question,
+                limit=sparse_depth,
+                window=filter_window,
+                extra_terms=aliases,
+            ),
         }
 
         if window is not None and use_temporal:
@@ -303,7 +317,7 @@ def rrf_retriever(
                 metadata,
                 query_type=retrieval_plan.query_type,
                 window=window,
-                query_entities=resolve_query_entities(connection, question),
+                query_entities=query_entities,
             )
 
         return [
