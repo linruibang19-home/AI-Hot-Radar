@@ -35,6 +35,7 @@ from ahr.rag.answer import (
     bind_citations,
     build_user_prompt,
     check_invariants,
+    drop_citations,
     load_evidence,
     parse_model_output,
     summarise_considered,
@@ -72,7 +73,7 @@ from ahr.rag.retrieval import (
 )
 from ahr.rag.router import DEFAULT_CANDIDATES
 from ahr.rag.router import choose as choose_route
-from ahr.rag.support import score_citations, summarise
+from ahr.rag.support import score_citations, summarise, unsupported_numbers
 from ahr.rag.temporal import Scored, apply_temporal_fit
 from ahr.rag.trace import (
     DROPPED_BUDGET,
@@ -730,6 +731,43 @@ async def answer_question(
             # general knowledge.
             refusal_reason = "检索到的内容不足以回答这个问题"
 
+        # §10 layer ③, and the first version of it that decides anything.
+        #
+        # The score has been computed, stored and badged since T2-4 while
+        # changing nothing: an answer could show a source the cross-encoder
+        # scored 0.000 next to one it scored 0.998, both rendered identically as
+        # "来源". Measured live, 11.11% of scored citations sit below the
+        # threshold. `AHR-QSO-700` §8 asks for zero such defects, so the
+        # citation is now removed rather than displayed.
+        #
+        # Removal only — this never escalates to a refusal. Dropping the last
+        # citation would, via `check_invariants`, and the answers most exposed
+        # to that are grounded denials, which score low for structural reasons
+        # (29.41% weak against 10.22% for assertions). `unsupported_numbers`
+        # keeps the strongest rather than empty the list.
+        step = time.monotonic()
+        scores = await score_citations(
+            reranker,
+            citations,
+            {e.chunk_id: e.text for e in evidence},
+            fallback_claim=question,
+        )
+        for citation in citations:
+            citation.support_score = scores.get(citation.chunk_id)
+
+        weak = unsupported_numbers(citations)
+        if weak:
+            text, citations, limitations = drop_citations(text, citations, limitations, drop=weak)
+            limitations.append(
+                f"有 {len(weak)} 条引用未通过支持度校验"
+                "（交叉编码器判定证据不支持所配论断），已从答案中移除。"
+            )
+            metrics["support_dropped"] = len(weak)
+
+        metrics["stages_ms"]["support"] = int((time.monotonic() - step) * 1000)
+        metrics["support"] = summarise(scores, len(citations))
+        await report("support", {"ms": metrics["stages_ms"]["support"], **metrics["support"]})
+
         violations = check_invariants(text, citations, evidence, refused=refused)
         if violations:
             logger.warning("answer failed invariants: %s", violations)
@@ -761,21 +799,9 @@ async def answer_question(
         # therefore quietly excluding the thing most worth watching.
         _record_answer_usage(connection, model=llm.model_name, usage=usage, serving=persist)
 
-        # Groundedness per citation, before the row is written so the score
-        # lands with it. Same cross-encoder the offline evaluation uses, so the
-        # number on the page and the number in the report mean the same thing.
-        step = time.monotonic()
-        scores = await score_citations(
-            reranker,
-            citations,
-            {e.chunk_id: e.text for e in evidence},
-            fallback_claim=question,
-        )
-        for citation in citations:
-            citation.support_score = scores.get(citation.chunk_id)
-        metrics["stages_ms"]["support"] = int((time.monotonic() - step) * 1000)
-        metrics["support"] = summarise(scores, len(citations))
-        await report("support", {"ms": metrics["stages_ms"]["support"], **metrics["support"]})
+        # Support scoring used to sit here, after the answer was already fixed.
+        # It has moved above `check_invariants`, because a score that arrives
+        # after the decision it should inform can only be decoration.
 
         # `total_ms` last, because support scoring is part of the request.
         #
