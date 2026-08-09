@@ -18,6 +18,7 @@ to be a security control — there is no authentication to protect yet.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from dataclasses import dataclass
 
@@ -28,8 +29,17 @@ from ahr.config import get_settings
 logger = logging.getLogger(__name__)
 
 # §4: anonymous callers get 3 per minute and 20 per day.
-PER_MINUTE = 3
-PER_DAY = 20
+#
+# Overridable, with the spec values as defaults, because the quota defends a
+# public endpoint against a crawler and a local instance has neither. A
+# developer testing their own changes hit the daily ceiling and could not use
+# the feature they were building — the limit was doing its job to the one person
+# it was never meant to stop.
+#
+# Deliberately env-only and defaulted to the spec: production changes nothing
+# unless an operator says so, so this cannot quietly become a weaker limit.
+PER_MINUTE = int(os.environ.get("RAG_RATE_PER_MINUTE", "3"))
+PER_DAY = int(os.environ.get("RAG_RATE_PER_DAY", "20"))
 
 _MINUTE = 60
 _DAY = 86_400

@@ -383,6 +383,9 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
         print(json.dumps({"error": str(exc)}, indent=2, ensure_ascii=False))
         return 1
 
+    if args.variant == "planner-diff":
+        return _run_planner_diff(golden, args)
+
     if args.variant == "planner":
         # Before the connection, not after: the planner is pure functions over
         # the question and `asked_at`, so this variant runs with no database and
@@ -692,6 +695,48 @@ def _run_weight_sweep(
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def _run_planner_diff(golden: Any, args: argparse.Namespace) -> int:
+    """List where the two planners disagree, for a human to adjudicate.
+
+    Neither planner can be scored until the golden set carries
+    `expected_query_type`, and annotating ninety questions to find out is the
+    expensive way round. Agreement is weak evidence both are right; the
+    disagreements are the short list worth judging, and judging them *is* the
+    annotation.
+    """
+    import asyncio
+
+    from ahr.processing.llm import LlmUnavailableError
+    from ahr.processing.llm import build_client_from_env as build_llm
+    from ahr.rag.llm_planner import disagreements
+
+    try:
+        llm = build_llm()
+    except LlmUnavailableError as exc:
+        print(json.dumps({"error": f"llm unavailable: {exc}"}, ensure_ascii=False))
+        return 1
+
+    questions = [(q.id, q.question, q.asked_at) for q in golden.questions]
+
+    async def run() -> list[dict[str, Any]]:
+        async with llm:
+            return await disagreements(llm, questions)
+
+    rows = asyncio.run(run())
+    payload = {
+        "questions": len(questions),
+        "disagreements": len(rows),
+        "agreement_rate": round(1 - len(rows) / len(questions), 4) if questions else None,
+        "rows": rows,
+    }
+    if args.output:
+        Path(args.output).write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -1095,6 +1140,7 @@ def main(argv: list[str] | None = None) -> int:
             "generation",
             "latency",
             "planner",
+            "planner-diff",
         ],
         default="b1",
         help=(
@@ -1108,7 +1154,8 @@ def main(argv: list[str] | None = None) -> int:
             "generation end-to-end answers scored for groundedness and citations, "
             "latency per-stage p50/p95 (AHR-RAG-400 §14), "
             "planner query_type/time/entity accuracy against the golden set "
-            "(AHR-QSO-700 §8; needs no provider or database)"
+            "(AHR-QSO-700 §8; needs no provider or database), "
+            "planner-diff where the regex and LLM planners disagree"
         ),
     )
     rag_eval.add_argument(

@@ -84,6 +84,12 @@ services:
       dockerfile: Dockerfile
     environment:
       APP_ENV: ${APP_ENV:-local}
+      # The public quota (AHR-API-500 §4: 3/min, 20/day) defends against a
+      # crawler on an unauthenticated endpoint. A local stack has no such
+      # exposure, and everything behind the Docker gateway shares one bucket —
+      # so the developer and their own smoke tests spend the same twenty.
+      RAG_RATE_PER_MINUTE: ${RAG_RATE_PER_MINUTE:-30}
+      RAG_RATE_PER_DAY: ${RAG_RATE_PER_DAY:-500}
       # No DATABASE_URL here on purpose: Compose interpolates ${VAR} from a
       # .env beside this file, never from `env_file:`, so a password kept in
       # the repository-root .env would silently resolve to the default. The
