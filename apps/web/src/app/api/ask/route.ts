@@ -80,6 +80,7 @@ export async function POST(request: Request) {
 
   let question = "";
   // The reader's own time range, when they corrected the one the planner chose.
+  let conversationId: string | undefined;
   let timeFrom: string | undefined;
   let timeTo: string | undefined;
   try {
@@ -87,8 +88,14 @@ export async function POST(request: Request) {
       question?: unknown;
       timeFrom?: unknown;
       timeTo?: unknown;
+      conversationId?: unknown;
     };
     question = String(body.question ?? "").trim();
+    // Opaque to this layer: the upstream mints it and validates it, and a
+    // malformed one starts a new thread there rather than failing here.
+    if (typeof body.conversationId === "string" && body.conversationId.length <= 64) {
+      conversationId = body.conversationId;
+    }
     // Shape-checked here rather than passed through: the upstream would reject
     // a malformed date with a 422 the browser reports as "回答失败".
     const isDate = (v: unknown) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -119,7 +126,11 @@ export async function POST(request: Request) {
         ...forwardedFor(request),
         ...cacheDirective(request),
       },
-      body: JSON.stringify({ question, ...(timeFrom && timeTo ? { timeFrom, timeTo } : {}) }),
+      body: JSON.stringify({
+        question,
+        ...(conversationId ? { conversationId } : {}),
+        ...(timeFrom && timeTo ? { timeFrom, timeTo } : {}),
+      }),
       signal: controller.signal,
       cache: "no-store",
     });

@@ -161,6 +161,12 @@ class Answer:
     # about itself. A stats answer has no citations and is not a refusal, so
     # the page needs to be able to tell the two apart.
     kind: str = "rag"
+    # The thread this turn belongs to, and what a follow-up was rewritten into.
+    # Shown rather than merely applied: a reader whose 「它呢」 was resolved to the
+    # wrong antecedent needs to see that, the same way the resolved time window
+    # is displayed.
+    conversation_id: str | None = None
+    rewritten_question: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -172,6 +178,8 @@ class Answer:
             "refusalReason": self.refusal_reason,
             "weakRetrieval": self.weak_retrieval,
             "kind": self.kind,
+            "conversationId": self.conversation_id,
+            "rewrittenQuestion": self.rewritten_question,
             "limitations": self.limitations,
             "citations": [
                 {
