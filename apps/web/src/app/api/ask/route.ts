@@ -23,7 +23,25 @@ const TIMEOUT_MS = 90_000;
 
 const MAX_QUESTION_CHARS = 300;
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Suggestions for one answer, when asked for. Failure is silent by design:
+  // no chips is a fine outcome, an error is not.
+  const queryId = new URL(request.url).searchParams.get("suggestions");
+  if (queryId) {
+    try {
+      const response = await fetch(
+        `${AI_SERVICE_URL}/rag/suggestions/${encodeURIComponent(queryId)}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) return NextResponse.json({ suggestions: [] });
+      return NextResponse.json(await response.json(), {
+        headers: { "cache-control": "no-store" },
+      });
+    } catch {
+      return NextResponse.json({ suggestions: [] });
+    }
+  }
+
   // Conversation history. The rows have been accumulating in `rag_query` since
   // the first question; this is the read path that was missing, which is why
   // every answer used to vanish with the page that showed it.
