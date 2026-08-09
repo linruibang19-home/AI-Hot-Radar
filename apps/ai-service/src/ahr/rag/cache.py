@@ -199,8 +199,26 @@ async def put_embedding(
 # --- answers ----------------------------------------------------------------
 
 
+# Bumped when the answer *post-processing* changes, independently of the prompt.
+#
+# `prompt_version` covers what the model was asked; it says nothing about what
+# the server does to the reply afterwards. Support gating (2026-08-09) removes
+# citations the cross-encoder scores below threshold — so an entry written
+# before it shipped serves exactly the citation the gate exists to withhold,
+# for up to ANSWER_TTL after deploy. The prompt did not change, so bumping
+# `ANSWER_PROMPT_VERSION` would have been a lie about the cause.
+#
+# Separate from `CACHE_VERSION` on purpose: that one also namespaces the
+# embedding cache, whose 7-day entries are still perfectly valid here and cost
+# a provider round trip each to rebuild.
+ANSWER_PIPELINE_VERSION = "gated-1"
+
+
 def answer_key(question: str, *, fingerprint: str, prompt_version: str) -> str:
-    return f"{_ANSWER_PREFIX}:{_digest(canonical(question), fingerprint, prompt_version)}"
+    return (
+        f"{_ANSWER_PREFIX}:"
+        f"{_digest(canonical(question), fingerprint, prompt_version, ANSWER_PIPELINE_VERSION)}"
+    )
 
 
 async def get_answer(client: redis.Redis, key: str) -> dict[str, Any] | None:

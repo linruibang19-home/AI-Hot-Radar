@@ -41,6 +41,35 @@ def test_a_prompt_change_also_invalidates() -> None:
     assert v2 != v3
 
 
+def test_a_post_processing_change_also_invalidates() -> None:
+    """The prompt is only half of what shapes an answer.
+
+    Support gating removes citations after the model has replied, so an entry
+    written before it shipped would serve exactly the citation the gate exists
+    to withhold — and `prompt_version` cannot see that, because the prompt did
+    not change. ANSWER_TTL is an hour, so without this the gate had an hour of
+    holes in it on every deploy.
+    """
+    key = cache.answer_key("问题", fingerprint="aaa", prompt_version="rag-answer-v2")
+
+    original = cache.ANSWER_PIPELINE_VERSION
+    try:
+        cache.ANSWER_PIPELINE_VERSION = "gated-2"
+        assert cache.answer_key("问题", fingerprint="aaa", prompt_version="rag-answer-v2") != key
+    finally:
+        cache.ANSWER_PIPELINE_VERSION = original
+
+
+def test_the_embedding_cache_survives_a_pipeline_bump() -> None:
+    """Embeddings are unaffected by what the server does to a reply, and cost a
+    provider round trip each to rebuild. Bumping `CACHE_VERSION` — which also
+    namespaces the embedding keys — would have thrown away a week of valid
+    entries to fix an answer-shape problem."""
+    assert "ANSWER_PIPELINE_VERSION" in inspect.getsource(cache.answer_key)
+    assert "ANSWER_PIPELINE_VERSION" not in inspect.getsource(cache.get_embedding)
+    assert "ANSWER_PIPELINE_VERSION" not in inspect.getsource(cache.put_embedding)
+
+
 def test_the_fingerprint_tracks_embedded_chunks_not_items() -> None:
     """An item that exists but was never chunked cannot be retrieved, so it
     cannot change an answer — invalidating on it would throw entries away for

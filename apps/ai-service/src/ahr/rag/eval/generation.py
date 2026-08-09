@@ -72,6 +72,10 @@ class GenerationResult:
     story_coverage: float | None = None
     support_mean: float | None = None
     support_supported: float | None = None
+    # Same claims, scored against the parent block the model read rather than
+    # the cited passage alone — the basis the live gate uses.
+    support_as_read_mean: float | None = None
+    support_as_read_supported: float | None = None
     latency_ms: int | None = None
 
 
@@ -124,7 +128,27 @@ async def support_scores(
     answer: Answer,
     passages: dict[str, str],
 ) -> tuple[float | None, float | None]:
-    """Mean support, and the fraction of citations that clear the threshold."""
+    """Mean support, and the fraction of citations that clear the threshold.
+
+    Called twice per answer, on two different texts, because the two answer
+    different questions and only one of them is still a measurement.
+
+    **`support_*` — the cited passage alone.** The historical series
+    (0.8986 → 0.8952 → 0.9078 → 0.8602 → 0.9596) is on this basis and stays on
+    it. It asks whether the claim can be checked against *the paragraph that was
+    cited*, which is a statement about citation precision at passage level.
+
+    **`support_as_read_*` — the parent block the model was actually given.**
+    This is the basis the live gate uses, so it is the number comparable with
+    `rag_query.metrics.support` on the page.
+
+    The distinction is not pedantry: gating on a number turns that number into a
+    tautology. Every citation the gate lets through scored above threshold *on
+    the parent block*, so `support_as_read_supported` can only ever report what
+    the gate enforced — the same trap as a system that refuses everything and
+    scores perfectly on abstention. The passage-level number is the one that can
+    still fail, so it is the one worth watching.
+    """
     if reranker is None or not answer.citations:
         return None, None
 
@@ -248,6 +272,8 @@ def summarise(results: list[GenerationResult]) -> dict[str, Any]:
         "story_coverage": mean([r.story_coverage for r in answerable]),
         "support_mean": mean([r.support_mean for r in answerable]),
         "support_supported": mean([r.support_supported for r in answerable]),
+        "support_as_read_mean": mean([r.support_as_read_mean for r in answerable]),
+        "support_as_read_supported": mean([r.support_as_read_supported for r in answerable]),
         "must_contain_hit": mean([r.must_contain_hit for r in answerable]),
         "avg_citations": round(statistics.fmean([r.citations for r in answerable]), 2)
         if answerable
@@ -347,6 +373,17 @@ async def run_generation_eval(
         scored.support_mean = mean_support
         scored.support_supported = supported
 
+        # The gate's own basis, reported alongside rather than instead of the
+        # passage-level number. See `support_scores` for why replacing it would
+        # leave the report measuring only what the gate already enforces.
+        as_read_mean, as_read_supported = await support_scores(
+            reranker,
+            answer,
+            _load_parent_passages(answer),
+        )
+        scored.support_as_read_mean = as_read_mean
+        scored.support_as_read_supported = as_read_supported
+
         # Only for the trap questions, and only where the trap is written down.
         # One extra call each on twelve questions, against ninety answers that
         # already cost three round trips apiece.
@@ -387,4 +424,34 @@ def _load_context_passages(answer: Answer) -> dict[str, str]:
         return {}
     with psycopg.connect(get_settings().database_url) as connection:
         passages, _ = _load_context(connection, answer)
+    return passages
+
+
+def _load_parent_passages(answer: Answer) -> dict[str, str]:
+    """The same citations, widened to the parent block the model was given.
+
+    Rebuilt rather than carried on the `Answer`: parent expansion is a pure
+    query over `content_chunk` (ADR-0016 keeps nothing materialised), so
+    recomputing it here costs about 5ms per citation and avoids widening the
+    answer contract with a field only the evaluation reads.
+
+    Must stay identical to `service.answer_question`, truncation included — the
+    point of this basis is that it is the text the gate judged, and a different
+    cut-off would quietly make it a third basis rather than the same one.
+    """
+    import psycopg
+
+    from ahr.config import get_settings
+    from ahr.rag.answer import MAX_PARENT_CHARS
+    from ahr.rag.parent import expand as expand_parent
+
+    if not answer.citations:
+        return {}
+
+    passages: dict[str, str] = {}
+    with psycopg.connect(get_settings().database_url) as connection:
+        for citation in answer.citations:
+            parent = expand_parent(connection, citation.chunk_id)
+            if parent is not None:
+                passages[citation.chunk_id] = parent.text[:MAX_PARENT_CHARS]
     return passages

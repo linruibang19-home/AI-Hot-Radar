@@ -100,8 +100,73 @@ async def score_citations(
     return scores
 
 
+def unsupported_numbers(citations: list[Citation]) -> set[int]:
+    """Which citations fail the support check — and never all of them.
+
+    `AHR-QSO-700` §8 asks for zero "citation exists but does not support the
+    conclusion" defects, and the score that decides it has been computed and
+    displayed since T2-4 without changing anything. Measured on the live
+    corpus, 11.11% of 729 scored citations sit below the threshold: roughly one
+    source in nine is shown to a reader as backing a sentence the cross-encoder
+    says it does not back.
+
+    **Removal is bounded by design: this never empties the list.** Two separate
+    reasons, and the first is the one that would do real damage.
+
+    A grounded denial — "the evidence does not mention a fine" plus what the
+    retrieval did find — is the behaviour 3.13 deliberately built to replace
+    dead-end refusals, and entailment scoring is structurally bad at it:
+    denial-type answers average 0.6465 with **29.41%** of citations under the
+    threshold, against 10.22% for assertions. Emptying the list would hand
+    those answers to `check_invariants`, which turns a zero-citation answer
+    into a refusal — so the most likely casualty of an unbounded rule is
+    precisely the answer shape that is working, and the 0.0000 over-refusal
+    rate with it.
+
+    Second, an answer whose every citation is weak is still better served by
+    its strongest source plus a stated caveat than by silently becoming "not
+    enough evidence". The reader can judge a weak source; they cannot judge an
+    answer they were never shown.
+
+    Measured before shipping: of 161 answered queries, 33 carry at least one
+    weak citation and **0** carry nothing but weak ones. This guard is cheap
+    insurance on a path production has not yet taken, not a common case.
+
+    Unscored citations (a reranker outage) are never dropped — `None` means
+    "not scored", never "unsupported".
+    """
+    scored = [c for c in citations if c.support_score is not None]
+    weak = {
+        c.number
+        for c in scored
+        if c.support_score is not None and c.support_score < SUPPORT_THRESHOLD
+    }
+    if not weak:
+        return set()
+
+    if any(c.number not in weak for c in citations):
+        return weak
+
+    # Everything scored below the bar: keep the strongest and say so.
+    strongest = max(scored, key=lambda c: c.support_score or 0.0)
+    return weak - {strongest.number}
+
+
 def summarise(scores: dict[str, float], citations: int) -> dict[str, float | int]:
-    """The per-answer figures, in the same shape the evaluation reports."""
+    """The per-answer figures, in the same shape the evaluation reports.
+
+    **The two counts are taken at different points, deliberately.** `scored`
+    counts every citation the model produced, *before* gating; `citations`
+    counts what survived it. So `support_supported` stays on the same basis as
+    the offline series (0.8986 → 0.8952 → 0.9078 → 0.8602) and remains
+    comparable across the change, while the gap between the two counts is what
+    the gate removed — `metrics.support_dropped` names it directly.
+
+    Reading `support_supported` as "how much of what the reader sees is
+    supported" would be wrong and would make a gated answer look worse than an
+    ungated one: after gating, everything the reader sees is supported by
+    construction, and that number is uninformative rather than reassuring.
+    """
     if not scores:
         return {"scored": 0, "citations": citations}
 

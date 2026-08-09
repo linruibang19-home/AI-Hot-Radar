@@ -497,6 +497,54 @@ def bind_citations(
     return cleaned.strip(), citations, problems, [*cleaned_limitations, *recovered]
 
 
+# After `bind_citations` the prose carries `[1]`, not `[E1]` — the model's
+# private labelling is already gone by then.
+_BOUND_CITATION_RE = re.compile(r"\[(\d+)\]")
+
+
+def drop_citations(
+    answer_markdown: str,
+    citations: list[Citation],
+    limitations: list[str],
+    *,
+    drop: set[int],
+) -> tuple[str, list[Citation], list[str]]:
+    """Remove citations by number and close the gap the removal leaves.
+
+    Renumbering is the whole difficulty. Deleting `[2]` from `[1][2][3]` and
+    leaving the rest alone produces a body that references a `[3]` no citation
+    record answers to — which `check_invariants` correctly rejects, turning a
+    repairable answer into a refusal. So the survivors are renumbered into
+    reading order exactly as `bind_citations` numbered them in the first place,
+    and the reader still sees `[1][2]`.
+
+    Applied to `limitations` too, for the reason recorded on `clean_limitation`:
+    a number that means nothing to a reader must not survive in one field
+    because the cleaning was written for another.
+    """
+    if not drop:
+        return answer_markdown, citations, limitations
+
+    kept = [citation for citation in citations if citation.number not in drop]
+    renumber = {citation.number: index + 1 for index, citation in enumerate(kept)}
+
+    def replace(match: re.Match[str]) -> str:
+        number = int(match.group(1))
+        if number in renumber:
+            return f"[{renumber[number]}]"
+        return ""  # dropped: strip the marker rather than dangle it
+
+    body = _BOUND_CITATION_RE.sub(replace, answer_markdown)
+    rewritten = [
+        stripped
+        for text in limitations
+        if (stripped := _BOUND_CITATION_RE.sub(replace, text).strip())
+    ]
+    for citation in kept:
+        citation.number = renumber[citation.number]
+    return body.strip(), kept, rewritten
+
+
 def check_invariants(
     answer_markdown: str,
     citations: list[Citation],
