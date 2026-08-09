@@ -56,6 +56,8 @@ export interface AnswerPayload {
   } | null;
   /** Most citations failed the support check. Reported, never a refusal. */
   weakRetrieval?: boolean;
+  /** "rag" or "corpus_stats" — the site answering about itself. */
+  kind?: string;
   metrics?: {
     total_ms?: number;
     evidence?: number;
@@ -685,6 +687,16 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
                 </span>
               )}
             </div>
+          )}
+
+          {/* The site answering about itself. Marked rather than blended in:
+              it has no citations by construction, and a reader who has been
+              told every fact carries a source should be able to see why this
+              one does not instead of assuming they were lost. */}
+          {answer.kind === "corpus_stats" && (
+            <p className="ask-kind" role="status">
+              这是<strong>本站运行数据</strong>，直接来自数据库计数，不是检索结果，因此没有引用来源。
+            </p>
           )}
 
           {/* Most of this answer's citations failed the support check. The
