@@ -242,7 +242,7 @@ sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapf
 cd ai-hot-radar && docker compose -f infra/compose/docker-compose.prod.yml up -d
 ```
 
-Flyway 在 core-api 启动时把 **V001–V017** 一次性建完（空库首次会跑十几秒）。
+Flyway 在 core-api 启动时把 **V001–V021** 一次性建完（空库首次会跑十几秒）。
 镜像里已经带了迁移文件——core-api 的 Dockerfile 用仓库根做 build context 就是为了这个。
 
 按顺序验证：
