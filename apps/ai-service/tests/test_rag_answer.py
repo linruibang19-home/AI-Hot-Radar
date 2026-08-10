@@ -372,6 +372,75 @@ def test_a_json_array_is_not_an_answer() -> None:
     assert parse_model_output('["答案 [E1]"]')["answer_markdown"] == ""
 
 
+# --- the model writing the answer twice ------------------------------------
+
+_ENVELOPE = (
+    '{"answer_markdown": "MiniMax 开源了 H3 [E1]。", '
+    '"claims": [{"evidence": "E1", "text": "MiniMax 开源了全模态生成系统 H3"}]}'
+)
+
+
+def test_prose_followed_by_the_envelope_parses_as_the_envelope() -> None:
+    """Three stored answers render the answer twice, the second time with
+    braces. `json.loads` rejects the leading prose and the prose-recovery guard
+    only rejects text that *starts* with `{`, so the whole reply became the
+    body."""
+    parsed = parse_model_output(f"MiniMax 开源了 H3 [E1]。\n\n{_ENVELOPE}")
+
+    assert parsed["answer_markdown"] == "MiniMax 开源了 H3 [E1]。"
+    assert "answer_markdown" not in parsed["answer_markdown"]
+    assert parsed["limitations"]
+
+
+def test_the_envelope_after_prose_keeps_its_claims() -> None:
+    """The half that is not visible on the page. Prose recovery returns no
+    claims, so `_persist` stores the *question* as every citation's claim and
+    the support gate scores (question × passage) — measured at 100% of citations
+    on fallback answers against 5.0% on the rest."""
+    parsed = parse_model_output(f"MiniMax 开源了 H3 [E1]。\n\n{_ENVELOPE}")
+
+    assert [c["text"] for c in parsed["claims"]] == ["MiniMax 开源了全模态生成系统 H3"]
+
+
+def test_the_envelope_before_prose_is_no_longer_a_refusal() -> None:
+    """The more expensive order, and the one the old guard turned into a
+    refusal: a complete answer reported as "the corpus has nothing"."""
+    parsed = parse_model_output(f"{_ENVELOPE}\n\n希望这个回答对你有帮助！")
+
+    assert parsed["answer_markdown"] == "MiniMax 开源了 H3 [E1]。"
+    assert parsed["claims"]
+
+
+def test_the_models_own_caveats_survive_the_recovery() -> None:
+    """A model's limitations are content — they are what keeps a hedged answer
+    from reading as a confident one. Replacing them with a note about the
+    transport would trade a real qualification for an operational one."""
+    envelope = (
+        '{"answer_markdown": "答案 [E1]", "claims": [], "limitations": ["证据只覆盖到 08-06"]}'
+    )
+    parsed = parse_model_output(f"答案 [E1]\n\n{envelope}")
+
+    assert "证据只覆盖到 08-06" in parsed["limitations"]
+    assert len(parsed["limitations"]) == 2
+
+
+def test_a_truncated_envelope_after_prose_still_is_not_shown() -> None:
+    """The guard this must not weaken. A cut-off envelope is unparseable, so
+    there is nothing to recover from it — and the prose before it is a partial
+    answer, which is the case `_recover_bare_answer` already handles."""
+    parsed = parse_model_output('答案 [E1]。\n\n{"answer_markdown": "答案 [E1]，还没写完')
+
+    assert "answer_markdown" not in parsed["answer_markdown"]
+
+
+def test_json_quoted_inside_an_answer_is_not_mistaken_for_the_envelope() -> None:
+    """Evidence blocks and answers can both contain JSON. Recovering the wrong
+    object would replace the answer with something quoted from it."""
+    parsed = parse_model_output('配置项是 {"model": "bge-m3"} [E1]。')
+
+    assert parsed["answer_markdown"].startswith("配置项是")
+
+
 def test_a_claim_never_carries_the_model_s_own_labels() -> None:
     """Third field, same rule. The body was cleaned, then `limitations` was
     found leaking `[E1]`, and `claim_text` was never cleaned at all — 22 of 806
