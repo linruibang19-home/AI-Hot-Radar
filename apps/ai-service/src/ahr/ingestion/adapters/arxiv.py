@@ -15,7 +15,7 @@ import re
 import time
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 import feedparser
 import pymupdf
@@ -99,8 +99,9 @@ class ArxivPaperAdapter:
             remaining = self._rate_limit_seconds - (time.monotonic() - self._last_request_at)
             if remaining > 0:
                 await asyncio.sleep(remaining)
-        response = await self._fetcher.fetch(
-            url, headers=headers, etag=etag, last_modified=last_modified
+        response = cast(
+            "FetchResult",
+            await self._fetcher.fetch(url, headers=headers, etag=etag, last_modified=last_modified),
         )
         self._last_request_at = time.monotonic()
         return response
@@ -272,9 +273,7 @@ def _extract_pdf(
                 continue
             total += len(text)
             if total > MAX_PDF_TEXT_CHARS:
-                raise ParseFailedError(
-                    f"arXiv PDF text exceeds {MAX_PDF_TEXT_CHARS} characters"
-                )
+                raise ParseFailedError(f"arXiv PDF text exceeds {MAX_PDF_TEXT_CHARS} characters")
             pages.append(f"[Page {page_number}]\n{text}")
     finally:
         pdf.close()
