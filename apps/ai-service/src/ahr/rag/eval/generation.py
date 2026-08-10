@@ -44,7 +44,11 @@ from ahr.rag.service import answer_question
 # the threshold can be moved once there is a reason to.
 SUPPORT_THRESHOLD = 0.30
 
-_SENTENCE_RE = re.compile(r"[^。！？\n]+[。！？]?")
+# A citation immediately after terminal punctuation still belongs to that
+# sentence: ``事实。[1]`` and ``事实[1]。`` are equivalent attachment styles.
+# The old expression stopped at ``。`` and counted ``[1]`` as a second,
+# uncited sentence, turning a perfectly cited one-liner into 0.5 coverage.
+_SENTENCE_RE = re.compile(r"[^。！？\n]+(?:[。！？](?:\s*\[\d+\])*)?")
 _CITATION_RE = re.compile(r"\[(\d+)\]")
 
 
@@ -261,22 +265,27 @@ def summarise(results: list[GenerationResult]) -> dict[str, Any]:
         return round(statistics.fmean(present), 4) if present else None
 
     answerable = [r for r in results if r.answerable]
+    answered = [r for r in answerable if not r.refused]
     unanswerable = [r for r in results if not r.answerable]
 
     summary: dict[str, Any] = {
         "questions": len(results),
         "answerable": len(answerable),
+        "answered": len(answered),
         "unanswerable": len(unanswerable),
-        "citation_coverage": mean([r.citation_coverage for r in answerable]),
-        "citation_precision": mean([r.citation_precision for r in answerable]),
-        "story_coverage": mean([r.story_coverage for r in answerable]),
-        "support_mean": mean([r.support_mean for r in answerable]),
-        "support_supported": mean([r.support_supported for r in answerable]),
-        "support_as_read_mean": mean([r.support_as_read_mean for r in answerable]),
-        "support_as_read_supported": mean([r.support_as_read_supported for r in answerable]),
+        # Completeness is defined over responses that made factual claims. A
+        # refusal has no claims and no citations by design; counting it as 0
+        # double-penalises the same failure here and in over_refusal_rate.
+        "citation_coverage": mean([r.citation_coverage for r in answered]),
+        "citation_precision": mean([r.citation_precision for r in answered]),
+        "story_coverage": mean([r.story_coverage for r in answered]),
+        "support_mean": mean([r.support_mean for r in answered]),
+        "support_supported": mean([r.support_supported for r in answered]),
+        "support_as_read_mean": mean([r.support_as_read_mean for r in answered]),
+        "support_as_read_supported": mean([r.support_as_read_supported for r in answered]),
         "must_contain_hit": mean([r.must_contain_hit for r in answerable]),
-        "avg_citations": round(statistics.fmean([r.citations for r in answerable]), 2)
-        if answerable
+        "avg_citations": round(statistics.fmean([r.citations for r in answered]), 2)
+        if answered
         else None,
         "latency_ms_mean": round(statistics.fmean([r.latency_ms or 0 for r in results]), 0)
         if results
@@ -321,11 +330,13 @@ def summarise(results: list[GenerationResult]) -> dict[str, Any]:
         rows = [r for r in results if r.category == category and r.answerable]
         if not rows:
             continue
+        answered_rows = [r for r in rows if not r.refused]
         by_category[category] = {
             "questions": len(rows),
-            "citation_coverage": mean([r.citation_coverage for r in rows]),
-            "citation_precision": mean([r.citation_precision for r in rows]),
-            "support_mean": mean([r.support_mean for r in rows]),
+            "answered": len(answered_rows),
+            "citation_coverage": mean([r.citation_coverage for r in answered_rows]),
+            "citation_precision": mean([r.citation_precision for r in answered_rows]),
+            "support_mean": mean([r.support_mean for r in answered_rows]),
         }
 
     return {"overall": summary, "by_category": by_category}

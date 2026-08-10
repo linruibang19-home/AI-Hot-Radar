@@ -464,6 +464,9 @@ def _apply_dimensions(
     hits: list[ChunkHit],
     question: str,
     asked_at: datetime,
+    *,
+    passages: dict[str, str] | None = None,
+    identifier_fit_weight: float = 0.0,
 ) -> list[ChunkHit]:
     """B9: §6's `directness` and `source_fit`, applied after the cross-encoder.
 
@@ -479,6 +482,7 @@ def _apply_dimensions(
             key=hit.chunk_id,
             relevance=hit.score,
             title=hit.title,
+            passage=(passages or {}).get(hit.chunk_id, ""),
             source_tier=(
                 str(tier)
                 if (tier := metadata.get(hit.content_item_id, {}).get("source_tier"))
@@ -487,7 +491,12 @@ def _apply_dimensions(
         )
         for hit in hits
     ]
-    order = apply_dimensions(candidates, question=question, query_type=retrieval_plan.query_type)
+    order = apply_dimensions(
+        candidates,
+        question=question,
+        query_type=retrieval_plan.query_type,
+        identifier_fit_weight=identifier_fit_weight,
+    )
     by_id = {hit.chunk_id: hit for hit in hits}
     return [by_id[key] for key in order if key in by_id]
 

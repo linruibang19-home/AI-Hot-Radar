@@ -15,6 +15,8 @@ from ahr.rag.dimensions import (
     Candidate,
     apply_dimensions,
     directness,
+    identifier_fit,
+    identifiers,
     source_fit,
     tokenize,
 )
@@ -63,6 +65,17 @@ def test_cjk_splits_per_character_and_latin_per_word() -> None:
     """The same rule the sparse channel uses — one tokenizer, both languages."""
     assert tokenize("智谱发布") == {"智", "谱", "发", "布"}
     assert "llama.cpp" in tokenize("llama.cpp b10223")
+
+
+def test_identifiers_only_keep_mixed_model_or_version_tokens() -> None:
+    assert identifiers("GLM-5.2 在 2026-08-03 发布") == {"glm-5.2"}
+    assert identifiers("普通 model 和 2026-08-03") == set()
+
+
+def test_identifier_fit_is_case_insensitive_and_bounded() -> None:
+    assert identifier_fit("GLM-5.2 有什么 SLA", "Hosted glm-5.2 has 99% uptime") == 1.0
+    assert identifier_fit("GLM-5.2 与 Qwen3.8-Max", "Only GLM-5.2 is here") == 0.5
+    assert identifier_fit("没有显式型号", "GLM-5.2") == 0.0
 
 
 # --- source_fit ------------------------------------------------------------
@@ -130,6 +143,19 @@ def test_directness_breaks_a_tie_on_relevance() -> None:
         query_type="fact_check",
     )
     assert order[0] == "about"
+
+
+def test_identifier_guard_can_break_a_cross_lingual_near_tie() -> None:
+    order = apply_dimensions(
+        [
+            Candidate("nearby", 0.90, "智谱托管服务", "primary", "GLM family"),
+            Candidate("exact", 0.90, "Provisioned Throughput", "primary", "GLM-5.2 SLA"),
+        ],
+        question="GLM-5.2 的可用性承诺是什么",
+        query_type="fact_check",
+        identifier_fit_weight=0.12,
+    )
+    assert order[0] == "exact"
 
 
 def test_source_fit_reorders_an_explainer_toward_the_expert_source() -> None:

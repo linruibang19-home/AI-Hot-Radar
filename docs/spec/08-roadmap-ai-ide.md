@@ -135,6 +135,23 @@ Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互
 **完成标准**：所有门禁通过；失败项有根因和修复证据；发布候选可 fast-forward
 纳入 `main`；不打印或提交 `.env`，不推送远端，不执行生产部署。
 
+### TASK-M4-002｜RAG 专项黄金集与引用发布门禁
+
+**状态**：✅ 2026-08-11 完成。15 题专项集、8 个真实近邻噪声、同候选快照 A/B、
+90 题检索/生成回归、数值关系审计与逐题人工 P0 核验均已落地；证据见
+`docs/status/rag-specialist-audit-20260811.md`。Planner 的 query-type 代理经扫描确认
+在当前语料上不可操作，未用默认关闭的 LLM 结果冒充线上门禁通过。
+**读取**：`04-rag-agent-design.md`、`07-quality-security-ops.md`、
+`docs/design/m4-rag-evaluation.md`、`data/golden/README.md`、
+`docs/status/rag-product-readiness-20260810.md`。
+**输入**：现有 90 题黄金集、ENTITY/B15/GEN 基线和线上 `rag_query` 证据链。
+**产出**：中文厂商名到英文产品/模型的专项黄金集、噪声敏感性样本、同候选快照
+的重排 A/B、关键问题逐条人工引用核验，以及可阻断发布的回归结果。
+**边界**：先用专项集证明召回缺口；只有缺口成立才试验查询改写。改写只能新增
+候选，不得改变冻结的原始问题、实体、时间窗或覆盖原始查询结果。
+**完成标准**：每个样本均由原始 passage 人工核验；关键问题不存在“引用存在但
+不支持结论”的 P0；回归绑定 `eval_run_id`、候选快照、模型/配置版本，结果可复现。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

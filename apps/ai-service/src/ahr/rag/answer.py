@@ -57,9 +57,31 @@ MAX_PARENT_CHARS = PARENT_BUDGET_TOKENS * CHARS_PER_TOKEN
 # roundups, and v2 explicitly invited the model to repeat their unrelated items
 # in an 「间接相关」 paragraph. That made an entity question look comprehensive
 # while making it less relevant.
-ANSWER_PROMPT_VERSION = "rag-answer-v3"
+# v4 makes citation completeness executable for the model. v3 said every fact
+# needed a citation, but the model still wrote several factual sentences and
+# placed one marker only at the paragraph end. The specialist gate measured
+# 0.8733 coverage despite 0.9857 passage support: the evidence was good, the
+# sentence-level attachment was not.
+# v5 closes two critical failures found by manual audit: moving a 64% saving
+# from "per completed task" onto the raw per-rollout prices, and presenting a
+# list of nearby deployment facts as a non-refusal when the requested SLA was
+# absent. Cross-encoder support cannot reliably catch either relation error.
+# v6 adds a denominator-preservation example after v5's abstract rule still
+# let the model conflate the two cost bases in the specialist replay.
+ANSWER_PROMPT_VERSION = "rag-answer-v6"
 
 _CITATION_RE = re.compile(r"\[E(\d+)\]")
+
+_NUMERIC_VALUE_RE = re.compile(
+    r"(?:[$￥¥]\s*)?\d+(?:[.,]\d+)*(?:\s*(?:%|％|倍|美元|元|万亿|亿|万))?",
+    re.IGNORECASE,
+)
+_NUMERIC_RELATION_RE = re.compile(
+    r"%|％|倍|便宜|昂贵|成本|高于|低于|超过|少于|多于|相当|持平|差距|节省|"
+    r"提升|下降|增长|减少",
+    re.IGNORECASE,
+)
+_CURRENCY_VALUE_RE = re.compile(r"[$￥¥]\s*\d+(?:[.,]\d+)*")
 
 # Bare evidence labels, including ranges: `E3`, `E6-E10`, `E6–E10`.
 _BARE_LABEL_RE = re.compile(r"\bE\d+(?:\s*[-–—~]\s*E?\d+)?")
@@ -90,8 +112,43 @@ SYSTEM_PROMPT = """你是 AI Hot Radar 的问答助手，只依据给定证据�
 5. 证据之间互相矛盾时，如实指出分歧和各自的来源，不要挑一个当定论。
 6. 不要输出证据原文的大段复制，用自己的话概括并标注编号。
 7. **不要在 limitations 里写证据编号**，那是给正文用的。
+8. 数字必须保留证据中的单位、分母和比较口径。例如「每次运行」「每个完成的任务」
+   不是同一个口径；不得把一个口径下的百分比改挂到另一个数字上。证据没有明确给出的
+   百分比、倍数或日期差不要自行计算，只列原始数字并说明口径。
+9. 问题要求的直接关系、数值或承诺若不在证据中，即使证据提到同一模型的其他事实，
+   也属于证据不足：把 `answer_markdown` 留空，在 `limitations` 说明缺少什么；不要用邻近
+   事实拼成一个看似回答的列表。
+
+口径示例：若证据写「A 每个完成的任务便宜 60%；单次运行 A 为 $4、B 为 $7」，
+可以分别复述这两项，但绝不能写成「因为 $4 对 $7，所以单次运行便宜 60%」。百分比仍
+必须修饰「每个完成的任务」，单次运行只报告 $4 与 $7。
+
+## 输出前逐句自检（必须执行）
+
+按句号、问号、感叹号、分号和列表项逐句检查 `answer_markdown`：只要该句包含
+可核实的事实，就必须在该句结束前出现至少一个有效的 `[E#]`。引用不能只放在
+整段最后来覆盖前面的多句。没有合适证据的句子必须删除，不能保留为无引用断言。
+
+错误：`GLM-5.2 已上线。它提供 99% 可用性。[E3]`
+正确：`GLM-5.2 已上线。[E3] 它提供 99% 可用性。[E3]`
 
 只输出 JSON：
+{"answer_markdown": "...", "claims": [{"text": "...", "evidence_ids": ["E1"],
+ "certainty": "confirmed|likely|uncertain"}], "limitations": ["..."]}"""
+
+NUMERIC_AUDIT_SYSTEM_PROMPT = """你是数值关系审计器。只核对候选答案中数字之间的关系，
+不得补充证据之外的事实。重点检查单位、分母、比较口径和百分比归属：per rollout、
+per completed task、每美元、每 token 等口径不能互换。
+
+若候选答案正确，原样保留；若错误，删除或修正错误关系。所有保留的可核实事实仍须紧跟
+原有 [E#] 证据编号。只能使用给定编号。若证据不足以安全修正，把 answer_markdown 留空并
+在 limitations 说明原因。
+
+百分比和两组原始货币值必须拆成不同句子，并分别保留各自口径；禁止用「即」「因为」
+把它们连成同一个关系。例如应写「A 每个完成任务便宜 60%。[E1] 单次运行 A 为 $4、
+B 为 $7。[E1]」，不得写「A 便宜 60%，即 $4 对 $7」。
+
+只输出严格 JSON：
 {"answer_markdown": "...", "claims": [{"text": "...", "evidence_ids": ["E1"],
  "certainty": "confirmed|likely|uncertain"}], "limitations": ["..."]}"""
 
@@ -310,6 +367,71 @@ def build_user_prompt(question: str, evidence: list[Evidence], plan: RetrievalPl
             f"{item.text}"
         )
     return "\n".join(lines)
+
+
+def needs_numeric_relation_audit(answer_markdown: str) -> bool:
+    """Whether a local, deterministic trigger requires the bounded audit turn."""
+    prose = re.sub(r"\[(?:E)?\d+\]", "", answer_markdown)
+    return (
+        len(_NUMERIC_VALUE_RE.findall(prose)) >= 2
+        and _NUMERIC_RELATION_RE.search(prose) is not None
+    )
+
+
+def has_unsafe_percentage_currency_mix(answer_markdown: str) -> bool:
+    """A hard post-audit invariant for the observed denominator failure.
+
+    A percentage and two prices may all be true while referring to different
+    denominators.  Keeping them in separate sentences makes the relationship
+    explicit and prevents ``64%, i.e. $4.65 vs $8.37`` from surviving merely
+    because every token occurs in one evidence passage.
+    """
+    for sentence in re.split(r"[。！？!?\n]", answer_markdown):
+        if ("%" in sentence or "％" in sentence) and len(_CURRENCY_VALUE_RE.findall(sentence)) >= 2:
+            return True
+    return False
+
+
+def build_numeric_audit_prompt(
+    question: str, candidate: dict[str, Any], evidence: list[Evidence]
+) -> str:
+    """Give the auditor only the candidate and the same original evidence."""
+    lines = [
+        f"问题：{question}",
+        "",
+        "候选答案 JSON：",
+        json.dumps(candidate, ensure_ascii=False),
+        "",
+        "原始证据：",
+    ]
+    for item in evidence:
+        lines.append(f"\n[{item.label}] {item.title}\n{item.text}")
+    return "\n".join(lines)
+
+
+def parse_numeric_audit_output(raw: str) -> dict[str, Any] | None:
+    """Strict schema boundary for the second model turn.
+
+    Unlike the first answer, plain-markdown recovery is forbidden here.  The
+    whole point of the extra call is a controlled verifier; accepting an
+    unstructured reply would quietly turn it into another generator.
+    """
+    text = raw.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.S).strip()
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    if not isinstance(parsed.get("answer_markdown"), str):
+        return None
+    if not isinstance(parsed.get("claims"), list):
+        return None
+    if not isinstance(parsed.get("limitations"), list):
+        return None
+    return parsed
 
 
 def parse_model_output(raw: str) -> dict[str, Any]:
@@ -675,6 +797,38 @@ def bind_citations(
 # After `bind_citations` the prose carries `[1]`, not `[E1]` — the model's
 # private labelling is already gone by then.
 _BOUND_CITATION_RE = re.compile(r"\[(\d+)\]")
+_BOUND_SENTENCE_RE = re.compile(r"[^。！？\n]+(?:[。！？](?:\s*\[\d+\])*)?")
+
+
+def drop_uncited_sentences(answer_markdown: str) -> tuple[str, int]:
+    """Delete factual prose the model failed to anchor, never invent a source.
+
+    Prompt compliance is stochastic; publication safety cannot be. A prose
+    sentence without a server-bound ``[n]`` marker is removed. The caller then
+    drops citation records no longer referenced by the surviving text and
+    refuses if nothing grounded remains.
+    """
+    kept_lines: list[str] = []
+    removed = 0
+    for line in answer_markdown.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            if kept_lines and kept_lines[-1]:
+                kept_lines.append("")
+            continue
+
+        bullet = stripped.startswith("- ")
+        content = stripped[2:].strip() if bullet else stripped
+        sentences = [part.strip() for part in _BOUND_SENTENCE_RE.findall(content) if part.strip()]
+        grounded = [part for part in sentences if _BOUND_CITATION_RE.search(part)]
+        removed += len(sentences) - len(grounded)
+        if grounded:
+            joined = " ".join(grounded)
+            kept_lines.append(f"- {joined}" if bullet else joined)
+
+    while kept_lines and not kept_lines[-1]:
+        kept_lines.pop()
+    return "\n".join(kept_lines).strip(), removed
 
 
 def drop_citations(
