@@ -989,12 +989,19 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
         <div className="chat-log">
           {empty && (
             <div className="chat-empty">
+              <span className="chat-empty-kicker">基于站内原始资讯</span>
+              <h2 className="chat-empty-title">从一个具体问题开始</h2>
               <p className="chat-empty-lead">
-                问一个关于最近 AI 动态的问题。答完可以接着追问，
-                <strong>「它」「那家公司」这类指代会自动接上上一轮</strong>。
+                可询问近期模型发布、公司动态或产品变化；回答后还能直接追问
+                <strong>「它」「那家公司」</strong>。
               </p>
-              <div className="ask-examples">
-                <span className="ask-examples-label">试试：</span>
+              <ul className="chat-trust" aria-label="问答能力边界">
+                <li>原文引用</li>
+                <li>时间范围可修正</li>
+                <li>证据不足会拒答</li>
+              </ul>
+              <div className="ask-examples" role="group" aria-label="示例问题">
+                <span className="ask-examples-label">试试这样问</span>
                 {EXAMPLES.map((example) => (
                   <button
                     key={example.question}
