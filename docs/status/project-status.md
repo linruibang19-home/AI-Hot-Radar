@@ -1,8 +1,42 @@
 # 项目进度总览
 
-> 更新时间：2026-08-10
+> 更新时间：2026-08-11
 > 当前阶段：**M4 功能完成、发布门禁继续收口；M5 部署产物就绪待执行**
 > 所有数据均来自实际运行，非估算
+
+## 0. TASK-M5-001 发布基线复核（2026-08-11）
+
+最新开发分支 `claude/project-review-and-progress-ef3d8a@1cef453` 比当时的
+`main@06b4623` 线性领先 42 个提交。本次以该提交建立
+`codex/release-readiness`，先验证再 fast-forward 正式基线，不从旧 `main` 部署。
+
+全量门禁发现并关闭了三类此前未进入完成声明的问题：
+
+1. **Web 依赖树存在 1 critical / 5 high 等 11 个漏洞。** Next.js 保持 15.x，
+   升至 15.5.23；Vitest 升至 4.1.10；同步 ESLint、Node 类型和
+   PostCSS/Sharp/Nanoid 安全覆盖。`npm audit` 归零，CI 改用 `npm ci` 并增加
+   `npm audit --audit-level=high`。
+2. **Python CI 实际仍会被格式门禁拦截。** 三个文件只做 Ruff 机械格式化；
+   重新验证 140 个文件全部符合格式。
+3. **空库迁移在 V018 违反 vendor 外键。** 不改已执行的 V018 checksum；按
+   ADR-0022 新增 V017.1 父记录前置迁移并启用 Flyway out-of-order。空库
+   V001–V021 全过；已有 V021 数据库补执行 V017.1 后 vendor 数保持 15 / 102。
+
+本次正式验收证据：
+
+| 门禁 | 结果 |
+|---|---|
+| Spec | 通过：140 sources / 9 profiles / 38 social targets |
+| Python | Ruff check + format、mypy 84 files、pytest **827/827** |
+| Java | Maven `verify` **55/55**、`BUILD SUCCESS`；成品 JAR 含 V017.1 |
+| Web | lockfile clean install、audit **0**、typecheck、lint、Vitest **54/54**、Next production build |
+| Database | 空库顺序执行 V001–V021（含 V017.1）成功；已有库乱序补迁移成功 |
+| Compose | 7 服务运行；PostgreSQL、Redis、Core API、AI Service、Web 健康检查通过 |
+| HTTP smoke | `/ask`、`/reports`、三种报告 API、Core/AI live/ready 全部 200 |
+| Chrome | `/ask` 无应用侧控制台错误；日报 10、周报 3、月报 1 均可见且有详情链接 |
+
+未在本卡执行：远端 push、生产部署、密钥轮换、DNS/TLS 和真实备份恢复；它们仍属于
+服务器到位后的 M5 运维动作。
 
 ## 1. 里程碑完成情况
 
