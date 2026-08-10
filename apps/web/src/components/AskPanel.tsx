@@ -700,7 +700,13 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
   // renders, so the answer is never slower for them.
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
+  // The conversation list, open only while the reader is choosing from it. It
+  // is a drawer, not a panel: leaving it open under the box would put a stack
+  // of other conversations between the answer and the next question.
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   const bottom = useRef<HTMLDivElement | null>(null);
+  const box = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const loadThreads = useCallback(() => {
@@ -778,11 +784,18 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
       setConversationId(id);
       setSuggestions([]);
       setError(null);
+      // The list has done its job. Leaving it open would keep a stack of other
+      // conversations under the one just opened, which is the shape the reader
+      // was looking at when they said the page was a pile of records.
+      setHistoryOpen(false);
       try {
         sessionStorage.setItem("ahr:conversation", id);
       } catch {
         // Private mode or a full quota; the thread still works for this page.
       }
+      // To the top of the conversation, not the bottom: a thread being reopened
+      // is one to read from the beginning.
+      box.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       inputRef.current?.focus();
     } catch {
       setError("这段对话没能打开，请重试");
@@ -901,7 +914,38 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
 
   return (
     <>
-      <div className="chat">
+      <div className="chat" ref={box}>
+        {/* Which conversation this is, and the way out of it. 换个新话题 used to
+            live in the note under the composer — a line of explanatory text is
+            not where a control goes, and the reader looking for "new chat"
+            found nothing. */}
+        <div className="chat-head">
+          <div className="chat-head-what">
+            {conversationId && turns.length > 0 ? (
+              <>
+                <span className="ask-session-dot" aria-hidden="true" />
+                <span className="chat-head-topic" title={turns[0].question}>
+                  {turns[0].question}
+                </span>
+                <span className="chat-head-count">{turns.length} 轮</span>
+              </>
+            ) : (
+              <span className="chat-head-fresh">新对话</span>
+            )}
+          </div>
+          <button
+            type="button"
+            className="chat-new"
+            onClick={startFresh}
+            // Disabled on an empty box rather than hidden: a control that
+            // disappears when it has nothing to do is one the reader cannot
+            // find when it does.
+            disabled={turns.length === 0 && !pending}
+          >
+            ＋ 新建对话
+          </button>
+        </div>
+
         <div className="chat-log">
           {empty && (
             <div className="chat-empty">
@@ -1079,17 +1123,11 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
             </button>
           </form>
 
+          {/* One sentence, and no control in it. The header owns starting over;
+              repeating it here was two buttons for one action. */}
           <div className="chat-status">
             {conversationId && turns.length > 0 ? (
-              <>
-                <span className="ask-session-dot" aria-hidden="true" />
-                <span>
-                  同一段对话 · 第 <strong>{turns.length}</strong> 轮 · 追问会带上上文
-                </span>
-                <button type="button" className="ask-session-reset" onClick={startFresh}>
-                  换个新话题
-                </button>
-              </>
+              <span>下一个问题会带上以上 {turns.length} 轮的上下文，可以直接用「它」指代。</span>
             ) : (
               <span>回答只依据站内已采集的资讯，每条事实都标注来源，证据不足时会拒答。</span>
             )}
@@ -1101,7 +1139,11 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
           thread in the box above and keeps asking inside it — the resumable
           unit is the conversation, not one line of it. */}
       {otherThreads.length > 0 && (
-        <details className="ask-history">
+        <details
+          className="ask-history"
+          open={historyOpen}
+          onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
+        >
           <summary className="ask-history-title">
             历史对话
             <span className="ask-history-count">{otherThreads.length} 段</span>

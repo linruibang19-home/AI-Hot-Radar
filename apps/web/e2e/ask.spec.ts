@@ -281,7 +281,30 @@ test.describe("ask", () => {
     await expect(page.locator(".chat-turn").first()).toBeVisible({ timeout: 20_000 });
     // Reopened into the box, not into an expander below it.
     await expect(page.locator(".ask-history-body")).toHaveCount(0);
-    // And the composer says the next question will continue this thread.
-    await expect(page.locator(".chat-status")).toContainText("同一段对话");
+    // And the list closes behind it: leaving it open puts a stack of other
+    // conversations between the reopened answer and the next question.
+    await expect(page.locator(".ask-history")).not.toHaveAttribute("open", "");
+    await expect(page.locator(".chat-status")).toContainText("上下文");
+  });
+
+  test("starting a new conversation is a control, not a line of small print", async ({
+    page,
+  }) => {
+    // Nothing to clear yet, so it says so rather than disappearing.
+    await expect(page.locator(".chat-new")).toBeDisabled();
+
+    await page.locator(".ask-input").fill("llama.cpp 最近发布了哪些版本？");
+    await page.locator(".ask-submit").click();
+    await expect(page.locator(".chat-turn .ask-body, .chat-turn .ask-refusal")).toBeVisible({
+      timeout: 120_000,
+    });
+
+    // The header names the conversation the box is in.
+    await expect(page.locator(".chat-head-topic")).toContainText("llama.cpp");
+    await expect(page.locator(".chat-new")).toBeEnabled();
+
+    await page.locator(".chat-new").click();
+    await expect(page.locator(".chat-turn")).toHaveCount(0);
+    await expect(page.locator(".chat-head-fresh")).toBeVisible();
   });
 });
