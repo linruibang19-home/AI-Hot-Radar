@@ -211,6 +211,31 @@ async def suggestions(query_id: str) -> dict[str, object]:
     return {"suggestions": rows}
 
 
+@router.get("/conversations/{conversation_id}")
+def conversation_turns(conversation_id: str) -> dict[str, object]:
+    """One thread, oldest first — what a reload needs to restore.
+
+    `/history` returns the site's recent questions across every thread, which is
+    a different question and was the only one answered. So refreshing the page
+    mid-conversation dropped it and showed the reader strangers' questions
+    instead of their own.
+    """
+    import psycopg
+
+    from ahr.config import get_settings
+    from ahr.rag.service import load_thread
+
+    try:
+        uuid.UUID(conversation_id)
+    except ValueError:
+        # A malformed id is an empty thread, not an error: the page renders a
+        # fresh conversation, which is what the reader gets anyway.
+        return {"turns": []}
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        return {"turns": load_thread(connection, conversation_id)}
+
+
 @router.get("/history")
 def history(limit: int = 20) -> dict[str, object]:
     """Recent conversations, newest first.
@@ -276,7 +301,7 @@ def conversation(query_id: str) -> dict[str, object]:
     from ahr.rag.service import load_conversation
 
     with psycopg.connect(get_settings().database_url) as connection:
-        found = load_conversation(connection, query_id)
+        found: dict[str, object] | None = load_conversation(connection, query_id)
 
     if found is None:
         raise HTTPException(status_code=404, detail="conversation not found")

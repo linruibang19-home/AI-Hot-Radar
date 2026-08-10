@@ -26,7 +26,26 @@ const MAX_QUESTION_CHARS = 300;
 export async function GET(request: Request) {
   // Suggestions for one answer, when asked for. Failure is silent by design:
   // no chips is a fine outcome, an error is not.
-  const queryId = new URL(request.url).searchParams.get("suggestions");
+  const url = new URL(request.url);
+
+  // A whole thread, for restoring a conversation after a reload.
+  const threadId = url.searchParams.get("conversation");
+  if (threadId) {
+    try {
+      const response = await fetch(
+        `${AI_SERVICE_URL}/rag/conversations/${encodeURIComponent(threadId)}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) return NextResponse.json({ turns: [] });
+      return NextResponse.json(await response.json(), {
+        headers: { "cache-control": "no-store" },
+      });
+    } catch {
+      return NextResponse.json({ turns: [] });
+    }
+  }
+
+  const queryId = url.searchParams.get("suggestions");
   if (queryId) {
     try {
       const response = await fetch(

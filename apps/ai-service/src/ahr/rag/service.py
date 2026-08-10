@@ -1159,6 +1159,36 @@ def _record_answer_usage(connection: Any, *, model: str, usage: TokenUsage, serv
         )
 
 
+def load_thread(connection: Any, conversation_id: str) -> list[dict[str, Any]]:
+    """Every turn of one thread, oldest first, in the shape the client renders.
+
+    Named apart from `load_conversation`, which loads a single turn by its own
+    id for the permalink page. The two read the same rows through the same
+    projection and answer different questions; giving them one name shadowed the
+    older one and broke four of its tests.
+
+    `load_history` returns the site's recent questions across all threads; this
+    returns one thread in order. They are different questions and were being
+    answered by the same route, which is why a reload dropped the conversation
+    and left the reader looking at strangers' questions instead of their own.
+
+    Reuses `_as_conversation`, so a turn read back here and a turn read back
+    from a permalink cannot drift into rendering differently.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            _CONVERSATION_SELECT
+            + """
+             WHERE q.conversation_id = %s::uuid
+             GROUP BY q.id
+             ORDER BY q.completed_at ASC NULLS LAST
+            """,
+            (conversation_id,),
+        )
+        rows = cursor.fetchall()
+    return [_as_conversation(row) for row in rows]
+
+
 def _persist(connection: Any, answer: Answer) -> None:
     """Record the query and its citations (V001 `rag_query` / `rag_citation`).
 
