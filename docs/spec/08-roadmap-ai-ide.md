@@ -182,6 +182,17 @@ p95/p99 SLO、全库门禁与当前镜像 smoke 均已验证；服务器依赖�
 和证据不足拒答三项边界；typecheck、lint、unit 与 production build 通过；Docker 当前
 镜像 `/ask` 可访问且包含新版可信提示。
 
+### TASK-DOC-001｜发布候选文档与交接收口
+
+**状态**：✅ 2026-08-11 完成；当前交接见
+`docs/status/handoff-20260811.md`。
+**读取**：`README.md`、`12-delivery-index.md`、`docs/status/project-status.md`、
+`docs/status/handoff-20260810.md` 以及 08-11 三份 RAG 验收记录。
+**输入**：当前 Git 分支/提交、Docker Compose 运行态、数据库实测快照与本轮门禁结果。
+**产出**：更新总入口、交付索引、累计项目状态和新的当前交接文档；旧交接保留为历史记录。
+**完成标准**：当前分支、数据量、测试数、RAG 门禁、报告状态和剩余任务在各入口口径一致；
+不把服务器权限事项、人工视觉验收或未来产品化能力写成已完成。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：
