@@ -80,6 +80,23 @@ describe("what the reader is shown about the conversation", () => {
     expect(SOURCE).toMatch(/\/api\/ask\?threads=1/);
   });
 
+  it("closes the conversation list once it has handed a thread over", () => {
+    // Left open, a stack of other conversations sits between the answer just
+    // reopened and the box for asking the next question.
+    const body = SOURCE.slice(SOURCE.indexOf("async function resume"));
+    expect(body.slice(0, body.indexOf("} catch"))).toContain("setHistoryOpen(false)");
+  });
+
+  it("offers starting over as a control, in one fixed place", () => {
+    // 换个新话题 used to be a chip inside the explanatory note under the
+    // composer, and the reader looking for "new chat" found nothing.
+    expect(SOURCE).toMatch(/className="chat-new"/);
+    expect([...SOURCE.matchAll(/onClick=\{startFresh\}/g)]).toHaveLength(1);
+    // Disabled when there is nothing to clear, never removed: a control that
+    // disappears when idle is one that cannot be found when it is needed.
+    expect(SOURCE).toMatch(/disabled=\{turns\.length === 0 && !pending\}/);
+  });
+
   it("keeps the thread for one sitting, not indefinitely", () => {
     // A conversation resumed a week later would carry context the reader has
     // forgotten into a corpus that has moved on.
