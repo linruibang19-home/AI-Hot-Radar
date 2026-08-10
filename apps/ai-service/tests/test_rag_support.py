@@ -196,12 +196,17 @@ def test_the_served_path_scores_before_it_checks_invariants() -> None:
     assert source.index("unsupported_numbers(") < source.index("check_invariants(")
 
 
-def test_the_served_path_never_turns_a_drop_into_a_refusal() -> None:
-    """`refused` is decided from the bound citations, before any is removed."""
+def test_the_served_path_decides_refusal_after_all_publication_filters() -> None:
+    """No unsupported or uncited fact may survive merely to avoid a refusal."""
     from ahr.rag import service
 
     source = inspect.getsource(service.answer_question)
-    assert source.index("refused = not text or not citations") < source.index("score_citations")
+    score = source.index("score_citations(")
+    support_drop = source.index("drop_citations(", score)
+    sentence_filter = source.index("drop_uncited_sentences(", support_drop)
+    refusal = source.index("refused = not text or not citations", sentence_filter)
+    invariants = source.index("check_invariants(", refusal)
+    assert score < support_drop < sentence_filter < refusal < invariants
 
 
 def test_the_report_keeps_both_scoring_bases_apart() -> None:

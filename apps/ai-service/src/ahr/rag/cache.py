@@ -386,7 +386,7 @@ async def semantic_remember(
 async def record(client: redis.Redis, outcome: str) -> None:
     """Count hits and misses so the cache can be judged rather than assumed."""
     try:
-        await _awaited(client.hincrby(_COUNTER, outcome, 1))
+        _incremented: int = await _awaited(client.hincrby(_COUNTER, outcome, 1))
     except Exception as exc:  # noqa: BLE001
         logger.warning("cache counter failed: %s", exc)
 

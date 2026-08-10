@@ -12,6 +12,7 @@ silently discard that evidence.
 from __future__ import annotations
 
 import logging
+import re
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -29,16 +30,22 @@ from ahr.rag.answer import (
     ANSWER_PROMPT_VERSION,
     MAX_EVIDENCE,
     MAX_PARENT_CHARS,
+    NUMERIC_AUDIT_SYSTEM_PROMPT,
     SYSTEM_PROMPT,
     Answer,
     Citation,
     Evidence,
     bind_citations,
+    build_numeric_audit_prompt,
     build_user_prompt,
     check_invariants,
     drop_citations,
+    drop_uncited_sentences,
+    has_unsafe_percentage_currency_mix,
     load_evidence,
+    needs_numeric_relation_audit,
     parse_model_output,
+    parse_numeric_audit_output,
     summarise_considered,
 )
 from ahr.rag.cache import (
@@ -908,20 +915,85 @@ async def answer_question(
         metrics["stages_ms"]["generate"] = int((time.monotonic() - step) * 1000)
 
         parsed = parse_model_output(raw)
+        numeric_audit = {"triggered": False, "status": "skipped", "ms": 0}
+        candidate_markdown = str(parsed.get("answer_markdown") or "")
+        if needs_numeric_relation_audit(candidate_markdown):
+            numeric_audit["triggered"] = True
+            audit_started = time.monotonic()
+            try:
+                audit_prompt = build_numeric_audit_prompt(question, parsed, evidence)
+                audited_raw, audited_usage = await llm.summarize(
+                    system_prompt=NUMERIC_AUDIT_SYSTEM_PROMPT,
+                    user_prompt=audit_prompt,
+                    json_mode=True,
+                    temperature=0.0,
+                )
+                numeric_audit["attempts"] = 1
+                usage.prompt_tokens += audited_usage.prompt_tokens
+                usage.completion_tokens += audited_usage.completion_tokens
+                usage.cached_tokens += audited_usage.cached_tokens
+                usage.attempts += audited_usage.attempts
+                usage.latency_ms += audited_usage.latency_ms
+
+                audited = parse_numeric_audit_output(audited_raw)
+                if audited is None or has_unsafe_percentage_currency_mix(
+                    str(audited.get("answer_markdown") or "") if audited else ""
+                ):
+                    repair_raw, repair_usage = await llm.summarize(
+                        system_prompt=NUMERIC_AUDIT_SYSTEM_PROMPT,
+                        user_prompt=(
+                            f"{audit_prompt}\n\n上次审计输出未通过安全结构校验：\n"
+                            f"{audited_raw[:4000]}\n\n请只修复一次：百分比陈述与两组货币值"
+                            "必须分句，且输出完整严格 JSON。"
+                        ),
+                        json_mode=True,
+                        temperature=0.0,
+                    )
+                    numeric_audit["attempts"] = 2
+                    usage.prompt_tokens += repair_usage.prompt_tokens
+                    usage.completion_tokens += repair_usage.completion_tokens
+                    usage.cached_tokens += repair_usage.cached_tokens
+                    usage.attempts += repair_usage.attempts
+                    usage.latency_ms += repair_usage.latency_ms
+
+                    repaired = parse_numeric_audit_output(repair_raw)
+                    if repaired is None or has_unsafe_percentage_currency_mix(
+                        str(repaired.get("answer_markdown") or "") if repaired else ""
+                    ):
+                        numeric_audit["status"] = "invalid_fail_closed"
+                        parsed = {
+                            "answer_markdown": "",
+                            "claims": [],
+                            "limitations": [
+                                "数值关系审计两次均未返回安全的单位/分母结构，"
+                                "未发布高风险数字比较。"
+                            ],
+                        }
+                    else:
+                        numeric_audit["status"] = "repaired"
+                        parsed = repaired
+                else:
+                    numeric_audit["status"] = "passed"
+                    parsed = audited
+            except LlmUnavailableError as exc:
+                logger.warning("numeric relation audit unavailable: %s", exc)
+                numeric_audit["status"] = "unavailable_fail_closed"
+                parsed = {
+                    "answer_markdown": "",
+                    "claims": [],
+                    "limitations": ["数值关系审计服务不可用，未发布高风险数字比较。"],
+                }
+            numeric_audit["ms"] = int((time.monotonic() - audit_started) * 1000)
+            metrics["stages_ms"]["numeric_audit"] = numeric_audit["ms"]
+            await report("numeric_audit", numeric_audit)
+        metrics["numeric_audit"] = numeric_audit
+
         text, citations, dangling, limitations = bind_citations(
             str(parsed.get("answer_markdown") or ""),
             list(parsed.get("claims") or []),
             evidence,
             limitations=[str(x) for x in (parsed.get("limitations") or [])],
         )
-
-        refused = not text or not citations
-        refusal_reason = None
-        if refused:
-            # No grounded claim survived. Saying so is the required behaviour,
-            # not a fallback: §10 forbids letting the model fill the gap from
-            # general knowledge.
-            refusal_reason = "检索到的内容不足以回答这个问题"
 
         # §10 layer ③, and the first version of it that decides anything.
         #
@@ -932,11 +1004,12 @@ async def answer_question(
         # threshold. `AHR-QSO-700` §8 asks for zero such defects, so the
         # citation is now removed rather than displayed.
         #
-        # Removal only — this never escalates to a refusal. Dropping the last
-        # citation would, via `check_invariants`, and the answers most exposed
-        # to that are grounded denials, which score low for structural reasons
-        # (29.41% weak against 10.22% for assertions). `unsupported_numbers`
-        # keeps the strongest rather than empty the list.
+        # Removal is followed by a final sentence-level publication gate. If no
+        # grounded claim survives, the system refuses instead of publishing an
+        # uncited fact. Grounded denials are especially exposed to low support
+        # scores for structural reasons (29.41% weak against 10.22% for
+        # assertions), so `unsupported_numbers` still keeps the strongest
+        # candidate whenever one passes the bounded safety rule.
         step = time.monotonic()
         scores = await score_citations(
             reranker,
@@ -956,6 +1029,30 @@ async def answer_question(
             metrics["support_dropped"] = len(weak)
         weak_retrieval = is_weak_retrieval(len(weak), len(citations))
         metrics["weak_retrieval"] = weak_retrieval
+
+        # Last publication transform, after every operation that can remove a
+        # citation. Running this before support gating left a real hole: a
+        # sentence was grounded at the first check, its only weak citation was
+        # then dropped, and the now-uncited sentence reached the page.
+        text, uncited_dropped = drop_uncited_sentences(text)
+        if uncited_dropped:
+            referenced = {int(value) for value in re.findall(r"\[(\d+)\]", text)}
+            orphaned = {
+                citation.number for citation in citations if citation.number not in referenced
+            }
+            text, citations, limitations = drop_citations(
+                text, citations, limitations, drop=orphaned
+            )
+            limitations.append(f"有 {uncited_dropped} 句事实陈述未标注可验证引用，已从答案中移除。")
+            metrics["uncited_sentences_dropped"] = uncited_dropped
+
+        refused = not text or not citations
+        refusal_reason = None
+        if refused:
+            # No grounded claim survived. Saying so is the required behaviour,
+            # not a fallback: §10 forbids letting the model fill the gap from
+            # general knowledge.
+            refusal_reason = "检索到的内容不足以回答这个问题"
 
         metrics["stages_ms"]["support"] = int((time.monotonic() - step) * 1000)
         metrics["support"] = summarise(scores, len(citations))

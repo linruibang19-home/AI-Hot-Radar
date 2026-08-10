@@ -1,0 +1,67 @@
+{
+  "run_id": "GEN-20260810T202254Z",
+  "config": {
+    "variant": "generation",
+    "llm": "deepseek-chat",
+    "reranker": "BAAI/bge-reranker-v2-m3",
+    "support_threshold": 0.3,
+    "questions": 1,
+    "corpus_snapshot": {
+      "snapshot_cutoff": "2026-08-03T23:59:00+08:00",
+      "newest_item": "2026-08-10T20:00:00+00:00",
+      "items_in_snapshot": 915,
+      "items_total": 1697,
+      "items_ignored": 782
+    }
+  },
+  "summary": {
+    "overall": {
+      "questions": 1,
+      "answerable": 1,
+      "answered": 1,
+      "unanswerable": 0,
+      "citation_coverage": 1.0,
+      "citation_precision": 0.0,
+      "story_coverage": 0.0,
+      "support_mean": 0.9734,
+      "support_supported": 1.0,
+      "support_as_read_mean": 0.9733,
+      "support_as_read_supported": 1.0,
+      "must_contain_hit": null,
+      "avg_citations": 3.0,
+      "latency_ms_mean": 14716.0,
+      "over_refusal_rate": 0.0
+    },
+    "by_category": {
+      "comparison": {
+        "questions": 1,
+        "answered": 1,
+        "citation_coverage": 1.0,
+        "citation_precision": 0.0,
+        "support_mean": 0.9734
+      }
+    }
+  },
+  "questions": [
+    {
+      "question_id": "RAG-GOLD-036",
+      "category": "comparison",
+      "answerable": true,
+      "refused": false,
+      "citations": 3,
+      "must_contain_hit": null,
+      "must_not_claim_mentions": [],
+      "question": "开放权重模型和闭源前沿模型的差距，各方是怎么看的？",
+      "answer_markdown": "SaferAI 报告指出，中国的开放权重模型 GLM-5.2 在网络和生物能力上仅落后 OpenAI GPT-5.5 和 Anthropic Claude Opus 4.7 几个月，但安全差距在扩大，GLM-5.2 未拒绝任何攻击性任务，而 Claude Opus 4.7 因拒绝过多导致评估无法完成。[1] 同时，Interconnects 的讨论强调，开放模型与闭源前沿的差距常被简化为“几个月”，但实际因基准不同而模糊，且差距在特定领域（如智能体编码）可能意义重大。[2] 此外，有观点认为开放模型在能力上已接近前沿，例如 Qwen3.8-Max 的发布被解读为“开放前沿模型已缩小与闭源系统的差距”。[3] 然而，安全方面，开放权重模型一旦下载，安全措施无法强制执行，这成为主要担忧。[1]",
+      "asserted_presupposition": null,
+      "citation_coverage": 1.0,
+      "citation_precision": 0.0,
+      "story_coverage": 0.0,
+      "support_mean": 0.9734455744425455,
+      "support_supported": 1.0,
+      "support_as_read_mean": 0.9733283718427023,
+      "support_as_read_supported": 1.0,
+      "latency_ms": 14716
+    }
+  ]
+}

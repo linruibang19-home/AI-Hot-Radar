@@ -335,6 +335,64 @@ def test_rejects_out_of_range_grade(tmp_path: Path) -> None:
         load_golden_set(tmp_path, require_full=False)
 
 
+def test_distractors_are_typed_and_kept_separate_from_relevant_items(tmp_path: Path) -> None:
+    _write(
+        tmp_path,
+        "x.yaml",
+        {
+            "category": "fact_check",
+            "questions": [
+                {
+                    "id": "Q1",
+                    "cohort": "vendor_alias",
+                    "question": "q",
+                    "asked_at": "2026-08-03T12:00:00+08:00",
+                    "answerable": True,
+                    "relevant_items": [{"id": "i1", "grade": 2}],
+                    "distractor_items": [{"id": "i2", "reason": "nearby model"}],
+                }
+            ],
+        },
+    )
+    golden = load_golden_set(tmp_path, require_full=False)
+    question = golden.questions[0]
+    assert question.cohort == "vendor_alias"
+    assert question.distractor_ids == frozenset({"i2"})
+    assert golden.item_ids == frozenset({"i1"})
+    assert golden.annotated_item_ids == frozenset({"i1", "i2"})
+
+
+@pytest.mark.parametrize(
+    ("distractors", "message"),
+    [
+        ([{"id": "i2"}], "need an 'id' and a 'reason'"),
+        ([{"id": "i1", "reason": "same row"}], "both relevant and distractors"),
+    ],
+)
+def test_rejects_invalid_distractor_annotations(
+    tmp_path: Path, distractors: list[dict[str, str]], message: str
+) -> None:
+    _write(
+        tmp_path,
+        "x.yaml",
+        {
+            "category": "fact_check",
+            "questions": [
+                {
+                    "id": "Q1",
+                    "question": "q",
+                    "asked_at": "2026-08-03T12:00:00+08:00",
+                    "answerable": True,
+                    "relevant_items": [{"id": "i1", "grade": 2}],
+                    "distractor_items": distractors,
+                }
+            ],
+        },
+    )
+    with pytest.raises(GoldenSetError, match=message):
+        load_golden_set(tmp_path, require_full=False)
+
+
 def test_require_full_enforces_the_per_category_minimum(tmp_path: Path) -> None:
     _write(
         tmp_path,
@@ -391,3 +449,13 @@ def test_shipped_golden_set_ids_are_sequential_and_unique() -> None:
     golden = load_golden_set(GOLDEN_DIR, require_full=True)
     numbers = sorted(int(q.id.rsplit("-", 1)[1]) for q in golden.questions)
     assert numbers == list(range(1, 91))
+
+
+@pytest.mark.skipif(GOLDEN_DIR is None, reason="golden set not mounted")
+def test_vendor_alias_specialist_set_is_complete_and_adversarial() -> None:
+    assert GOLDEN_DIR is not None
+    golden = load_golden_set(GOLDEN_DIR / "vendor-alias", require_full=False)
+    assert len(golden) == 15
+    assert {q.cohort for q in golden.questions} == {"zh_vendor_to_latin_model"}
+    assert all(q.distractor_items for q in golden.questions)
+    assert all(q.must_contain for q in golden.questions)

@@ -117,7 +117,12 @@ class LlmClient:
             self._client = None
 
     async def _complete(
-        self, messages: list[dict[str, str]], usage: TokenUsage, *, json_mode: bool = True
+        self,
+        messages: list[dict[str, str]],
+        usage: TokenUsage,
+        *,
+        json_mode: bool = True,
+        temperature: float | None = None,
     ) -> str:
         if self._client is None:
             raise RuntimeError("LlmClient must be used as an async context manager")
@@ -125,7 +130,7 @@ class LlmClient:
         payload: dict[str, Any] = {
             "model": self._config.model,
             "messages": messages,
-            "temperature": self._config.temperature,
+            "temperature": self._config.temperature if temperature is None else temperature,
             "stream": False,
         }
         if json_mode:
@@ -168,7 +173,12 @@ class LlmClient:
         return self._config.model
 
     async def summarize(
-        self, *, system_prompt: str, user_prompt: str, json_mode: bool = False
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        json_mode: bool = False,
+        temperature: float | None = None,
     ) -> tuple[str, TokenUsage]:
         """Completion for narrative output or a caller-declared JSON contract.
 
@@ -184,6 +194,7 @@ class LlmClient:
             ],
             usage,
             json_mode=json_mode,
+            temperature=temperature,
         )
         return text, usage
 

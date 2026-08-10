@@ -1,0 +1,67 @@
+{
+  "run_id": "GEN-20260810T194318Z",
+  "config": {
+    "variant": "generation",
+    "llm": "deepseek-chat",
+    "reranker": "BAAI/bge-reranker-v2-m3",
+    "support_threshold": 0.3,
+    "questions": 1,
+    "corpus_snapshot": {
+      "snapshot_cutoff": "2026-08-03T23:59:00+08:00",
+      "newest_item": "2026-08-10T18:34:10+00:00",
+      "items_in_snapshot": 915,
+      "items_total": 1694,
+      "items_ignored": 779
+    }
+  },
+  "summary": {
+    "overall": {
+      "questions": 1,
+      "answerable": 1,
+      "answered": 1,
+      "unanswerable": 0,
+      "citation_coverage": 1.0,
+      "citation_precision": 1.0,
+      "story_coverage": 1.0,
+      "support_mean": 0.9979,
+      "support_supported": 1.0,
+      "support_as_read_mean": 0.9979,
+      "support_as_read_supported": 1.0,
+      "must_contain_hit": 1.0,
+      "avg_citations": 1.0,
+      "latency_ms_mean": 14011.0,
+      "over_refusal_rate": 0.0
+    },
+    "by_category": {
+      "fact_check": {
+        "questions": 1,
+        "answered": 1,
+        "citation_coverage": 1.0,
+        "citation_precision": 1.0,
+        "support_mean": 0.9979
+      }
+    }
+  },
+  "questions": [
+    {
+      "question_id": "RAG-VENDOR-010",
+      "category": "fact_check",
+      "answerable": true,
+      "refused": false,
+      "citations": 1,
+      "must_contain_hit": 1.0,
+      "must_not_claim_mentions": [],
+      "question": "月之暗面的新模型和 GPT-5.6 Sol 做编码任务时成本差多少？",
+      "answer_markdown": "在 DeepSWE 编码基准上，月之暗面的 Kimi K3 每个完成的任务比 GPT-5.6 Sol 便宜 64%。[1] 单次运行成本为 **$4.65** 对比 Sol 的 **$8.37**。[1] 按每美元解决的编码任务数计算，Kimi K3 是 Sol 的约 2.8 倍。[1]",
+      "asserted_presupposition": null,
+      "citation_coverage": 1.0,
+      "citation_precision": 1.0,
+      "story_coverage": 1.0,
+      "support_mean": 0.9978918433189392,
+      "support_supported": 1.0,
+      "support_as_read_mean": 0.9978918433189392,
+      "support_as_read_supported": 1.0,
+      "latency_ms": 14011
+    }
+  ]
+}

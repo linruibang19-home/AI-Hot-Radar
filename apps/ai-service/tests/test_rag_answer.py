@@ -15,9 +15,14 @@ from ahr.rag.answer import (
     Citation,
     Evidence,
     bind_citations,
+    build_numeric_audit_prompt,
     build_user_prompt,
     check_invariants,
+    drop_uncited_sentences,
+    has_unsafe_percentage_currency_mix,
+    needs_numeric_relation_audit,
     parse_model_output,
+    parse_numeric_audit_output,
 )
 from ahr.rag.planner import plan
 
@@ -114,6 +119,67 @@ def test_prompt_excludes_unrelated_industry_roundup_items() -> None:
     assert "不要为了显得全面" in SYSTEM_PROMPT
     assert "仅仅出现在同一篇汇总文章里不算相关" in SYSTEM_PROMPT
     assert "间接的另起一段" not in SYSTEM_PROMPT
+
+
+def test_prompt_requires_sentence_level_citation_self_check() -> None:
+    assert "按句号、问号、感叹号、分号和列表项逐句检查" in SYSTEM_PROMPT
+    assert "引用不能只放在" in SYSTEM_PROMPT
+    assert "没有合适证据的句子必须删除" in SYSTEM_PROMPT
+
+
+def test_prompt_preserves_numeric_denominators_and_requires_real_refusal() -> None:
+    assert "每次运行" in SYSTEM_PROMPT
+    assert "每个完成的任务" in SYSTEM_PROMPT
+    assert "不得把一个口径下的百分比改挂到另一个数字上" in SYSTEM_PROMPT
+    assert "不要用邻近" in SYSTEM_PROMPT
+    assert "百分比仍" in SYSTEM_PROMPT
+    assert "单次运行只报告" in SYSTEM_PROMPT
+
+
+def test_numeric_relation_audit_trigger_is_narrow_and_deterministic() -> None:
+    assert needs_numeric_relation_audit("A 每个任务便宜 64%，$4.65 对 $8.37。[E1]")
+    assert needs_numeric_relation_audit("A 得分 56，低于 B 的 57。[E1]")
+    assert not needs_numeric_relation_audit("模型有 2.4 万亿参数，激活 95B。[E1]")
+    assert not needs_numeric_relation_audit("成本为 $4.65。[E1]")
+
+
+def test_numeric_audit_output_requires_the_strict_json_contract() -> None:
+    valid = '{"answer_markdown":"答案 [E1]。","claims":[],"limitations":[]}'
+    assert parse_numeric_audit_output(valid) is not None
+    assert parse_numeric_audit_output("答案 [E1]。") is None
+    assert parse_numeric_audit_output('{"answer_markdown":"答案"}') is None
+
+
+def test_percentage_and_two_prices_must_be_separate_after_audit() -> None:
+    assert has_unsafe_percentage_currency_mix("每个任务便宜 64%，即 $4.65 对 $8.37。[E1]")
+    assert not has_unsafe_percentage_currency_mix(
+        "每个完成任务便宜 64%。[E1] 单次运行是 $4.65 对 $8.37。[E1]"
+    )
+
+
+def test_uncited_sentences_are_removed_without_borrowing_a_source() -> None:
+    cleaned, removed = drop_uncited_sentences(
+        "无引用概括。事实 A。[1] 事实 B[2]。\n\n- 邻近但无引用。\n- 可核对事实。[2]"
+    )
+    assert cleaned == "事实 A。[1] 事实 B[2]。\n\n- 可核对事实。[2]"
+    assert removed == 2
+
+
+def test_all_uncited_prose_becomes_empty_for_fail_closed_refusal() -> None:
+    cleaned, removed = drop_uncited_sentences("检索结果里没有直接答案。\n- 只有邻近事实。")
+    assert cleaned == ""
+    assert removed == 2
+
+
+def test_numeric_audit_prompt_contains_original_evidence_not_generated_summary() -> None:
+    prompt = build_numeric_audit_prompt(
+        "成本差多少",
+        {"answer_markdown": "$4 与 $7", "claims": [], "limitations": []},
+        _evidence(1),
+    )
+    assert "成本差多少" in prompt
+    assert "正文 1" in prompt
+    assert "$4 与 $7" in prompt
 
 
 def test_limitations_never_show_the_models_own_evidence_labels() -> None:

@@ -134,7 +134,7 @@ class RetrievalTrace:
         """
         ordered = sorted(
             self.candidates.values(),
-            key=lambda c: (c.fused_rank if c.fused_rank is not None else 10**6),
+            key=lambda c: c.fused_rank if c.fused_rank is not None else 10**6,
         )
         kept = ordered[:limit]
         keys = {c.chunk_id for c in kept}

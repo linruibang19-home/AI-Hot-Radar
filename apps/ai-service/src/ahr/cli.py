@@ -360,10 +360,12 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
     """Score a retrieval configuration against the golden set (TASK-M4-001)."""
     from ahr.rag.embeddings import EmbeddingUnavailableError, build_client_from_env
     from ahr.rag.eval.golden import (
+        GoldenSet,
         GoldenSetError,
         describe_corpus_snapshot,
         load_golden_set,
         verify_items_exist,
+        verify_original_evidence,
     )
     from ahr.rag.eval.runner import (
         dense_retriever,
@@ -382,6 +384,21 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
     except GoldenSetError as exc:
         print(json.dumps({"error": str(exc)}, indent=2, ensure_ascii=False))
         return 1
+
+    if args.question_id:
+        selected = tuple(
+            question for question in golden.questions if question.id == args.question_id
+        )
+        if not selected:
+            print(
+                json.dumps(
+                    {"error": f"question id not found: {args.question_id}"},
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+            return 1
+        golden = GoldenSet(questions=selected, source_files=golden.source_files)
 
     if args.variant == "query-type-sweep":
         return _run_query_type_sweep(golden, args)
@@ -448,6 +465,7 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
         # decides if last week's numbers still mean anything.
         with psycopg.connect(get_settings().database_url) as connection:
             freshness = check_freshness(connection, golden)
+            evidence_issues = verify_original_evidence(connection, golden)
 
         print(
             json.dumps(
@@ -457,6 +475,10 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
                     "files": list(golden.source_files),
                     "by_category": {c: len(golden.by_category(c)) for c in CATEGORIES},
                     "annotated_items": len(golden.item_ids),
+                    "annotated_distractors": len(
+                        {item_id for q in golden.questions for item_id in q.distractor_ids}
+                    ),
+                    "original_evidence_issues": evidence_issues,
                     "freshness": freshness,
                 },
                 indent=2,
@@ -466,7 +488,7 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
         # Non-zero when the annotations no longer describe the corpus, so this
         # can gate a scheduled run. Reporting a clean exit while pointing at
         # missing items would make the check decorative.
-        return 1 if freshness["missing"] or freshness["unretrievable"] else 0
+        return 1 if freshness["missing"] or freshness["unretrievable"] or evidence_issues else 0
 
     if args.variant in ("generation", "latency"):
         return _run_generation_eval(golden, args, snapshot)
@@ -492,6 +514,29 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
                 return {"error": str(exc)}
 
         with psycopg.connect(get_settings().database_url) as connection:
+            if args.variant == "specialist-ab":
+                assert client is not None
+                from ahr.rag.eval.specialist_ab import run_specialist_ab
+
+                try:
+                    reranker = build_reranker_from_env()
+                except RerankUnavailableError as exc:
+                    return {"error": str(exc)}
+                async with client, reranker:
+                    payload = await run_specialist_ab(
+                        connection,
+                        golden,
+                        client,
+                        reranker,
+                        candidate_limit=args.rerank_candidates,
+                        top_n=args.rerank_top_n,
+                    )
+                payload["config"]["corpus_snapshot"] = snapshot
+                if args.output:
+                    Path(args.output).write_text(
+                        json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+                    )
+                return payload
             if args.variant == "b1":
                 assert client is not None
                 async with client:
@@ -622,8 +667,17 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
     if args.output and "error" not in payload:
         # The per-question rows went to --output; stdout gets the summary so a
         # regression run stays readable in a terminal.
-        summary = payload["summary"]
-        brief = {"run_id": payload["run_id"], **summary} if isinstance(summary, dict) else payload
+        summary = payload.get("summary", payload.get("summaries"))
+        brief = (
+            {
+                "run_id": payload["run_id"],
+                "summary": summary,
+                **({"deltas": payload["deltas"]} if "deltas" in payload else {}),
+                **({"decision": payload["decision"]} if "decision" in payload else {}),
+            }
+            if isinstance(summary, dict)
+            else payload
+        )
         print(json.dumps(brief, indent=2, ensure_ascii=False))
     else:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
@@ -1194,6 +1248,7 @@ def main(argv: list[str] | None = None) -> int:
             "planner",
             "planner-diff",
             "query-type-sweep",
+            "specialist-ab",
         ],
         default="b1",
         help=(
@@ -1209,7 +1264,8 @@ def main(argv: list[str] | None = None) -> int:
             "planner query_type/time/entity accuracy against the golden set "
             "(AHR-QSO-700 §8; needs no provider or database), "
             "planner-diff where the regex and LLM planners disagree, "
-            "query-type-sweep which query_type actually retrieves best per question"
+            "query-type-sweep which query_type actually retrieves best per question, "
+            "specialist-ab one-snapshot entity/noise rerank A/B for an annotated specialist set"
         ),
     )
     rag_eval.add_argument(
@@ -1230,6 +1286,11 @@ def main(argv: list[str] | None = None) -> int:
     rag_eval.add_argument("--chunk-depth", type=int, default=60, help="AHR-RAG-400 §5 topK")
     rag_eval.add_argument("--sparse-depth", type=int, default=40, help="AHR-RAG-400 §5 FTS topK")
     rag_eval.add_argument("--output", default=None, help="write the full per-question report here")
+    rag_eval.add_argument(
+        "--question-id",
+        default=None,
+        help="replay one golden question by id before running the whole set",
+    )
     rag_eval.add_argument(
         "--llm-planner",
         action="store_true",

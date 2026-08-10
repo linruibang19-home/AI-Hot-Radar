@@ -52,6 +52,20 @@ class RelevantItem:
 
 
 @dataclass(frozen=True)
+class DistractorItem:
+    """A real passage that is topically plausible but does not answer the question.
+
+    These are human-selected adversarial candidates, not synthetic text.  A
+    robustness run may inject them before reranking to prove that a nearby
+    vendor/model cannot displace the original evidence merely because the
+    surrounding vocabulary is similar.
+    """
+
+    item_id: str
+    reason: str
+
+
+@dataclass(frozen=True)
 class GoldenQuestion:
     id: str
     category: str
@@ -59,7 +73,14 @@ class GoldenQuestion:
     asked_at: datetime
     answerable: bool
     relevant_items: tuple[RelevantItem, ...] = ()
+    distractor_items: tuple[DistractorItem, ...] = ()
+    cohort: str | None = None
     must_contain: tuple[str, ...] = ()
+    # Exact anchors that must exist in fetched source title/body.  Kept
+    # separate from ``must_contain`` because a correct Chinese answer may
+    # translate an English phrase ("next week" -> "下周") while the evidence
+    # validator must still check the source verbatim.
+    evidence_must_contain: tuple[str, ...] = ()
     must_not_claim: tuple[str, ...] = ()
     # The false thing an answer must not assert, written as a sentence rather
     # than a keyword. `must_not_claim` is substring matching and cannot tell a
@@ -92,6 +113,14 @@ class GoldenQuestion:
     def relevant_ids(self) -> frozenset[str]:
         return frozenset(item.item_id for item in self.relevant_items)
 
+    @property
+    def distractor_ids(self) -> frozenset[str]:
+        return frozenset(item.item_id for item in self.distractor_items)
+
+    @property
+    def annotated_item_ids(self) -> frozenset[str]:
+        return self.relevant_ids | self.distractor_ids
+
     def grade_of(self, item_id: str) -> int:
         for item in self.relevant_items:
             if item.item_id == item_id:
@@ -117,6 +146,10 @@ class GoldenSet:
     @property
     def item_ids(self) -> frozenset[str]:
         return frozenset(item_id for q in self.questions for item_id in q.relevant_ids)
+
+    @property
+    def annotated_item_ids(self) -> frozenset[str]:
+        return frozenset(item_id for q in self.questions for item_id in q.annotated_item_ids)
 
 
 def _parse_question(raw: dict[str, Any], category: str, path: Path) -> GoldenQuestion:
@@ -158,6 +191,25 @@ def _parse_question(raw: dict[str, Any], category: str, path: Path) -> GoldenQue
     if duplicates:
         raise fail(f"duplicate relevant item ids: {duplicates}")
 
+    distractors: list[DistractorItem] = []
+    for entry in raw.get("distractor_items") or ():
+        if not isinstance(entry, dict) or "id" not in entry or "reason" not in entry:
+            raise fail("distractor_items entries need an 'id' and a 'reason'")
+        distractors.append(
+            DistractorItem(item_id=str(entry["id"]), reason=str(entry["reason"]).strip())
+        )
+    if any(not item.reason for item in distractors):
+        raise fail("distractor_items reason must not be empty")
+    distractor_ids = [item.item_id for item in distractors]
+    duplicated_distractors = [
+        item_id for item_id, count in Counter(distractor_ids).items() if count > 1
+    ]
+    if duplicated_distractors:
+        raise fail(f"duplicate distractor item ids: {duplicated_distractors}")
+    overlap = sorted(set(ids) & set(distractor_ids))
+    if overlap:
+        raise fail(f"items cannot be both relevant and distractors: {overlap}")
+
     expected_query_type = raw.get("expected_query_type")
     if expected_query_type is not None and expected_query_type not in QUERY_TYPES:
         raise fail(f"expected_query_type must be one of {QUERY_TYPES}, got {expected_query_type!r}")
@@ -171,7 +223,12 @@ def _parse_question(raw: dict[str, Any], category: str, path: Path) -> GoldenQue
         asked_at=asked_at,
         answerable=answerable,
         relevant_items=tuple(relevant),
+        distractor_items=tuple(distractors),
+        cohort=str(raw["cohort"]) if raw.get("cohort") else None,
         must_contain=tuple(str(v) for v in raw.get("must_contain") or ()),
+        evidence_must_contain=tuple(
+            str(v) for v in raw.get("evidence_must_contain") or raw.get("must_contain") or ()
+        ),
         must_not_claim=tuple(str(v) for v in raw.get("must_not_claim") or ()),
         presupposition=raw.get("presupposition"),
         expected_query_type=expected_query_type,
@@ -282,7 +339,7 @@ def verify_items_exist(connection: Any, golden: GoldenSet) -> list[str]:
     re-ingested into a fresh revision that was never chunked. Retrieval could
     not have found it, and the evaluation had no way to say so.
     """
-    wanted = sorted(golden.item_ids)
+    wanted = sorted(golden.annotated_item_ids)
     if not wanted:
         return []
 
@@ -302,6 +359,48 @@ def verify_items_exist(connection: Any, golden: GoldenSet) -> list[str]:
         usable = {row[0] for row in cursor.fetchall()}
 
     return [item_id for item_id in wanted if item_id not in usable]
+
+
+def verify_original_evidence(connection: Any, golden: GoldenSet) -> list[dict[str, str]]:
+    """Check answer anchors against the current original revision body.
+
+    ``must_contain`` is an answer assertion, but the only acceptable sources are
+    the fetched ``content_item.title`` and ``content_revision.body_text``.
+    ``zh_title`` and ``summary_zh`` are deliberately excluded because both may
+    be LLM enrichment.  The raw title is retained because release feeds often
+    put the version number only there.
+    """
+    wanted = sorted(golden.item_ids)
+    if not wanted:
+        return []
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT ci.id::text, ci.title, cr.body_text
+              FROM content_item ci
+              JOIN content_revision cr ON cr.id = ci.current_revision_id
+             WHERE ci.id = ANY(%s::uuid[])
+            """,
+            (wanted,),
+        )
+        bodies = {str(row[0]): f"{row[1] or ''}\n{row[2] or ''}" for row in cursor.fetchall()}
+
+    issues: list[dict[str, str]] = []
+    for question in golden.questions:
+        evidence = "\n".join(
+            bodies.get(item_id, "") for item_id in question.relevant_ids
+        ).casefold()
+        for assertion in question.evidence_must_contain:
+            if assertion.casefold() not in evidence:
+                issues.append(
+                    {
+                        "question_id": question.id,
+                        "assertion": assertion,
+                        "error": "must_contain is absent from original title and evidence body",
+                    }
+                )
+    return issues
 
 
 def describe_corpus_snapshot(connection: Any, golden: GoldenSet) -> dict[str, Any]:
