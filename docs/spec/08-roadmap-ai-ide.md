@@ -152,6 +152,22 @@ Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互
 **完成标准**：每个样本均由原始 passage 人工核验；关键问题不存在“引用存在但
 不支持结论”的 P0；回归绑定 `eval_run_id`、候选快照、模型/配置版本，结果可复现。
 
+### TASK-M4-003｜RAG 上线前安全与性能稳定性
+
+**状态**：✅ 2026-08-11 完成。安全边界、凭据 fail-closed、供应商快速失败、分阶段
+p95/p99 SLO、全库门禁与当前镜像 smoke 均已验证；服务器依赖项按边界保留。证据见
+`docs/status/rag-security-performance-20260811.md`。
+**读取**：`04-rag-agent-design.md`、`07-quality-security-ops.md`、
+`docs/status/rag-product-readiness-20260810.md`、ADR-0017、ADR-0023、ADR-0024。
+**输入**：当前公开问答入口、原始网页证据、三类供应商调用、`rag_query.metrics` 与
+08-11 全量延迟证据。
+**产出**：不可信证据提示边界、最终答案凭据泄漏 fail-closed、可配置且有界的供应商
+超时/尝试次数、分阶段 p95/p99 SLO 判定、Compose 当前源码全量门禁。
+**边界**：不按关键词删除安全类文章；不引入新中间件；没有第二供应商真实配置与回归时
+不宣称备用模型已完成；密钥轮换、DNS/TLS、真实告警和恢复演练留到服务器就绪后执行。
+**完成标准**：安全 canary、超时/重试和 SLO 单测通过；Ruff、全库 mypy、全量 pytest
+通过；Compose 服务健康，公开 API smoke 无回归。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

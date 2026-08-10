@@ -126,10 +126,44 @@ def test_config_falls_back_to_the_embedding_provider(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("EMBEDDING_BASE_URL", "https://api.siliconflow.cn/v1")
     monkeypatch.setenv("EMBEDDING_API_KEY", "sk-test")
     monkeypatch.setenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
+    monkeypatch.delenv("RERANKER_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("RERANKER_MAX_ATTEMPTS", raising=False)
 
     config = build_config_from_env()
     assert config.base_url == "https://api.siliconflow.cn/v1"
     assert config.api_key == "sk-test"
+    assert config.timeout_seconds == 20.0
+    assert config.max_attempts == 2
+
+
+def test_runtime_bounds_are_configurable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EMBEDDING_BASE_URL", "https://x")
+    monkeypatch.setenv("EMBEDDING_API_KEY", "k")
+    monkeypatch.setenv("RERANKER_MODEL", "m")
+    monkeypatch.setenv("RERANKER_TIMEOUT_SECONDS", "12.5")
+    monkeypatch.setenv("RERANKER_MAX_ATTEMPTS", "1")
+    config = build_config_from_env()
+    assert config.timeout_seconds == 12.5
+    assert config.max_attempts == 1
+
+
+@pytest.mark.parametrize(
+    ("name", "value", "message"),
+    [
+        ("RERANKER_TIMEOUT_SECONDS", "61", "between 1 and 60"),
+        ("RERANKER_MAX_ATTEMPTS", "1.5", "integer"),
+        ("RERANKER_MAX_ATTEMPTS", "4", "between 1 and 3"),
+    ],
+)
+def test_invalid_runtime_bounds_fail_configuration(
+    monkeypatch: pytest.MonkeyPatch, name: str, value: str, message: str
+) -> None:
+    monkeypatch.setenv("EMBEDDING_BASE_URL", "https://x")
+    monkeypatch.setenv("EMBEDDING_API_KEY", "k")
+    monkeypatch.setenv("RERANKER_MODEL", "m")
+    monkeypatch.setenv(name, value)
+    with pytest.raises(RerankUnavailableError, match=message):
+        build_config_from_env()
 
 
 def test_missing_model_is_reported_clearly(monkeypatch: pytest.MonkeyPatch) -> None:

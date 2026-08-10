@@ -32,6 +32,41 @@ DEFAULT_RATES = {
     "output": 8.0,
 }
 
+# Milliseconds. These are publication SLOs, not provider SDK timeouts. The
+# former says when the product is unhealthy; the latter bounds one attempt.
+DEFAULT_LATENCY_SLOS = {
+    "total": 30_000,
+    "embed": 5_000,
+    "rerank": 10_000,
+    "generate": 15_000,
+    "numeric_audit": 15_000,
+    "support": 10_000,
+}
+DEFAULT_SLO_MIN_SAMPLES = 20
+
+
+def _bounded_env_int(name: str, default: int, *, minimum: int, maximum: int) -> int:
+    try:
+        value = int(os.environ.get(name, "") or default)
+    except ValueError:
+        return default
+    return value if minimum <= value <= maximum else default
+
+
+def latency_slo(stage: str) -> int:
+    default = DEFAULT_LATENCY_SLOS.get(stage, 10_000)
+    name = f"RAG_SLO_{stage.upper()}_P95_MS"
+    return _bounded_env_int(name, default, minimum=100, maximum=300_000)
+
+
+def slo_status(samples: int, p95_ms: int, threshold_ms: int) -> str:
+    minimum = _bounded_env_int(
+        "RAG_SLO_MIN_SAMPLES", DEFAULT_SLO_MIN_SAMPLES, minimum=1, maximum=10_000
+    )
+    if samples < minimum:
+        return "insufficient_data"
+    return "ok" if p95_ms <= threshold_ms else "breached"
+
 
 def rates() -> dict[str, float]:
     def _rate(name: str, fallback: float) -> float:
@@ -117,6 +152,7 @@ def latency_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
             SELECT count(*),
                    percentile_cont(0.50) WITHIN GROUP (ORDER BY (metrics->>'total_ms')::numeric),
                    percentile_cont(0.95) WITHIN GROUP (ORDER BY (metrics->>'total_ms')::numeric),
+                   percentile_cont(0.99) WITHIN GROUP (ORDER BY (metrics->>'total_ms')::numeric),
                    max((metrics->>'total_ms')::numeric),
                    count(*) FILTER (WHERE status = 'REFUSED')
               FROM rag_query
@@ -125,7 +161,7 @@ def latency_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
             """,
             (days,),
         )
-        row = cursor.fetchone() or (0, None, None, None, 0)
+        row = cursor.fetchone() or (0, None, None, None, None, 0)
 
         # Stage medians, one row per stage. Kept separate from the totals query
         # because a stage can be absent — `rerank` is missing whenever the
@@ -142,6 +178,8 @@ def latency_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
             SELECT stage.key,
                    count(*),
                    percentile_cont(0.50) WITHIN GROUP (ORDER BY stage.value::numeric),
+                   percentile_cont(0.95) WITHIN GROUP (ORDER BY stage.value::numeric),
+                   percentile_cont(0.99) WITHIN GROUP (ORDER BY stage.value::numeric),
                    -- The share is computed per request and then taken at the
                    -- median, not as one median divided by another. Dividing
                    -- medians compares populations: `support` is timed on the 36
@@ -170,22 +208,32 @@ def latency_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
             "stage": name,
             "samples": int(count),
             "p50Ms": int(median or 0),
+            "p95Ms": int(p95 or 0),
+            "p99Ms": int(p99 or 0),
+            "sloP95Ms": latency_slo(str(name)),
+            "sloStatus": slo_status(int(count), int(p95 or 0), latency_slo(str(name))),
             # "In the median request, this stage was N% of it" — a statement
             # about one request, true on its own, rather than a slice of a pie
             # that was never one pie.
             "shareOfP50": round(float(share), 4) if share is not None else 0.0,
         }
-        for name, count, median, share in stage_rows
+        for name, count, median, p95, p99, share in stage_rows
     ]
+
+    total_slo = latency_slo("total")
+    total_p95 = int(row[2] or 0)
 
     return {
         "days": days,
         "queries": total_queries,
         "p50Ms": p50,
-        "p95Ms": int(row[2] or 0),
-        "maxMs": int(row[3] or 0),
-        "refused": int(row[4] or 0),
-        "refusalRate": round(int(row[4] or 0) / total_queries, 4) if total_queries else 0.0,
+        "p95Ms": total_p95,
+        "p99Ms": int(row[3] or 0),
+        "maxMs": int(row[4] or 0),
+        "sloP95Ms": total_slo,
+        "sloStatus": slo_status(total_queries, total_p95, total_slo),
+        "refused": int(row[5] or 0),
+        "refusalRate": round(int(row[5] or 0) / total_queries, 4) if total_queries else 0.0,
         "stages": stages,
     }
 

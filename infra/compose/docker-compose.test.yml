@@ -14,3 +14,18 @@ services:
       # repository depth is preserved because a few delivery tests resolve
       # compose/config files from the test file's absolute path.
       - ../../:/workspace
+
+  web:
+    # The deps stage contains the lockfile-exact toolchain. Bind the current
+    # source while keeping node_modules in a Docker volume, so UI checks do not
+    # depend on a host Node installation or a stale runtime image.
+    build:
+      target: deps
+    image: ai-hot-radar-web-test:latest
+    working_dir: /app
+    volumes:
+      - ../../apps/web:/app
+      - web_test_node_modules:/app/node_modules
+
+volumes:
+  web_test_node_modules:

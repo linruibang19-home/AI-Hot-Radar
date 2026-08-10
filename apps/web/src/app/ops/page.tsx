@@ -44,10 +44,22 @@ interface Stats {
     queries: number;
     p50Ms: number;
     p95Ms: number;
+    p99Ms: number;
     maxMs: number;
+    sloP95Ms: number;
+    sloStatus: "ok" | "breached" | "insufficient_data";
     refused: number;
     refusalRate: number;
-    stages: { stage: string; samples: number; p50Ms: number; shareOfP50: number }[];
+    stages: {
+      stage: string;
+      samples: number;
+      p50Ms: number;
+      p95Ms: number;
+      p99Ms: number;
+      sloP95Ms: number;
+      sloStatus: "ok" | "breached" | "insufficient_data";
+      shareOfP50: number;
+    }[];
   };
   retrieval: {
     days: number;
@@ -100,6 +112,7 @@ const STAGES: Record<string, string> = {
   parent: "父块展开",
   generate: "生成回答",
   support: "引用支持度打分",
+  numeric_audit: "高风险数值关系审计",
   cache: "缓存查询",
 };
 
@@ -117,7 +130,13 @@ const OUTCOMES: Record<string, string> = {
 
 /** The stages that leave the machine. Everything else is local SQL.
     `support` is a reranker call per citation, issued concurrently. */
-const EXTERNAL = new Set(["embed", "rerank", "generate", "support"]);
+const EXTERNAL = new Set(["embed", "rerank", "generate", "numeric_audit", "support"]);
+
+const SLO_LABELS = {
+  ok: "达标",
+  breached: "超标",
+  insufficient_data: "样本不足",
+} as const;
 
 async function load(): Promise<Stats | null> {
   try {
@@ -181,7 +200,13 @@ export default async function OpsPage() {
         </div>
         <div className="stat">
           <div className="stat-value">{ms(latency.p95Ms)}</div>
-          <div className="stat-label">p95 延迟</div>
+          <div className="stat-label">
+            p95 延迟 · {SLO_LABELS[latency.sloStatus]} / {ms(latency.sloP95Ms)}
+          </div>
+        </div>
+        <div className="stat">
+          <div className="stat-value">{ms(latency.p99Ms)}</div>
+          <div className="stat-label">p99 延迟</div>
         </div>
       </div>
 
@@ -251,7 +276,7 @@ export default async function OpsPage() {
       <section className="eval-section">
         <h2 className="section-title">延迟去了哪里</h2>
         <div className="notice">
-          三次外部 API 往返（嵌入 / 重排 / 生成）占 p50 的{" "}
+          外部 API 往返（嵌入 / 重排 / 生成 / 支持度审计）占 p50 的{" "}
           <strong>{(externalShare * 100).toFixed(1)}%</strong>，本地检索、融合、父块展开合计{" "}
           <strong>{ms(localMs)}</strong>。 直接后果：<strong>想压延迟只能动网络侧</strong>，
           优化本地 SQL 一毫秒也省不下来；反过来，任何「多算几路」的本地实验成本可以忽略。
@@ -263,6 +288,8 @@ export default async function OpsPage() {
                 <th>阶段</th>
                 <th>样本</th>
                 <th>p50</th>
+                <th>p95 / SLO</th>
+                <th>p99</th>
                 <th>占单次请求比例</th>
                 <th>位置</th>
               </tr>
@@ -276,6 +303,11 @@ export default async function OpsPage() {
                   </td>
                   <td className="eval-num">{stage.samples}</td>
                   <td className="eval-num">{ms(stage.p50Ms)}</td>
+                  <td className="eval-num">
+                    {ms(stage.p95Ms)} / {ms(stage.sloP95Ms)}
+                    <div className="eval-delta">{SLO_LABELS[stage.sloStatus]}</div>
+                  </td>
+                  <td className="eval-num">{ms(stage.p99Ms)}</td>
                   <td className="eval-num">{(stage.shareOfP50 * 100).toFixed(1)}%</td>
                   <td>
                     <span

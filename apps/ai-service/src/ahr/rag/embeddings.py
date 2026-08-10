@@ -60,6 +60,28 @@ class EmbeddingConfig:
     max_attempts: int = 3
 
 
+def _env_number(name: str, default: float, *, minimum: float, maximum: float) -> float:
+    raw = os.environ.get(name, "").strip()
+    try:
+        value = float(raw) if raw else default
+    except ValueError as exc:
+        raise EmbeddingUnavailableError(f"{name} must be numeric") from exc
+    if not minimum <= value <= maximum:
+        raise EmbeddingUnavailableError(f"{name} must be between {minimum:g} and {maximum:g}")
+    return value
+
+
+def _env_attempts(name: str, default: int, *, maximum: int) -> int:
+    raw = os.environ.get(name, "").strip()
+    try:
+        value = int(raw) if raw else default
+    except ValueError as exc:
+        raise EmbeddingUnavailableError(f"{name} must be an integer") from exc
+    if not 1 <= value <= maximum:
+        raise EmbeddingUnavailableError(f"{name} must be between 1 and {maximum}")
+    return value
+
+
 def build_config_from_env() -> EmbeddingConfig:
     base_url = os.environ.get("EMBEDDING_BASE_URL", "").strip()
     api_key = os.environ.get("EMBEDDING_API_KEY", "").strip()
@@ -82,6 +104,8 @@ def build_config_from_env() -> EmbeddingConfig:
         api_key=api_key,
         model=model,
         dimensions=int(os.environ.get("EMBEDDING_DIMENSIONS", EMBEDDING_DIMENSIONS)),
+        timeout_seconds=_env_number("EMBEDDING_TIMEOUT_SECONDS", 60.0, minimum=1.0, maximum=120.0),
+        max_attempts=_env_attempts("EMBEDDING_MAX_ATTEMPTS", 3, maximum=5),
     )
 
 
