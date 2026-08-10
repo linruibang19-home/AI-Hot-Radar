@@ -500,7 +500,9 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
           className="ask-input"
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
-          placeholder="问一个关于最近 AI 动态的问题…"
+          placeholder={
+            conversationId ? "接着问，会带上上文（可以用「它」指代上一个话题）…" : "问一个关于最近 AI 动态的问题…"
+          }
           maxLength={300}
           aria-label="问题"
         />
@@ -508,6 +510,32 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
           {loading ? "检索中…" : "提问"}
         </button>
       </form>
+
+      {/* Shown from the *first* answer, not the second. The thread below needs
+          two turns before it has anything to draw, and until this existed there
+          was nothing anywhere telling a reader the box remembers — so a feature
+          that worked looked missing. */}
+      {conversationId && !loading && (
+        <div className="ask-session">
+          <span className="ask-session-dot" aria-hidden="true" />
+          <span>
+            对话进行中 · 第 <strong>{thread.length}</strong> 轮 · 追问会带上上文
+          </span>
+          <button
+            type="button"
+            className="ask-session-reset"
+            onClick={() => {
+              setConversationId(null);
+              setThread([]);
+              setAnswer(null);
+              setSuggestions([]);
+              setQuestion("");
+            }}
+          >
+            换个新话题
+          </button>
+        </div>
+      )}
 
       {/* Only before the first question: once there is an answer on screen the
           examples are clutter, and the history list below already offers
@@ -630,8 +658,12 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
         <ol className="ask-thread">
           {thread.slice(0, -1).map((turn, index) => (
             <li key={turn.queryId ?? index} className="ask-thread-turn">
-              <p className="ask-thread-q">{turn.question}</p>
+              <p className="ask-thread-q">
+                <span className="ask-thread-role">你问</span>
+                {turn.question}
+              </p>
               <p className="ask-thread-a">
+                <span className="ask-thread-role">回答</span>
                 {(turn.answerMarkdown || turn.refusalReason || "").slice(0, 140)}
                 {(turn.answerMarkdown || "").length > 140 ? "…" : ""}
               </p>
