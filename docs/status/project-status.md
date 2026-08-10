@@ -1,7 +1,7 @@
 # 项目进度总览
 
-> 更新时间：2026-08-06
-> 当前阶段：**M4 全部收尾，M5 部署产物就绪待执行**
+> 更新时间：2026-08-10
+> 当前阶段：**M4 功能完成、发布门禁继续收口；M5 部署产物就绪待执行**
 > 所有数据均来自实际运行，非估算
 
 ## 1. 里程碑完成情况
@@ -9,11 +9,11 @@
 | 里程碑 | 状态 | 核心产出 |
 |---|---|---|
 | **M0 工程骨架** | ✅ 完成 | 三服务 + Compose + Flyway + pgvector + CI + request-ID |
-| **M1 真实信源与入库** | ✅ 完成 | 7 类适配器、107 源 ACTIVE、1358 条内容入库、调度器、标题净化、**失败分级降级** |
+| **M1 真实信源与入库** | ✅ 完成 | 9 类 Profile、109 源 ACTIVE、1750 条内容入库、调度器、标题净化、**失败分级降级** |
 | **M2 内容加工与网站** | ✅ 完成 | 切块、去重、LLM 结构化、主题归一、精选、全文检索、日/周/月报、邮件投递、Redis 缓存、成本追踪 |
 | **M3 Story 与热点** | ✅ 主体完成 | 事件聚类、主来源选择、独立信源计数、事件时间线、cluster_suggestion 复核队列、Story 热度、**精选与报告接入多信源佐证** |
-| **M4 RAG MVP** | ✅ **功能全部实现** ／ ⚠️ **发布门禁未全过** | 90 题黄金集、B1–B13 十三轮检索评测 + 四轮生成侧、混合召回 + 重排 + 时效融合 + §6 五条调整、父块阶梯、Story 折叠、生成 + 句级引用 + 拒答、`/ask` 页面、SSE 阶段流式、**token 级流式**、**问答永久链接**、p50/p95。**`AHR-QSO-700` §8 六条数值门禁：过 1、未过 2、待定 2、不可判定 1**，见 1.1 |
-| M5 上线与增强 | 🟡 **产物就绪** | prod compose / Caddyfile / release.yml / 备份worker **已落地**；服务器采购、DNS、密钥轮换待执行 |
+| **M4 RAG MVP** | ✅ **功能全部实现** ／ ⚠️ **发布门禁未全过** | 90 题黄金集、B1–B15 与 ENTITY 检索产物 + 多轮生成侧、混合召回 + 重排 + 时效/实体融合 + §6 五条调整、父块阶梯、Story 折叠、生成 + 句级引用 + 拒答、`/ask` 页面、SSE/token 流式、问答永久链接、p50/p95。门禁判定见 1.1 |
+| M5 上线与增强 | 🟡 **产物就绪** | prod compose / Caddyfile / release.yml / 备份 worker **已落地**；密钥轮换、DNS、首次部署与恢复演练待执行 |
 
 > **M4 的两个待办已于 2026-08-06 关闭**：token 级流式与 `/ask/{id}` 永久链接。
 > 详见 3.16 与 3.17。至此 `AHR-RAG-400` 与 `AHR-API-500` 的**功能条目**全部实现。
@@ -2010,6 +2010,48 @@ psycopg 会**扫描整个查询字符串**找占位符，`--` 注释也不例外
 `GET /rag/threads` 按 `conversation_id` 聚合，标题取**第一问**——
 那是读者完整打出来的一句，后面的都被代词替换掉了。
 
+## 3.32 2026-08-10 全链路复核：RAG 实体时效、发布边界与 UI
+
+本轮不是凭已有报告宣布完成，而是从真实失败问句、Docker 运行态和数据库重新测。
+完整产品判断见 [RAG 产品成熟度复核](rag-product-readiness-20260810.md)。
+
+### RAG：关闭第二次「评测有、线上无」
+
+- 把 `temporal_search` 接进在线 `service.retrieve`，线上与评测通道构成一致；
+- 对可解析厂商实体的时间问题新增 subject 限定 `entity_temporal`（权重 1.0）；
+- `channels` provenance 穿过融合、重排与证据选择，实体时间命中不被普通来源上限删掉；
+- 新增来源多样性指标 `distinct_sources@10`、`dominant_source_share@10`、`primary_source@5`。
+
+真实问句「最近七天里，智谱发布了什么？」从错误拒答变为引用 GLM-5.2：
+时间窗 2026-08-03–08-10，dense 60 / sparse 40 / entity_temporal 2，引用支持度 0.9550。
+
+90 题 ENTITY（B3、无重排）R@10 **0.8071**、R@20 **0.8870**、MRR 0.6357、
+nDCG 0.6303；相对同配置修复前 R@10 +0.0310，`recent_updates` R@10 0.6600→0.8044。
+两次带重排 B9 90 题运行受供应商长尾影响，在 120 秒和 600 秒超时，**没有把残缺运行记成结果**。
+
+### 采集：arXiv 不再把摘要当全文
+
+`ArxivPaperAdapter` 现在 HTML 优先、PDF fallback，带 3 秒 host rate limit、PDF 页数/字符上限；
+pipeline 与 probe 共用同一 acquisition。真实 canary `2608.06394` 取得 234688 bytes、
+46787 正文字符，canonical 保持 `/abs/2608.06394`。
+
+### 发布：草稿 fail-closed，Outbox 不造假
+
+数据库 14 份报告全部为 DRAFT。此前公共报告列表/详情没有状态过滤，现已只读 PUBLISHED；
+在发布端点和人工审核未闭环前，`/reports` 为空比自动发布模型草稿正确。
+
+Outbox 当前 1807 条未消费事件，仍无消费者。没有真实异步下游前，不实现只负责
+`published_at=now()` 的空消费者；当前正确性仍由业务状态重开 PENDING + poller 保证。
+
+### UI 与工程门禁
+
+问答页保持原结构，只新增「检索截至」和证据概览（引用、发布方、支持度、一手来源）。
+Chrome 桌面/窄屏实测：引用定位高亮正常、无横向溢出、应用控制台 0 warning/error、
+无 Next.js 错误覆盖层。
+
+实跑：Python **827 passed**、Ruff check 全绿、mypy 84 文件全绿；Web **54 passed**、
+ESLint/TypeScript/production build 全绿；Java 21 容器 **55 passed**。
+
 ## 4. 服务与中间件
 
 | 组件 | 地址 | 状态 | 实现进度 |
@@ -2343,7 +2385,7 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 
 ## 10. 未消费的 Outbox（一条需要如实描述的架构现状）
 
-`outbox_event` 有 **1374 行，`published_at` 全部为空**，最早一条是 2026-08-01。
+2026-08-10 本次复核时，`outbox_event` 有 **1807 行，`published_at` 全部为空**，最早一条是 2026-08-01。
 也就是说**没有任何消费者**——写入路径完整，读取路径不存在。
 
 这不影响正确性：下游加工走的是 `_pending_items` 轮询，

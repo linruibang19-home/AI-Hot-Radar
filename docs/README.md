@@ -56,6 +56,8 @@
 | [project-status.md](status/project-status.md) | **项目总进度**：里程碑、数据、信源、服务、待办 |
 | [m1-canary-evidence.md](status/m1-canary-evidence.md) | M1 信源探测验收证据 |
 | [m1-canary-evidence.json](status/m1-canary-evidence.json) | 逐源原始数据 |
+| [rag-product-readiness-20260810.md](status/rag-product-readiness-20260810.md) | **当前 RAG 全链路、成熟产品对标与优化顺序** |
+| [handoff-20260810.md](status/handoff-20260810.md) | 当前 checkout 的完整交接与复测入口 |
 
 ## 其他入口
 
