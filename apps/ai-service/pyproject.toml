@@ -28,7 +28,8 @@ tracing = [
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",
-    "ruff>=0.7.0",
+    # Keep CI reproducible; raise the cap deliberately with any new-rule fixes.
+    "ruff>=0.7.0,<0.17",
     # Upper bound deliberate. `pip install -e ".[dev]"` otherwise resolves to
     # whatever is newest on the day CI runs, so a green build can turn red with
     # no commit in between. That had already happened: fifteen errors across two
@@ -80,6 +81,11 @@ ignore_missing_imports = true
 # feedparser and trafilatura ship no type stubs; their return values are
 # narrowed explicitly at each call site instead.
 module = ["feedparser.*", "trafilatura.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# PyMuPDF exposes a runtime API but does not publish a py.typed marker.
+module = ["pymupdf"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

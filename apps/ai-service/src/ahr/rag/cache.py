@@ -51,7 +51,7 @@ import math
 import re
 import struct
 from collections.abc import Awaitable
-from typing import Any, TypeVar, cast
+from typing import Any, cast
 
 import redis.asyncio as redis
 
@@ -59,14 +59,12 @@ from ahr.rag.planner import DISPLAY_TIMEZONE
 
 logger = logging.getLogger(__name__)
 
+
 # redis-py types several commands as `Awaitable[T] | T` so one set of stubs can
 # serve both the sync and async clients. On the async client they are always
 # awaitable; the cast says so without loosening anything else.
-_T = TypeVar("_T")
-
-
-def _awaited(value: Awaitable[_T] | _T) -> Awaitable[_T]:
-    return cast("Awaitable[_T]", value)
+def _awaited[T](value: Awaitable[T] | T) -> Awaitable[T]:
+    return cast("Awaitable[T]", value)
 
 
 # Bump to invalidate every entry at once after a change to what is stored.
@@ -171,7 +169,7 @@ def _pack(vector: list[float]) -> str:
     return base64.b64encode(struct.pack(f"{len(vector)}f", *vector)).decode("ascii")
 
 
-def _unpack(blob: str) -> list[float]:
+def _unpack(blob: bytes | str) -> list[float]:
     raw = base64.b64decode(blob)
     return list(struct.unpack(f"{len(raw) // 4}f", raw))
 
@@ -348,7 +346,9 @@ async def semantic_lookup(
     corpus has moved.
     """
     try:
-        entries = await _awaited(client.lrange(_SEMANTIC_INDEX, 0, SEMANTIC_INDEX_SIZE - 1))
+        entries: list[bytes | str] = await _awaited(
+            client.lrange(_SEMANTIC_INDEX, 0, SEMANTIC_INDEX_SIZE - 1)
+        )
     except Exception as exc:  # noqa: BLE001
         logger.warning("semantic index read failed: %s", exc)
         return None
@@ -393,8 +393,8 @@ async def record(client: redis.Redis, outcome: str) -> None:
 
 async def stats(client: redis.Redis) -> dict[str, Any]:
     try:
-        counters = await _awaited(client.hgetall(_COUNTER))
-        indexed = await _awaited(client.llen(_SEMANTIC_INDEX))
+        counters: dict[bytes | str, bytes | str] = await _awaited(client.hgetall(_COUNTER))
+        indexed: int = await _awaited(client.llen(_SEMANTIC_INDEX))
     except Exception as exc:  # noqa: BLE001
         logger.warning("cache stats failed: %s", exc)
         return {}
