@@ -88,6 +88,7 @@ from ahr.rag.retrieval import (
 )
 from ahr.rag.router import DEFAULT_CANDIDATES
 from ahr.rag.router import choose as choose_route
+from ahr.rag.safety import credential_labels
 from ahr.rag.support import (
     is_weak_retrieval,
     score_citations,
@@ -1067,6 +1068,31 @@ async def answer_question(
             citations = []
             limitations = [*limitations, *violations]
 
+        publication_text = "\n".join(
+            [
+                text,
+                *limitations,
+                *(citation.claim_text for citation in citations),
+                *(citation.title for citation in citations),
+                *(item.title for item in evidence),
+            ]
+        )
+        credential_kinds = credential_labels(publication_text)
+        credential_blocked = bool(credential_kinds)
+        metrics["security"] = {
+            "credential_output_blocked": credential_blocked,
+            "credential_kinds": list(credential_kinds),
+        }
+        if credential_blocked:
+            # Labels are safe to record; the matched value is deliberately not
+            # returned, persisted or logged.
+            logger.warning("RAG answer blocked by credential output policy: %s", credential_kinds)
+            refused = True
+            refusal_reason = "回答触发敏感凭据输出保护"
+            text = ""
+            citations = []
+            limitations = ["候选答案包含疑似访问凭据，已阻止发布。"]
+
         if dangling:
             limitations.append(f"模型引用了不存在的证据编号：{', '.join(dangling)}")
 
@@ -1119,7 +1145,7 @@ async def answer_question(
             plan=retrieval_plan,
             model=llm.model_name,
             metrics=metrics,
-            considered=summarise_considered(evidence),
+            considered=[] if credential_blocked else summarise_considered(evidence),
         )
         if persist:
             _persist(connection, result)

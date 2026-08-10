@@ -253,7 +253,10 @@ def _extract_pdf(
     """Extract bounded page text from an arXiv PDF with page separators."""
 
     try:
-        pdf = pymupdf.open(stream=response.body, filetype="pdf")
+        # PyMuPDF's wheel exposes runtime types inconsistently across releases;
+        # isolate that untyped boundary here instead of letting Any spread into
+        # the extraction result.
+        pdf: Any = cast(Any, pymupdf).open(stream=response.body, filetype="pdf")
     except Exception as exc:
         raise ParseFailedError(f"invalid arXiv PDF from {response.final_url}: {exc}") from exc
 

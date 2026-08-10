@@ -54,3 +54,25 @@ def test_no_percent_sign_survives_in_the_latency_sql() -> None:
         stray = [part for part in block.split("%") if not part.startswith(("s", "b", "t"))]
         # The split leaves one leading fragment that is not a placeholder.
         assert len(stray) <= 1, f"unescaped percent in SQL: {block[:80]}"
+
+
+def test_slo_never_calls_too_few_samples_healthy(monkeypatch) -> None:
+    monkeypatch.setenv("RAG_SLO_MIN_SAMPLES", "20")
+    assert ops.slo_status(19, 1, 10_000) == "insufficient_data"
+    assert ops.slo_status(20, 9_999, 10_000) == "ok"
+    assert ops.slo_status(20, 10_001, 10_000) == "breached"
+
+
+def test_stage_slo_is_configurable_but_invalid_values_fall_back(monkeypatch) -> None:
+    monkeypatch.setenv("RAG_SLO_RERANK_P95_MS", "7000")
+    assert ops.latency_slo("rerank") == 7000
+
+    monkeypatch.setenv("RAG_SLO_RERANK_P95_MS", "not-a-number")
+    assert ops.latency_slo("rerank") == ops.DEFAULT_LATENCY_SLOS["rerank"]
+
+
+def test_latency_summary_queries_p95_and_p99_per_stage() -> None:
+    source = inspect.getsource(ops.latency_summary)
+    assert "percentile_cont(0.95)" in source
+    assert "percentile_cont(0.99)" in source
+    assert '"sloStatus"' in source

@@ -47,9 +47,7 @@ async def ready(response: Response) -> HealthStatus:
     except Exception as exc:  # dependency probes must never raise to the caller
         checks["postgres"] = f"error: {type(exc).__name__}"
 
-    client = aioredis.from_url(  # type: ignore[no-untyped-call]
-        settings.redis_url, socket_connect_timeout=3
-    )
+    client = aioredis.from_url(settings.redis_url, socket_connect_timeout=3)
     try:
         await client.ping()
         checks["redis"] = "ok"
