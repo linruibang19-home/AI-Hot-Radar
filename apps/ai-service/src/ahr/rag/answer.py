@@ -329,6 +329,15 @@ def parse_model_output(raw: str) -> dict[str, Any]:
     Nothing about verification is relaxed: the recovered text goes through the
     same `bind_citations`, so every number is still resolved against the real
     evidence set and invented ones are still stripped.
+
+    **The envelope is looked for inside the text before prose recovery is
+    considered.** A model that writes the answer as prose *and then repeats it
+    as JSON* satisfies neither `json.loads` (leading prose) nor the guard above
+    (the text does not start with `{`), so the whole thing — JSON braces
+    included — was being stored as the answer body. Three answers in the corpus
+    render that way. Recovering the object instead of trimming the tail is what
+    the damage justifies: see `_recover_bare_answer` for what prose recovery
+    costs.
     """
     text = raw.strip()
     if text.startswith("```"):
@@ -336,6 +345,9 @@ def parse_model_output(raw: str) -> dict[str, Any]:
     try:
         parsed = json.loads(text)
     except json.JSONDecodeError:
+        envelope = _embedded_envelope(text)
+        if envelope is not None:
+            return _noting(envelope, "模型在约定的 JSON 之外多写了一段正文，已按 JSON 解析")
         return _recover_bare_answer(text)
     if isinstance(parsed, dict):
         return parsed
@@ -345,7 +357,87 @@ def parse_model_output(raw: str) -> dict[str, Any]:
     return _recover_bare_answer(parsed if isinstance(parsed, str) else text)
 
 
+# Cheap pre-check before scanning for a `{`: ordinary Chinese prose almost
+# never contains this, and the scan below is only worth running when it does.
+_ENVELOPE_KEY = '"answer_markdown"'
+
+
+def _embedded_envelope(text: str) -> dict[str, Any] | None:
+    """The JSON object, when the model wrapped something around it.
+
+    Covers both orders, and the second is the more expensive failure:
+
+    * prose then JSON — the whole string was stored as the answer, so the
+      reader saw the answer twice, the second time with braces;
+    * JSON then prose — `json.loads` rejects the trailing data and the guard in
+      `_recover_bare_answer` sees a leading `{`, so a **complete answer became a
+      refusal**. Not yet observed in this corpus; the path exists regardless.
+
+    `raw_decode` rather than a regex: the value is JSON with escaped quotes and
+    nested braces, and a regex that could match it correctly would be a JSON
+    parser written badly.
+    """
+    if _ENVELOPE_KEY not in text:
+        return None
+
+    decoder = json.JSONDecoder()
+    start = text.find("{")
+    while start != -1:
+        try:
+            parsed, _end = decoder.raw_decode(text, start)
+        except json.JSONDecodeError:
+            pass
+        else:
+            # `answer_markdown` rather than any dict: the evidence blocks and
+            # the answer itself can both contain JSON, and recovering the wrong
+            # object would replace the answer with something quoted from it.
+            if isinstance(parsed, dict) and "answer_markdown" in parsed:
+                return parsed
+        start = text.find("{", start + 1)
+    return None
+
+
+def _noting(envelope: dict[str, Any], note: str) -> dict[str, Any]:
+    """Add a degradation note without discarding the model's own limitations.
+
+    The model's caveats are content — they are what keeps a hedged answer from
+    reading as a confident one — and replacing them with a note about the
+    transport would trade a real qualification for an operational one.
+    """
+    existing = envelope.get("limitations")
+    kept = [str(x) for x in existing] if isinstance(existing, list) else []
+    return {**envelope, "limitations": [*kept, note]}
+
+
 def _recover_bare_answer(text: str) -> dict[str, Any]:
+    """Last resort: treat the whole reply as the answer body.
+
+    **This costs the `claims` array, and that is not cosmetic.** Measured over
+    896 stored citations: on answers recovered this way, *every one* of them
+    carries the question as its claim text (5.0% on the rest), because
+    `_persist` falls back to the question when there is no claim. Two things
+    then go wrong quietly — the 「支撑：」 line under each source shows the
+    question instead of the sentence the source supports, and the support gate
+    scores (question × passage) rather than (claim × passage), which is a
+    different measurement. Those answers drop 3.50 citations on average against
+    2.71 for the rest.
+
+    So this is the fallback of last resort, after `_embedded_envelope` has
+    failed to find a real one. It is worth having — it recovers a finished
+    answer that would otherwise be reported as "the corpus has nothing" — but
+    it is a worse outcome than parsing the envelope, not an equivalent one.
+
+    An envelope that would not parse — truncated, usually — is cut off the end
+    first. `_embedded_envelope` has already had its chance at it, so whatever is
+    left is machine output rather than prose, and the guard below only looks at
+    the *start* of the text: that is the reason the original defect got through
+    at all, and it would let a truncated one through the same way.
+    """
+    marker = text.find(_ENVELOPE_KEY)
+    if marker > 0:
+        brace = text.rfind("{", 0, marker)
+        text = text[: brace if brace != -1 else marker].strip()
+
     if text.startswith(("{", "[")) or not _CITATION_RE.search(text):
         return {"answer_markdown": "", "claims": [], "limitations": ["模型输出无法解析为 JSON"]}
     return {
