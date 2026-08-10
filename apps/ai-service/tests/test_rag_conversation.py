@@ -8,6 +8,7 @@ since V001 and was written by nothing.
 from __future__ import annotations
 
 import inspect
+import json
 
 from ahr.processing.llm import LlmUnavailableError
 from ahr.rag import conversation, service
@@ -119,3 +120,166 @@ def test_the_next_turn_still_sees_the_resolved_name() -> None:
     """Keeping the typed question must not cost the chain: 「它呢」 then
     「那它的价格呢」 only resolves if the middle turn contributes the name."""
     assert "retrieval_plan->>'question'" in inspect.getsource(conversation.load_turns)
+
+
+# --- the transcript cache ---------------------------------------------------
+
+
+class _Cache:
+    """Enough Redis to exercise the transcript layer, and a call log."""
+
+    def __init__(self, stored: dict[str, str] | None = None) -> None:
+        self.stored = stored or {}
+        self.reads: list[str] = []
+        self.writes: list[tuple[str, str, int | None]] = []
+
+    async def get(self, key: str) -> str | None:
+        self.reads.append(key)
+        return self.stored.get(key)
+
+    async def set(self, key: str, value: str, ex: int | None = None) -> None:
+        self.writes.append((key, value, ex))
+        self.stored[key] = value
+
+
+class _DbCursor:
+    def __init__(self, rows: list[tuple[object, ...]], log: list[str]) -> None:
+        self.rows = rows
+        self.log = log
+
+    def __enter__(self) -> _DbCursor:
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        return None
+
+    def execute(self, sql: str, params: object = ()) -> None:
+        self.log.append(sql)
+
+    def fetchall(self) -> list[tuple[object, ...]]:
+        return self.rows
+
+
+class _Db:
+    def __init__(self, rows: list[tuple[object, ...]]) -> None:
+        self.rows = rows
+        self.queries: list[str] = []
+
+    def cursor(self) -> _DbCursor:
+        return _DbCursor(self.rows, self.queries)
+
+
+_THREAD = "2c9a1d44-5c1f-4f8e-9c3d-7a1b2c3d4e5f"
+
+
+async def test_a_warm_transcript_costs_no_database_query(monkeypatch) -> None:
+    """The point of the layer. Every follow-up ran a five-table join to recover
+    at most six short strings, on the request path, before retrieval started."""
+    warm = json.dumps(
+        [{"question": "Qwen3.8-Max 的参数量是多少？", "citedTitles": ["阿里发布 Qwen3.8-Max"]}],
+        ensure_ascii=False,
+    )
+    cache = _Cache({f"ahr:rag:v1:thread:{_THREAD}": warm})
+    monkeypatch.setattr(conversation, "cache_client", lambda: cache)
+    db = _Db([])
+
+    turns = await conversation.turns_for(db, _THREAD)
+
+    assert turns == [
+        Turn(question="Qwen3.8-Max 的参数量是多少？", cited_titles=("阿里发布 Qwen3.8-Max",))
+    ]
+    assert db.queries == []
+
+
+async def test_a_cold_transcript_falls_back_and_warms_itself(monkeypatch) -> None:
+    """Postgres stays the source of truth: a flushed Redis costs one query, and
+    the next turn does not pay it again."""
+    cache = _Cache()
+    monkeypatch.setattr(conversation, "cache_client", lambda: cache)
+    db = _Db([("Kimi K3 用的是什么量化格式？", ["Kimi K3 模型概览"])])
+
+    turns = await conversation.turns_for(db, _THREAD)
+
+    assert [t.question for t in turns] == ["Kimi K3 用的是什么量化格式？"]
+    assert len(db.queries) == 1
+    assert cache.writes and cache.writes[0][0] == f"ahr:rag:v1:thread:{_THREAD}"
+
+
+async def test_an_empty_thread_is_cached_rather_than_re_queried(monkeypatch) -> None:
+    """`None` and `[]` are different answers. Collapsing them would send a
+    five-table join after the empty result it already had — on every thread's
+    first question, which is the most common case there is."""
+    cache = _Cache({f"ahr:rag:v1:thread:{_THREAD}": "[]"})
+    monkeypatch.setattr(conversation, "cache_client", lambda: cache)
+    db = _Db([("should not be read", [])])
+
+    assert await conversation.turns_for(db, _THREAD) == []
+    assert db.queries == []
+
+
+async def test_a_broken_cache_degrades_to_the_database(monkeypatch) -> None:
+    """A cache that can break the feature is worse than no cache."""
+
+    class _Broken(_Cache):
+        async def get(self, key: str) -> str | None:
+            raise RuntimeError("connection reset")
+
+    monkeypatch.setattr(conversation, "cache_client", _Broken)
+    db = _Db([("Kimi K3 用的是什么量化格式？", ["Kimi K3 模型概览"])])
+
+    turns = await conversation.turns_for(db, _THREAD)
+    assert [t.question for t in turns] == ["Kimi K3 用的是什么量化格式？"]
+
+
+async def test_a_completed_turn_extends_the_cached_transcript(monkeypatch) -> None:
+    cache = _Cache()
+    monkeypatch.setattr(conversation, "cache_client", lambda: cache)
+
+    await conversation.remember(
+        _THREAD,
+        [Turn(question="Qwen3.8-Max 的参数量是多少？", cited_titles=())],
+        Turn(question="Qwen3.8-Max 的上下文长度是多少？", cited_titles=("阿里发布 Qwen3.8-Max",)),
+    )
+
+    written = json.loads(cache.writes[-1][1])
+    assert [row["question"] for row in written] == [
+        "Qwen3.8-Max 的参数量是多少？",
+        "Qwen3.8-Max 的上下文长度是多少？",
+    ]
+
+
+async def test_the_cached_transcript_stays_bounded(monkeypatch) -> None:
+    """The same bound as the database read. An unbounded cached transcript would
+    quietly reintroduce the drift `MAX_TURNS` exists to prevent."""
+    cache = _Cache()
+    monkeypatch.setattr(conversation, "cache_client", lambda: cache)
+    prior = [Turn(question=f"第 {i} 问", cited_titles=()) for i in range(20)]
+
+    await conversation.remember(_THREAD, prior, Turn(question="最新一问", cited_titles=()))
+
+    written = json.loads(cache.writes[-1][1])
+    assert len(written) == conversation.MAX_TURNS
+    assert written[-1]["question"] == "最新一问"
+
+
+def test_the_cache_cannot_launder_an_answer_into_the_next_query() -> None:
+    """§11 forbids treating a previous answer as a fact, and a cache is exactly
+    where that rule gets quietly broken. Only the two things a rewrite may see
+    are stored, so there is nothing here for a later turn to pick up."""
+    source = inspect.getsource(service._extend_thread)
+    assert "answer_markdown" not in source
+    assert "c.title" in source
+
+    stored = inspect.getsource(conversation._as_row)
+    assert set(Turn.__dataclass_fields__) == {"question", "cited_titles"}
+    assert "answer" not in stored
+
+
+def test_the_cache_is_written_only_after_the_row_is_committed() -> None:
+    """Database ahead of cache is the safe direction — the next read finds a
+    transcript one turn short, which is a slightly worse rewrite. The reverse
+    would have the cache claiming a turn that does not exist."""
+    source = inspect.getsource(service.answer_question)
+    assert source.index("_persist(connection, result)") < source.index(
+        "await _extend_thread(result"
+    )

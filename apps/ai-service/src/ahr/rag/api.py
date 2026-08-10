@@ -236,6 +236,27 @@ def conversation_turns(conversation_id: str) -> dict[str, object]:
         return {"turns": load_thread(connection, conversation_id)}
 
 
+@router.get("/threads")
+def threads(limit: int = 20) -> dict[str, object]:
+    """Recent conversations, one row each, newest first.
+
+    What a chat surface's history list needs. `/history` returns individual
+    turns, which in a threaded page shows the same follow-up three times with
+    nothing saying what each was following up on — and gives the reader nothing
+    to resume, because the resumable unit is the thread.
+
+    Still the site's conversations rather than a reader's: there are no accounts
+    until M5, and the page says so.
+    """
+    import psycopg
+
+    from ahr.config import get_settings
+    from ahr.rag.service import THREAD_LIMIT, load_recent_threads
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        return {"threads": load_recent_threads(connection, min(limit, THREAD_LIMIT))}
+
+
 @router.get("/history")
 def history(limit: int = 20) -> dict[str, object]:
     """Recent conversations, newest first.

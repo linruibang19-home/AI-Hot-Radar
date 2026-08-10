@@ -45,6 +45,21 @@ export async function GET(request: Request) {
     }
   }
 
+  // The conversation list. Threads, not turns: the resumable unit is the whole
+  // conversation, and a flat list of follow-ups shows the same 「那它呢」 three
+  // times with nothing saying what each one followed.
+  if (url.searchParams.get("threads")) {
+    try {
+      const response = await fetch(`${AI_SERVICE_URL}/rag/threads`, { cache: "no-store" });
+      if (!response.ok) return NextResponse.json({ threads: [] });
+      return NextResponse.json(await response.json(), {
+        headers: { "cache-control": "no-store" },
+      });
+    } catch {
+      return NextResponse.json({ threads: [] });
+    }
+  }
+
   const queryId = url.searchParams.get("suggestions");
   if (queryId) {
     try {
