@@ -2304,3 +2304,51 @@ summary:focus-visible {
   border-color: var(--accent, #0f766e);
   background: var(--surface-muted, #f5f5f4);
 }
+
+/* That a conversation is in progress, stated from the first answer. The thread
+   needs two turns before it can show anything, and until this existed nothing
+   on the page said the box remembers — a working feature looked absent. */
+.ask-session {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.6rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--fg-muted, #57534e);
+}
+
+.ask-session-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent, #0f766e);
+}
+
+.ask-session-reset {
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--border, #e7e5e4);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-muted, #57534e);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.ask-session-reset:hover {
+  border-color: var(--accent, #0f766e);
+  color: var(--accent, #0f766e);
+}
+
+/* Who said what, so earlier turns read as a conversation rather than as notes. */
+.ask-thread-role {
+  display: inline-block;
+  margin-right: 0.4rem;
+  padding: 0 0.35rem;
+  border-radius: 3px;
+  background: var(--surface-muted, #f5f5f4);
+  color: var(--fg-muted, #57534e);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
