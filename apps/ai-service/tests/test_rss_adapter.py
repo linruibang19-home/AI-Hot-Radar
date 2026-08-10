@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 from datetime import UTC, datetime
 
 import httpx
@@ -15,7 +16,8 @@ from ahr.ingestion.adapters.arxiv import (
 )
 from ahr.ingestion.adapters.rss import RssAtomAdapter
 from ahr.ingestion.errors import ParseFailedError
-from ahr.ingestion.models import SourceConfig, SourceCursor
+from ahr.ingestion.fulltext_gate import Decision, evaluate
+from ahr.ingestion.models import DiscoveredDocument, SourceConfig, SourceCursor
 from ahr.ingestion.urls import url_hash
 
 
@@ -46,6 +48,21 @@ def arxiv_source() -> SourceConfig:
         verification="protocol_guaranteed",
         enabled=True,
         subject="cs.AI",
+    )
+
+
+def arxiv_item() -> DiscoveredDocument:
+    return DiscoveredDocument(
+        external_id="2608.01234",
+        candidate_url="https://arxiv.org/abs/2608.01234",
+        title_hint="Evidence Grounded Retrieval for Time-Sensitive AI Intelligence",
+        published_at_hint=datetime(2026, 8, 3, tzinfo=UTC),
+        discovery_summary="This is the abstract, not the body.",
+        attributes={
+            "arxiv_id": "2608.01234",
+            "html_url": "https://arxiv.org/html/2608.01234",
+            "pdf_url": "https://arxiv.org/pdf/2608.01234",
+        },
     )
 
 
@@ -180,3 +197,62 @@ async def test_weekend_empty_feed_is_not_a_failure(make_fetcher, fixture_bytes) 
     assert batch.items == []
     # Only meaningful on an actual skip day; otherwise the reason differs.
     assert batch.empty_reason in {"PUBLISHER_SKIP_DAY", "FEED_EMPTY"}
+
+
+async def test_arxiv_prefers_replayable_html_fulltext(make_fetcher, fixture_bytes) -> None:
+    html = fixture_bytes("arxiv_paper.html")
+    requested: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested.append(str(request.url))
+        return httpx.Response(200, content=html, headers={"content-type": "text/html"})
+
+    async with make_fetcher(handler) as fetcher:
+        acquired = await ArxivPaperAdapter(fetcher, rate_limit_seconds=0).acquire(
+            arxiv_item(), source_id="arxiv-cs-ai"
+        )
+
+    assert requested == ["https://arxiv.org/html/2608.01234"]
+    assert acquired.requested_url.endswith("/html/2608.01234")
+    assert acquired.extraction.document.canonical_url.endswith("/abs/2608.01234")
+    assert acquired.extraction.document.extractor == "arxiv_html"
+    assert evaluate(acquired.extraction.document).decision is Decision.ACCEPTED
+
+
+async def test_arxiv_missing_html_falls_back_to_replayable_pdf(
+    make_fetcher, fixture_bytes
+) -> None:
+    pdf = base64.b64decode(fixture_bytes("arxiv_paper.pdf.b64"))
+    requested: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested.append(str(request.url))
+        if "/html/" in str(request.url):
+            return httpx.Response(404)
+        return httpx.Response(200, content=pdf, headers={"content-type": "application/pdf"})
+
+    async with make_fetcher(handler) as fetcher:
+        acquired = await ArxivPaperAdapter(fetcher, rate_limit_seconds=0).acquire(
+            arxiv_item(), source_id="arxiv-cs-ai"
+        )
+
+    assert requested == [
+        "https://arxiv.org/html/2608.01234",
+        "https://arxiv.org/pdf/2608.01234",
+    ]
+    assert acquired.extraction.document.extractor == "arxiv_pdf_pymupdf"
+    assert "[Page 1]" in acquired.extraction.document.body_text
+    assert evaluate(acquired.extraction.document).decision is Decision.ACCEPTED
+
+
+async def test_arxiv_invalid_pdf_is_a_parse_failure(make_fetcher) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "/html/" in str(request.url):
+            return httpx.Response(404)
+        return httpx.Response(200, content=b"not a pdf")
+
+    async with make_fetcher(handler) as fetcher:
+        with pytest.raises(ParseFailedError):
+            await ArxivPaperAdapter(fetcher, rate_limit_seconds=0).acquire(
+                arxiv_item(), source_id="arxiv-cs-ai"
+            )
