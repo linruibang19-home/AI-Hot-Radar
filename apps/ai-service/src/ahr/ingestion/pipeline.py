@@ -24,11 +24,11 @@ from ahr.ingestion.adapters.github_repo import GitHubRepoActivityAdapter
 from ahr.ingestion.adapters.listing import HtmlListingAdapter
 from ahr.ingestion.adapters.public_api import PublicJsonApiAdapter
 from ahr.ingestion.adapters.rss import RssAtomAdapter
-from ahr.ingestion.article import extract_article
+from ahr.ingestion.article import ArticleExtraction, extract_article
 from ahr.ingestion.errors import IngestionError
 from ahr.ingestion.fulltext_gate import ExtractedDocument, evaluate
-from ahr.ingestion.http import HttpConfig, HttpFetcher
-from ahr.ingestion.models import SourceConfig
+from ahr.ingestion.http import FetchResult, HttpConfig, HttpFetcher
+from ahr.ingestion.models import DiscoveredDocument, SourceConfig
 from ahr.ingestion.repository import (
     PersistStats,
     finish_crawl_run,
@@ -78,6 +78,25 @@ def build_adapter(source: SourceConfig, fetcher: HttpFetcher, token: str | None)
             return PublicJsonApiAdapter(fetcher)
         case _:
             return None
+
+
+async def _acquire_fulltext(
+    adapter: Any, source: SourceConfig, item: DiscoveredDocument, fetcher: HttpFetcher
+) -> tuple[FetchResult, ArticleExtraction, str]:
+    """Return response, extraction and the URL actually requested."""
+
+    if isinstance(adapter, ArxivPaperAdapter):
+        acquired = await adapter.acquire(item, source_id=source.id)
+        return acquired.response, acquired.extraction, acquired.requested_url
+
+    response = await fetcher.fetch(item.candidate_url)
+    extraction = extract_article(
+        response,
+        source_id=source.id,
+        title_hint=item.title_hint,
+        published_hint=item.published_at_hint,
+    )
+    return response, extraction, item.candidate_url
 
 
 def _state_from_evidence(connection: Any, source_id: str) -> str | None:
@@ -161,12 +180,8 @@ async def ingest_source(
     for item in batch.items[:max_documents]:
         try:
             if item.requires_fetch:
-                response = await fetcher.fetch(item.candidate_url)
-                extraction = extract_article(
-                    response,
-                    source_id=source.id,
-                    title_hint=item.title_hint,
-                    published_hint=item.published_at_hint,
+                response, extraction, requested_url = await _acquire_fulltext(
+                    adapter, source, item, fetcher
                 )
                 document = extraction.document
                 gate = evaluate(document, is_release=source.is_release_like)
@@ -179,6 +194,8 @@ async def ingest_source(
                     gate=gate,
                     run_id=run_id,
                     raw_body=response.body,
+                    requested_url=requested_url,
+                    raw_content_type=response.headers.get("content-type"),
                     http_status=response.status_code,
                     response_headers=response.headers,
                     final_url=response.final_url,

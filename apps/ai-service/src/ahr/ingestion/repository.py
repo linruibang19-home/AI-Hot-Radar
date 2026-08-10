@@ -17,6 +17,7 @@ mid-batch replays rather than skipping content.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from dataclasses import dataclass
@@ -124,6 +125,8 @@ def persist_document(
     gate: GateResult,
     run_id: uuid.UUID | None = None,
     raw_body: bytes | None = None,
+    requested_url: str | None = None,
+    raw_content_type: str | None = None,
     http_status: int | None = None,
     response_headers: dict[str, str] | None = None,
     final_url: str | None = None,
@@ -138,6 +141,9 @@ def persist_document(
     stats = stats or PersistStats()
     canonical = canonicalize_url(item.candidate_url)
     canonical_hash = url_hash(canonical)
+    content_type = (
+        raw_content_type or ("text/html" if item.requires_fetch else "application/json")
+    ).split(";", 1)[0][:200]
     now = datetime.now(UTC)
 
     with connection.cursor() as cursor:
@@ -154,10 +160,19 @@ def persist_document(
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s
             )
             ON CONFLICT (source_id, external_id) DO UPDATE SET
+                crawl_run_id = EXCLUDED.crawl_run_id,
+                requested_url = EXCLUDED.requested_url,
+                final_url = EXCLUDED.final_url,
                 canonical_url = EXCLUDED.canonical_url,
                 canonical_url_hash = EXCLUDED.canonical_url_hash,
                 http_status = EXCLUDED.http_status,
+                response_headers = EXCLUDED.response_headers,
+                content_type = EXCLUDED.content_type,
+                body_bytes = EXCLUDED.body_bytes,
+                body_sha256 = EXCLUDED.body_sha256,
                 fetched_at = EXCLUDED.fetched_at,
+                parser_version = EXCLUDED.parser_version,
+                discovery_summary = EXCLUDED.discovery_summary,
                 processing_status = EXCLUDED.processing_status
             RETURNING id
             """,
@@ -166,15 +181,15 @@ def persist_document(
                 source.id,
                 run_id,
                 item.external_id,
-                item.candidate_url,
+                requested_url or item.candidate_url,
                 final_url or item.candidate_url,
                 canonical,
                 canonical_hash,
                 http_status,
                 json.dumps(response_headers or {}),
-                "text/html" if item.requires_fetch else "application/json",
+                content_type,
                 raw_body,
-                content_hash(raw_body.decode("utf-8", "replace")) if raw_body else None,
+                hashlib.sha256(raw_body).hexdigest() if raw_body else None,
                 now,
                 EXTRACTION_VERSION,
                 "PARSED" if gate.accepted else "FETCHED",

@@ -10,14 +10,21 @@ empty feed at the weekend is expected and must not be scored as a failure.
 
 from __future__ import annotations
 
+import asyncio
 import re
+import time
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any
 
 import feedparser
+import pymupdf
 
 from ahr.ingestion.adapters.rss import _entry_time, _entry_url
-from ahr.ingestion.errors import ParseFailedError
+from ahr.ingestion.article import ArticleExtraction, extract_article
+from ahr.ingestion.errors import NotFoundError, ParseFailedError
+from ahr.ingestion.fulltext_gate import Decision, ExtractedDocument, evaluate
+from ahr.ingestion.http import FetchResult
 from ahr.ingestion.models import DiscoveredDocument, DiscoveryBatch, SourceConfig, SourceCursor
 
 RSS_ROOT = "https://rss.arxiv.org/rss"
@@ -30,6 +37,17 @@ _ARXIV_ID_RE = re.compile(r"(?:abs|html|pdf)/([0-9]{4}\.[0-9]{4,5}(?:v[0-9]+)?|[
 
 # arXiv asks for roughly one request every three seconds.
 DEFAULT_RATE_LIMIT_SECONDS = 3.0
+MAX_PDF_PAGES = 200
+MAX_PDF_TEXT_CHARS = 2_000_000
+
+
+@dataclass(frozen=True)
+class PaperAcquisition:
+    """The actual fulltext response and its normalized paper extraction."""
+
+    response: FetchResult
+    extraction: ArticleExtraction
+    requested_url: str
 
 
 def extract_arxiv_id(url: str) -> str | None:
@@ -60,8 +78,32 @@ class ArxivPaperAdapter:
 
     name = "arxiv_feed_paper"
 
-    def __init__(self, fetcher: Any) -> None:
+    def __init__(
+        self, fetcher: Any, *, rate_limit_seconds: float = DEFAULT_RATE_LIMIT_SECONDS
+    ) -> None:
         self._fetcher = fetcher
+        self._rate_limit_seconds = max(rate_limit_seconds, 0.0)
+        self._last_request_at: float | None = None
+
+    async def _fetch(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        etag: str | None = None,
+        last_modified: str | None = None,
+    ) -> FetchResult:
+        """Fetch one arXiv resource without exceeding the documented host rate."""
+
+        if self._last_request_at is not None and self._rate_limit_seconds:
+            remaining = self._rate_limit_seconds - (time.monotonic() - self._last_request_at)
+            if remaining > 0:
+                await asyncio.sleep(remaining)
+        response = await self._fetcher.fetch(
+            url, headers=headers, etag=etag, last_modified=last_modified
+        )
+        self._last_request_at = time.monotonic()
+        return response
 
     async def discover(
         self, source: SourceConfig, cursor: SourceCursor | None = None
@@ -73,7 +115,7 @@ class ArxivPaperAdapter:
             raise ParseFailedError(f"source {source.id} has no arXiv subject")
 
         cursor = cursor or SourceCursor()
-        response = await self._fetcher.fetch(
+        response = await self._fetch(
             f"{RSS_ROOT}/{subject}",
             headers={"Accept": "application/rss+xml, application/xml"},
             etag=cursor.etag,
@@ -147,3 +189,106 @@ class ArxivPaperAdapter:
             http_status=response.status_code,
             empty_reason=empty_reason,
         )
+
+    async def acquire(self, item: DiscoveredDocument, *, source_id: str) -> PaperAcquisition:
+        """Fetch paper HTML first and use the PDF only when HTML is unavailable or unusable.
+
+        The abstract page remains the canonical citation target. Its metadata is
+        already carried by the RSS entry; it is never mistaken for paper body.
+        """
+
+        arxiv_id = str(
+            item.attributes.get("arxiv_id") or extract_arxiv_id(item.candidate_url) or ""
+        )
+        if not arxiv_id:
+            raise ParseFailedError(f"cannot derive arXiv id from {item.candidate_url}")
+
+        html_url = str(item.attributes.get("html_url") or f"{HTML_ROOT}/{arxiv_id}")
+        try:
+            html_response = await self._fetch(html_url, headers={"Accept": "text/html"})
+            html = extract_article(
+                html_response,
+                source_id=source_id,
+                title_hint=item.title_hint,
+                published_hint=item.published_at_hint,
+            )
+            html_document = replace(
+                html.document,
+                canonical_url=item.candidate_url,
+                extractor="arxiv_html",
+            )
+            html = replace(html, document=html_document)
+            if evaluate(html_document).decision is Decision.ACCEPTED:
+                return PaperAcquisition(html_response, html, html_url)
+        except ParseFailedError:
+            # A structurally invalid HTML rendition is equivalent to absence;
+            # the public PDF is the documented fallback.
+            pass
+        except NotFoundError:
+            # Only a missing HTML rendition falls back. Access restrictions,
+            # rate limits and transport failures retain their taxonomy.
+            pass
+
+        pdf_url = str(item.attributes.get("pdf_url") or f"{PDF_ROOT}/{arxiv_id}")
+        pdf_response = await self._fetch(pdf_url, headers={"Accept": "application/pdf"})
+        extraction = _extract_pdf(
+            pdf_response,
+            source_id=source_id,
+            canonical_url=item.candidate_url,
+            title=item.title_hint,
+            published_at=item.published_at_hint,
+        )
+        return PaperAcquisition(pdf_response, extraction, pdf_url)
+
+
+def _extract_pdf(
+    response: FetchResult,
+    *,
+    source_id: str,
+    canonical_url: str,
+    title: str | None,
+    published_at: datetime | None,
+) -> ArticleExtraction:
+    """Extract bounded page text from an arXiv PDF with page separators."""
+
+    try:
+        pdf = pymupdf.open(stream=response.body, filetype="pdf")
+    except Exception as exc:
+        raise ParseFailedError(f"invalid arXiv PDF from {response.final_url}: {exc}") from exc
+
+    try:
+        if pdf.needs_pass:
+            raise ParseFailedError(f"encrypted arXiv PDF from {response.final_url}")
+        if pdf.page_count > MAX_PDF_PAGES:
+            raise ParseFailedError(
+                f"arXiv PDF has {pdf.page_count} pages, limit is {MAX_PDF_PAGES}"
+            )
+
+        pages: list[str] = []
+        total = 0
+        for page_number, page in enumerate(pdf, start=1):
+            text = page.get_text("text", sort=True).strip()
+            if not text:
+                continue
+            total += len(text)
+            if total > MAX_PDF_TEXT_CHARS:
+                raise ParseFailedError(
+                    f"arXiv PDF text exceeds {MAX_PDF_TEXT_CHARS} characters"
+                )
+            pages.append(f"[Page {page_number}]\n{text}")
+    finally:
+        pdf.close()
+
+    body = "\n\n".join(pages)
+    if not body:
+        raise ParseFailedError(f"arXiv PDF contains no extractable text: {response.final_url}")
+
+    document = ExtractedDocument(
+        body_text=body,
+        title=title,
+        canonical_url=canonical_url,
+        published_at=published_at,
+        source_id=source_id,
+        extractor="arxiv_pdf_pymupdf",
+    )
+    return ArticleExtraction(document=document, body_markdown=body, raw_html="")
