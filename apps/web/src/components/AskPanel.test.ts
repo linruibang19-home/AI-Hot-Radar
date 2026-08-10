@@ -117,4 +117,12 @@ describe("what the reader is shown about the conversation", () => {
     expect(SOURCE).toContain("检索截至");
     expect(SOURCE).toContain("formatDateTime(turn.askedAt)");
   });
+
+  it("sets concrete expectations before the first question", () => {
+    expect(SOURCE).toContain('aria-label="问答能力边界"');
+    expect(SOURCE).toContain("原文引用");
+    expect(SOURCE).toContain("时间范围可修正");
+    expect(SOURCE).toContain("证据不足会拒答");
+    expect(SOURCE).toContain('aria-label="示例问题"');
+  });
 });
