@@ -21,10 +21,12 @@ from ahr.rag.eval.golden import (
 )
 from ahr.rag.eval.metrics import (
     RankedResult,
+    dedupe_hits_to_items,
     dedupe_to_items,
     ndcg_at_k,
     recall_at_k,
     reciprocal_rank,
+    source_diagnostics,
 )
 from ahr.rag.retrieval import ChunkHit, _escape_lexeme, interleave
 
@@ -147,6 +149,29 @@ def test_dedupe_prevents_one_document_from_inflating_recall() -> None:
 
 def test_dedupe_of_an_empty_result_is_empty() -> None:
     assert dedupe_to_items([]) == []
+
+
+def test_source_diagnostics_measure_concentration_and_primary_ratio() -> None:
+    ranked = [
+        RankedResult("a", 1.0, source_id="vendor", source_tier="primary"),
+        RankedResult("b", 0.9, source_id="vendor", source_tier="primary"),
+        RankedResult("c", 0.8, source_id="press", source_tier="secondary"),
+        RankedResult("d", 0.7, source_id="expert", source_tier="expert"),
+        RankedResult("e", 0.6, source_id="press", source_tier="secondary"),
+    ]
+    result = source_diagnostics(ranked)
+    assert result["distinct_sources"] == 3
+    assert result["dominant_source_share"] == pytest.approx(2 / 5)
+    assert result["primary_source_share"] == pytest.approx(2 / 5)
+
+
+def test_dedupe_hits_keeps_provenance_from_the_best_rank() -> None:
+    hits = [
+        ChunkHit("c1", "a", 1.0, "", "Vendor", "vendor", "primary"),
+        ChunkHit("c2", "a", 0.9, "", "Press", "press", "secondary"),
+    ]
+    ranked = dedupe_hits_to_items(hits)
+    assert ranked == [RankedResult("a", 1.0, "vendor", "primary")]
 
 
 # --------------------------------------------------------------------------

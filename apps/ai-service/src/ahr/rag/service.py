@@ -1,8 +1,9 @@
 """End-to-end question answering: plan → retrieve → rerank → generate → verify.
 
 The retrieval configuration is the one the evaluation selected, not a fresh
-guess: weighted RRF over dense + sparse with the time window used as a filter
-(B3), reordered by the cross-encoder over 40 candidates (B4). Those choices have
+guess: weighted RRF over dense + sparse + temporal (when a window exists), with
+the same time window also used as a hard relevance filter (B3), reordered by
+the cross-encoder over 40 candidates (B4). Those choices have
 numbers behind them — B4 measured MRR 0.8574 and nDCG@10 0.8162 against B1's
 0.7630 / 0.7381 — and changing them here without re-running the golden set would
 silently discard that evidence.
@@ -65,15 +66,18 @@ from ahr.rag.planner import plan_from_dict
 from ahr.rag.rerank import DEFAULT_TOP_N, RerankClient, RerankUnavailableError
 from ahr.rag.retrieval import (
     KEYWORD_FTS_TOP_K,
+    TEMPORAL_SQL_TOP_K,
     VECTOR_PASSAGE_TOP_K,
     ChunkHit,
     dense_search,
     entity_names,
     expand_vendor_aliases,
+    expand_vendor_entity_ids,
     load_chunk_texts,
     load_item_metadata,
     resolve_query_entities,
     sparse_search,
+    temporal_search,
 )
 from ahr.rag.router import DEFAULT_CANDIDATES
 from ahr.rag.router import choose as choose_route
@@ -238,6 +242,7 @@ async def retrieve(
     # retrieval is the channel that matches strings, so the expansion has to
     # reach it before it runs.
     query_entities = resolve_query_entities(connection, question)
+    query_family_entities = expand_vendor_entity_ids(connection, query_entities)
     aliases = expand_vendor_aliases(connection, query_entities)
     names = entity_names(connection, query_entities)
 
@@ -253,6 +258,17 @@ async def retrieve(
     await mark("sparse", step, found=len(sparse), aliases=len(aliases))
 
     channels: dict[str, list[ChunkHit]] = {"dense": dense, "sparse": sparse}
+    if window is not None:
+        step = time.monotonic()
+        temporal = temporal_search(
+            connection,
+            window=window,
+            limit=TEMPORAL_SQL_TOP_K,
+            entity_ids=query_family_entities,
+        )
+        temporal_channel = "entity_temporal" if query_family_entities else "temporal"
+        channels[temporal_channel] = temporal
+        await mark("temporal", step, found=len(temporal))
     if trace is not None:
         for name, rows in channels.items():
             trace.record_channel(name, rows)
@@ -265,9 +281,9 @@ async def retrieve(
         metadata,
         query_type=retrieval_plan.query_type,
         window=window,
-        query_entities=query_entities,
+        query_entities=query_family_entities,
     )
-    await mark("fuse", step, found=len(fused), entities=len(query_entities))
+    await mark("fuse", step, found=len(fused), entities=len(query_family_entities))
     if trace is not None:
         trace.record_fusion(fused)
 
@@ -278,6 +294,9 @@ async def retrieve(
             score=h.score,
             title=h.title,
             source_name=h.source_name,
+            source_id=h.source_id,
+            source_tier=h.source_tier,
+            channels=h.channels,
         )
         for h in fused
     ]
@@ -302,6 +321,9 @@ async def retrieve(
                     score=score,
                     title=candidates[i].title,
                     source_name=candidates[i].source_name,
+                    source_id=candidates[i].source_id,
+                    source_tier=candidates[i].source_tier,
+                    channels=candidates[i].channels,
                 )
                 for i, score in scored
             ]
@@ -470,7 +492,7 @@ def select_evidence(
         # An unknown source is never capped: missing metadata must not decide
         # what the reader sees, and it would silently favour whatever happens to
         # be joined successfully.
-        if fact is not None:
+        if fact is not None and "entity_temporal" not in hit.channels:
             taken = by_source.get(fact.source_id, 0)
             if taken >= per_source:
                 outcomes[hit.chunk_id] = DROPPED_SOURCE_CAP

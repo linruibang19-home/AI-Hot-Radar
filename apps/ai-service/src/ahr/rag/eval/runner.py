@@ -17,7 +17,13 @@ from typing import Any
 from ahr.rag.dimensions import Candidate, apply_dimensions
 from ahr.rag.embeddings import EmbeddingClient
 from ahr.rag.eval.golden import CATEGORIES, GoldenQuestion, GoldenSet
-from ahr.rag.eval.metrics import dedupe_to_items, ndcg_at_k, recall_at_k, reciprocal_rank
+from ahr.rag.eval.metrics import (
+    dedupe_hits_to_items,
+    ndcg_at_k,
+    recall_at_k,
+    reciprocal_rank,
+    source_diagnostics,
+)
 from ahr.rag.fusion import apply_boosts, reciprocal_rank_fusion
 from ahr.rag.llm_planner import plan_with_llm
 from ahr.rag.planner import plan
@@ -35,6 +41,7 @@ from ahr.rag.retrieval import (
     dense_search,
     entity_names,
     expand_vendor_aliases,
+    expand_vendor_entity_ids,
     interleave,
     load_chunk_texts,
     load_item_metadata,
@@ -99,6 +106,9 @@ class QuestionResult:
     ndcg: float | None = None
     first_hit_rank: int | None = None
     missed_items: list[str] = field(default_factory=list)
+    distinct_sources_at_10: int = 0
+    dominant_source_share_at_10: float = 0.0
+    primary_source_at_5: float = 0.0
 
 
 @dataclass
@@ -124,6 +134,15 @@ class EvalReport:
             overall[f"recall@{depth}"] = round(statistics.fmean(q.recall[depth] for q in scored), 4)
         overall["mrr"] = round(statistics.fmean(q.mrr or 0.0 for q in scored), 4)
         overall[f"ndcg@{NDCG_DEPTH}"] = round(statistics.fmean(q.ndcg or 0.0 for q in scored), 4)
+        overall["distinct_sources@10"] = round(
+            statistics.fmean(q.distinct_sources_at_10 for q in scored), 2
+        )
+        overall["dominant_source_share@10"] = round(
+            statistics.fmean(q.dominant_source_share_at_10 for q in scored), 4
+        )
+        overall["primary_source@5"] = round(
+            statistics.fmean(q.primary_source_at_5 for q in scored), 4
+        )
 
         by_category: dict[str, Any] = {}
         for category in CATEGORIES:
@@ -138,6 +157,15 @@ class EvalReport:
                 },
                 "mrr": round(statistics.fmean(q.mrr or 0.0 for q in rows), 4),
                 f"ndcg@{NDCG_DEPTH}": round(statistics.fmean(q.ndcg or 0.0 for q in rows), 4),
+                "distinct_sources@10": round(
+                    statistics.fmean(q.distinct_sources_at_10 for q in rows), 2
+                ),
+                "dominant_source_share@10": round(
+                    statistics.fmean(q.dominant_source_share_at_10 for q in rows), 4
+                ),
+                "primary_source@5": round(
+                    statistics.fmean(q.primary_source_at_5 for q in rows), 4
+                ),
             }
 
         return {
@@ -204,7 +232,7 @@ async def run_variant(
 
     for question in golden.questions:
         hits = await retrieve(question.question, question.asked_at)
-        ranked = dedupe_to_items([(hit.content_item_id, hit.score) for hit in hits])
+        ranked = dedupe_hits_to_items(hits)
         results.append(_score(question, ranked, top_chunk_score=hits[0].score if hits else 0.0))
 
     prefix = variant.split("-", 1)[0].upper()
@@ -300,6 +328,7 @@ def rrf_retriever(
         # gets — the same divergence B7 and the temporal channel were caught in,
         # and the reason this line is a copy rather than a simplification.
         query_entities = resolve_query_entities(connection, question)
+        query_family_entities = expand_vendor_entity_ids(connection, query_entities)
         aliases = expand_vendor_aliases(connection, query_entities)
         names = entity_names(connection, query_entities)
 
@@ -316,8 +345,12 @@ def rrf_retriever(
         }
 
         if window is not None and use_temporal:
-            channels["temporal"] = temporal_search(
-                connection, window=snapshot_window(asked_at, window), limit=temporal_depth
+            temporal_channel = "entity_temporal" if query_family_entities else "temporal"
+            channels[temporal_channel] = temporal_search(
+                connection,
+                window=snapshot_window(asked_at, window),
+                limit=temporal_depth,
+                entity_ids=query_family_entities,
             )
 
         fused = reciprocal_rank_fusion(channels, weights=weights)
@@ -330,7 +363,7 @@ def rrf_retriever(
                 metadata,
                 query_type=retrieval_plan.query_type,
                 window=window,
-                query_entities=query_entities,
+                query_entities=query_family_entities,
             )
 
         return [
@@ -340,6 +373,9 @@ def rrf_retriever(
                 score=hit.score,
                 title=hit.title,
                 source_name=hit.source_name,
+                source_id=hit.source_id,
+                source_tier=hit.source_tier,
+                channels=hit.channels,
             )
             for hit in fused
         ]
@@ -405,6 +441,9 @@ def rerank_retriever(
                 score=score,
                 title=candidates[index].title,
                 source_name=candidates[index].source_name,
+                source_id=candidates[index].source_id,
+                source_tier=candidates[index].source_tier,
+                channels=candidates[index].channels,
             )
             for index, score in scored
         ]
@@ -528,6 +567,10 @@ def _score(
         top_score=round(top_chunk_score, 4),
         retrieved_items=len(ranked),
     )
+    source = source_diagnostics(ranked)
+    result.distinct_sources_at_10 = int(source["distinct_sources"])
+    result.dominant_source_share_at_10 = round(float(source["dominant_source_share"]), 4)
+    result.primary_source_at_5 = round(float(source["primary_source_share"]), 4)
 
     if not question.answerable:
         # Nothing is relevant, so recall/MRR/nDCG are undefined. The useful

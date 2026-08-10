@@ -61,6 +61,9 @@ class ChunkHit:
     score: float
     title: str
     source_name: str
+    source_id: str = ""
+    source_tier: str = ""
+    channels: tuple[str, ...] = ()
 
 
 def dense_search(
@@ -88,7 +91,9 @@ def dense_search(
                    ci.id::text,
                    1 - (ch.embedding <=> %s::vector) AS similarity,
                    COALESCE(ci.zh_title, ci.title),
-                   s.name
+                   s.name,
+                   s.id,
+                   s.source_tier
               FROM content_chunk ch
               JOIN content_revision cr ON cr.id = ch.content_revision_id
               JOIN content_item ci ON ci.id = cr.content_item_id
@@ -120,6 +125,8 @@ def dense_search(
                 score=float(row[2]),
                 title=row[3] or "",
                 source_name=row[4] or "",
+                source_id=row[5] or "",
+                source_tier=row[6] or "",
             )
             for row in cursor.fetchall()
         ]
@@ -131,6 +138,7 @@ def temporal_search(
     window: tuple[datetime, datetime],
     limit: int = TEMPORAL_SQL_TOP_K,
     content_type: str | None = None,
+    entity_ids: frozenset[str] = frozenset(),
 ) -> list[ChunkHit]:
     """Chunks from items published inside the window, newest first.
 
@@ -152,7 +160,9 @@ def temporal_search(
                    ci.id::text,
                    COALESCE(ci.published_at, ci.observed_at),
                    COALESCE(ci.zh_title, ci.title),
-                   s.name
+                   s.name,
+                   s.id,
+                   s.source_tier
               FROM content_item ci
               JOIN content_revision cr ON cr.id = ci.current_revision_id
               JOIN content_chunk ch ON ch.content_revision_id = cr.id
@@ -161,9 +171,23 @@ def temporal_search(
                AND COALESCE(ci.published_at, ci.observed_at) >= %s
                AND COALESCE(ci.published_at, ci.observed_at) < %s
                AND (%s::text IS NULL OR ci.content_type = %s)
+               AND (cardinality(%s::uuid[]) = 0 OR EXISTS (
+                    SELECT 1
+                      FROM item_entity ie
+                     WHERE ie.content_item_id = ci.id
+                       AND ie.role = 'subject'
+                       AND ie.entity_id = ANY(%s::uuid[])
+               ))
              ORDER BY ci.id, ch.ordinal
             """,
-            (window[0], window[1], content_type, content_type),
+            (
+                window[0],
+                window[1],
+                content_type,
+                content_type,
+                sorted(entity_ids),
+                sorted(entity_ids),
+            ),
         )
         rows = cursor.fetchall()
 
@@ -178,6 +202,8 @@ def temporal_search(
             score=0.0,
             title=row[3] or "",
             source_name=row[4] or "",
+            source_id=row[5] or "",
+            source_tier=row[6] or "",
         )
         for row in rows[:limit]
     ]
@@ -491,6 +517,33 @@ def expand_vendor_aliases(connection: Any, entity_ids: frozenset[str]) -> list[s
     ]
 
 
+def expand_vendor_entity_ids(connection: Any, entity_ids: frozenset[str]) -> frozenset[str]:
+    """Resolved entities plus every curated entity in the same vendor family.
+
+    Text aliases help the sparse channel only when the body spells a family
+    token.  The temporal SQL channel can use the stronger structured fact:
+    enrichment marked the item entity as its subject.  This is what lets a
+    question about 智谱 retrieve a release whose subject is ``GLM 5.2`` even
+    when the publisher never writes the vendor name.
+    """
+    if not entity_ids:
+        return entity_ids
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT DISTINCT sibling.id::text
+              FROM entity hit
+              JOIN vendor_entity mine ON mine.entity_slug = hit.slug
+              JOIN vendor_entity theirs ON theirs.vendor_slug = mine.vendor_slug
+              JOIN entity sibling ON sibling.slug = theirs.entity_slug
+             WHERE hit.id = ANY(%s::uuid[])
+            """,
+            (sorted(entity_ids),),
+        )
+        siblings = {str(row[0]) for row in cursor.fetchall() if row[0]}
+    return frozenset(set(entity_ids) | siblings)
+
+
 def entity_names(connection: Any, entity_ids: frozenset[str]) -> list[str]:
     """Names for resolved entity ids, for weighting the keyword channel."""
     if not entity_ids:
@@ -576,7 +629,9 @@ def sparse_search(
                       FROM unnest(%s::text[], %s::float8[]) AS t(lexeme, idf)
                      WHERE ch.search_vector @@ to_tsquery('simple', t.lexeme)) AS rank,
                    COALESCE(ci.zh_title, ci.title),
-                   s.name
+                   s.name,
+                   s.id,
+                   s.source_tier
               FROM to_tsquery('simple', %s) AS q
               JOIN content_chunk ch ON ch.search_vector @@ q
               JOIN content_revision cr ON cr.id = ch.content_revision_id
@@ -609,6 +664,8 @@ def sparse_search(
                 score=float(row[2]),
                 title=row[3] or "",
                 source_name=row[4] or "",
+                source_id=row[5] or "",
+                source_tier=row[6] or "",
             )
             for row in cursor.fetchall()
         ]

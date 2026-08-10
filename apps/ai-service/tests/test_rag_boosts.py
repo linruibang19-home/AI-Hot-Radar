@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from ahr.rag.fusion import (
     BOOST_ENTITY_SUBJECT,
     BOOST_PRIMARY_SOURCE,
+    DEFAULT_WEIGHTS,
     PENALTY_OPINION_FOR_FACT,
     PENALTY_REPOST,
     FusedHit,
@@ -189,7 +190,7 @@ def test_the_source_cap_is_a_third_rule_not_a_variant_of_the_other_two() -> None
     assert "DROPPED_SOURCE_CAP" in source
     # An unknown source is never capped: missing metadata must not decide what
     # the reader sees.
-    assert "if fact is not None:" in source
+    assert "if fact is not None" in source
 
 
 def test_the_source_cap_matches_the_corroboration_allowance() -> None:
@@ -199,6 +200,22 @@ def test_the_source_cap_matches_the_corroboration_allowance() -> None:
     from ahr.rag.service import MAX_PER_SOURCE
 
     assert MAX_PER_SOURCE == MAX_PER_STORY == 3
+
+
+def test_entity_subject_coverage_precedes_the_source_cap() -> None:
+    """Diversity must not delete the only passage about the asked entity.
+
+    Live trace: GLM-5.2 reached fused rank 1 / rerank rank 4 through the
+    entity-temporal channel, then three unrelated Hugging Face items exhausted
+    the publisher cap and deleted it.  Coverage is the selection objective;
+    diversity is a constraint after coverage, not instead of it.
+    """
+    import inspect
+
+    from ahr.rag import service
+
+    source = inspect.getsource(service.select_evidence)
+    assert '"entity_temporal" not in hit.channels' in source
 
 
 def test_the_longest_entity_match_wins() -> None:
@@ -228,6 +245,26 @@ def test_alias_expansion_collapses_versions_onto_the_family_name() -> None:
     assert "startswith" in source
 
 
+def test_vendor_family_ids_filter_the_temporal_channel_by_subject() -> None:
+    """A vendor question must retrieve a release titled only with its model.
+
+    The concrete production failure was 智谱 -> GLM 5.2: text aliases alone
+    left the target outside top-40 sparse results, while `item_entity` already
+    said GLM 5.2 was the document subject.
+    """
+    import inspect
+
+    from ahr.rag import retrieval
+
+    expansion = inspect.getsource(retrieval.expand_vendor_entity_ids)
+    temporal = inspect.getsource(retrieval.temporal_search)
+    assert "vendor_entity" in expansion
+    assert "sibling.id" in expansion
+    assert "ie.role = 'subject'" in temporal
+    assert "ie.entity_id = ANY" in temporal
+    assert DEFAULT_WEIGHTS["entity_temporal"] > DEFAULT_WEIGHTS["temporal"]
+
+
 def test_the_evaluation_expands_aliases_exactly_as_the_server_does() -> None:
     """Otherwise the regression scores a configuration no reader ever gets.
 
@@ -244,4 +281,6 @@ def test_the_evaluation_expands_aliases_exactly_as_the_server_does() -> None:
     scored = inspect.getsource(runner.rrf_retriever)
     for source in (served, scored):
         assert "expand_vendor_aliases(" in source
+        assert "expand_vendor_entity_ids(" in source
         assert "extra_terms=aliases" in source
+        assert "entity_ids=query_family_entities" in source
