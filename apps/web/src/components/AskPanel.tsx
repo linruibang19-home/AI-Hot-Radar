@@ -352,6 +352,39 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
   // Follow-ups this answer's own sources could support. Fetched after it
   // renders, so the answer is never slower for them.
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  // The question being answered right now. Held separately from `answer` so the
+  // previous turn can stay on screen while this one runs — clearing the answer
+  // to show progress emptied the page mid-conversation, which is what made
+  // multi-turn look like "ask, wipe, ask again".
+  const [pending, setPending] = useState<string | null>(null);
+
+  // Restore the thread this browser was in the middle of. Without it a reload
+  // dropped the conversation and left the reader looking at the site's shared
+  // history instead of their own — the two were being served by one route.
+  useEffect(() => {
+    let stored: string | null = null;
+    try {
+      stored = sessionStorage.getItem("ahr:conversation");
+    } catch {
+      stored = null;
+    }
+    if (!stored || initial) return;
+
+    let cancelled = false;
+    fetch(`/api/ask?conversation=${encodeURIComponent(stored)}`)
+      .then((response) => response.json())
+      .then((data) => {
+        const turns: AnswerPayload[] = data.turns ?? [];
+        if (cancelled || turns.length === 0) return;
+        setThread(turns);
+        setAnswer(turns[turns.length - 1]);
+        setConversationId(stored);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [initial]);
 
   // Conversations live in `rag_query`, written in the same transaction as the
   // answer. Loading them on mount is what makes a conversation survive
@@ -385,7 +418,7 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
 
     setLoading(true);
     setError(null);
-    setAnswer(null);
+    setPending(trimmed);
     setSuggestions([]);
     setStages([]);
     setStreamed("");
@@ -439,7 +472,18 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
             // The thread the next question continues. The server mints it on
             // the first turn, so the client never invents an id that would then
             // have to be trusted.
-            if (landed.conversationId) setConversationId(landed.conversationId);
+            if (landed.conversationId) {
+              setConversationId(landed.conversationId);
+              // Survives a reload. `sessionStorage`, not `localStorage`: this is
+              // one sitting, and a thread resumed a week later would carry
+              // context the reader has forgotten into a corpus that has moved.
+              try {
+                sessionStorage.setItem("ahr:conversation", landed.conversationId);
+              } catch {
+                // Private mode or a full quota. The conversation still works for
+                // this page; only resuming after a reload is lost.
+              }
+            }
             if (landed.queryId) {
               fetch(`/api/ask?suggestions=${encodeURIComponent(landed.queryId)}`)
                 .then((response) => response.json())
@@ -447,6 +491,7 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
                 .catch(() => setSuggestions([]));
             }
             setThread((prior) => [...prior, landed]);
+            setPending(null);
             // The verified answer replaces the streamed copy. They are the same
             // text by construction — the tests pin that — so this swaps in the
             // version that also carries the citations the markers link to.
@@ -526,8 +571,14 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
             className="ask-session-reset"
             onClick={() => {
               setConversationId(null);
+              try {
+                sessionStorage.removeItem("ahr:conversation");
+              } catch {
+                // Nothing to clean up if it was never stored.
+              }
               setThread([]);
               setAnswer(null);
+              setPending(null);
               setSuggestions([]);
               setQuestion("");
             }}
@@ -642,7 +693,17 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
           waited on `.ask-body` started asserting against a page whose sources
           had not been delivered yet. `aria-busy` says the same thing to a
           screen reader. */}
-      {!answer && streamed && (
+      {/* The question currently running, above its own answer. Without it the
+          streamed text arrived detached from what was asked, and the reader had
+          to remember which of their questions this was. */}
+      {pending && (
+        <p className="ask-thread-q ask-pending-q">
+          <span className="ask-thread-role">你问</span>
+          {pending}
+        </p>
+      )}
+
+      {streamed && (
         <div className="ask-answer" aria-busy="true">
           <div className="ask-draft">{renderAnswerBody(streamed, [], () => {}, null)}</div>
           <p className="ask-meta ask-streaming" aria-live="polite">
@@ -651,33 +712,51 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
         </div>
       )}
 
-      {/* Earlier turns of this thread. Collapsed to question and conclusion:
-          the full apparatus of every past answer would bury the current one,
-          and each remains reachable by its permalink. */}
-      {thread.length > 1 && (
+      {/* Every earlier turn, in full. They used to be 140-character stubs, on
+          the reasoning that a past answer's apparatus would bury the current
+          one — but truncating the *text* threw away the thing the reader came
+          back for, and a conversation you cannot re-read is a log, not a
+          conversation. The apparatus (plan chips, editable window, source
+          cards) still belongs only to the newest turn; the prose does not. */}
+      {/* While a turn is running, *every* completed turn belongs here — the
+          newest one included, because the block that normally renders it is
+          hidden until this turn finishes. Slicing it off unconditionally is what
+          made the previous answer vanish the moment a follow-up was submitted. */}
+      {(pending ? thread.length > 0 : thread.length > 1) && (
         <ol className="ask-thread">
-          {thread.slice(0, -1).map((turn, index) => (
+          {(pending ? thread : thread.slice(0, -1)).map((turn, index) => (
             <li key={turn.queryId ?? index} className="ask-thread-turn">
               <p className="ask-thread-q">
                 <span className="ask-thread-role">你问</span>
                 {turn.question}
               </p>
-              <p className="ask-thread-a">
-                <span className="ask-thread-role">回答</span>
-                {(turn.answerMarkdown || turn.refusalReason || "").slice(0, 140)}
-                {(turn.answerMarkdown || "").length > 140 ? "…" : ""}
-              </p>
-              {turn.queryId && (
-                <a className="ask-thread-link" href={`/ask/${turn.queryId}`}>
-                  这一轮的完整回答 →
-                </a>
+              {turn.rewrittenQuestion && (
+                <p className="ask-thread-rewrite">理解为：{turn.rewrittenQuestion}</p>
               )}
+              <div className="ask-thread-a">
+                {renderAnswerBody(
+                  turn.answerMarkdown || turn.refusalReason || "",
+                  turn.citations ?? [],
+                  () => {},
+                  null,
+                )}
+              </div>
+              <p className="ask-thread-foot">
+                {(turn.citations ?? []).length > 0 && (
+                  <span>{(turn.citations ?? []).length} 条引用</span>
+                )}
+                {turn.queryId && (
+                  <a className="ask-thread-link" href={`/ask/${turn.queryId}`}>
+                    永久链接 →
+                  </a>
+                )}
+              </p>
             </li>
           ))}
         </ol>
       )}
 
-      {answer && (
+      {answer && !pending && (
         <div className="ask-answer">
           {/* What the planner decided, before any of it was used. The absolute
               window matters most: "最近" became a real interval, and if it
