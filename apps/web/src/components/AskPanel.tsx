@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { RetrievalTrace } from "@/components/RetrievalTrace";
-import { formatDate } from "@/lib/datetime";
+import { formatDate, formatDateTime } from "@/lib/datetime";
 
 /**
  * The conversation, as one box you keep talking to.
@@ -154,6 +154,38 @@ function supportBadge(score: number | null | undefined) {
     >
       支持度 {score.toFixed(2)}
     </span>
+  );
+}
+
+/**
+ * A compact, literal account of the evidence behind one answer.
+ *
+ * This deliberately avoids a single "confidence" score. Citation support,
+ * source independence and source tier answer different questions; collapsing
+ * them into one percentage would look precise while hiding which part is weak.
+ */
+function EvidenceSummary({ citations }: { citations: Citation[] }) {
+  if (citations.length === 0) return null;
+
+  const scored = citations.filter((citation) => citation.supportScore != null);
+  const supported = scored.filter(
+    (citation) => (citation.supportScore ?? 0) >= SUPPORT_THRESHOLD,
+  ).length;
+  const primary = citations.filter((citation) => citation.sourceTier === "primary").length;
+  const publishers = new Set(citations.map((citation) => citation.sourceName)).size;
+
+  return (
+    <div className="ask-evidence-summary" aria-label="证据质量概览">
+      <span className="ask-evidence-label">证据概览</span>
+      <span>{citations.length} 条引用</span>
+      <span>{publishers} 家发布方</span>
+      {scored.length > 0 && (
+        <span>
+          支持度通过 {supported}/{scored.length}
+        </span>
+      )}
+      {primary > 0 && <span>{primary} 条一手来源</span>}
+    </div>
   );
 }
 
@@ -504,6 +536,12 @@ function ChatTurn({
                   {turn.metrics.selection.distinct_sources} 家信源
                 </span>
               )}
+              {turn.askedAt && (
+                <span className="ask-plan-chip" title="回答只依据这一时刻之前已进入语料库的内容">
+                  检索截至
+                  <span className="ask-plan-range">{formatDateTime(turn.askedAt)}</span>
+                </span>
+              )}
             </div>
           )}
 
@@ -564,6 +602,8 @@ function ChatTurn({
               {renderAnswerBody(turn.answerMarkdown, turn.citations, focusCitation, activeCite)}
             </div>
           )}
+
+          {!turn.refused && <EvidenceSummary citations={turn.citations} />}
 
           {turn.limitations.length > 0 && (
             <ul className="ask-limitations">
