@@ -1,12 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { RetrievalTrace } from "@/components/RetrievalTrace";
 import { formatDate } from "@/lib/datetime";
 
 /**
- * The question box and its answer.
+ * The conversation, as one box you keep talking to.
+ *
+ * This was a search page wearing a chat feature. One answer occupied the page,
+ * the next question replaced it, and the transcript existed only in the
+ * database — so multi-turn worked end to end and was invisible, which is
+ * indistinguishable from not existing. The rebuild inverts what is primary:
+ * **`turns` is the page**, an append-only list, and there is no longer a
+ * variable holding "the current answer" for the next question to overwrite.
+ * The class of bug where submitting a follow-up blanked the screen is gone
+ * structurally rather than by being handled.
  *
  * Two things here are not cosmetic. Citations are rendered from the server's
  * resolved list, never from anything the model wrote — a reference the model
@@ -71,9 +80,22 @@ export interface AnswerPayload {
     /** Distinct publishers behind the evidence, after the per-source cap. */
     selection?: { distinct_sources?: number; source_capped?: number };
     support_dropped?: number;
+    cache?: { outcome?: string; similarity?: number | null; replayOf?: string };
   };
-  /** Only the permalink carries this; the history list does not fetch it. */
+  /** Only the permalink carries this; the thread list does not fetch it. */
   trace?: TraceRow[];
+  /** Client-side only: the progress this turn reported while it ran. Kept on
+      the turn rather than in one shared slot, so an earlier answer's trace is
+      still its own once the next question has been asked. */
+  stages?: StageEvent[];
+}
+
+/** One thread in the conversation list. */
+interface ThreadSummary {
+  conversationId: string;
+  title: string;
+  turns: number;
+  lastAskedAt: string | null;
 }
 
 /** One candidate's journey through the funnel. See `rag/trace.py`. */
@@ -108,13 +130,6 @@ const QUERY_TYPES: Record<string, string> = {
   abstention: "开放提问",
 };
 
-/**
- * Source tiers, shown as a badge on every citation.
- *
- * This is the tier that already drives the §6 ranking boost and the selection
- * algorithm — the reader deciding whether to believe a claim deserves the same
- * information the ranker used.
- */
 /**
  * Groundedness, shown per citation.
  *
@@ -195,6 +210,20 @@ const STEPS = [
   { key: "generate", label: "生成回答" },
 ] as const;
 
+interface StageEvent {
+  stage: string;
+  ms?: number;
+  found?: number;
+  evidence?: number;
+  time_range?: string | null;
+  /** `cache` only: which layer answered. */
+  outcome?: string;
+  similarity?: number;
+  /** `generate` reports when it begins, because it is the one stage whose end
+      coincides with the answer. Every other stage reports on completion. */
+  started?: boolean;
+}
+
 /**
  * Render `[1]` inside the answer as a control that reaches its source.
  *
@@ -242,20 +271,6 @@ function renderWithCitations(
       </button>
     );
   });
-}
-
-interface StageEvent {
-  stage: string;
-  ms?: number;
-  found?: number;
-  evidence?: number;
-  time_range?: string | null;
-  /** `cache` only: which layer answered. */
-  outcome?: string;
-  similarity?: number;
-  /** `generate` reports when it begins, because it is the one stage whose end
-      coincides with the answer. Every other stage reports on completion. */
-  started?: boolean;
 }
 
 /**
@@ -317,203 +332,8 @@ function renderAnswerBody(
   return blocks;
 }
 
-/**
- * @param initial A stored conversation to show on load. The permalink page
- * passes the row it rendered on the server, so the shared link and the live ask
- * box are the same component rather than two renderers that can drift apart.
- */
-export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<AnswerPayload | null>(initial ?? null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [stages, setStages] = useState<StageEvent[]>([]);
-  // The answer as it is written. Everything here has already been resolved
-  // server-side — invented citation numbers are gone and the real ones carry
-  // their final number — and nothing arrives until the answer is guaranteed not
-  // to become a refusal, so none of it is ever taken back.
-  const [streamed, setStreamed] = useState("");
-  const [activeCite, setActiveCite] = useState<number | null>(null);
-  const [history, setHistory] = useState<AnswerPayload[]>([]);
-  const [openHistory, setOpenHistory] = useState<string | null>(null);
-  // The range the reader set, if they corrected the planner's. Held here
-  // rather than derived from the answer: it has to survive the re-ask that
-  // applies it, and the answer it produces reports the new range, not the old.
-  const [readerWindow, setReaderWindow] = useState<{ from: string; to: string } | null>(null);
-  // The thread. Held here rather than derived from `answer`, because it has to
-  // survive the answer being replaced by the next turn — that is the whole
-  // point of it.
-  const [conversationId, setConversationId] = useState<string | null>(
-    initial?.conversationId ?? null,
-  );
-  // Earlier turns of this thread, oldest first. The server already stores them;
-  // this is only what the reader can see without a round trip.
-  const [thread, setThread] = useState<AnswerPayload[]>(initial ? [initial] : []);
-  // Follow-ups this answer's own sources could support. Fetched after it
-  // renders, so the answer is never slower for them.
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  // The question being answered right now. Held separately from `answer` so the
-  // previous turn can stay on screen while this one runs — clearing the answer
-  // to show progress emptied the page mid-conversation, which is what made
-  // multi-turn look like "ask, wipe, ask again".
-  const [pending, setPending] = useState<string | null>(null);
-
-  // Restore the thread this browser was in the middle of. Without it a reload
-  // dropped the conversation and left the reader looking at the site's shared
-  // history instead of their own — the two were being served by one route.
-  useEffect(() => {
-    let stored: string | null = null;
-    try {
-      stored = sessionStorage.getItem("ahr:conversation");
-    } catch {
-      stored = null;
-    }
-    if (!stored || initial) return;
-
-    let cancelled = false;
-    fetch(`/api/ask?conversation=${encodeURIComponent(stored)}`)
-      .then((response) => response.json())
-      .then((data) => {
-        const turns: AnswerPayload[] = data.turns ?? [];
-        if (cancelled || turns.length === 0) return;
-        setThread(turns);
-        setAnswer(turns[turns.length - 1]);
-        setConversationId(stored);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [initial]);
-
-  // Conversations live in `rag_query`, written in the same transaction as the
-  // answer. Loading them on mount is what makes a conversation survive
-  // navigating to a source and coming back — previously the answer existed only
-  // in this component's state and one click destroyed it.
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/ask")
-      .then((r) => r.json())
-      .then((body) => {
-        if (!cancelled) setHistory((body.conversations ?? []) as AnswerPayload[]);
-      })
-      .catch(() => {
-        /* history is an enhancement; the ask box works without it */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  function focusCitation(number: number) {
-    setActiveCite(number);
-    document
-      .getElementById(`cite-${number}`)
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-
-  async function ask(text: string, window?: { from: string; to: string } | null) {
-    const trimmed = text.trim();
-    if (trimmed.length < 2 || loading) return;
-
-    setLoading(true);
-    setError(null);
-    setPending(trimmed);
-    setSuggestions([]);
-    setStages([]);
-    setStreamed("");
-    setActiveCite(null);
-
-    try {
-      const response = await fetch("/api/ask?stream=1", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          question: trimmed,
-          ...(conversationId ? { conversationId } : {}),
-          ...(window ? { timeFrom: window.from, timeTo: window.to } : {}),
-        }),
-      });
-
-      if (!response.ok || !response.body) {
-        const body = await response.json().catch(() => ({}));
-        setError(String(body.error ?? "回答失败"));
-        return;
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        // SSE frames are separated by a blank line. A frame can arrive split
-        // across reads, so only whole ones are consumed and the remainder is
-        // carried forward.
-        const frames = buffer.split("\n\n");
-        buffer = frames.pop() ?? "";
-
-        for (const frame of frames) {
-          const event = /^event: (.+)$/m.exec(frame)?.[1];
-          const data = /^data: (.+)$/m.exec(frame)?.[1];
-          if (!event || !data) continue;
-
-          const payload = JSON.parse(data);
-          if (event === "stage") {
-            setStages((prior) => [...prior, payload as StageEvent]);
-          } else if (event === "delta") {
-            setStreamed((prior) => prior + String(payload.text ?? ""));
-          } else if (event === "answer") {
-            const landed = payload as AnswerPayload;
-            setAnswer(landed);
-            // The thread the next question continues. The server mints it on
-            // the first turn, so the client never invents an id that would then
-            // have to be trusted.
-            if (landed.conversationId) {
-              setConversationId(landed.conversationId);
-              // Survives a reload. `sessionStorage`, not `localStorage`: this is
-              // one sitting, and a thread resumed a week later would carry
-              // context the reader has forgotten into a corpus that has moved.
-              try {
-                sessionStorage.setItem("ahr:conversation", landed.conversationId);
-              } catch {
-                // Private mode or a full quota. The conversation still works for
-                // this page; only resuming after a reload is lost.
-              }
-            }
-            if (landed.queryId) {
-              fetch(`/api/ask?suggestions=${encodeURIComponent(landed.queryId)}`)
-                .then((response) => response.json())
-                .then((data) => setSuggestions(data.suggestions ?? []))
-                .catch(() => setSuggestions([]));
-            }
-            setThread((prior) => [...prior, landed]);
-            setPending(null);
-            // The verified answer replaces the streamed copy. They are the same
-            // text by construction — the tests pin that — so this swaps in the
-            // version that also carries the citations the markers link to.
-            setStreamed("");
-            // Prepend rather than refetch: the row is already committed, and a
-            // round trip would show the reader their own answer arriving twice.
-            setHistory((prior) => [
-              landed,
-              ...prior.filter((row) => row.queryId !== landed.queryId),
-            ]);
-          } else if (event === "error") {
-            setError(String(payload.error ?? "回答失败"));
-          }
-        }
-      }
-    } catch {
-      setError("网络错误，请重试");
-    } finally {
-      setLoading(false);
-    }
-  }
-
+/** The four-step progress list, from the stage events one turn reported. */
+function Progress({ stages, open }: { stages: StageEvent[]; open: boolean }) {
   // A stage that has only *started* is not done. `generate` is the whole point
   // of the distinction: it reports at its beginning and takes 5.7s at p50, so
   // treating any reported stage as complete drew four ticks and then left the
@@ -524,348 +344,174 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
   const found = stages.find((s) => s.stage === "fuse")?.found;
   const evidence = stages.find((s) => s.stage === "select")?.evidence;
 
-  // The answer on screen is already rendered in full above; repeating it in the
-  // history list would show the same thing twice.
-  const past = history.filter((row) => !answer || row.queryId !== answer.queryId);
-
-  // On a permalink the answer already *is* the page, so offering a link to it
-  // would be a control that goes nowhere.
-  const isPermalink = initial?.queryId != null && initial.queryId === answer?.queryId;
+  // A cache hit runs no pipeline, so the four-step list has nothing to report
+  // and rendered as an empty box. Saying which layer answered is both more
+  // honest and more useful — a reader who sees a stale-looking answer should be
+  // able to tell it came from cache.
+  if (cacheHit) {
+    return (
+      <div className="ask-trace ask-cache-hit">
+        <strong>命中缓存</strong>
+        {cacheHit.outcome === "semantic" ? (
+          <span className="ask-step-detail">语义近邻 · 相似度 {cacheHit.similarity?.toFixed(4)}</span>
+        ) : (
+          <span className="ask-step-detail">同一问题、同一份语料</span>
+        )}
+        <span className="ask-step-detail">未调用模型</span>
+      </div>
+    );
+  }
 
   return (
-    <>
-      <form
-        className="ask-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void ask(question);
-        }}
-      >
-        <input
-          className="ask-input"
-          value={question}
-          onChange={(event) => setQuestion(event.target.value)}
-          placeholder={
-            conversationId ? "接着问，会带上上文（可以用「它」指代上一个话题）…" : "问一个关于最近 AI 动态的问题…"
-          }
-          maxLength={300}
-          aria-label="问题"
-        />
-        <button className="button ask-submit" type="submit" disabled={loading}>
-          {loading ? "检索中…" : "提问"}
-        </button>
-      </form>
-
-      {/* Shown from the *first* answer, not the second. The thread below needs
-          two turns before it has anything to draw, and until this existed there
-          was nothing anywhere telling a reader the box remembers — so a feature
-          that worked looked missing. */}
-      {conversationId && !loading && (
-        <div className="ask-session">
-          <span className="ask-session-dot" aria-hidden="true" />
-          <span>
-            对话进行中 · 第 <strong>{thread.length}</strong> 轮 · 追问会带上上文
-          </span>
-          <button
-            type="button"
-            className="ask-session-reset"
-            onClick={() => {
-              setConversationId(null);
-              try {
-                sessionStorage.removeItem("ahr:conversation");
-              } catch {
-                // Nothing to clean up if it was never stored.
-              }
-              setThread([]);
-              setAnswer(null);
-              setPending(null);
-              setSuggestions([]);
-              setQuestion("");
-            }}
-          >
-            换个新话题
-          </button>
-        </div>
-      )}
-
-      {/* Only before the first question: once there is an answer on screen the
-          examples are clutter, and the history list below already offers
-          things to re-read. */}
-      {!answer && !loading && !streamed && (
-        <div className="ask-examples">
-          <span className="ask-examples-label">试试：</span>
-          {EXAMPLES.map((example) => (
-            <button
-              key={example.question}
-              type="button"
-              className="ask-example"
-              title={example.shows}
-              onClick={() => {
-                setQuestion(example.question);
-                void ask(example.question);
-              }}
+    <details className="ask-trace" open={open} aria-live="polite">
+      <summary className="ask-trace-summary">
+        检索过程
+        {found ? <span className="ask-step-detail">{found} 条候选</span> : null}
+        {evidence ? <span className="ask-step-detail">{evidence} 段证据</span> : null}
+      </summary>
+      <ol className="ask-progress">
+        {STEPS.map((step) => {
+          const isDone = done.has(step.key);
+          // Active either because the server said this stage began, or because
+          // it is the first stage not yet reported — the fast ones send no
+          // "started" event, and inventing one would mean guessing at a
+          // duration the server already knows.
+          const active =
+            !isDone &&
+            (running.includes(step.key) ||
+              STEPS.filter((s) => done.has(s.key)).length === STEPS.indexOf(step));
+          return (
+            <li
+              key={step.key}
+              className={`ask-step${isDone ? " is-done" : ""}${active ? " is-active" : ""}`}
             >
-              {example.question}
-              <span className="ask-example-shows">{example.shows}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* The trace stays. It used to be removed the moment the answer landed,
-          which threw away the one artefact that shows *how* the answer was
-          reached — the thing that distinguishes this from a chat box. Open
-          while running, collapsed once there is an answer to read first. */}
-      {/* A cache hit runs no pipeline, so the four-step list has nothing to
-          report and rendered as an empty box. Saying which layer answered is
-          both more honest and more useful — a reader who sees a stale-looking
-          answer should be able to tell it came from cache. */}
-      {cacheHit && (
-        <div className="ask-trace ask-cache-hit">
-          <strong>命中缓存</strong>
-          {cacheHit.outcome === "semantic" ? (
-            <span className="ask-step-detail">
-              语义近邻 · 相似度 {cacheHit.similarity?.toFixed(4)}
-            </span>
-          ) : (
-            <span className="ask-step-detail">同一问题、同一份语料</span>
-          )}
-          <span className="ask-step-detail">未调用模型</span>
-        </div>
-      )}
-
-      {stages.length > 0 && !cacheHit && (
-        <details className="ask-trace" open={loading} aria-live="polite">
-          <summary className="ask-trace-summary">
-            检索过程
-            {found ? <span className="ask-step-detail">{found} 条候选</span> : null}
-            {evidence ? <span className="ask-step-detail">{evidence} 段证据</span> : null}
-          </summary>
-          <ol className="ask-progress">
-            {STEPS.map((step) => {
-              const isDone = done.has(step.key);
-              // Active either because the server said this stage began, or
-              // because it is the first stage not yet reported — the fast ones
-              // send no "started" event, and inventing one would mean guessing
-              // at a duration the server already knows.
-              const active =
-                !isDone &&
-                (running.includes(step.key) ||
-                  STEPS.filter((s) => done.has(s.key)).length === STEPS.indexOf(step));
-              return (
-                <li
-                  key={step.key}
-                  className={`ask-step${isDone ? " is-done" : ""}${active ? " is-active" : ""}`}
-                >
-                  <span className="ask-step-mark" aria-hidden="true">
-                    {isDone ? "✓" : active ? "•" : ""}
-                  </span>
-                  <span>{step.label}</span>
-                  {step.key === "embed" && found ? (
-                    <span className="ask-step-detail">{found} 条候选</span>
-                  ) : null}
-                  {step.key === "rerank" && evidence ? (
-                    <span className="ask-step-detail">选出 {evidence} 条证据</span>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
-        </details>
-      )}
-
-      {error && (
-        <div className="ask-answer" role="alert">
-          <p className="filter-note">{error}</p>
-        </div>
-      )}
-
-      {/* The answer while it is still being written. Rendered with the same
-          renderer as the finished one, so the paragraph the reader starts on
-          does not reflow when the final event lands. Citation markers show as
-          plain numbers here and become clickable once the citation list arrives
-          with the verified answer — the number itself never changes.
-
-          `.ask-draft`, deliberately *not* `.ask-body`: a partial answer and a
-          verified one must not look the same to anything reading the DOM.
-          Reusing the class made "the answer has landed" indistinguishable from
-          "the first sentence has landed", and three browser tests that had
-          waited on `.ask-body` started asserting against a page whose sources
-          had not been delivered yet. `aria-busy` says the same thing to a
-          screen reader. */}
-      {/* The question currently running, above its own answer. Without it the
-          streamed text arrived detached from what was asked, and the reader had
-          to remember which of their questions this was. */}
-      {pending && (
-        <p className="ask-thread-q ask-pending-q">
-          <span className="ask-thread-role">你问</span>
-          {pending}
-        </p>
-      )}
-
-      {streamed && (
-        <div className="ask-answer" aria-busy="true">
-          <div className="ask-draft">{renderAnswerBody(streamed, [], () => {}, null)}</div>
-          <p className="ask-meta ask-streaming" aria-live="polite">
-            正在生成…
-          </p>
-        </div>
-      )}
-
-      {/* Every earlier turn, in full. They used to be 140-character stubs, on
-          the reasoning that a past answer's apparatus would bury the current
-          one — but truncating the *text* threw away the thing the reader came
-          back for, and a conversation you cannot re-read is a log, not a
-          conversation. The apparatus (plan chips, editable window, source
-          cards) still belongs only to the newest turn; the prose does not. */}
-      {/* While a turn is running, *every* completed turn belongs here — the
-          newest one included, because the block that normally renders it is
-          hidden until this turn finishes. Slicing it off unconditionally is what
-          made the previous answer vanish the moment a follow-up was submitted. */}
-      {(pending ? thread.length > 0 : thread.length > 1) && (
-        <ol className="ask-thread">
-          {(pending ? thread : thread.slice(0, -1)).map((turn, index) => (
-            <li key={turn.queryId ?? index} className="ask-thread-turn">
-              <p className="ask-thread-q">
-                <span className="ask-thread-role">你问</span>
-                {turn.question}
-              </p>
-              {turn.rewrittenQuestion && (
-                <p className="ask-thread-rewrite">理解为：{turn.rewrittenQuestion}</p>
-              )}
-              <div className="ask-thread-a">
-                {renderAnswerBody(
-                  turn.answerMarkdown || turn.refusalReason || "",
-                  turn.citations ?? [],
-                  () => {},
-                  null,
-                )}
-              </div>
-              <p className="ask-thread-foot">
-                {(turn.citations ?? []).length > 0 && (
-                  <span>{(turn.citations ?? []).length} 条引用</span>
-                )}
-                {turn.queryId && (
-                  <a className="ask-thread-link" href={`/ask/${turn.queryId}`}>
-                    永久链接 →
-                  </a>
-                )}
-              </p>
+              <span className="ask-step-mark" aria-hidden="true">
+                {isDone ? "✓" : active ? "•" : ""}
+              </span>
+              <span>{step.label}</span>
+              {step.key === "embed" && found ? (
+                <span className="ask-step-detail">{found} 条候选</span>
+              ) : null}
+              {step.key === "rerank" && evidence ? (
+                <span className="ask-step-detail">选出 {evidence} 条证据</span>
+              ) : null}
             </li>
-          ))}
-        </ol>
-      )}
+          );
+        })}
+      </ol>
+    </details>
+  );
+}
 
-      {answer && !pending && (
+/**
+ * One completed exchange: what was asked, and what came back with it.
+ *
+ * Its own component with its own citation-focus state, because there are now
+ * several on screen at once. A single shared `activeCite` would highlight
+ * source 3 in every answer that has one; the ids are scoped by turn for the
+ * same reason.
+ */
+function ChatTurn({
+  turn,
+  index,
+  isLatest,
+  children,
+}: {
+  turn: AnswerPayload;
+  index: number;
+  isLatest: boolean;
+  /** The editable time window, on the newest turn only — re-asking is about
+      what to do next, not about editing something already answered. */
+  children?: React.ReactNode;
+}) {
+  const [activeCite, setActiveCite] = useState<number | null>(null);
+  const key = turn.queryId ?? `t${index}`;
+
+  const focusCitation = (number: number) => {
+    setActiveCite(number);
+    document
+      .getElementById(`cite-${key}-${number}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  return (
+    <article className={`chat-turn${isLatest ? " is-latest" : ""}`}>
+      <div className="chat-ask">
+        <span className="chat-avatar" aria-hidden="true">
+          你
+        </span>
+        <div className="chat-bubble">
+          {turn.question}
+          {turn.askedAt && <time className="chat-time">{formatDate(turn.askedAt)}</time>}
+        </div>
+      </div>
+
+      <div className="chat-reply">
+        <span className="chat-avatar is-ai" aria-hidden="true">
+          AI
+        </span>
         <div className="ask-answer">
+          {/* A follow-up that was understood as something else. Shown for the
+              same reason the resolved time window is: a reader whose 「它呢」 was
+              tied to the wrong antecedent can see it rather than conclude the
+              system is broken. */}
+          {turn.rewrittenQuestion && (
+            <p className="ask-rewrite" role="status">
+              这是一个追问，已理解为：<strong>{turn.rewrittenQuestion}</strong>
+            </p>
+          )}
+
           {/* What the planner decided, before any of it was used. The absolute
               window matters most: "最近" became a real interval, and if it
               caught the wrong one the reader can see that rather than guess. */}
-          {answer.plan && (
+          {turn.plan && (turn.plan.query_type || turn.plan.time_range) && (
             <div className="ask-plan">
-              {answer.plan.query_type && (
+              {turn.plan.query_type && (
                 <span className="ask-plan-chip">
-                  {QUERY_TYPES[answer.plan.query_type] ?? answer.plan.query_type}
+                  {QUERY_TYPES[turn.plan.query_type] ?? turn.plan.query_type}
                 </span>
               )}
-              {answer.plan.time_range?.from && answer.plan.time_range?.to ? (
+              {turn.plan.time_range?.from && turn.plan.time_range?.to ? (
                 <span className="ask-plan-chip">
-                  {answer.plan.time_range.label ?? "时间范围"}
+                  {turn.plan.time_range.label ?? "时间范围"}
                   <span className="ask-plan-range">
-                    {formatDate(answer.plan.time_range.from)} –{" "}
-                    {formatDate(answer.plan.time_range.to)}
+                    {formatDate(turn.plan.time_range.from)} – {formatDate(turn.plan.time_range.to)}
                   </span>
                 </span>
               ) : (
                 <span className="ask-plan-chip">全部时间</span>
               )}
-              {/* Displaying the resolved window was half the promise. The site
-                  already argued a reader who sees the wrong week should be able
-                  to fix it rather than conclude the system is broken; until now
-                  fixing it meant retyping the question and hoping. */}
-              <details className="ask-window">
-                <summary className="ask-window-toggle">改时间范围</summary>
-                <div className="ask-window-body">
-                  <label>
-                    从
-                    <input
-                      type="date"
-                      value={readerWindow?.from ?? (answer.plan?.time_range?.from ?? "").slice(0, 10)}
-                      onChange={(event) =>
-                        setReaderWindow((prev) => ({
-                          from: event.target.value,
-                          to: prev?.to ?? (answer.plan?.time_range?.to ?? "").slice(0, 10),
-                        }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    到
-                    <input
-                      type="date"
-                      value={readerWindow?.to ?? (answer.plan?.time_range?.to ?? "").slice(0, 10)}
-                      onChange={(event) =>
-                        setReaderWindow((prev) => ({
-                          from: prev?.from ?? (answer.plan?.time_range?.from ?? "").slice(0, 10),
-                          to: event.target.value,
-                        }))
-                      }
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="ask-window-apply"
-                    disabled={loading || !readerWindow?.from || !readerWindow?.to}
-                    onClick={() => {
-                      if (readerWindow?.from && readerWindow?.to) {
-                        void ask(answer.question ?? question, readerWindow);
-                      }
-                    }}
-                  >
-                    用这个范围重问
-                  </button>
-                </div>
-              </details>
-              {answer.metrics?.evidence != null && (
-                <span className="ask-plan-chip">{answer.metrics.evidence} 段证据</span>
+              {children}
+              {turn.metrics?.evidence != null && (
+                <span className="ask-plan-chip">{turn.metrics.evidence} 段证据</span>
               )}
               {/* How the question was read, not just what it asked. 「智谱」 also
                   searching for GLM is the difference between an answer and a
                   wrong "nothing was released"; showing it lets the reader tell
                   a good expansion from a wrong one. */}
-              {answer.metrics?.aliases && answer.metrics.aliases.length > 0 && (
+              {turn.metrics?.aliases && turn.metrics.aliases.length > 0 && (
                 <span className="ask-plan-chip ask-plan-alias">
                   同时检索
                   <span className="ask-plan-range">
-                    {answer.metrics.aliases.slice(0, 4).join(" · ")}
+                    {turn.metrics.aliases.slice(0, 4).join(" · ")}
                   </span>
                 </span>
               )}
               {/* One publisher is not corroboration however many documents it
                   quotes, and the count was previously buried in the footer. */}
-              {answer.metrics?.selection?.distinct_sources != null && (
+              {turn.metrics?.selection?.distinct_sources != null && (
                 <span className="ask-plan-chip">
-                  {answer.metrics.selection.distinct_sources} 家信源
+                  {turn.metrics.selection.distinct_sources} 家信源
                 </span>
               )}
             </div>
           )}
 
-          {/* The site answering about itself. Marked rather than blended in:
-              it has no citations by construction, and a reader who has been
-              told every fact carries a source should be able to see why this
-              one does not instead of assuming they were lost. */}
-          {/* A follow-up that was understood as something else. Shown for the
-              same reason the resolved time window is: a reader whose 「它呢」 was
-              tied to the wrong antecedent can see it rather than conclude the
-              system is broken. */}
-          {answer.rewrittenQuestion && (
-            <p className="ask-rewrite" role="status">
-              这是一个追问，已理解为：<strong>{answer.rewrittenQuestion}</strong>
-            </p>
-          )}
-
-          {answer.kind === "corpus_stats" && (
+          {/* The site answering about itself. Marked rather than blended in: it
+              has no citations by construction, and a reader who has been told
+              every fact carries a source should be able to see why this one
+              does not instead of assuming they were lost. */}
+          {turn.kind === "corpus_stats" && (
             <p className="ask-kind" role="status">
               这是<strong>本站运行数据</strong>，直接来自数据库计数，不是检索结果，因此没有引用来源。
             </p>
@@ -875,42 +521,20 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
               signal existed and was spent on a line of small print identical to
               every other note — while the answer it belonged to stated that
               智谱 had released nothing, over a window holding three Zhipu items. */}
-          {!answer.refused && answer.weakRetrieval && (
+          {!turn.refused && turn.weakRetrieval && (
             <p className="ask-weak" role="status">
               这次检索的证据大多没通过支持度校验
-              {answer.metrics?.support_dropped
-                ? `（移除了 ${answer.metrics.support_dropped} 条引用）`
+              {turn.metrics?.support_dropped
+                ? `（移除了 ${turn.metrics.support_dropped} 条引用）`
                 : null}
               ，下面的结论可信度偏低，建议换个说法再问一次或放宽时间范围。
             </p>
           )}
 
-          {/* The invitation multi-turn was missing. Clicking asks in the same
-              thread, so 「它呢」 keeps working from here — the suggestion and the
-              conversation are the same feature seen from two ends. */}
-          {suggestions.length > 0 && !loading && (
-            <div className="ask-followups">
-              <span className="ask-followups-label">接着问：</span>
-              {suggestions.map((text) => (
-                <button
-                  key={text}
-                  type="button"
-                  className="ask-followup"
-                  onClick={() => {
-                    setQuestion(text);
-                    void ask(text);
-                  }}
-                >
-                  {text}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {answer.refused ? (
+          {turn.refused ? (
             <div className="ask-refusal">
               <strong>没有足够证据回答这个问题。</strong>
-              <p>{answer.refusalReason ?? "检索到的内容不足以支持一个可核实的回答。"}</p>
+              <p>{turn.refusalReason ?? "检索到的内容不足以支持一个可核实的回答。"}</p>
               <p className="ask-refusal-note">
                 这是刻意的：本站不会用模型的常识补答，没有来源支撑的内容不会显示。
               </p>
@@ -918,11 +542,11 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
               {/* A refusal used to end here. The system knows exactly what it
                   read; showing it turns a dead end into something the reader
                   can act on — usually by noticing the window is wrong. */}
-              {answer.considered?.length > 0 && (
+              {turn.considered?.length > 0 && (
                 <div className="ask-considered">
                   <p className="ask-considered-title">检索到但不足以支撑回答的内容：</p>
                   <ul>
-                    {answer.considered.slice(0, 5).map((row) => (
+                    {turn.considered.slice(0, 5).map((row) => (
                       <li key={row.itemId}>
                         <a href={`/items/${row.itemId}`}>{row.title}</a>
                         <span className="ask-source-meta">
@@ -937,36 +561,31 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
             </div>
           ) : (
             <div className="ask-body">
-              {renderAnswerBody(
-                answer.answerMarkdown,
-                answer.citations,
-                focusCitation,
-                activeCite,
-              )}
+              {renderAnswerBody(turn.answerMarkdown, turn.citations, focusCitation, activeCite)}
             </div>
           )}
 
-          {answer.limitations.length > 0 && (
+          {turn.limitations.length > 0 && (
             <ul className="ask-limitations">
-              {answer.limitations.map((limitation) => (
+              {turn.limitations.map((limitation) => (
                 <li key={limitation}>{limitation}</li>
               ))}
             </ul>
           )}
 
-          {answer.citations.length > 0 && (
+          {turn.citations.length > 0 && (
             <details className="ask-sources">
               <summary className="ask-sources-title">
                 引用来源
-                <span className="ask-sources-count">{answer.citations.length} 条</span>
+                <span className="ask-sources-count">{turn.citations.length} 条</span>
               </summary>
               <ol className="ask-source-list">
-                {answer.citations.map((citation) => {
+                {turn.citations.map((citation) => {
                   const tier = TIERS[citation.sourceTier];
                   return (
                     <li
                       key={citation.number}
-                      id={`cite-${citation.number}`}
+                      id={`cite-${key}-${citation.number}`}
                       className={`ask-source${activeCite === citation.number ? " is-active" : ""}`}
                     >
                       <span className="ask-source-no">[{citation.number}]</span>
@@ -1014,125 +633,514 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
             </details>
           )}
 
+          {/* The progress this turn reported, kept with it and collapsed. It
+              used to be removed the moment the answer landed, which threw away
+              the one artefact showing *how* the answer was reached — the thing
+              that distinguishes this from a chat box. */}
+          {turn.stages && turn.stages.length > 0 && <Progress stages={turn.stages} open={false} />}
+
           <p className="ask-meta">
-            {answer.metrics?.total_ms && `耗时 ${(answer.metrics.total_ms / 1000).toFixed(1)}s`}
-            {answer.citations.length > 0 &&
-              ` · ${new Set(answer.citations.map((c) => c.sourceName)).size} 个信源`}
-            {answer.metrics?.degraded?.length ? ` · 降级：${answer.metrics.degraded.join(", ")}` : ""}
+            {turn.metrics?.total_ms && `耗时 ${(turn.metrics.total_ms / 1000).toFixed(1)}s`}
+            {turn.citations.length > 0 &&
+              ` · ${new Set(turn.citations.map((c) => c.sourceName)).size} 个信源`}
+            {turn.metrics?.degraded?.length ? ` · 降级：${turn.metrics.degraded.join(", ")}` : ""}
             {/* Addressable. The id has always been returned with the answer;
                 until there was a route that read it back it pointed nowhere. */}
-            {answer.queryId && !isPermalink && (
+            {turn.queryId && (
               <>
                 {" · "}
-                <a className="ask-permalink" href={`/ask/${answer.queryId}`}>
+                <a className="ask-permalink" href={`/ask/${turn.queryId}`}>
                   永久链接
                 </a>
               </>
             )}
           </p>
 
-          {/* Directly under the answer it explains. Rendered after the history
-              list it was unreadable — the reader had to scroll past twenty
-              other conversations to reach the explanation of the one above. */}
-          {answer.trace && answer.trace.length > 0 && <RetrievalTrace rows={answer.trace} />}
+          {turn.trace && turn.trace.length > 0 && <RetrievalTrace rows={turn.trace} />}
         </div>
-      )}
+      </div>
+    </article>
+  );
+}
 
-      {/* Earlier conversations. Collapsed by default and one open at a time:
-          a dozen expanded answers would bury the ask box that is the point of
-          the page. */}
-      {past.length > 0 && (
+/**
+ * @param initial A stored turn to open with. The permalink page passes the row
+ * it rendered on the server, so the shared link and the live conversation are
+ * the same component rather than two renderers that can drift apart — and
+ * because that row now carries its `conversationId`, a shared answer is
+ * somewhere a reader can keep asking from rather than a dead end.
+ */
+export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
+  const [question, setQuestion] = useState("");
+  // The transcript, and the only thing that decides what is on screen. There is
+  // deliberately no "current answer" variable: that one was what the next
+  // question overwrote, and clearing it to show progress is what emptied the
+  // page mid-conversation.
+  const [turns, setTurns] = useState<AnswerPayload[]>(initial ? [initial] : []);
+  // The question being answered right now, appended after the transcript rather
+  // than replacing any of it.
+  const [pending, setPending] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [stages, setStages] = useState<StageEvent[]>([]);
+  // The answer as it is written. Everything here has already been resolved
+  // server-side — invented citation numbers are gone and the real ones carry
+  // their final number — and nothing arrives until the answer is guaranteed not
+  // to become a refusal, so none of it is ever taken back.
+  const [streamed, setStreamed] = useState("");
+  const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  // The range the reader set, if they corrected the planner's. Held here rather
+  // than derived from the answer: it has to survive the re-ask that applies it,
+  // and the answer it produces reports the new range, not the old.
+  const [readerWindow, setReaderWindow] = useState<{ from: string; to: string } | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(
+    initial?.conversationId ?? null,
+  );
+  // Follow-ups this answer's own sources could support. Fetched after it
+  // renders, so the answer is never slower for them.
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+
+  const bottom = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const loadThreads = useCallback(() => {
+    fetch("/api/ask?threads=1")
+      .then((r) => r.json())
+      .then((body) => setThreads((body.threads ?? []) as ThreadSummary[]))
+      .catch(() => {
+        /* the conversation list is an enhancement; asking works without it */
+      });
+  }, []);
+
+  // Restore the thread this browser was in the middle of. Without it a reload
+  // dropped the conversation and left the reader looking at the site's shared
+  // history instead of their own — the two were being served by one route.
+  useEffect(() => {
+    let stored: string | null = null;
+    try {
+      stored = sessionStorage.getItem("ahr:conversation");
+    } catch {
+      stored = null;
+    }
+    if (!stored || initial) return;
+
+    let cancelled = false;
+    fetch(`/api/ask?conversation=${encodeURIComponent(stored)}`)
+      .then((response) => response.json())
+      .then((data) => {
+        const restored: AnswerPayload[] = data.turns ?? [];
+        if (cancelled || restored.length === 0) return;
+        setTurns(restored);
+        setConversationId(stored);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [initial]);
+
+  useEffect(loadThreads, [loadThreads]);
+
+  // Follow the conversation down as it grows. Only on submit: scrolling when
+  // the answer lands would move the page under a reader already reading the
+  // streamed copy of the same text.
+  useEffect(() => {
+    if (pending) bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [pending]);
+
+  function startFresh() {
+    setConversationId(null);
+    try {
+      sessionStorage.removeItem("ahr:conversation");
+    } catch {
+      // Nothing to clean up if it was never stored.
+    }
+    setTurns([]);
+    setPending(null);
+    setStreamed("");
+    setStages([]);
+    setSuggestions([]);
+    setError(null);
+    setReaderWindow(null);
+    setQuestion("");
+    inputRef.current?.focus();
+  }
+
+  /** Reopen a stored thread and keep asking inside it. */
+  async function resume(id: string) {
+    if (loading) return;
+    try {
+      const response = await fetch(`/api/ask?conversation=${encodeURIComponent(id)}`);
+      const data = await response.json();
+      const restored: AnswerPayload[] = data.turns ?? [];
+      if (restored.length === 0) return;
+      setTurns(restored);
+      setConversationId(id);
+      setSuggestions([]);
+      setError(null);
+      try {
+        sessionStorage.setItem("ahr:conversation", id);
+      } catch {
+        // Private mode or a full quota; the thread still works for this page.
+      }
+      inputRef.current?.focus();
+    } catch {
+      setError("这段对话没能打开，请重试");
+    }
+  }
+
+  async function ask(text: string, window?: { from: string; to: string } | null) {
+    const trimmed = text.trim();
+    if (trimmed.length < 2 || loading) return;
+
+    setLoading(true);
+    setError(null);
+    setPending(trimmed);
+    setQuestion("");
+    setSuggestions([]);
+    setStages([]);
+    setStreamed("");
+
+    try {
+      const response = await fetch("/api/ask?stream=1", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          question: trimmed,
+          ...(conversationId ? { conversationId } : {}),
+          ...(window ? { timeFrom: window.from, timeTo: window.to } : {}),
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        const body = await response.json().catch(() => ({}));
+        setError(String(body.error ?? "回答失败"));
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let seen: StageEvent[] = [];
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE frames are separated by a blank line. A frame can arrive split
+        // across reads, so only whole ones are consumed and the remainder is
+        // carried forward.
+        const frames = buffer.split("\n\n");
+        buffer = frames.pop() ?? "";
+
+        for (const frame of frames) {
+          const event = /^event: (.+)$/m.exec(frame)?.[1];
+          const data = /^data: (.+)$/m.exec(frame)?.[1];
+          if (!event || !data) continue;
+
+          const payload = JSON.parse(data);
+          if (event === "stage") {
+            seen = [...seen, payload as StageEvent];
+            setStages(seen);
+          } else if (event === "delta") {
+            setStreamed((prior) => prior + String(payload.text ?? ""));
+          } else if (event === "answer") {
+            // The progress rides along on the turn, so this answer keeps its
+            // own trace once the next question has been asked.
+            const landed = { ...(payload as AnswerPayload), stages: seen };
+            // The thread the next question continues. The server mints it on
+            // the first turn, so the client never invents an id that would then
+            // have to be trusted.
+            if (landed.conversationId) {
+              setConversationId(landed.conversationId);
+              // Survives a reload. `sessionStorage`, not `localStorage`: this is
+              // one sitting, and a thread resumed a week later would carry
+              // context the reader has forgotten into a corpus that has moved.
+              try {
+                sessionStorage.setItem("ahr:conversation", landed.conversationId);
+              } catch {
+                // Private mode or a full quota. The conversation still works for
+                // this page; only resuming after a reload is lost.
+              }
+            }
+            if (landed.queryId) {
+              fetch(`/api/ask?suggestions=${encodeURIComponent(landed.queryId)}`)
+                .then((response) => response.json())
+                .then((data) => setSuggestions(data.suggestions ?? []))
+                .catch(() => setSuggestions([]));
+            }
+            // Append. Nothing is replaced, which is the whole design: there is
+            // no slot for the previous answer to be evicted from.
+            setTurns((prior) => [...prior, landed]);
+            setPending(null);
+            // The verified answer replaces the streamed copy. They are the same
+            // text by construction — the tests pin that — so this swaps in the
+            // version that also carries the citations the markers link to.
+            setStreamed("");
+            setReaderWindow(null);
+          } else if (event === "error") {
+            setError(String(payload.error ?? "回答失败"));
+          }
+        }
+      }
+    } catch {
+      setError("网络错误，请重试");
+    } finally {
+      setLoading(false);
+      setPending(null);
+      loadThreads();
+    }
+  }
+
+  const latest = turns.length > 0 ? turns[turns.length - 1] : null;
+  const empty = turns.length === 0 && !pending && !error;
+  // Threads other than the open one. The open one is rendered in full above;
+  // listing it again would offer the reader a link to where they already are.
+  const otherThreads = threads.filter((t) => t.conversationId !== conversationId);
+
+  return (
+    <>
+      <div className="chat">
+        <div className="chat-log">
+          {empty && (
+            <div className="chat-empty">
+              <p className="chat-empty-lead">
+                问一个关于最近 AI 动态的问题。答完可以接着追问，
+                <strong>「它」「那家公司」这类指代会自动接上上一轮</strong>。
+              </p>
+              <div className="ask-examples">
+                <span className="ask-examples-label">试试：</span>
+                {EXAMPLES.map((example) => (
+                  <button
+                    key={example.question}
+                    type="button"
+                    className="ask-example"
+                    title={example.shows}
+                    onClick={() => void ask(example.question)}
+                  >
+                    {example.question}
+                    <span className="ask-example-shows">{example.shows}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {turns.map((turn, index) => (
+            <ChatTurn
+              key={turn.queryId ?? index}
+              turn={turn}
+              index={index}
+              isLatest={index === turns.length - 1}
+            >
+              {/* Displaying the resolved window was half the promise. A reader
+                  who sees the wrong week should be able to fix it rather than
+                  conclude the system is broken; until now fixing it meant
+                  retyping the question and hoping. Newest turn only: re-asking
+                  is about what to do next. */}
+              {index === turns.length - 1 && !pending && (
+                <details className="ask-window">
+                  <summary className="ask-window-toggle">改时间范围</summary>
+                  <div className="ask-window-body">
+                    <label>
+                      从
+                      <input
+                        type="date"
+                        value={readerWindow?.from ?? (turn.plan?.time_range?.from ?? "").slice(0, 10)}
+                        onChange={(event) =>
+                          setReaderWindow((prev) => ({
+                            from: event.target.value,
+                            to: prev?.to ?? (turn.plan?.time_range?.to ?? "").slice(0, 10),
+                          }))
+                        }
+                      />
+                    </label>
+                    <label>
+                      到
+                      <input
+                        type="date"
+                        value={readerWindow?.to ?? (turn.plan?.time_range?.to ?? "").slice(0, 10)}
+                        onChange={(event) =>
+                          setReaderWindow((prev) => ({
+                            from: prev?.from ?? (turn.plan?.time_range?.from ?? "").slice(0, 10),
+                            to: event.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="ask-window-apply"
+                      disabled={loading || !readerWindow?.from || !readerWindow?.to}
+                      onClick={() => {
+                        if (readerWindow?.from && readerWindow?.to) {
+                          void ask(turn.question ?? "", readerWindow);
+                        }
+                      }}
+                    >
+                      用这个范围重问
+                    </button>
+                  </div>
+                </details>
+              )}
+            </ChatTurn>
+          ))}
+
+          {/* The turn in flight. An extra entry at the end of the transcript,
+              never a replacement for it — the previous answer stays exactly
+              where the reader left it while this one is written. */}
+          {pending && (
+            <article className="chat-turn is-pending">
+              <div className="chat-ask">
+                <span className="chat-avatar" aria-hidden="true">
+                  你
+                </span>
+                <div className="chat-bubble">{pending}</div>
+              </div>
+              <div className="chat-reply">
+                <span className="chat-avatar is-ai" aria-hidden="true">
+                  AI
+                </span>
+                <div className="ask-answer" aria-busy="true">
+                  {stages.length > 0 && <Progress stages={stages} open />}
+                  {/* `.ask-draft`, deliberately *not* `.ask-body`: a partial
+                      answer and a verified one must not look the same to
+                      anything reading the DOM. Reusing the class made "the
+                      answer has landed" indistinguishable from "the first
+                      sentence has landed", and three browser tests that had
+                      waited on `.ask-body` started asserting against a page
+                      whose sources had not been delivered yet. */}
+                  {streamed && (
+                    <div className="ask-draft">{renderAnswerBody(streamed, [], () => {}, null)}</div>
+                  )}
+                  <p className="ask-meta ask-streaming" aria-live="polite">
+                    {streamed ? "正在生成…" : "正在检索证据…"}
+                  </p>
+                </div>
+              </div>
+            </article>
+          )}
+
+          {error && (
+            <div className="ask-answer chat-error" role="alert">
+              <p className="filter-note">{error}</p>
+            </div>
+          )}
+
+          <div ref={bottom} />
+        </div>
+
+        {/* The composer, pinned to the bottom of the box. It stays reachable
+            however long the transcript grows, which is what makes this one
+            conversation rather than a page you re-submit. */}
+        <div className="chat-composer">
+          {/* The invitation multi-turn was missing. Clicking asks in the same
+              thread, so 「它呢」 keeps working from here — the suggestion and the
+              conversation are the same feature seen from two ends. */}
+          {suggestions.length > 0 && !loading && (
+            <div className="ask-followups">
+              <span className="ask-followups-label">接着问：</span>
+              {suggestions.map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  className="ask-followup"
+                  onClick={() => void ask(text)}
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <form
+            className="ask-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void ask(question);
+            }}
+          >
+            <input
+              ref={inputRef}
+              className="ask-input"
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              placeholder={
+                conversationId
+                  ? "接着问，会带上上文（可以用「它」指代上一个话题）…"
+                  : "问一个关于最近 AI 动态的问题…"
+              }
+              maxLength={300}
+              aria-label="问题"
+            />
+            <button className="button ask-submit" type="submit" disabled={loading}>
+              {loading ? "检索中…" : "提问"}
+            </button>
+          </form>
+
+          <div className="chat-status">
+            {conversationId && turns.length > 0 ? (
+              <>
+                <span className="ask-session-dot" aria-hidden="true" />
+                <span>
+                  同一段对话 · 第 <strong>{turns.length}</strong> 轮 · 追问会带上上文
+                </span>
+                <button type="button" className="ask-session-reset" onClick={startFresh}>
+                  换个新话题
+                </button>
+              </>
+            ) : (
+              <span>回答只依据站内已采集的资讯，每条事实都标注来源，证据不足时会拒答。</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Earlier conversations, one row per thread. Clicking reopens the whole
+          thread in the box above and keeps asking inside it — the resumable
+          unit is the conversation, not one line of it. */}
+      {otherThreads.length > 0 && (
         <details className="ask-history">
           <summary className="ask-history-title">
-            历史问答
-            <span className="ask-history-count">{past.length} 条</span>
+            历史对话
+            <span className="ask-history-count">{otherThreads.length} 段</span>
             <span className="ask-history-note">
               暂无账号体系，这里是本站的公共记录（M5 加鉴权后按人区分）
             </span>
           </summary>
 
           <ul className="ask-history-list">
-            {past.map((row) => {
-              const id = row.queryId ?? row.question ?? "";
-              const isOpen = openHistory === id;
-              return (
-                <li key={id} className={`ask-history-row${isOpen ? " is-open" : ""}`}>
-                  <button
-                    type="button"
-                    className="ask-history-head"
-                    aria-expanded={isOpen}
-                    onClick={() => setOpenHistory(isOpen ? null : id)}
-                  >
-                    <span className="ask-history-q">{row.question}</span>
-                    <span className="ask-history-meta">
-                      {row.refused ? (
-                        <span className="ask-history-refused">已拒答</span>
-                      ) : (
-                        `${row.citations.length} 条引用`
-                      )}
-                      {row.askedAt && ` · ${formatDate(row.askedAt)}`}
-                    </span>
-                  </button>
-
-                  {isOpen && (
-                    <div className="ask-history-body">
-                      {row.queryId && (
-                        <p className="ask-meta">
-                          <a className="ask-permalink" href={`/ask/${row.queryId}`}>
-                            打开这条问答 ↗
-                          </a>
-                        </p>
-                      )}
-                      {row.refused ? (
-                        <p className="filter-note">
-                          {row.refusalReason ?? "检索到的内容不足以支持一个可核实的回答。"}
-                        </p>
-                      ) : (
-                        <div className="ask-body">
-                          {renderAnswerBody(row.answerMarkdown, row.citations, () => {}, null)}
-                        </div>
-                      )}
-
-                      {row.citations.length > 0 && (
-                        <ol className="ask-source-list">
-                          {row.citations.map((citation) => (
-                            <li key={citation.number} className="ask-source">
-                              <span className="ask-source-no">[{citation.number}]</span>
-                              <div>
-                                <div className="ask-source-head">
-                                  <a href={`/items/${citation.itemId}`}>{citation.title}</a>
-                                  {TIERS[citation.sourceTier] && (
-                                    <span
-                                      className={`tier-badge ${TIERS[citation.sourceTier].className}`}
-                                    >
-                                      {TIERS[citation.sourceTier].label}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="ask-source-meta">
-                                  {citation.sourceName}
-                                  {citation.publishedAt && ` · ${formatDate(citation.publishedAt)}`}
-                                  {" · "}
-                                  <a
-                                    href={citation.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    阅读原文 ↗
-                                  </a>
-                                </div>
-                              </div>
-                            </li>
-                          ))}
-                        </ol>
-                      )}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
+            {otherThreads.map((row) => (
+              <li key={row.conversationId} className="ask-history-row">
+                <button
+                  type="button"
+                  className="ask-history-head"
+                  onClick={() => void resume(row.conversationId)}
+                  disabled={loading}
+                >
+                  <span className="ask-history-q">{row.title}</span>
+                  <span className="ask-history-meta">
+                    {row.turns} 轮
+                    {row.lastAskedAt && ` · ${formatDate(row.lastAskedAt)}`}
+                    <span className="ask-history-resume">继续这段对话 →</span>
+                  </span>
+                </button>
+              </li>
+            ))}
           </ul>
         </details>
+      )}
+
+      {/* Rendered here rather than in the page so it sits below the box it
+          describes, and only once there is nothing more useful to say. */}
+      {latest === null && !pending && (
+        <div className="notice">
+          检索走的是<strong>混合召回 + 交叉编码器重排</strong>：稠密向量负责语义，
+          关键词通道负责精确型号与版本号（纯语义检索会把 MXFP4 召回成 NVFP4），
+          时间词解析成绝对区间后作为过滤条件。
+          引用编号由服务端反查真实段落生成，<strong>模型自己写的来源不会被显示</strong>。
+        </div>
       )}
     </>
   );

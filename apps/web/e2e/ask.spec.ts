@@ -153,8 +153,13 @@ test.describe("ask", () => {
     await marker.click();
 
     // The corresponding source must exist and become the highlighted one.
-    const number = await marker.textContent();
-    await expect(page.locator(`#cite-${number?.trim()}`)).toHaveClass(/is-active/);
+    // Scoped to the turn: anchors are `cite-<queryId>-<n>` now that several
+    // answers share the page, because `#cite-3` in a three-turn conversation
+    // would have sent the reader to the oldest of three sources numbered 3.
+    const number = (await marker.textContent())?.trim();
+    await expect(
+      page.locator(".chat-turn").last().locator(`[id$="-${number}"].ask-source`),
+    ).toHaveClass(/is-active/);
   });
 
   test("the resolved retrieval plan is shown", async ({ page }) => {
@@ -221,32 +226,62 @@ test.describe("ask", () => {
     await expect(page.locator(STEP)).toHaveCount(4);
   });
 
-  test("an answered question joins the history and reopens", async ({ page }) => {
-    // The defect this covers: leaving the page destroyed the conversation,
-    // because it lived only in component state. It is written to `rag_query`
-    // in the same transaction as the answer, so a reload must find it.
+  test("the previous answer survives asking a follow-up", async ({ page }) => {
+    // The defect this exists for, reported four times. Submitting a follow-up
+    // ran `setAnswer(null)` to show progress, so the previous exchange vanished
+    // the instant the next question was sent — a working multi-turn backend
+    // rendering as "ask, wipe, ask again".
     await page.locator(".ask-input").fill("llama.cpp 最近发布了哪些版本？");
     await page.locator(".ask-submit").click();
-    await expect(page.locator(".ask-body, .ask-refusal")).toBeVisible({
+    await expect(page.locator(".chat-turn .ask-body, .chat-turn .ask-refusal")).toBeVisible({
+      timeout: 120_000,
+    });
+
+    const first = await page.locator(".chat-turn").first().locator(".chat-bubble").textContent();
+
+    await page.locator(".ask-input").fill("它修复了什么问题？");
+    await page.locator(".ask-submit").click();
+
+    // Asserted *while the second turn is still running*, which is exactly the
+    // moment the page used to go blank.
+    await expect(page.locator(".chat-turn.is-pending")).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator(".chat-turn").first().locator(".chat-bubble")).toHaveText(
+      first ?? "",
+    );
+    await expect(page.locator(".chat-turn").first().locator(".ask-answer")).toBeVisible();
+
+    // And once it lands, both are on screen.
+    await expect(page.locator(".chat-turn")).toHaveCount(2, { timeout: 120_000 });
+  });
+
+  test("a conversation survives a reload", async ({ page }) => {
+    // It is written to `rag_query` in the same transaction as the answer, and
+    // the thread id is kept for the sitting, so a reload must find it — the
+    // page used to drop the conversation and show strangers' questions instead.
+    await page.locator(".ask-input").fill("llama.cpp 最近发布了哪些版本？");
+    await page.locator(".ask-submit").click();
+    await expect(page.locator(".chat-turn .ask-body, .chat-turn .ask-refusal")).toBeVisible({
       timeout: 120_000,
     });
 
     await page.reload();
-    await page.locator('.ask-history summary').click();
-    const history = page.locator(".ask-history-row");
-    await expect(history.first()).toBeVisible({ timeout: 20_000 });
-
-    // Collapsed by default; opening one shows its answer and its sources.
-    await history.first().locator(".ask-history-head").click();
-    await expect(history.first().locator(".ask-history-body")).toBeVisible();
+    await expect(page.locator(".chat-turn")).toHaveCount(1, { timeout: 20_000 });
+    await expect(page.locator(".chat-turn .ask-body, .chat-turn .ask-refusal")).toBeVisible();
   });
 
-  test("history rows start collapsed", async ({ page }) => {
-    // A dozen expanded answers would bury the ask box that is the point of the
-    // page.
-    await page.locator('.ask-history summary').click();
+  test("history lists conversations, and reopening one continues it", async ({ page }) => {
+    // The resumable unit is the thread. A flat list of turns showed the same
+    // 「那它呢」 three times with nothing saying what each was following up on,
+    // and offered nothing to reopen.
+    await page.locator(".ask-history summary").click();
     const rows = page.locator(".ask-history-row");
     await expect(rows.first()).toBeVisible({ timeout: 20_000 });
+
+    await rows.first().locator(".ask-history-head").click();
+    await expect(page.locator(".chat-turn").first()).toBeVisible({ timeout: 20_000 });
+    // Reopened into the box, not into an expander below it.
     await expect(page.locator(".ask-history-body")).toHaveCount(0);
+    // And the composer says the next question will continue this thread.
+    await expect(page.locator(".chat-status")).toContainText("同一段对话");
   });
 });

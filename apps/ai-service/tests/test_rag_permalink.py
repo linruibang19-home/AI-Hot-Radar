@@ -33,8 +33,13 @@ ROW = (
     {"total_ms": 9700},
     datetime(2026, 8, 6, 12, 0, tzinfo=UTC),
     ["证据只覆盖到 2026-08-06，之后是否有新版本未知。"],
+    "2c9a1d44-5c1f-4f8e-9c3d-7a1b2c3d4e5f",
     [{"number": 1, "title": "Kimi K3 模型概览", "sourceName": "Hugging Face Blog"}],
 )
+
+# Where each column lands, so a future column added to `_CONVERSATION_SELECT`
+# breaks the fixture at one place rather than at every index that shifted.
+_CITATIONS = 9
 
 
 class _Cursor:
@@ -106,8 +111,27 @@ def test_the_shape_is_what_the_client_already_renders() -> None:
     assert conversation["queryId"] == ROW[0]
     assert conversation["question"] == ROW[1]
     assert conversation["refused"] is False
-    assert conversation["citations"] == ROW[8]
+    assert conversation["citations"] == ROW[_CITATIONS]
     assert conversation["askedAt"] == "2026-08-06T12:00:00+00:00"
+    # The thread this turn belongs to. Without it a shared answer was a dead
+    # end: the page could render it and had nothing to keep asking from.
+    assert conversation["conversationId"] == ROW[8]
+
+
+def test_a_rewritten_follow_up_is_derived_rather_than_stored() -> None:
+    """`retrieval_plan.question` has recorded the *issued* question since the
+    planner shipped, so what a follow-up was understood as needs no column of
+    its own — it is that field differing from the one the reader typed."""
+    assert _as_conversation(ROW)["rewrittenQuestion"] is None
+
+    followup = (
+        *ROW[:1],
+        "那它的参数量呢？",
+        *ROW[2:4],
+        {"query_type": "fact_check", "question": "Kimi K3 的参数量是多少？"},
+        *ROW[5:],
+    )
+    assert _as_conversation(followup)["rewrittenQuestion"] == "Kimi K3 的参数量是多少？"
 
 
 def test_the_answers_own_caveats_survive_the_round_trip() -> None:

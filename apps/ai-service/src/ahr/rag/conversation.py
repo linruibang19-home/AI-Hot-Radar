@@ -34,6 +34,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from ahr.processing.llm import LlmClient, LlmUnavailableError
+from ahr.rag.cache import client as cache_client
+from ahr.rag.cache import get_transcript, put_transcript
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +110,56 @@ def load_turns(connection: Any, conversation_id: str, *, limit: int = MAX_TURNS)
         Turn(question=str(row[0]), cited_titles=tuple(str(t) for t in (row[1] or [])[:3]))
         for row in reversed(rows)
     ]
+
+
+async def turns_for(connection: Any, conversation_id: str, *, limit: int = MAX_TURNS) -> list[Turn]:
+    """The same turns as `load_turns`, through Redis when it has them.
+
+    Every follow-up ran that five-table join to recover at most six short
+    strings, on the request path, before retrieval could start. The transcript
+    is the one piece of per-thread state that is read on every turn and changes
+    exactly once per turn, which is what makes it worth a cache when the answer
+    body is not.
+
+    **Postgres stays the source of truth.** A cold or flushed Redis costs one
+    query, never a wrong answer; the worst a stale entry can do is rewrite a
+    pronoun against a transcript missing its newest line, which degrades to the
+    question as typed. That is the same failure the rewriter already handles
+    when the provider is down, so it needs no new behaviour — which is why the
+    transcript is cacheable and the evidence behind an answer is not.
+    """
+    cached = await get_transcript(cache_client(), conversation_id)
+    if cached is not None:
+        return [
+            Turn(
+                question=str(row.get("question", "")),
+                cited_titles=tuple(str(t) for t in row.get("citedTitles") or ()),
+            )
+            for row in cached
+        ][-limit:]
+
+    turns = load_turns(connection, conversation_id, limit=limit)
+    await put_transcript(cache_client(), conversation_id, [_as_row(t) for t in turns])
+    return turns
+
+
+def _as_row(turn: Turn) -> dict[str, Any]:
+    return {"question": turn.question, "citedTitles": list(turn.cited_titles)}
+
+
+async def remember(
+    conversation_id: str, prior: list[Turn], latest: Turn, *, limit: int = MAX_TURNS
+) -> None:
+    """Extend a thread's cached transcript with the turn that just completed.
+
+    Called after the answer is committed, so the cache never claims a turn the
+    database does not have. The reverse — database ahead of cache — is the safe
+    direction: the next read finds a transcript one turn short, which is a
+    slightly worse rewrite, not a wrong one.
+    """
+    await put_transcript(
+        cache_client(), conversation_id, [_as_row(t) for t in (*prior, latest)][-limit:]
+    )
 
 
 def _transcript(turns: list[Turn]) -> str:

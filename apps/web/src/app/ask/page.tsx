@@ -19,14 +19,11 @@ export default function AskPage() {
         </p>
       </header>
 
+      {/* The explanation of how retrieval works moved *inside* the panel, which
+          renders it only before the first question. It is worth reading once,
+          and a fixed block under a growing transcript is something the reader
+          scrolls past on every turn to reach the box they are typing in. */}
       <AskPanel />
-
-      <div className="notice">
-        检索走的是<strong>混合召回 + 交叉编码器重排</strong>：稠密向量负责语义，
-        关键词通道负责精确型号与版本号（纯语义检索会把 MXFP4 召回成 NVFP4），
-        时间词解析成绝对区间后作为过滤条件。
-        引用编号由服务端反查真实段落生成，<strong>模型自己写的来源不会被显示</strong>。
-      </div>
     </>
   );
 }

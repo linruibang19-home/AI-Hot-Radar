@@ -1362,6 +1362,10 @@ summary:focus-visible {
 .ask-plan {
   display: flex;
   flex-wrap: wrap;
+  /* Centred, not stretched. The date-range editor is a `<details>` among pills
+     of a different height, and the default `stretch` hung its label off the top
+     of the row. */
+  align-items: center;
   gap: 8px;
   margin-bottom: 14px;
   padding-bottom: 14px;
@@ -1529,10 +1533,6 @@ summary:focus-visible {
   overflow: hidden;
 }
 
-.ask-history-row.is-open {
-  border-color: var(--accent);
-}
-
 .ask-history-head {
   width: 100%;
   display: flex;
@@ -1562,15 +1562,6 @@ summary:focus-visible {
   font-size: 0.8rem;
   white-space: nowrap;
   flex-shrink: 0;
-}
-
-.ask-history-refused {
-  color: var(--accent-ink);
-}
-
-.ask-history-body {
-  padding: 6px 16px 16px;
-  border-top: 1px solid var(--border);
 }
 
 /* The citation marker as a control rather than text.
@@ -2247,18 +2238,6 @@ summary:focus-visible {
   border-radius: 0 4px 4px 0;
 }
 
-/* Earlier turns of the thread. Deliberately quiet: they are context for the
-   current answer, not competing with it, and each keeps its own permalink. */
-.ask-thread { margin: 0 0 1rem; padding: 0; list-style: none; }
-.ask-thread-turn {
-  padding: 0.5rem 0 0.5rem 0.85rem;
-  border-left: 2px solid var(--border, #e7e5e4);
-  margin-bottom: 0.5rem;
-}
-.ask-thread-q { margin: 0; font-size: 0.875rem; font-weight: 600; color: var(--fg, #1c1917); }
-.ask-thread-a { margin: 0.2rem 0 0; font-size: 0.8125rem; color: var(--fg-muted, #57534e); }
-.ask-thread-link { font-size: 0.75rem; color: var(--accent, #0f766e); }
-
 /* What a follow-up became. Same rationale as the resolved time window: shown so
    a wrong reading is diagnosable rather than mysterious. */
 .ask-rewrite {
@@ -2305,19 +2284,9 @@ summary:focus-visible {
   background: var(--surface-muted, #f5f5f4);
 }
 
-/* That a conversation is in progress, stated from the first answer. The thread
-   needs two turns before it can show anything, and until this existed nothing
-   on the page said the box remembers — a working feature looked absent. */
-.ask-session {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  margin: 0.6rem 0 0;
-  font-size: 0.8125rem;
-  color: var(--fg-muted, #57534e);
-}
-
+/* That a conversation is in progress, stated from the first answer rather than
+   waiting for a second turn to imply it — until this existed nothing on the
+   page said the box remembers, so a working feature looked absent. */
 .ask-session-dot {
   width: 7px;
   height: 7px;
@@ -2341,14 +2310,171 @@ summary:focus-visible {
   color: var(--accent, #0f766e);
 }
 
-/* Who said what, so earlier turns read as a conversation rather than as notes. */
-.ask-thread-role {
-  display: inline-block;
-  margin-right: 0.4rem;
-  padding: 0 0.35rem;
-  border-radius: 3px;
+/* ---------- the conversation box ----------------------------------------- */
+
+/* One bordered surface holding the whole exchange, with the composer fixed to
+   its lower edge. The page was previously form-on-top / answer-below / history-
+   below, which is a search results layout: it has no place for a second turn to
+   go, so the second turn took the first one's place. */
+.chat {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+  /* Tall enough that the composer sits near the fold on an empty page, so the
+     box reads as something to type into rather than a header — and no taller,
+     because the rest is blank until there is a conversation in it. */
+  min-height: min(58vh, 470px);
+}
+
+.chat-log {
+  flex: 1;
+  padding: 20px 22px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.chat-empty {
+  margin: auto 0;
+  padding: 8px 0 20px;
+}
+
+.chat-empty-lead {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+
+.chat-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Earlier turns stay legible but stop competing with the newest one. Fading
+   them was tried and rejected: a reader scrolling back to re-read an answer
+   should not find it greyed out for the crime of having been answered. */
+.chat-turn + .chat-turn {
+  border-top: 1px dashed var(--border);
+  padding-top: 22px;
+}
+
+.chat-ask,
+.chat-reply {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.chat-avatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
   background: var(--surface-muted, #f5f5f4);
-  color: var(--fg-muted, #57534e);
-  font-size: 0.6875rem;
-  font-weight: 500;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.chat-avatar.is-ai {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* The question, as the reader typed it. Kept visually distinct from the answer
+   so a long transcript can be skimmed by question alone. */
+.chat-bubble {
+  padding: 9px 14px;
+  border-radius: 12px 12px 12px 4px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.chat-time {
+  display: block;
+  margin-top: 3px;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+/* The answer card fills the row beside its avatar; the standalone card margin
+   would double the gap the flex row already provides. */
+.chat-reply .ask-answer {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.chat-error {
+  border-color: #e6b8b8;
+}
+
+.chat-composer {
+  position: sticky;
+  bottom: 0;
+  padding: 14px 22px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.chat-composer .ask-form {
+  margin-bottom: 0;
+}
+
+.chat-composer .ask-followups {
+  margin: 0 0 12px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.chat-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+/* Reopening a stored thread. The row is one control, so the affordance has to
+   read as "this goes somewhere" rather than as an expander. */
+.ask-history-resume {
+  margin-left: 10px;
+  color: var(--accent-ink);
+}
+
+.ask-history-head:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+@media (max-width: 720px) {
+  .chat-log {
+    padding: 16px 14px 6px;
+  }
+
+  .chat-composer {
+    padding: 12px 14px 14px;
+  }
+
+  /* The avatars cost 40px of a 375px line and say nothing the bubble shape
+     does not. */
+  .chat-avatar {
+    display: none;
+  }
 }

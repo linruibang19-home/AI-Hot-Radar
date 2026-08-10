@@ -14,7 +14,7 @@ import logging
 import time
 import uuid
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from typing import Any
 
@@ -52,7 +52,7 @@ from ahr.rag.cache import (
     semantic_remember,
 )
 from ahr.rag.cache import client as cache_client
-from ahr.rag.conversation import load_turns, rewrite
+from ahr.rag.conversation import Turn, remember, rewrite, turns_for
 from ahr.rag.dimensions import Candidate, apply_dimensions
 from ahr.rag.embeddings import EmbeddingClient
 from ahr.rag.folding import fold_by_story, load_chunk_facts, main_source_first
@@ -725,8 +725,9 @@ async def answer_question(
         # `retrieval_plan.question`.
         asked = question
         rewritten: str | None = None
+        turns: list[Turn] = []
         if conversation_id:
-            turns = load_turns(connection, conversation_id)
+            turns = await turns_for(connection, conversation_id)
             standalone, changed = await rewrite(llm, question, turns)
             if changed:
                 rewritten = standalone
@@ -760,6 +761,7 @@ async def answer_question(
             )
             if persist:
                 _persist(connection, result)
+                await _extend_thread(result, turns, conversation_id)
             return result
 
         cached, cache_state = await _from_cache(
@@ -772,6 +774,31 @@ async def answer_question(
             window_override=window_override,
         )
         if cached is not None:
+            # A cache hit is still a turn. It used to return here untouched,
+            # which meant a follow-up served from cache never reached
+            # `rag_query` under this thread — so it vanished on reload, and the
+            # *next* follow-up was rewritten against a transcript with a hole
+            # in it. The saving the cache exists for is the three provider round
+            # trips, not the row that records what was asked.
+            cached.question = asked
+            cached.rewritten_question = rewritten
+            cached.conversation_id = conversation_id
+            # The plan travels with the cached answer and carries the question
+            # it was built from — which, on a semantic near-match, is somebody
+            # else's wording. `load_turns` reads exactly this field to build the
+            # next rewrite's transcript, so leaving it would thread a sentence
+            # this reader never wrote into their own conversation.
+            if cached.plan is not None:
+                cached.plan = replace(cached.plan, question=question)
+            if persist:
+                # The answer being replayed keeps its own permalink reachable:
+                # that row owns the retrieval trace, and this turn has none of
+                # its own because no retrieval ran.
+                replayed = cached.query_id
+                if replayed:
+                    cached.metrics.setdefault("cache", {})["replayOf"] = replayed
+                _persist(connection, cached)
+                await _extend_thread(cached, turns, conversation_id)
             return cached
 
         hits, retrieval_plan, metrics = await retrieve(
@@ -995,6 +1022,7 @@ async def answer_question(
             # leave 90 synthetic rows behind. It must not leave 90 cache
             # entries behind either.
             await _store_in_cache(result, cache_state)
+            await _extend_thread(result, turns, conversation_id)
 
         return result
 
@@ -1008,6 +1036,7 @@ HISTORY_LIMIT = 20
 _CONVERSATION_SELECT = """
     SELECT q.id::text, q.question, q.answer_markdown, q.status,
            q.retrieval_plan, q.metrics, q.completed_at, q.limitations,
+           q.conversation_id::text,
            COALESCE(
                json_agg(
                    json_build_object(
@@ -1038,6 +1067,12 @@ _CONVERSATION_SELECT = """
 
 
 def _as_conversation(row: tuple[Any, ...]) -> dict[str, Any]:
+    plan = row[4] or {}
+    # What retrieval actually searched for. Equal to the typed question unless a
+    # follow-up was rewritten, which makes the comparison the whole derivation —
+    # no column is needed, because `retrieval_plan.question` has been recording
+    # the issued form since the planner shipped.
+    issued = str(plan.get("question") or "")
     return {
         "queryId": row[0],
         "question": row[1],
@@ -1048,10 +1083,15 @@ def _as_conversation(row: tuple[Any, ...]) -> dict[str, Any]:
         # permalink showed the answer with its qualifications stripped off —
         # a more confident version of what was actually said.
         "limitations": row[7] or [],
-        "plan": row[4] or {},
+        "plan": plan,
         "metrics": row[5] or {},
         "askedAt": row[6].isoformat() if row[6] else None,
-        "citations": row[8] or [],
+        # The thread this turn belongs to. Absent until now, which is why a
+        # shared answer was a dead end: the page could render it and had no way
+        # to let the reader keep asking from there.
+        "conversationId": row[8],
+        "rewrittenQuestion": issued if issued and issued != row[1] else None,
+        "citations": row[9] or [],
         # Not persisted: `considered` is a retrieval-time view, and storing
         # it would duplicate rows that already exist as content_item.
         "considered": [],
@@ -1157,6 +1197,74 @@ def _record_answer_usage(connection: Any, *, model: str, usage: TokenUsage, serv
                 usage.latency_ms,
             ),
         )
+
+
+async def _extend_thread(answer: Answer, prior: list[Turn], conversation_id: str | None) -> None:
+    """Add the turn that just completed to the thread's cached transcript.
+
+    Only the two things a rewrite may see: the question as retrieval issued it,
+    and the titles of what was cited. `AHR-RAG-400` §11 forbids treating a
+    previous answer as a fact, and a cache is exactly where that rule would get
+    quietly broken — so the answer text is not stored, and there is nothing here
+    for a later turn to launder into a query.
+    """
+    if not conversation_id:
+        return
+    issued = answer.plan.question if answer.plan else answer.question
+    await remember(
+        conversation_id,
+        prior,
+        Turn(
+            question=issued,
+            cited_titles=tuple(c.title for c in answer.citations[:3] if c.title),
+        ),
+    )
+
+
+# How many threads the conversation list shows. Same bound as `HISTORY_LIMIT`
+# and for the same reason; kept separate because one counts turns and the other
+# counts conversations, and they stopped meaning the same thing.
+THREAD_LIMIT = 20
+
+
+def load_recent_threads(connection: Any, limit: int = THREAD_LIMIT) -> list[dict[str, Any]]:
+    """Recent conversations, newest first, one row each.
+
+    The history list used to be flat turns, which is what a single-shot question
+    box has. In a thread that reads as duplication — 「那它的性能表现怎么样」 three
+    times over, each detached from the question it was following up on — and it
+    offers nothing to reopen, because the thing worth reopening is the
+    conversation rather than one line of it.
+
+    Titled by the *first* question of the thread: that is the one the reader
+    typed in full, before pronouns started standing in for it.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT conversation_id::text,
+                   (array_agg(question ORDER BY completed_at ASC NULLS LAST))[1],
+                   count(*),
+                   max(completed_at)
+              FROM rag_query
+             WHERE conversation_id IS NOT NULL
+             GROUP BY conversation_id
+             ORDER BY max(completed_at) DESC NULLS LAST
+             LIMIT %s
+            """,
+            (limit,),
+        )
+        rows = cursor.fetchall()
+
+    return [
+        {
+            "conversationId": row[0],
+            "title": row[1] or "",
+            "turns": int(row[2]),
+            "lastAskedAt": row[3].isoformat() if row[3] else None,
+        }
+        for row in rows
+    ]
 
 
 def load_thread(connection: Any, conversation_id: str) -> list[dict[str, Any]]:

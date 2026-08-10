@@ -264,6 +264,65 @@ async def put_answer(client: redis.Redis, key: str, payload: dict[str, Any]) -> 
         logger.warning("answer cache write failed: %s", exc)
 
 
+# --- conversation transcripts -----------------------------------------------
+
+# How long a thread stays warm. Deliberately close to one sitting: the browser
+# keeps its thread id in `sessionStorage` for the same reason, and a transcript
+# that outlived the tab holding it would only ever be read after the reader had
+# forgotten what it said.
+TRANSCRIPT_TTL = 2 * 3_600
+
+_TRANSCRIPT_PREFIX = f"ahr:rag:{CACHE_VERSION}:thread"
+
+
+def transcript_key(conversation_id: str) -> str:
+    return f"{_TRANSCRIPT_PREFIX}:{conversation_id}"
+
+
+async def get_transcript(client: redis.Redis, conversation_id: str) -> list[dict[str, Any]] | None:
+    """This thread's recent turns, or None when nothing is cached.
+
+    **None and `[]` are different answers and the caller depends on it.** None
+    means "not cached, go and read the database"; `[]` means "cached, and this
+    thread genuinely has no earlier turns" — which is every thread's first
+    question, the most common case there is. Collapsing the two would send a
+    five-table join after the empty result it already had.
+    """
+    try:
+        blob = await client.get(transcript_key(conversation_id))
+    except Exception as exc:  # noqa: BLE001 - a cache must never break the feature
+        logger.warning("transcript cache read failed: %s", exc)
+        return None
+    if blob is None:
+        return None
+    try:
+        loaded = json.loads(blob)
+    except json.JSONDecodeError:
+        return None
+    return loaded if isinstance(loaded, list) else None
+
+
+async def put_transcript(
+    client: redis.Redis, conversation_id: str, turns: list[dict[str, Any]]
+) -> None:
+    """Replace this thread's cached transcript.
+
+    Written whole rather than appended to. The turns are already in memory at
+    every call site — the service has just loaded them to rewrite the follow-up
+    — so a read-modify-write would be re-reading something it is holding, and a
+    list append would leave the two representations able to disagree about
+    ordering after a partial failure.
+    """
+    try:
+        await client.set(
+            transcript_key(conversation_id),
+            json.dumps(turns, ensure_ascii=False),
+            ex=TRANSCRIPT_TTL,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("transcript cache write failed: %s", exc)
+
+
 # --- semantic near-match ----------------------------------------------------
 
 
