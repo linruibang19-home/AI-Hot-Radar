@@ -190,6 +190,25 @@ def test_the_served_pipeline_applies_every_evaluated_dimension() -> None:
     assert "_rank_by_recency(" in source
 
 
+def test_the_served_pipeline_uses_the_evaluated_channel_set() -> None:
+    """The B3/B9 reports include TEMPORAL_SQL whenever the plan has a window.
+
+    Serving only dense+sparse made every reported retrieval metric describe a
+    configuration no reader received.  Pin the channel call in both paths so a
+    later refactor cannot recreate that split silently.
+    """
+    import inspect
+
+    from ahr.rag import service
+    from ahr.rag.eval import runner
+
+    served = inspect.getsource(service.retrieve)
+    scored = inspect.getsource(runner.rrf_retriever)
+    for source in (served, scored):
+        assert "temporal_search(" in source
+        assert '"entity_temporal" if query_family_entities else "temporal"' in source
+
+
 def test_dimensions_are_applied_before_the_unreranked_tail_is_appended() -> None:
     """Both evaluations reorder only the cross-encoder's output. Applying the
     dimensions to the merged list would also reorder candidates the reranker
