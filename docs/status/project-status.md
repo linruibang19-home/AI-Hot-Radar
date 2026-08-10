@@ -2035,10 +2035,12 @@ nDCG 0.6303；相对同配置修复前 R@10 +0.0310，`recent_updates` R@10 0.66
 pipeline 与 probe 共用同一 acquisition。真实 canary `2608.06394` 取得 234688 bytes、
 46787 正文字符，canonical 保持 `/abs/2608.06394`。
 
-### 发布：草稿 fail-closed，Outbox 不造假
+### 发布：恢复报告预览链路，Outbox 不造假
 
-数据库 14 份报告全部为 DRAFT。此前公共报告列表/详情没有状态过滤，现已只读 PUBLISHED；
-在发布端点和人工审核未闭环前，`/reports` 为空比自动发布模型草稿正确。
+数据库 14 份报告全部为 DRAFT。2026-08-10 的一次审计曾在读者报告接口增加
+`status=PUBLISHED`，但生成器只写 DRAFT、发布后台又尚未实现，结果把日报、周报、月报
+全部隐藏。这是回归，已撤销：`/reports` 继续展示已生成报告，同时不伪改其编辑状态。
+真正的 PUBLISHED-only 公开发布、审核和审计应在管理发布端点/UI 完成后一起启用。
 
 Outbox 当前 1807 条未消费事件，仍无消费者。没有真实异步下游前，不实现只负责
 `published_at=now()` 的空消费者；当前正确性仍由业务状态重开 PENDING + poller 保证。

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Daily report endpoints (AHR-FEAT-105).
+ * Daily, weekly and monthly report endpoints (AHR-FEAT-105).
  *
  * <p>Web, email and RSS all read this same record, so none of them can drift
  * into showing a different set of facts.
@@ -25,7 +25,7 @@ public class ReportController {
             """
             SELECT period_key, title, summary, item_count, generated_at, model_name
               FROM report
-             WHERE period_type = :period AND status = 'PUBLISHED'
+             WHERE period_type = :period
              ORDER BY period_key DESC
              LIMIT :limit
             """;
@@ -36,7 +36,6 @@ public class ReportController {
                    generated_at, model_name, prompt_version
               FROM report
              WHERE period_type = :period AND period_key = :key
-               AND status = 'PUBLISHED'
             """;
 
     private final NamedParameterJdbcTemplate jdbc;
