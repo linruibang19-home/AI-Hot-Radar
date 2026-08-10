@@ -150,7 +150,9 @@ async def _generate(
     the streamed copy would be an unverified second source of truth.
     """
     if on_delta is None:
-        return await llm.summarize(system_prompt=system_prompt, user_prompt=user_prompt)
+        return await llm.summarize(
+            system_prompt=system_prompt, user_prompt=user_prompt, json_mode=True
+        )
 
     usage = TokenUsage()
     extractor = JsonStringExtractor("answer_markdown")
@@ -158,7 +160,7 @@ async def _generate(
     raw: list[str] = []
 
     async for piece in llm.stream_summarize(
-        system_prompt=system_prompt, user_prompt=user_prompt, usage=usage
+        system_prompt=system_prompt, user_prompt=user_prompt, usage=usage, json_mode=True
     ):
         raw.append(piece)
         prose = extractor.feed(piece)
@@ -918,7 +920,6 @@ async def answer_question(
             reranker,
             citations,
             {e.chunk_id: e.text for e in evidence},
-            fallback_claim=question,
         )
         for citation in citations:
             citation.support_score = scores.get(citation.chunk_id)
@@ -1337,7 +1338,7 @@ def _persist(connection: Any, answer: Answer) -> None:
                         query_id,
                         c.number,
                         c.chunk_id,
-                        c.claim_text or answer.question,
+                        c.claim_text,
                         c.support_score,
                     )
                     for c in answer.citations

@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from ahr.rag.answer import (
+    SYSTEM_PROMPT,
     Citation,
     Evidence,
     bind_citations,
@@ -83,6 +84,36 @@ def test_bare_numeric_evidence_ids_are_accepted() -> None:
         "结论 [E2]。", [{"text": "t", "evidence_ids": [2]}], _evidence()
     )
     assert citations[0].claim_text == "t"
+
+
+def test_bare_prose_binds_each_citation_to_its_local_assertion() -> None:
+    _text, citations, _dangling, _limitations = bind_citations(
+        "**MiniMax H3 已开源** [E1]。\n- 它支持文本、图像和视频 [E2][E3]。",
+        [],
+        _evidence(),
+    )
+
+    assert [citation.claim_text for citation in citations] == [
+        "MiniMax H3 已开源。",
+        "它支持文本、图像和视频。",
+        "它支持文本、图像和视频。",
+    ]
+
+
+def test_repeated_bare_citation_uses_the_shortest_local_assertion() -> None:
+    _text, citations, _dangling, _limitations = bind_citations(
+        "MiniMax H3 已开源并支持多种模态 [E1]。更具体地说，H3 已开源 [E1]。",
+        [],
+        _evidence(1),
+    )
+
+    assert citations[0].claim_text == "更具体地说，H3 已开源。"
+
+
+def test_prompt_excludes_unrelated_industry_roundup_items() -> None:
+    assert "不要为了显得全面" in SYSTEM_PROMPT
+    assert "仅仅出现在同一篇汇总文章里不算相关" in SYSTEM_PROMPT
+    assert "间接的另起一段" not in SYSTEM_PROMPT
 
 
 def test_limitations_never_show_the_models_own_evidence_labels() -> None:

@@ -167,11 +167,14 @@ class LlmClient:
     def model_name(self) -> str:
         return self._config.model
 
-    async def summarize(self, *, system_prompt: str, user_prompt: str) -> tuple[str, TokenUsage]:
-        """Free-text completion for narrative output such as report summaries.
+    async def summarize(
+        self, *, system_prompt: str, user_prompt: str, json_mode: bool = False
+    ) -> tuple[str, TokenUsage]:
+        """Completion for narrative output or a caller-declared JSON contract.
 
-        Separate from `enrich` because there is no JSON contract to validate
-        here; the caller is expected to treat the result as prose.
+        Narrative callers keep the default. RAG supplies a JSON schema in its
+        prompt and opts in so compatible providers enforce the same contract at
+        transport level; the downstream parser remains the final validator.
         """
         usage = TokenUsage()
         text = await self._complete(
@@ -180,12 +183,17 @@ class LlmClient:
                 {"role": "user", "content": user_prompt},
             ],
             usage,
-            json_mode=False,
+            json_mode=json_mode,
         )
         return text, usage
 
     async def stream_summarize(
-        self, *, system_prompt: str, user_prompt: str, usage: TokenUsage
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        usage: TokenUsage,
+        json_mode: bool = False,
     ) -> AsyncIterator[str]:
         """`summarize`, delivered as it is produced.
 
@@ -215,6 +223,8 @@ class LlmClient:
             # than estimates.
             "stream_options": {"include_usage": True},
         }
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
 
         started = time.monotonic()
         try:

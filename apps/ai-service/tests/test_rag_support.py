@@ -41,6 +41,25 @@ def test_scoring_is_concurrent_rather_than_sequential() -> None:
     assert "asyncio.gather" in inspect.getsource(support.score_citations)
 
 
+async def test_a_missing_claim_is_unscored_instead_of_using_the_question() -> None:
+    class RecordingReranker:
+        def __init__(self) -> None:
+            self.queries: list[str] = []
+
+        async def rerank(self, query: str, documents: list[str], *, top_n: int):
+            self.queries.append(query)
+            return [(0, 0.9)]
+
+    citation = _citation(1, None)
+    citation.claim_text = ""
+    reranker = RecordingReranker()
+
+    scores = await support.score_citations(reranker, [citation], {"chunk-1": "正文"})
+
+    assert scores == {}
+    assert reranker.queries == []
+
+
 def test_the_backfill_selects_by_its_invariant_not_by_a_date() -> None:
     """A citation whose scoring failed at answer time is picked up on the next
     run, instead of staying NULL forever for not being in the original backlog.

@@ -46,14 +46,18 @@ MAX_EVIDENCE_CHARS = 1200
 CHARS_PER_TOKEN = 3
 MAX_PARENT_CHARS = PARENT_BUDGET_TOKENS * CHARS_PER_TOKEN
 
-# v2 adds the answer-shape rules. v1 said what was forbidden but never said what
+# v2 added the answer-shape rules. v1 said what was forbidden but never said what
 # a good answer looks like, and the model settled on the safest thing that
 # satisfied every prohibition: an undifferentiated bullet list of whatever the
 # evidence contained. Asking "最近 Codex 有什么消息" returned eleven bullets, five
 # of them about other companies, with no sentence anywhere saying what the answer
 # *was*. Nothing in v1 was violated — the reader simply had to do the summarising
 # the assistant was there to do.
-ANSWER_PROMPT_VERSION = "rag-answer-v2"
+# v3 closes the opposite failure: evidence windows often contain industry
+# roundups, and v2 explicitly invited the model to repeat their unrelated items
+# in an 「间接相关」 paragraph. That made an entity question look comprehensive
+# while making it less relevant.
+ANSWER_PROMPT_VERSION = "rag-answer-v3"
 
 _CITATION_RE = re.compile(r"\[E(\d+)\]")
 
@@ -70,8 +74,9 @@ SYSTEM_PROMPT = """你是 AI Hot Radar 的问答助手，只依据给定证据�
 结论之后，如果还有值得展开的内容，再用 `- ` 列点补充细节。
 只有一两条事实时不要用列表，直接写成段落。
 
-如果证据里同时有**直接相关**和**间接相关**的内容，先写直接相关的；
-间接的另起一段并说明它为什么只是间接相关，不要混在同一个列表里。
+只回答问题点名的主体和范围。同期行业新闻只有在证据明确说明它与该主体存在
+直接的因果、合作、竞争或对比关系时才能写；仅仅出现在同一篇汇总文章里不算相关。
+不要为了显得全面而添加「间接相关」「行业背景」或与主体无直接关系的新闻。
 
 关键结论里的核心事实（数字、型号、版本号、结论词）用 `**加粗**` 标出，
 每段最多加粗一处——到处加粗等于没有重点。
@@ -412,20 +417,17 @@ def _noting(envelope: dict[str, Any], note: str) -> dict[str, Any]:
 def _recover_bare_answer(text: str) -> dict[str, Any]:
     """Last resort: treat the whole reply as the answer body.
 
-    **This costs the `claims` array, and that is not cosmetic.** Measured over
-    896 stored citations: on answers recovered this way, *every one* of them
-    carries the question as its claim text (5.0% on the rest), because
-    `_persist` falls back to the question when there is no claim. Two things
-    then go wrong quietly — the 「支撑：」 line under each source shows the
-    question instead of the sentence the source supports, and the support gate
-    scores (question × passage) rather than (claim × passage), which is a
-    different measurement. Those answers drop 3.50 citations on average against
-    2.71 for the rest.
+    **This costs the model's structured `claims` array, and that is not
+    cosmetic.** Measured over 896 stored citations, the old fallback attached
+    the question to every recovered citation and therefore scored (question ×
+    passage), not (claim × passage). `bind_citations` now derives the local
+    assertion beside each marker, but that deterministic repair remains less
+    expressive than receiving the structured contract in the first place.
 
     So this is the fallback of last resort, after `_embedded_envelope` has
     failed to find a real one. It is worth having — it recovers a finished
     answer that would otherwise be reported as "the corpus has nothing" — but
-    it is a worse outcome than parsing the envelope, not an equivalent one.
+    it remains a worse outcome than parsing the envelope, not an equivalent one.
 
     An envelope that would not parse — truncated, usually — is cut off the end
     first. `_embedded_envelope` has already had its chance at it, so whatever is
@@ -470,6 +472,43 @@ def _claim_evidence(claims: list[dict[str, Any]]) -> list[tuple[int, str, int]]:
         for number in numbers:
             pairs.append((number, text, len(numbers)))
     return pairs
+
+
+_CLAIM_SEGMENT_RE = re.compile(r"[^。！？!?\n]+(?:[。！？!?]+|$)")
+
+
+def _claim_contexts(answer_markdown: str) -> dict[int, str]:
+    """Derive the local assertion carried by each inline evidence marker.
+
+    This is the safety net for a provider that returns valid cited prose but
+    omits the JSON ``claims`` array. Support scoring must compare a passage to
+    the assertion beside its marker, never to the user's question. Sentence and
+    line boundaries keep a citation in a long answer from inheriting unrelated
+    neighbouring bullets. If a marker is repeated, the shortest local assertion
+    wins; ties keep reading order.
+    """
+
+    contexts: dict[int, str] = {}
+    for match in _CLAIM_SEGMENT_RE.finditer(answer_markdown):
+        segment = match.group(0)
+        numbers = [int(item.group(1)) for item in _CITATION_RE.finditer(segment)]
+        if not numbers:
+            continue
+
+        claim = _CITATION_RE.sub("", segment)
+        claim = re.sub(r"^\s*(?:(?:#{1,6}|[-*+]|>)\s+)+", "", claim)
+        claim = re.sub(r"\[([^\]]+)]\([^)]*\)", r"\1", claim)
+        claim = claim.replace("**", "").replace("__", "").replace("`", "")
+        claim = re.sub(r"\s+", " ", claim).strip(" 、,，")
+        claim = re.sub(r"\s+([。！？!?；;，,])", r"\1", claim)
+        if not claim:
+            continue
+
+        for number in numbers:
+            previous = contexts.get(number)
+            if previous is None or len(claim) < len(previous):
+                contexts[number] = claim
+    return contexts
 
 
 def bind_citations(
@@ -603,6 +642,13 @@ def bind_citations(
         if number not in claim_for or breadth < claim_breadth[number]:
             claim_for[number] = text
             claim_breadth[number] = breadth
+
+    # A plain-markdown recovery has no structured claims. Bind every citation
+    # to the sentence that actually contains it so the support gate still
+    # measures (claim × passage), not (question × passage).
+    for number, text in _claim_contexts(answer_markdown).items():
+        if number in renumber and number not in claim_for:
+            claim_for[number] = text
 
     citations = [
         Citation(
