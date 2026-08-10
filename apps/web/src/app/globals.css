@@ -1405,6 +1405,28 @@ summary:focus-visible {
   margin-bottom: 14px !important;
 }
 
+/* Literal evidence dimensions, kept separate instead of inventing one opaque
+   confidence percentage. This remains a quiet metadata row so it does not
+   compete with the answer or change the existing page hierarchy. */
+.ask-evidence-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ask-evidence-label {
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .ask-points {
   margin: 0 0 14px;
   padding-left: 20px;

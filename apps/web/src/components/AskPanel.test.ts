@@ -105,4 +105,16 @@ describe("what the reader is shown about the conversation", () => {
     // order to say why it is not the one being used.
     expect(SOURCE).not.toMatch(/localStorage\./);
   });
+
+  it("shows evidence quality without collapsing it into an opaque score", () => {
+    expect(SOURCE).toMatch(/aria-label="证据质量概览"/);
+    expect(SOURCE).toContain("支持度通过");
+    expect(SOURCE).toContain("条一手来源");
+    expect(SOURCE).not.toContain("综合置信度");
+  });
+
+  it("states when the corpus was searched", () => {
+    expect(SOURCE).toContain("检索截至");
+    expect(SOURCE).toContain("formatDateTime(turn.askedAt)");
+  });
 });
