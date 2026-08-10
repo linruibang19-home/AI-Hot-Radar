@@ -21,6 +21,24 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/reports")
 public class ReportController {
 
+    static final String LIST_SQL =
+            """
+            SELECT period_key, title, summary, item_count, generated_at, model_name
+              FROM report
+             WHERE period_type = :period AND status = 'PUBLISHED'
+             ORDER BY period_key DESC
+             LIMIT :limit
+            """;
+
+    static final String DETAIL_SQL =
+            """
+            SELECT period_key, title, summary, body_markdown, item_count,
+                   generated_at, model_name, prompt_version
+              FROM report
+             WHERE period_type = :period AND period_key = :key
+               AND status = 'PUBLISHED'
+            """;
+
     private final NamedParameterJdbcTemplate jdbc;
 
     public ReportController(NamedParameterJdbcTemplate jdbc) {
@@ -31,16 +49,8 @@ public class ReportController {
     public List<ReportSummary> list(
             @RequestParam(required = false, defaultValue = "daily") String period,
             @RequestParam(required = false, defaultValue = "30") int limit) {
-        String sql =
-                """
-                SELECT period_key, title, summary, item_count, generated_at, model_name
-                  FROM report
-                 WHERE period_type = :period
-                 ORDER BY period_key DESC
-                 LIMIT :limit
-                """;
         return jdbc.query(
-                sql,
+                LIST_SQL,
                 new MapSqlParameterSource()
                         .addValue("period", normalisePeriod(period))
                         .addValue("limit", Math.min(Math.max(limit, 1), 90)),
@@ -57,16 +67,9 @@ public class ReportController {
     @GetMapping("/{period}/{key}")
     public ResponseEntity<ReportDetail> detail(
             @PathVariable String period, @PathVariable String key) {
-        String sql =
-                """
-                SELECT period_key, title, summary, body_markdown, item_count,
-                       generated_at, model_name, prompt_version
-                  FROM report
-                 WHERE period_type = :period AND period_key = :key
-                """;
         List<ReportDetail> rows =
                 jdbc.query(
-                        sql,
+                        DETAIL_SQL,
                         new MapSqlParameterSource()
                                 .addValue("period", normalisePeriod(period))
                                 .addValue("key", key),
