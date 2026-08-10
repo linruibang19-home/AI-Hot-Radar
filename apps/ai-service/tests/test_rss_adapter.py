@@ -219,9 +219,7 @@ async def test_arxiv_prefers_replayable_html_fulltext(make_fetcher, fixture_byte
     assert evaluate(acquired.extraction.document).decision is Decision.ACCEPTED
 
 
-async def test_arxiv_missing_html_falls_back_to_replayable_pdf(
-    make_fetcher, fixture_bytes
-) -> None:
+async def test_arxiv_missing_html_falls_back_to_replayable_pdf(make_fetcher, fixture_bytes) -> None:
     pdf = base64.b64decode(fixture_bytes("arxiv_paper.pdf.b64"))
     requested: list[str] = []
 

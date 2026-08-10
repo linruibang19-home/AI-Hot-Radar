@@ -122,6 +122,19 @@ Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互
 **产出**：黄金集、SQL/FTS baseline、Vector baseline、RRF、离线报告。  
 **顺序**：先测 baseline，再加 reranker；不得只展示几个主观示例宣布有效。
 
+### TASK-M5-001｜发布基线整合与全量门禁
+
+**状态**：✅ 2026-08-11 完成；验收记录见 `docs/status/project-status.md` §0。
+**读取**：`07-quality-security-ops.md`、`11-end-to-end-runbook.md`、
+`12-delivery-index.md`、`docs/status/project-status.md`。
+**输入**：当前已由 Docker Compose 实测运行的最新开发分支。
+**产出**：以最新开发提交为起点的正式发布候选基线、可重复的全量验收记录，
+以及与实测结果一致的状态文档。
+**关键测试**：Python pytest/mypy、Java Maven test、Web typecheck/lint/unit、
+契约生成无 diff、Compose 服务健康、数据库迁移与核心页面/API smoke。
+**完成标准**：所有门禁通过；失败项有根因和修复证据；发布候选可 fast-forward
+纳入 `main`；不打印或提交 `.env`，不推送远端，不执行生产部署。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

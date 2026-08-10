@@ -66,10 +66,7 @@ async def score_citations(
     if reranker is None or not citations:
         return {}
 
-    pairs = [
-        (c.chunk_id, c.claim_text, passages.get(c.chunk_id, ""))
-        for c in citations
-    ]
+    pairs = [(c.chunk_id, c.claim_text, passages.get(c.chunk_id, "")) for c in citations]
     pairs = [(chunk_id, claim, text) for chunk_id, claim, text in pairs if text and claim]
     if not pairs:
         return {}

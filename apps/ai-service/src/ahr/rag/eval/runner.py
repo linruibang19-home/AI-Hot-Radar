@@ -163,9 +163,7 @@ class EvalReport:
                 "dominant_source_share@10": round(
                     statistics.fmean(q.dominant_source_share_at_10 for q in rows), 4
                 ),
-                "primary_source@5": round(
-                    statistics.fmean(q.primary_source_at_5 for q in rows), 4
-                ),
+                "primary_source@5": round(statistics.fmean(q.primary_source_at_5 for q in rows), 4),
             }
 
         return {

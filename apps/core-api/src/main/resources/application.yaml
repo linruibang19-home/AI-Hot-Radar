@@ -17,6 +17,9 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: false
     validate-on-migrate: true
+    # V017.1 repairs the prerequisite of the already-released V018 data
+    # migration without changing V018's checksum on existing databases.
+    out-of-order: true
 
   data:
     redis:
