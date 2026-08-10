@@ -53,8 +53,6 @@ async def score_citations(
     reranker: RerankClient | None,
     citations: list[Citation],
     passages: dict[str, str],
-    *,
-    fallback_claim: str,
 ) -> dict[str, float]:
     """Return `chunk_id -> support score` for every citation that could be scored.
 
@@ -69,7 +67,7 @@ async def score_citations(
         return {}
 
     pairs = [
-        (c.chunk_id, c.claim_text or fallback_claim, passages.get(c.chunk_id, ""))
+        (c.chunk_id, c.claim_text, passages.get(c.chunk_id, ""))
         for c in citations
     ]
     pairs = [(chunk_id, claim, text) for chunk_id, claim, text in pairs if text and claim]

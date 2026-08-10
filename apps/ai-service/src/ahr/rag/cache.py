@@ -211,7 +211,7 @@ async def put_embedding(
 # Separate from `CACHE_VERSION` on purpose: that one also namespaces the
 # embedding cache, whose 7-day entries are still perfectly valid here and cost
 # a provider round trip each to rebuild.
-ANSWER_PIPELINE_VERSION = "gated-1"
+ANSWER_PIPELINE_VERSION = "grounded-2"
 
 
 def answer_key(

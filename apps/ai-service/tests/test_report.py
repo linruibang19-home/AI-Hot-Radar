@@ -227,6 +227,54 @@ async def test_summarize_returns_prose_without_json_mode() -> None:
     assert usage.attempts == 1
 
 
+async def test_summarize_can_enforce_a_json_transport_contract() -> None:
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json as json_module
+
+        seen.update(json_module.loads(request.content))
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": '{"answer_markdown":"答案"}'}}]}
+        )
+
+    async with _client(handler) as client:
+        await client.summarize(system_prompt="return json", user_prompt="u", json_mode=True)
+
+    assert seen["response_format"] == {"type": "json_object"}
+
+
+async def test_stream_summarize_can_enforce_a_json_transport_contract() -> None:
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json as json_module
+
+        seen.update(json_module.loads(request.content))
+        frame = 'data: {"choices":[{"delta":{"content":"{}"}}]}\n\ndata: [DONE]\n\n'
+        return httpx.Response(200, text=frame, headers={"content-type": "text/event-stream"})
+
+    usage = TokenUsage()
+    async with _client(handler) as client:
+        pieces = [
+            piece
+            async for piece in client.stream_summarize(
+                system_prompt="return json", user_prompt="u", usage=usage, json_mode=True
+            )
+        ]
+
+    assert pieces == ["{}"]
+    assert seen["response_format"] == {"type": "json_object"}
+
+
+def test_rag_generation_enables_json_mode_for_both_paths() -> None:
+    import inspect
+
+    from ahr.rag.service import _generate
+
+    assert inspect.getsource(_generate).count("json_mode=True") == 2
+
+
 async def test_summarize_propagates_provider_outage() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(503, json={"error": "down"})
