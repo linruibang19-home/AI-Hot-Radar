@@ -37,6 +37,20 @@ temporal 阶段只有 5 个样本，仍显示“样本不足”。
 - [RAG 问答界面精修](rag-ui-polish-20260811.md)
 - [首次生产部署记录](production-deployment-20260811.md)
 
+## 0D. TASK-M5-004 报告邮件订阅闭环（2026-08-11）
+
+报告页在不改变原刊物布局的前提下增加“邮件订阅”入口。Core API 与 PostgreSQL 负责双重
+确认、daily/weekly/monthly 偏好、IANA 时区、退订、幂等投递和三次 SMTP 重试；Web 仅做
+同源代理，Python `send-report --dry-run` 保留为运维预览。只有 PUBLISHED 报告可入队，邮件
+失败不改变报告状态，也不阻塞采集、精选、Story、RAG 或站内阅读。
+
+Flyway V023 已在空库完整执行 24 个迁移并在现有数据卷升级成功。Compose + Mailpit 真实走通
+申请（202）、确认（ACTIVE）、新 PUBLISHED 日报投递、在线阅读链接和退订
+（UNSUBSCRIBED），验收邮箱、报告、投递和邮件均已清理。Core API 72、Web 69、生产资产 7
+项测试通过，spec/preflight/Compose 配置均通过。Chrome、扩展和原生宿主自检正常，但本次
+Codex 浏览器执行内核因本地路径初始化失败，未完成视觉点击验收，不能把 HTTP 验收冒充为
+Chrome 验收。完整证据见 [邮件订阅验收记录](report-subscriptions-20260811.md) 和 ADR-0026。
+
 ## 0B. TASK-M5-002 报告阅读体验与结构化只读模型（2026-08-11）
 
 日报、周报、月报现共用“周期档案 + 刊物正文”阅读组件；保留全站侧栏、AI Hot Radar

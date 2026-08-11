@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { ReportSubscribe } from "@/components/ReportSubscribe";
+
 import {
   REPORT_PERIODS,
   groupReports,
@@ -218,6 +220,10 @@ function ReportPaper({ report, period }: { report: ReportDetail; period: ReportP
         <p className="report-dateline">
           {reportWindow(period, report.date)} · {report.status} · 约 {report.stats.readingMinutes} 分钟
         </p>
+        <div className="report-masthead-actions">
+          <span>新一期发布后，可按你的时区发送</span>
+          <ReportSubscribe period={period} />
+        </div>
         <div className="report-rule" aria-hidden="true" />
       </header>
 

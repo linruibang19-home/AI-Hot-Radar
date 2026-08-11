@@ -2291,6 +2291,238 @@ summary:focus-visible {
   letter-spacing: 0.04em;
 }
 
+.report-masthead-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+  margin: -4px 0 14px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.report-subscribe-trigger,
+.report-subscribe-submit,
+.subscription-action-card button {
+  border: 1px solid var(--accent-ink);
+  border-radius: 7px;
+  background: var(--accent-ink);
+  padding: 7px 12px;
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+}
+
+.report-subscribe-trigger:hover,
+.report-subscribe-submit:hover,
+.subscription-action-card button:hover {
+  filter: brightness(0.94);
+}
+
+.report-subscribe-submit:disabled,
+.subscription-action-card button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.report-subscribe-dialog {
+  width: min(520px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 0;
+  color: var(--text);
+  box-shadow: 0 24px 80px rgb(15 43 39 / 18%);
+}
+
+.report-subscribe-dialog::backdrop {
+  background: rgb(19 31 29 / 42%);
+  backdrop-filter: blur(2px);
+}
+
+.report-subscribe-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+}
+
+.report-subscribe-close button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.report-subscribe-close button:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.report-subscribe-form {
+  padding: 30px;
+  text-align: left;
+}
+
+.report-subscribe-eyebrow,
+.subscription-action-card > span {
+  color: var(--accent-ink);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.report-subscribe-form h2 {
+  margin: 5px 0 7px;
+  font-size: 24px;
+}
+
+.report-subscribe-form > p {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.report-subscribe-email {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.report-subscribe-email input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 10px 12px;
+  color: var(--text);
+  font: inherit;
+}
+
+.report-subscribe-email input:focus,
+.report-subscribe-periods label:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.report-subscribe-form fieldset {
+  margin: 18px 0 0;
+  border: 0;
+  padding: 0;
+}
+
+.report-subscribe-form legend {
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.report-subscribe-periods {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.report-subscribe-periods label {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.report-subscribe-periods label:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.report-subscribe-periods input {
+  margin-top: 2px;
+  accent-color: var(--accent-ink);
+}
+
+.report-subscribe-periods span {
+  display: grid;
+  gap: 2px;
+}
+
+.report-subscribe-periods strong {
+  font-size: 12px;
+}
+
+.report-subscribe-periods small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.report-subscribe-form .report-subscribe-timezone {
+  margin: 12px 0;
+  font-size: 11px;
+}
+
+.report-subscribe-form .report-subscribe-result,
+.subscription-action-result {
+  margin: 0 0 12px;
+  border-radius: 8px;
+  background: #fff4e8;
+  padding: 9px 11px;
+  color: #8a4f13;
+  font-size: 12px;
+}
+
+.report-subscribe-form .report-subscribe-result.is-success,
+.subscription-action-result.is-success {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.report-subscribe-submit {
+  width: 100%;
+  padding: 10px 14px;
+}
+
+.subscription-action-page {
+  display: grid;
+  min-height: calc(100vh - 130px);
+  place-items: center;
+  padding: 32px 0;
+}
+
+.subscription-action-card {
+  width: min(560px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: clamp(26px, 6vw, 48px);
+}
+
+.subscription-action-card h1 {
+  margin: 7px 0 10px;
+  font-size: clamp(1.65rem, 5vw, 2.4rem);
+}
+
+.subscription-action-card > p:not(.subscription-action-result) {
+  margin: 0 0 22px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.subscription-action-card > a {
+  color: var(--accent-ink);
+  font-weight: 650;
+}
+
 .report-rule {
   height: 5px;
   border-top: 2px solid var(--text-soft);
@@ -2681,6 +2913,23 @@ summary:focus-visible {
 }
 
 @media (max-width: 620px) {
+  .report-masthead-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .report-subscribe-dialog {
+    width: calc(100vw - 18px);
+  }
+
+  .report-subscribe-form {
+    padding: 28px 18px 20px;
+  }
+
+  .report-subscribe-periods {
+    grid-template-columns: 1fr;
+  }
+
   .report-lead,
   .report-overview {
     padding: 18px;
