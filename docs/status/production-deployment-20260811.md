@@ -1,7 +1,19 @@
 # TASK-M5-006 首次生产部署记录
 
 日期：2026-08-11  
-状态：**✅ 首次生产闭环完成；v0.1.4 正在 https://aihotradar.online 运行**
+状态：**✅ 首次生产闭环完成；v0.1.5 正在 https://aihotradar.online 运行**
+
+## 0C. 2026-08-12 v0.1.5 导航维护发布（当前）
+
+- PR [#6](https://github.com/linruibang19-home/AI-Hot-Radar/pull/6) 合并提交为
+  `d58e63942c5cfff4c8a134fd77914ccf6893de1a`，PR 与 Release 两轮五项 CI 均全绿；
+- Release [31524206135](https://github.com/linruibang19-home/AI-Hot-Radar/actions/runs/31524206135)
+  发布 web/core-api/ai-service 三张 `sha-d58e639...` 镜像；
+- 服务器 checkout 与 `IMAGE_TAG` 对齐该 SHA，preflight、10 服务健康等待与公网 smoke
+  通过，0 unhealthy；11 个公开页面均为 200；
+- 生产 Chrome 的热点榜定向预取 434ms，随后点击到首屏 219ms，控制台 0 error；公网
+  Playwright 导航回归 16/16。详细根因与被否决方案见
+  [导航点击性能记录](navigation-performance-20260812.md)。
 
 ## 0B. 2026-08-12 首次生产闭环（当前）
 
