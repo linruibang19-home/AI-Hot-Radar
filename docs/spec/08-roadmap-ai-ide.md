@@ -193,6 +193,21 @@ p95/p99 SLO、全库门禁与当前镜像 smoke 均已验证；服务器依赖�
 **完成标准**：当前分支、数据量、测试数、RAG 门禁、报告状态和剩余任务在各入口口径一致；
 不把服务器权限事项、人工视觉验收或未来产品化能力写成已完成。
 
+### TASK-M5-002｜报告阅读体验与结构化只读模型
+
+**状态**：🟡 2026-08-11 实现与自动化验收完成，Chrome 视觉门禁待补；证据见
+`docs/status/report-reader-20260811.md`。
+**读取**：`01-product-requirements.md`、`06-frontend-spec.md`、
+`docs/status/handoff-20260811.md`。
+**输入**：现有 daily/weekly/monthly DRAFT 报告、`report_item` 证据关系和当前报告路由。
+**产出**：向后兼容的结构化报告只读 API；保留全站侧栏的“档案栏 + 刊物正文”报告界面；
+日报、周报、月报使用同一组件但呈现不同周期语义；桌面与移动端可用。
+**边界**：不得复制 AIHOT 品牌、Logo、完整文案或像素布局；不得新增浏览器写凭据；
+本卡不实现人工发布、下架或编辑，DRAFT 必须明确显示；不新增数据库表或迁移。
+**完成标准**：详情返回真实 `report_item`、来源、Story、章节、统计与前后期导航；三周期
+页面可访问；Python 报告测试、Java 测试、Web typecheck/lint/unit/build、Docker smoke 和
+Chrome 桌面/窄屏验收通过。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

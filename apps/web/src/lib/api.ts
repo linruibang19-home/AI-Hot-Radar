@@ -349,11 +349,51 @@ export interface ReportSummary {
   itemCount: number;
   generatedAt: string;
   modelName?: string | null;
+  status: string;
+}
+
+export interface ReportEntry {
+  section: string;
+  position: number;
+  id: string;
+  title: string;
+  summary?: string | null;
+  canonicalUrl: string;
+  contentType?: string | null;
+  sourceId: string;
+  sourceName: string;
+  organization?: string | null;
+  sourceTier: string;
+  storySlug?: string | null;
+  independentSources: number;
+}
+
+export interface ReportSection {
+  key: string;
+  label: string;
+  count: number;
+  items: ReportEntry[];
+}
+
+export interface ReportStats {
+  items: number;
+  sections: number;
+  sources: number;
+  primarySources: number;
+  stories: number;
+  readingMinutes: number;
 }
 
 export interface ReportDetail extends ReportSummary {
   bodyMarkdown: string;
   promptVersion?: string | null;
+  publishedAt?: string | null;
+  sections: ReportSection[];
+  stats: ReportStats;
+  navigation: {
+    previousKey?: string | null;
+    nextKey?: string | null;
+  };
 }
 
 export type ReportPeriod = "daily" | "weekly" | "monthly";
@@ -401,6 +441,34 @@ export function formatPeriodKey(period: ReportPeriod, key: string): string {
   }
   const [year, month, day] = key.split("-");
   return `${year} 年 ${Number(month)} 月 ${Number(day)} 日`;
+}
+
+/** The inclusive calendar window represented by a persisted report key. */
+export function reportWindow(period: ReportPeriod, key: string): string {
+  if (period === "daily") return key;
+  if (period === "monthly") {
+    const match = /^(\d{4})-(\d{2})$/.exec(key);
+    if (!match) return key;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return `${key}-01 — ${key}-${String(last).padStart(2, "0")}`;
+  }
+
+  const match = /^(\d{4})-W(\d{2})$/.exec(key);
+  if (!match) return key;
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  const fourthOfJanuary = new Date(Date.UTC(year, 0, 4));
+  const mondayOfWeekOne = new Date(fourthOfJanuary);
+  mondayOfWeekOne.setUTCDate(
+    fourthOfJanuary.getUTCDate() - ((fourthOfJanuary.getUTCDay() + 6) % 7),
+  );
+  const start = new Date(mondayOfWeekOne);
+  start.setUTCDate(start.getUTCDate() + (week - 1) * 7);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+  return `${start.toISOString().slice(0, 10)} — ${end.toISOString().slice(0, 10)}`;
 }
 
 /**

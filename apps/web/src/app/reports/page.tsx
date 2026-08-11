@@ -1,12 +1,5 @@
-import Link from "next/link";
-
-import {
-  REPORT_PERIODS,
-  fetchReports,
-  formatPeriodKey,
-  groupReports,
-  normalisePeriod,
-} from "@/lib/api";
+import { ReportWorkspace } from "@/components/ReportWorkspace";
+import { REPORT_PERIODS, fetchReport, fetchReports, normalisePeriod } from "@/lib/api";
 
 import type { Metadata } from "next";
 
@@ -31,64 +24,28 @@ export default async function ReportsPage({
   const params = await searchParams;
   const period = normalisePeriod(params.period);
   const reports = await fetchReports(60, period);
-  const archive = groupReports(period, reports);
   const active = REPORT_PERIODS.find((entry) => entry.key === period);
 
-  return (
-    <>
-      <h1 className="page-title">AI 报告</h1>
-      <p className="page-subtitle">
-        {active?.blurb} · 总述由模型基于当期精选生成，所有条目均链接回原始来源
-      </p>
+  if (reports.length === 0) {
+    return (
+      <section className="report-empty" aria-labelledby="report-empty-title">
+        <p>{active?.blurb}</p>
+        <h1 id="report-empty-title">尚无{active?.label}</h1>
+        <p>报告生成后会在这里形成可按周期浏览的出版式档案。</p>
+        <code>docker compose exec ai-service {CLI_HINT[period]}</code>
+      </section>
+    );
+  }
 
-      <nav className="tabs" aria-label="报告周期">
-        {REPORT_PERIODS.map((entry) => {
-          const current = entry.key === period;
-          return (
-            <Link
-              key={entry.key}
-              href={entry.key === "daily" ? "/reports" : `/reports?period=${entry.key}`}
-              className={current ? "tab tab-active" : "tab"}
-              aria-current={current ? "page" : undefined}
-            >
-              {entry.label}
-            </Link>
-          );
-        })}
-      </nav>
+  const report = await fetchReport(period, reports[0].date);
+  if (!report) {
+    return (
+      <section className="report-empty" aria-labelledby="report-empty-title">
+        <h1 id="report-empty-title">报告索引与正文暂时不同步</h1>
+        <p>列表记录存在，但正文读取失败。请稍后重试或检查 core-api 日志。</p>
+      </section>
+    );
+  }
 
-      {reports.length === 0 ? (
-        <div className="empty">
-          尚无{active?.label}。请先生成：
-          <br />
-          <code>docker compose exec ai-service {CLI_HINT[period]}</code>
-        </div>
-      ) : (
-        [...archive.entries()].map(([label, entries]) => (
-          <section key={label}>
-            <h2 className="day-heading">
-              {label}
-              <span className="day-count">{entries.length} 期</span>
-            </h2>
-            {entries.map((report) => (
-              <article className="card" key={report.date}>
-                <div className="card-meta">
-                  <span>{formatPeriodKey(period, report.date)}</span>
-                  <span>·</span>
-                  <span>{report.itemCount} 条精选</span>
-                  {report.modelName && <span className="tag">{report.modelName}</span>}
-                </div>
-                <h3 className="card-title">
-                  <Link href={`/reports/${period}/${report.date}`}>{report.title}</Link>
-                </h3>
-                {report.summary && (
-                  <p className="card-summary">{report.summary.slice(0, 220)}…</p>
-                )}
-              </article>
-            ))}
-          </section>
-        ))
-      )}
-    </>
-  );
+  return <ReportWorkspace period={period} reports={reports} report={report} />;
 }
