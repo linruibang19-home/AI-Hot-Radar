@@ -128,8 +128,9 @@ docker run --rm -v "$PWD/apps/core-api:/build" -v "$PWD/database/migrations:/bui
 - **M5 上线**：部署产物（prod compose / Caddy / GHCR workflow / 备份脚本）已就绪，
   剩下的是密钥轮换、供应商消费上限、服务器、DNS/TLS、真实告警与恢复演练——见
   `docs/status/handoff-20260811.md`。
-- **日报/周报/月报生成与预览已恢复，但 14 份当前全部是 DRAFT**（日报 10、周报 3、
-  月报 1）；生产发布前仍需补齐人工审核/发布闭环，不能把预览等同于正式发布。
+- **日报/周报/月报已启用非阻塞发布门**：当前 14 份（日报 10、周报 3、月报 1）均为
+  PUBLISHED；不合格版本进入 REVIEW_REQUIRED，人工 WITHDRAWN 不会被 pipeline 自动解除。
+  站内发布是自动的；邮件目前仍是受保护的手工 `send-report`，订阅与定时群发尚未实现。
 - **管理端写操作只有 API，没有浏览器 UI**。鉴权、二次确认、审计都已实现并实测，
   但把 OPERATOR 令牌放进 localStorage 需要单独想清楚 XSS 面（ADR-0019）。
 - **`outbox_event` 只写不读**：`published_at` 全空、没有消费者。

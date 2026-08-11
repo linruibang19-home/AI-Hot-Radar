@@ -2,7 +2,7 @@
 
 文档 ID：`AHR-INDEX-1200`
 
-版本：`v1.3.0`
+版本：`v1.3.1`
 更新时间：2026-08-11
 
 ## 1. 当前交付状态
@@ -34,7 +34,7 @@ DNS/TLS、真实告警和恢复演练尚未执行。
 | `apps/web/` | Next.js 15 App Router 网站、RAG UI、评测与运维页 | 已实现；当前镜像健康 |
 | `apps/core-api/` | Spring Boot 3 内容、报告与管理 API | 已实现；当前镜像健康 |
 | `apps/ai-service/` | FastAPI 采集、加工、聚类、报告与 RAG | 已实现；当前镜像健康 |
-| `database/migrations/` | Flyway V001–V021（含 V017.1） | 空库与已有库升级通过 |
+| `database/migrations/` | Flyway V001–V022（含 V017.1） | 当前库升级通过；V022 报告发布迁移已执行 |
 | `infra/compose/docker-compose.yml` | 本地唯一启动入口 | 已验证 |
 | `infra/compose/docker-compose.prod.yml` | 生产 Compose | 产物就绪，未在目标服务器执行 |
 | `infra/caddy/Caddyfile` | HTTPS 反向代理 | 产物就绪，待域名与证书 |
@@ -44,8 +44,9 @@ DNS/TLS、真实告警和恢复演练尚未执行。
 | `config/` | 140 信源、9 类 Profile、taxonomy 与受限 watchlist | 已加载；社交监控保持关闭 |
 
 当前公开页面：`/`、`/items`、`/hot`、`/stories`、`/topics`、`/reports`、`/ask`、
-`/eval`、`/ops`、`/admin/sources`。日报、周报、月报均可生成与预览；当前数据库 14 份
-报告均为 DRAFT，正式发布闭环仍是待办。
+`/eval`、`/ops`、`/admin/sources`。日报、周报、月报均可生成并经确定性门禁自动发布；
+当前数据库 14 份报告均为 PUBLISHED。受保护的发布/撤回 API 已完成，浏览器管理写 UI、
+订阅与定时邮件仍是待办。
 
 ## 3. 规格与设计
 
@@ -66,18 +67,18 @@ DNS/TLS、真实告警和恢复演练尚未执行。
 | `docs/spec/10-source-adapter-implementation.md` | Adapter 实现边界 | 锁定 |
 | `docs/spec/11-end-to-end-runbook.md` | 全链路运行与恢复 | 当前 |
 | `docs/design/` | RAG 评测、实现和部署设计 | 当前 |
-| `docs/adr/` | 已锁定架构决策与回滚条件 | 当前至 ADR-0024 |
+| `docs/adr/` | 已锁定架构决策与回滚条件 | 当前至 ADR-0025 |
 
 ## 4. 当前交付证据
 
-- Python：Ruff、mypy 86 个源码文件、pytest 863/863；
-- Java：Maven verify 55/55；
+- Python：Ruff、mypy 86 个源码文件、pytest 871/871；
+- Java：Maven test 62/62；
 - Web：typecheck、lint、Vitest 55/55、Next.js 15.5.23 production build；
-- 数据库：140 个信源、1784 条内容、6875 个分块且 100% 向量化、1386 个 Story；
+- 数据库：140 个信源、1855 条内容、7057 个分块且 100% 向量化、1448 个 Story；
 - RAG：主集 Recall@20 0.8994、专项集 0.9333、引用完整性 0.9881、段落支持度
   0.9344、拒答准确率 1.0000、关键问题 P0 为 0；
 - 运行态：PostgreSQL、Redis、Core API、AI Service、Web 健康，`/ask` 返回 200；
-- 报告：日报 10、周报 3、月报 1，均为 DRAFT。
+- 报告：日报 10、周报 3、月报 1，均为 PUBLISHED；公开 API 只读取 PUBLISHED。
 
 证据与限制分别见本页 §1 指向的四份 08-11 状态文档；不要脱离 run、样本量和口径引用
 单个指标。
@@ -86,7 +87,7 @@ DNS/TLS、真实告警和恢复演练尚未执行。
 
 1. 上线 P0：轮换全部密钥、设置供应商消费上限、配置服务器/DNS/TLS/告警；
 2. 上线 P0：执行带提交 SHA 的首次部署并做真实 `pg_dump` 恢复演练；
-3. 产品 P1：补齐报告人工审核/发布、管理写操作 UI 与加工任务重跑入口；
+3. 产品 P1：在明确订阅者、退订和时区策略后补报告定时投递；补管理写操作 UI 与加工任务重跑入口；
 4. RAG P1：扩大实体/时间人工标注与噪声集，解决 SLA 类目标原文稳定排第 27 的缺口；
 5. 产品化 P2：反馈闭环、版本化知识快照、账号/租户/ACL（只在私有语料进入范围后）。
 
