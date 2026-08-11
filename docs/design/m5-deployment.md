@@ -1,7 +1,7 @@
 # M5 上线方案
 
 上级规格：`AHR-QSO-700`（安全与运维）、`AHR-ROADMAP-800` M5
-状态：**首次生产闭环完成；v0.1.4 正在 aihotradar.online 运行**
+状态：**首次生产闭环完成；v0.1.5 正在 aihotradar.online 运行**
 
 ## 0. 已查明的事实
 

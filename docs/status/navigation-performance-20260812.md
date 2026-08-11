@@ -1,7 +1,7 @@
 # 导航点击性能与即时反馈（2026-08-12）
 
 任务：TASK-M5-006 上线维护项
-状态：本地候选已通过构建与浏览器回归，待同提交发布到生产后补线上复测
+状态：✅ 已随 `v0.1.5@d58e639` 发布并通过公网浏览器回归
 
 ## 1. 根因与基线
 
@@ -33,6 +33,16 @@ Redis/Core API 没有形成秒级瓶颈，主要问题是动态 App Router 等�
 | 慢 RSC 回归 | 600ms 人工延迟期间 `aria-busy=true` 且骨架可见；完成后状态清除 |
 | 定向预取 | 本地 Chrome 悬停预取完成后，热点榜点击到 URL 切换 214ms |
 | 浏览器控制台 | 0 error |
+
+## 4. 生产发布复测
+
+- PR [#6](https://github.com/linruibang19-home/AI-Hot-Radar/pull/6) 五项 CI 全绿后合并；
+- Release [31524206135](https://github.com/linruibang19-home/AI-Hot-Radar/actions/runs/31524206135)
+  在 `d58e63942c5cfff4c8a134fd77914ccf6893de1a` 重跑五项门禁并发布三张 SHA 镜像；
+- 服务器 preflight、镜像 pull、10 服务 `up --wait` 与公网 smoke 全部通过，0 unhealthy；
+- 生产 Chrome 实测目标路由悬停预取 434ms，随后点击到目标首屏 219ms，控制台 0 error；
+- 官方 Playwright 容器直接对 `https://aihotradar.online` 跑导航回归 16/16，通过桌面、
+  详情、原文、慢 RSC、返回和 375px 移动端场景。
 
 ChromeCodex 插件仍在启动内核前报 `failed to write kernel assets ... (os error 3)`；本次采用
 本机已安装 Chrome 的 Playwright 通道与官方 Playwright 容器完成真实浏览器验收，插件故障
