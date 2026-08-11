@@ -57,7 +57,7 @@ fi
 
 for name in IMAGE_REPO IMAGE_TAG SITE_DOMAIN PUBLIC_BASE_URL ACME_EMAIL \
 	POSTGRES_DB POSTGRES_USER LLM_API_KEY EMBEDDING_API_KEY GITHUB_TOKEN \
-	ALERT_WEBHOOK_URL SMTP_HOST EMAIL_FROM; do
+	SMTP_HOST EMAIL_FROM; do
 	require_value "$name"
 done
 
@@ -90,10 +90,19 @@ if ! printf '%s' "$acme_email" | grep -Eq '^[^[:space:]@]+@[^[:space:]@]+\.[^[:s
 fi
 
 alert_url=$(value ALERT_WEBHOOK_URL)
-case "$alert_url" in
-	https://*) ;;
-	*) fail "ALERT_WEBHOOK_URL must use HTTPS" ;;
-esac
+alert_email=$(value ALERT_EMAIL_TO)
+if [ -z "$alert_url" ] && [ -z "$alert_email" ]; then
+	fail "ALERT_WEBHOOK_URL or ALERT_EMAIL_TO is required"
+fi
+if [ -n "$alert_url" ]; then
+	case "$alert_url" in
+		https://*) ;;
+		*) fail "ALERT_WEBHOOK_URL must use HTTPS" ;;
+	esac
+fi
+if [ -n "$alert_email" ] && ! printf '%s' "$alert_email" | grep -Eq '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'; then
+	fail "ALERT_EMAIL_TO is not a valid recipient address"
+fi
 
 for name in LLM_DAILY_TOKEN_LIMIT RAG_RATE_PER_MINUTE RAG_RATE_PER_DAY \
 	ALERT_FAILURE_THRESHOLD MONITOR_INTERVAL_SECONDS BACKUP_MAX_AGE_SECONDS BACKUP_KEEP_DAYS \
