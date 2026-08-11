@@ -50,6 +50,14 @@ services:
       timeout: 3s
       retries: 10
 
+  # Local email sandbox for TASK-M5-004. Messages stay on the developer
+  # machine and can be inspected at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   core-api:
     build:
       # Root context: the image needs database/migrations for Flyway.
@@ -65,6 +73,16 @@ services:
       # requires it explicitly and refuses to start without it.
       AHR_ADMIN_BOOTSTRAP_TOKEN: ${AHR_ADMIN_BOOTSTRAP_TOKEN:-local-development-admin-token-do-not-deploy}
       AHR_ADMIN_VIEWER_TOKEN: ${AHR_ADMIN_VIEWER_TOKEN:-local-development-viewer-token-do-not-deploy}
+      # Local Compose is deliberately pinned to Mailpit. A developer's root
+      # .env may contain production SMTP values for preflight, but local
+      # acceptance must never contact an external mailbox by accident.
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_AUTH: false
+      SMTP_STARTTLS: false
+      EMAIL_FROM: noreply@localhost
+      EMAIL_DISPATCH_INTERVAL_MS: ${LOCAL_EMAIL_DISPATCH_INTERVAL_MS:-10000}
+      AHR_SUBSCRIPTION_TOKEN_SECRET: ${AHR_SUBSCRIPTION_TOKEN_SECRET:-local-development-subscription-token-secret-do-not-deploy}
     # POSTGRES_USER / POSTGRES_PASSWORD arrive from here rather than from
     # `environment:`, which would override them with the interpolated default.
     env_file:
@@ -77,6 +95,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_started
 
   ai-service:
     build:

@@ -117,8 +117,9 @@ const SECTIONS: { label: string; entries: NavEntry[] }[] = [
     // know it works" rather than content, so they sit together.
     label: "工程",
     entries: [
-      { href: "/eval", label: "检索评测", icon: "eval" },
-      { href: "/ops", label: "成本与延迟", icon: "ops" },
+      { href: "/eval", label: "RAG 质量", icon: "eval" },
+      { href: "/ops", label: "运行状态", icon: "ops" },
+      { href: "/admin/models", label: "模型配置", icon: "admin" },
       { href: "/admin/sources", label: "信源后台", icon: "admin" },
     ],
   },

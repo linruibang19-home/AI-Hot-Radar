@@ -57,7 +57,7 @@ fi
 
 for name in IMAGE_REPO IMAGE_TAG SITE_DOMAIN PUBLIC_BASE_URL ACME_EMAIL \
 	POSTGRES_DB POSTGRES_USER LLM_API_KEY EMBEDDING_API_KEY GITHUB_TOKEN \
-	ALERT_WEBHOOK_URL; do
+	ALERT_WEBHOOK_URL SMTP_HOST EMAIL_FROM; do
 	require_value "$name"
 done
 
@@ -65,6 +65,7 @@ require_min_length POSTGRES_PASSWORD 24
 require_min_length INTERNAL_SERVICE_TOKEN 32
 require_min_length AHR_ADMIN_BOOTSTRAP_TOKEN 32
 require_min_length AHR_ADMIN_VIEWER_TOKEN 32
+require_min_length AHR_SUBSCRIPTION_TOKEN_SECRET 32
 
 operator_token=$(value AHR_ADMIN_BOOTSTRAP_TOKEN)
 viewer_token=$(value AHR_ADMIN_VIEWER_TOKEN)
@@ -95,12 +96,31 @@ case "$alert_url" in
 esac
 
 for name in LLM_DAILY_TOKEN_LIMIT RAG_RATE_PER_MINUTE RAG_RATE_PER_DAY \
-	ALERT_FAILURE_THRESHOLD MONITOR_INTERVAL_SECONDS BACKUP_MAX_AGE_SECONDS BACKUP_KEEP_DAYS; do
+	ALERT_FAILURE_THRESHOLD MONITOR_INTERVAL_SECONDS BACKUP_MAX_AGE_SECONDS BACKUP_KEEP_DAYS \
+	SMTP_PORT EMAIL_DISPATCH_INTERVAL_MS; do
 	resolved=$(value "$name")
 	if ! printf '%s' "$resolved" | grep -Eq '^[1-9][0-9]*$'; then
 		fail "$name must be a positive integer"
 	fi
 done
+
+for name in SMTP_AUTH SMTP_STARTTLS; do
+	resolved=$(value "$name")
+	case "$resolved" in
+		true|false) ;;
+		*) fail "$name must be true or false" ;;
+	esac
+done
+
+if [ "$(value SMTP_AUTH)" = "true" ]; then
+	require_value SMTP_USERNAME
+	require_value SMTP_PASSWORD
+fi
+
+email_from=$(value EMAIL_FROM)
+if ! printf '%s' "$email_from" | grep -Eq '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'; then
+	fail "EMAIL_FROM is not a valid sender address"
+fi
 
 if [ "$(value PROVIDER_BUDGET_CAP_CONFIRMED)" != "true" ]; then
 	fail "provider-side spending caps have not been confirmed"

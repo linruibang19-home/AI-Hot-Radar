@@ -1,7 +1,7 @@
 # 项目进度总览
 
 > 更新时间：2026-08-11
-> 当前阶段：**M4 完成；M5 目标机与不可变镜像就绪，等待域名和专用外部凭据后启动**
+> 当前阶段：**M4 完成；M5 代码与本地上线门禁完成，生产等待当前分支发布和外部配置**
 > 所有数据均来自实际运行，非估算
 
 > 本文是按时间累积的工程日志，后文保留了当时的失败、旧快照和已关闭待办。判断当前
@@ -10,22 +10,26 @@
 
 ## 0A. 2026-08-11 当前发布候选摘要
 
-当前分支 `codex/rag-quality-gates` 的部署提交为 `29cb967`，发布标签 `v0.1.1` 已通过完整
-CI 并发布三套不可变镜像。除 RAG 专项门禁与问答 UI 外，报告结构化阅读和非阻塞发布后端
-均已纳入同一发布提交；目标机执行证据见
-[首次生产部署记录](production-deployment-20260811.md)。
+当前分支为 `codex/prelaunch-product-completion`，最新功能提交 `0ef8526`。本分支在原发布
+候选上继续完成邮箱订阅、DeepSeek 生成模型白名单切换以及 RAG 质量/运行页面收口；尚未
+push 或生成新不可变镜像。服务器仍运行旧仓库提交 `0ae2fa75` 且项目容器数为 0，不能把
+“目标机已准备”描述成“网站已上线”。目标机执行证据见
+[首次生产部署记录](production-deployment-20260811.md)，当前 checkout 见
+[08-11 交接](handoff-20260811.md)。
 
 | 当前实测 | 数值 |
 |---|---:|
 | source / ACTIVE | 140 / 108 |
-| content_item | 1868 |
-| content_chunk / 已向量化 | 7102 / 7102 |
-| story / 多信源 Story | 1458 / 28 |
-| entity | 5092 |
+| content_item | 1915（采集仍在增长） |
+| content_chunk / 已向量化 | 7264 / 7264 |
+| story / 多信源 Story | 1498 / 32 |
+| entity | 5203 |
 | rag_query / rag_citation | 215 / 910 |
-| report | 14（daily 10 / weekly 3 / monthly 1，全部 PUBLISHED）|
+| report | 15（daily 11 / weekly 3 / monthly 1，全部 PUBLISHED）|
+| Flyway / 生成模型 | V024 / deepseek-v4-flash v3 |
+| 正式订阅 / 投递 | 0 / 0（Mailpit 验收数据已清理） |
 
-当前质量证据：Python 878、Java 62、Web 62 个测试通过；RAG 主集 Recall@20 0.8994、
+当前质量证据：Python 878、Java 74、Web 71 个测试通过；RAG 主集 Recall@20 0.8994、
 专项 0.9333，近邻噪声加入后无退化，引用完整性 0.9881、段落支持度 0.9344、拒答准确率
 1.0000、人工 P0 为 0。近 30 天真实问答总链路 p95 15634ms，低于 30000ms SLO；
 temporal 阶段只有 5 个样本，仍显示“样本不足”。
@@ -35,7 +39,24 @@ temporal 阶段只有 5 个样本，仍显示“样本不足”。
 - [RAG 专项发布门禁与人工审计](rag-specialist-audit-20260811.md)
 - [RAG 安全与性能稳定性](rag-security-performance-20260811.md)
 - [RAG 问答界面精修](rag-ui-polish-20260811.md)
+- [邮箱订阅与定时投递](report-subscriptions-20260811.md)
+- [DeepSeek 生成模型配置](generation-model-selection-20260811.md)
+- [RAG 质量与运行页面](rag-operations-ui-20260811.md)
 - [首次生产部署记录](production-deployment-20260811.md)
+
+## 0D. TASK-M5-004 报告邮件订阅闭环（2026-08-11）
+
+报告页在不改变原刊物布局的前提下增加“邮件订阅”入口。Core API 与 PostgreSQL 负责双重
+确认、daily/weekly/monthly 偏好、IANA 时区、退订、幂等投递和三次 SMTP 重试；Web 仅做
+同源代理，Python `send-report --dry-run` 保留为运维预览。只有 PUBLISHED 报告可入队，邮件
+失败不改变报告状态，也不阻塞采集、精选、Story、RAG 或站内阅读。
+
+Flyway V023 已在空库完整执行 24 个迁移并在现有数据卷升级成功。Compose + Mailpit 真实走通
+申请（202）、确认（ACTIVE）、新 PUBLISHED 日报投递、在线阅读链接和退订
+（UNSUBSCRIBED），验收邮箱、报告、投递和邮件均已清理。Core API 72、Web 69、生产资产 7
+项测试通过，spec/preflight/Compose 配置均通过。Chrome、扩展和原生宿主自检正常，但本次
+Codex 浏览器执行内核因本地路径初始化失败，未完成视觉点击验收，不能把 HTTP 验收冒充为
+Chrome 验收。完整证据见 [邮件订阅验收记录](report-subscriptions-20260811.md) 和 ADR-0026。
 
 ## 0B. TASK-M5-002 报告阅读体验与结构化只读模型（2026-08-11）
 
@@ -110,7 +131,7 @@ Compose smoke 通过。邮件订阅和定时调度不在本卡，当前只有手
 | **M2 内容加工与网站** | ✅ 完成 | 切块、去重、LLM 结构化、主题归一、精选、全文检索、日/周/月报、邮件投递、Redis 缓存、成本追踪 |
 | **M3 Story 与热点** | ✅ 主体完成 | 事件聚类、主来源选择、独立信源计数、事件时间线、cluster_suggestion 复核队列、Story 热度、**精选与报告接入多信源佐证** |
 | **M4 RAG MVP** | ✅ **功能与本地发布门禁完成** | 90 题主集 + 15 题厂商专项集、同候选噪声 A/B、混合召回 + 重排 + 时效/实体融合、父块、Story 折叠、引用与拒答、数值关系审计、安全边界、SSE/token 流式、永久链接、p50/p95/p99 SLO、可信 UI。门禁判定见 1.1 |
-| M5 上线与增强 | 🟡 **代码侧门禁完成** | preflight / immutable release / Caddy / monitor / backup / smoke 已落地，本地真实恢复通过；密钥轮换、DNS/TLS、真实告警、异机备份与首次部署需目标权限 |
+| M5 上线与增强 | 🟡 **代码侧门禁完成** | 邮箱订阅、模型配置、工程页、preflight / immutable release / Caddy / monitor / backup / smoke 已落地，V024 真实恢复通过；当前分支发布、专用密钥、SMTP、DNS/TLS、真实告警、异机备份与首次部署仍需闭环 |
 
 > **M4 的两个待办已于 2026-08-06 关闭**：token 级流式与 `/ask/{id}` 永久链接。
 > 详见 3.16 与 3.17。至此 `AHR-RAG-400` 与 `AHR-API-500` 的**功能条目**全部实现。
