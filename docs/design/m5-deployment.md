@@ -1,7 +1,7 @@
 # M5 上线方案
 
 上级规格：`AHR-QSO-700`（安全与运维）、`AHR-ROADMAP-800` M5
-状态：**方案已定，待执行**
+状态：**生产预检、监控、备份恢复工具和本地演练已完成；目标服务器待执行**
 
 ## 0. 已查明的事实
 
@@ -69,10 +69,9 @@ GitHub Actions 构建 → GHCR 推镜像 → 服务器 `docker compose pull && u
 
 理由：2 GB 机器构建会 OOM；而且**构建产物与代码提交绑定**，回滚就是拉上一个 tag。
 
-需要新增：
-- `infra/compose/docker-compose.prod.yml`（不映射内部端口、加 Caddy、镜像用 GHCR tag）
-- `.github/workflows/release.yml`（构建三个镜像并推 GHCR）
-- `Caddyfile`
+已实现：生产 Compose 不映射内部端口；release 先验证同一提交再构建三镜像；Caddy 自动
+TLS；部署只接受不可变 `sha-<40 hex>` 标签。`preflight.sh`、`deploy-production.sh`、
+`smoke-production.sh` 把配置、发布和公网验收串成失败即停的门禁。
 
 ## 5. 为什么不用 Vercel
 
@@ -102,7 +101,7 @@ Vercel 只能跑 `web`。`core-api`（JVM）、三个 Python 服务、Postgres+p
 
 | 风险 | 应对 |
 |---|---|
-| 公开 `/ask` 被刷，LLM 成本失控 | 上线前加限流（`AHR-API-500` §4 已规定匿名 3/min、20/day，**尚未实现**）|
+| 公开 `/ask` 被刷，LLM 成本失控 | 已实现匿名 3/min、20/day 和部署级 token 日预算；生产还必须在供应商侧设消费上限 |
 | 原始 HTML 占库一半且线性增长 | 加保留期，或迁对象存储 |
-| 单机无冗余 | 作品站可接受；备份是底线 |
+| 单机无冗余 | 作品站可接受；每日校验和备份、备份年龄告警、每月隔离恢复演练和异机副本是底线 |
 | 香港节点大陆访问偶有抖动 | Cloudflare 代理可缓解；必要时再考虑备案迁大陆 |

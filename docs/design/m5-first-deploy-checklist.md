@@ -1,7 +1,7 @@
 # M5 首次部署清单：会踩的坑，按会踩到的顺序
 
 上级：`docs/design/m5-deployment.md`（方案与选型）、`AHR-QSO-700` §4
-状态：**清单已核对，部署待执行**
+状态：**本地上线门禁与恢复演练已通过；目标服务器部署待执行**
 
 `m5-deployment.md` 说的是「怎么选、为什么这么选」。这份说的是
 **你照着做的时候，第几步会出问题**。每一条要么是我在审查产物时实际发现并已修的，
@@ -66,17 +66,18 @@ SHA-256，那个选择只在令牌高熵时才成立。
 **在你打第一个标签之前，GHCR 上一个镜像都没有**——服务器上 `docker compose pull`
 会直接失败，且报的是「找不到镜像」而不是「你还没发布」。
 
-在本地做，不在服务器上做：
+在本地做，不在服务器上做。发布 workflow 会先复用完整 CI，只有同一提交的
+Spec/Python/Java/空库迁移/Web 全绿才构建镜像：
 
 ```bash
-git checkout main && git merge --no-ff claude/project-review-and-progress-ef3d8a
+git checkout main && git merge --no-ff codex/rag-quality-gates
 ```
 
 ```bash
 git push origin main && git tag v0.1.0 && git push origin v0.1.0
 ```
 
-然后去 GitHub Actions 看那三个 job（web / ai-service / core-api）**全绿**再往下走。
+然后去 GitHub Actions 看 verify 与三个 build job（web / ai-service / core-api）**全绿**再往下走。
 三个镜像各约 300–600 MB，构建加推送通常十几分钟。
 
 **镜像默认是私有的。** 两条路选一条：
@@ -92,7 +93,8 @@ echo <PAT with read:packages> | docker login ghcr.io -u linruibang19-home --pass
 
 ## 4. `.env` 的位置是错得最快的一步
 
-生产 compose 读的是 **`infra/compose/.env`**，不是仓库根目录的 `.env`。
+生产预检默认读 **`infra/compose/.env`**，不是仓库根目录的 `.env`；也可以把显式路径
+传给 `preflight.sh` / `deploy-production.sh`，脚本会同时把它传给 Compose，避免两个配置源漂移。
 
 原因写在文件里：Compose 解析 `${VAR}` 时只看**compose 文件旁边**的 `.env`，
 从来不看 `env_file:` 指的那个。把密钥放在仓库根目录，`${POSTGRES_PASSWORD}`
@@ -105,9 +107,15 @@ cp .env.example infra/compose/.env   # 然后填真值
 `env_file` 标了 `required: true`，所以文件不存在会**直接报错**而不是带着空值启动。
 这是故意的。
 
-必填（缺一个就启动失败，用的是 `${VAR:?...}` 语法）：
-`POSTGRES_PASSWORD` · `INTERNAL_SERVICE_TOKEN` · `AHR_ADMIN_BOOTSTRAP_TOKEN` ·
-`AHR_ADMIN_VIEWER_TOKEN` · `PUBLIC_BASE_URL` · `SITE_DOMAIN`
+填完后先锁权限并预检；不要把 `preflight.env.example` 当生产配置，它只用于结构测试：
+
+```bash
+chmod 600 infra/compose/.env
+sh infra/scripts/preflight.sh infra/compose/.env
+```
+
+预检会拒绝：可变镜像标签、localhost 公网地址、短/相同管理令牌、非 HTTPS 告警地址、
+未确认的供应商消费上限或异机备份责任，以及 Linux 上权限不是 600/400 的密钥文件。
 
 ---
 
@@ -239,10 +247,12 @@ sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapf
 ## 10. 首次启动的顺序与验证
 
 ```bash
-cd ai-hot-radar && docker compose -f infra/compose/docker-compose.prod.yml up -d
+cd ai-hot-radar && sh infra/scripts/deploy-production.sh infra/compose/.env
 ```
 
-Flyway 在 core-api 启动时把 **V001–V021** 一次性建完（空库首次会跑十几秒）。
+部署脚本先要求干净工作树和 `IMAGE_TAG=sha-<当前 HEAD>`，再执行 preflight、pull、
+`up -d --wait` 与公网 smoke。Flyway 在 core-api 启动时把 **V001–V022**（含 V017.1）
+一次性建完（空库首次会跑十几秒）。
 镜像里已经带了迁移文件——core-api 的 Dockerfile 用仓库根做 build context 就是为了这个。
 
 按顺序验证：
@@ -262,7 +272,8 @@ docker compose -f infra/compose/docker-compose.prod.yml logs core-api | grep "re
 curl -sS -o /dev/null -w '%{http_code}\n' https://<域名>/api/v1/admin/sources
 ```
 
-**必须是 401。** 返回 200 说明鉴权没生效，立刻停。
+**公网必须是 404。** Caddy 只反代 Next.js，内部 Java 管理 API 没有公网路由；返回 401
+反而说明内部管理面被暴露。站内 `/admin/sources` 由 VIEWER 令牌在服务器侧读取，页面应为 200。
 
 ---
 
@@ -301,17 +312,21 @@ prod compose 默认 200 万 token/天，`0` 表示关闭。
 ## 12. 备份：没演练过的备份不算备份
 
 `backup` 容器每 24 小时 `pg_dump -Fc` 一次，保留 7 天，落在
-`infra/compose/backups/`。它先写 `.partial` 再改名，所以半截的转储不会伪装成好的。
+`infra/compose/backups/`。它先写 `.partial`，用 `pg_restore --list` 验证目录，再原子改名
+并生成 `.sha256`；半截或目录损坏的转储不会伪装成好的。
 
-**上线后 48 小时内做一次真的恢复演练**：
+目标机首次部署后立即做一次隔离恢复演练（不会覆盖源库，目标库名被限制为
+`ai_hot_radar_restore_verify*`）：
 
 ```bash
-docker compose -f infra/compose/docker-compose.prod.yml exec postgres \
-  pg_restore -U $POSTGRES_USER -d postgres --create --clean /backups/<文件名>.dump
+BACKUP_FILE=/backups/<文件名>.dump docker compose \
+  --env-file infra/compose/.env -f infra/compose/docker-compose.prod.yml \
+  --profile tools run --rm restore-verify
 ```
 
 两个已知局限，如实记着：
-- 备份和数据库**在同一块盘上**。磁盘挂了就都没了。真要防，得往对象存储送一份。
+- 本机备份和数据库仍在同一块盘上；生产 preflight 要求明确确认异机/对象存储责任，
+  但实际同步必须在拿到目标服务器与存储凭据后配置并复测。
 - 保留 7 天意味着**第 8 天才发现的数据损坏无法回滚**。
 
 ---
@@ -322,7 +337,9 @@ docker compose -f infra/compose/docker-compose.prod.yml exec postgres \
 - [ ] `/admin/sources` 能列出信源（说明 VIEWER 凭据配对了）
 - [ ] `sitemap.xml` 里是真域名而不是 localhost（靠 `PUBLIC_BASE_URL`）
 - [ ] scheduler 日志里能看到 `tick claimed=… ok=…`
-- [ ] 隔天回来看 `docker compose logs backup`，确认 `backup ok:`
+- [ ] 隔天回来看 `docker compose logs backup`，确认 `backup ok and catalog verified:`
+- [ ] monitor 启动后能收到一次受控失败告警与恢复通知；它只读健康端点与备份目录，
+  不挂 Docker socket，也不会自行重启服务。
 
 ## 14. 搬家：租期到期前要做的事
 
