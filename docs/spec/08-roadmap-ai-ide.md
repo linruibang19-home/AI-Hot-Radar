@@ -259,7 +259,8 @@ Compose 与已通过的 M4/M5 质量门禁。
 **读取**：`02-system-architecture.md`、`07-quality-security-ops.md`、
 `11-end-to-end-runbook.md`、`docs/design/m5-deployment.md`、
 `docs/design/m5-first-deploy-checklist.md`、TASK-M5-005 验收记录。
-**输入**：`kuritian.online`、目标服务器、公网部署脚本、不可变镜像发布门和本地恢复证据。
+**输入**：主人待提供的新域名、香港 2C4G 目标服务器、公网部署脚本、不可变镜像发布门和
+本地恢复证据。旧 `kuritian.online` 不续费，不再作为本卡上线域名。
 **产出**：专用 SSH 密钥与非 root 运维边界、目标机系统审计、Docker/防火墙、生产配置、
 Cloudflare DNS/TLS、按提交 SHA 的首次部署、公网 smoke、真实告警、异机备份和恢复复演。
 **边界**：聊天中出现的口令视为泄露，不在命令、文件或日志中复述/使用；真实密钥不得进入
@@ -268,6 +269,9 @@ Git；出租方账号下的服务器按半可信主机处理，模型密钥必�
 **完成标准**：域名续费与 A 记录生效；80/443 只到 Caddy，内部端口公网不可达；HTTPS
 Full (strict) 与安全头通过；核心服务健康；AI 动态、精选、三周期报告与 RAG 公网可用；
 告警失败/恢复均实收；异机备份存在且隔离恢复成功；部署提交、RPO/RTO 和回滚命令有记录。
+**当前证据**：见 `docs/status/production-deployment-20260811.md`。服务器、SSH/UFW/Docker、
+不可变镜像和权限 600 的 fail-closed 生产配置已就绪；域名、专用供应商凭据、告警与异机
+备份仍等待主人侧外部状态。
 
 ## 4. AI IDE 统一提示词
 
