@@ -273,11 +273,11 @@ Git；出租方账号下的服务器按半可信主机处理，模型密钥必�
 **完成标准**：域名续费与 A 记录生效；80/443 只到 Caddy，内部端口公网不可达；HTTPS
 Full (strict) 与安全头通过；核心服务健康；AI 动态、精选、三周期报告与 RAG 公网可用；
 告警失败/恢复均实收；异机备份存在且隔离恢复成功；部署提交、RPO/RTO 和回滚命令有记录。
-**当前证据**：见 `docs/status/production-deployment-20260811.md`。服务器、SSH/UFW/Docker、
-不可变镜像、权限 600 的 fail-closed 生产配置和域名 A 记录已就绪；服务器仓库已与
-`0ae2fa75` 对齐且生产容器保持停止。主人决定先完成邮箱订阅、生成模型切换和工程页面收口，
-三项现已在本地完成并通过 V024 空库迁移、102 MiB 隔离恢复与全栈回归；当前分支尚未
-push 或发布新不可变镜像。专用供应商凭据、消费上限、生产 SMTP、告警与异机备份仍未关闭。
+**当前证据**：见 `docs/status/production-deployment-20260811.md`。PR #3 五项 CI 全绿后已合并；
+`v0.1.3@4c497357` 的同提交 Release 与 web/ai-service/core-api 三张不可变镜像全部成功。
+服务器 `production` 已严格 fast-forward 到该提交，工作树干净且可读取 GHCR manifest；
+生产容器仍为 0。新版 preflight 正确阻断缺失的轮换后供应商凭据、生产 SMTP、HTTPS 告警、
+消费上限与异机备份确认；TLS、公网 smoke 和真实投递尚未执行，因此本卡继续保持“进行中”。
 
 ### TASK-M5-007｜DeepSeek 生成模型可见、可切换、可审计
 

@@ -1,36 +1,29 @@
 # TASK-M5-006 首次生产部署记录
 
 日期：2026-08-11  
-状态：**服务器与域名已准备；当前功能分支尚未发布，生产按设计保持停止**
+状态：**v0.1.3 已发布且服务器代码已对齐；生产因外部配置未齐按设计保持停止**
 
-## 0. 2026-08-11 暂停快照
+## 0. 2026-08-11 23:06 发布与暂停快照
 
-- 新域名 `aihotradar.online` 的 A 记录已经生效并指向 `47.242.229.41`；
-- 本地 `main`、GitHub `main`、标签 `v0.1.2` 与服务器 `production` 当前均指向
-  `0ae2fa75f2e7cabf9ef4586181b78bf09794607d`；
-- 服务器仓库工作树已确认干净，生产 `.env` 仍保持权限 600 且被 Git 忽略；
-- 生产项目容器数为 0，80/443 当前没有项目服务监听，尚未签发 TLS 证书；
-- 主人决定先完成邮箱订阅、生成模型切换和工程页面收口，再产生新的不可变镜像并部署；
-- 邮箱订阅已在本地完成并通过 Mailpit 端到端验收；尚未配置生产 SMTP，也尚未产生或推送
-  包含该功能的新不可变镜像，因此服务器继续保持停止；
-- 当前暂停不会影响本地持续采集与验证，也没有半配置服务对公网暴露。
+- PR [#3](https://github.com/linruibang19-home/AI-Hot-Radar/pull/3) 的五项 CI 全绿后已合并到
+  `main@4c4973575249f7f1a883a36a9cf3532a14fef0a4`；
+- 标签 `v0.1.3` 已创建，Release
+  [31504670925](https://github.com/linruibang19-home/AI-Hot-Radar/actions/runs/31504670925)
+  在同一提交上重复通过 spec、Python、Java、Web 和空库 Flyway 门禁；
+- `web`、`ai-service`、`core-api` 三张生产镜像均已发布 `v0.1.3`、`latest` 与
+  `sha-4c4973575249f7f1a883a36a9cf3532a14fef0a4`；
+- 香港目标机 `production` 已从 `0ae2fa75` 严格 fast-forward 到 `4c497357`，工作树干净，
+  精确标签为 `v0.1.3`；目标机可匿名读取 GHCR manifest，因此镜像拉取不依赖聊天中暴露的 PAT；
+- 目标机根盘 40 GiB、可用 31 GiB，Docker 29.7.2、Compose 5.4.0；项目容器数仍为 0；
+- 域名 `aihotradar.online` 的 A 记录继续指向 `47.242.229.41`；80/443 没有项目监听，
+  尚未签发 TLS 证书，公网仍未上线；
+- 新版真实 `.env` 预检按设计失败 14 项，全部是外部配置或运维确认；没有为了“先启动”
+  降低门禁，也没有使用聊天中出现过的 DeepSeek、SiliconFlow 或 GitHub 密钥；
+- 本地 V024 的 102 MiB dump 已完成 SHA/目录校验与隔离恢复，恢复快照为
+  `140|1915|7264|1498|15|024`，但生产异机持续备份仍未建立。
 
-### 2026-08-11 22:20 本地收口更新
-
-- 当前功能分支为 `codex/prelaunch-product-completion`，已完成邮箱订阅、DeepSeek V4
-  Flash/Pro 白名单配置和 RAG 质量/运行页面；最新功能提交 `0ef8526`，尚未 push；
-- V023/V024 空库 25 个迁移通过；Python 878、Java 74、Web 71 项测试及 Web audit/build 通过；
-- 当前库 V024，15 份报告全部 PUBLISHED，模型为 `deepseek-v4-flash` version 3；
-- 新 102 MiB dump 已完成 SHA/目录校验与隔离恢复，恢复快照
-  `140|1915|7264|1498|15|024`；
-- 旧 `v0.1.2` / `0ae2fa75` 镜像不含上述功能，不能直接恢复生产；必须先让当前提交 CI
-  全绿并发布新的不可变镜像；
-- 生产 SMTP、专用模型 key、供应商消费上限、HTTPS 告警与异机备份仍是 fail-closed 外部闸门。
-
-目标机只读复核：专用 `deploy` 密钥可登录 Ubuntu 22.04.5；仓库 `production` 分支为
-`0ae2fa75`、工作树干净；80/443 无监听，外部直连两端口均失败。旧提交 preflight 仍明确
-拒绝缺失的 LLM、embedding、GitHub、告警、消费上限和异机备份配置；当前分支部署后还会
-增加生产 SMTP/发件地址门禁。DNS A 记录仍为 `47.242.229.41`，TTL 600。
+生产保持停止是当前正确状态：代码、标签、镜像和服务器 checkout 已经就绪，但真实模型调用、
+邮件投递、告警、供应商预算与异机备份尚不能形成安全闭环。
 
 ## 1. 已完成
 
@@ -55,19 +48,23 @@
 | `v0.1.0` | 被空库门禁拦截；发现 CI 用字典序误排 `V017_1` 与 `V017` |
 | 修复 | `.github/workflows/ci.yml` 按 Flyway 版本段排序，并将扩展/基表检查改为真实断言 |
 | `v0.1.1` | [Release 31476721634](https://github.com/linruibang19-home/AI-Hot-Radar/actions/runs/31476721634) 全部通过 |
-| CI | Web、AI service、Core API、spec、空库 V001–V022 全绿 |
-| 镜像 | `web`、`ai-service`、`core-api` 均构建并推送成功 |
+| `v0.1.3` | [Release 31504670925](https://github.com/linruibang19-home/AI-Hot-Radar/actions/runs/31504670925) 全部通过 |
+| CI | Web、AI service、Core API、spec、空库 V001–V024 全绿 |
+| 当前部署提交 | `4c4973575249f7f1a883a36a9cf3532a14fef0a4`（服务器已对齐，尚未启动） |
+| ai-service 镜像 | `sha256:6bd7849f85d8fe0f4002122a3f28cabe95b5aff28b506f9b68ff4cbd6e4689b7` |
+| core-api 镜像 | `sha256:f69349472e5c22601436d4a1b3d2460b069d0ca360ff54a8368fdf100a2d1645` |
+| web 镜像 | `sha256:aa663ee34111c835665c9d81cfb4932df28710281906873adf9891e886f2029d` |
 
 ## 3. 当前 fail-closed 闸门
 
-目标机执行 `sh infra/scripts/preflight.sh infra/compose/.env` 时只报告以下未完成外部条件：
+目标机在 `v0.1.3` 上执行 `sh infra/scripts/preflight.sh infra/compose/.env`，报告 14 个问题，
+归并后只剩以下外部条件：
 
-1. `https://` 公网地址和 ACME 运维邮箱（域名与 A 记录已完成）；
-2. 目标机专用、低额度的 LLM、embedding/rerank、GitHub 凭据；
-3. 模型供应商控制台消费上限确认；
-4. 可实际接收的生产 SMTP、发件地址以及 SPF/DKIM/DMARC；
-5. 可实际接收的生产告警通道；
-6. 异机备份的目标与责任人确认。
+1. 轮换后的 `LLM_API_KEY`、`EMBEDDING_API_KEY` 和用于 GitHub 数据源限流的专用 token；
+2. 生产 SMTP 主机、发件地址、认证/TLS 选择、投递间隔和至少 32 字符的订阅签名密钥；
+3. 可实际接收的 HTTPS 告警 webhook；
+4. DeepSeek / SiliconFlow 控制台消费上限确认；
+5. 异机备份目标与持续同步责任确认。
 
 这些值不得通过聊天发送。主人应在自己的供应商控制台创建专用凭据并设置消费上限，随后在
 SSH 会话中直接填写目标机的 `infra/compose/.env`；预检全绿前不得运行生产部署脚本。
@@ -84,7 +81,7 @@ SSH 会话中直接填写目标机的 `infra/compose/.env`；预检全绿前不�
 
 ## 5. 尚未声明完成的内容
 
-- 尚未启动生产容器或对外提供半配置站点；
+- 尚未启动生产容器或对外提供半配置站点；服务器只有代码与镜像发布态就绪；
 - 尚未签发域名证书；
 - 尚未验证真实模型调用、采集、RAG、三周期报告和推送；
 - 尚未取得真实告警与异机恢复证据，RPO/RTO 仍不能关闭。
