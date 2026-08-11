@@ -70,7 +70,7 @@ SHA-256，那个选择只在令牌高熵时才成立。
 Spec/Python/Java/空库迁移/Web 全绿才构建镜像：
 
 ```bash
-git checkout main && git merge --no-ff codex/rag-quality-gates
+git checkout main && git merge --no-ff <已通过 CI 的发布分支>
 ```
 
 ```bash
@@ -251,7 +251,7 @@ cd ai-hot-radar && sh infra/scripts/deploy-production.sh infra/compose/.env
 ```
 
 部署脚本先要求干净工作树和 `IMAGE_TAG=sha-<当前 HEAD>`，再执行 preflight、pull、
-`up -d --wait` 与公网 smoke。Flyway 在 core-api 启动时把 **V001–V022**（含 V017.1）
+`up -d --wait` 与公网 smoke。Flyway 在 core-api 启动时把 **V001–V024**（含 V017.1）
 一次性建完（空库首次会跑十几秒）。
 镜像里已经带了迁移文件——core-api 的 Dockerfile 用仓库根做 build context 就是为了这个。
 

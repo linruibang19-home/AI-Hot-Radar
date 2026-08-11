@@ -3,10 +3,10 @@
 面向 AI 行业的时效性情报平台：统一采集 140 个公开信源，完成清洗、去重、结构化、
 事件聚合与精选评分，产出网站与日报，并提供**每句话都能点回原文**的 RAG 问答。
 
-当前状态：**M0–M4 功能与本地发布门禁完成并持续自动运行**；M5 的生产预检、监控、
-不可变镜像发布门与本地真实恢复演练已完成，目标服务器上的密钥轮换、DNS/TLS、真实
-告警和异机备份待执行。语料每 120 秒轮询一次，2026-08-11 本次实测快照为
-**1868 条内容 / 7102 个分块（全部已向量化）/ 1458 个事件**。
+当前状态：**M0–M4 与 M5 代码侧功能、全量本地发布门禁均已完成并持续自动运行**；
+香港目标机和域名已准备，但生产服务为等待专用密钥、SMTP、告警与异机备份而主动保持停止。
+语料每 120 秒轮询一次，2026-08-11 22:20 实测快照为
+**1915 条内容 / 7264 个分块（全部已向量化）/ 1498 个事件**。
 
 ---
 
@@ -81,7 +81,7 @@ RAG 很容易做成一个「看起来会答」的黑盒。这里的取向相反�
 | AI 服务 | FastAPI / Python 3.12 | 采集、加工、RAG |
 | 存储 | PostgreSQL 16 + pgvector | HNSW cosine；全文用 tsvector + CJK bigram |
 | 缓存 | Redis | 读缓存、限流、RAG 三层缓存（不做真相来源） |
-| 模型 | DeepSeek（生成）· 硅基流动 bge-m3 / bge-reranker-v2-m3 | |
+| 模型 | DeepSeek V4 Flash / Pro（生成）· 硅基流动 bge-m3 / bge-reranker-v2-m3 | 只切换 DeepSeek 生成模型；向量/重排固定 |
 | 可观测 | OpenTelemetry（可选）· Jaeger（仅 dev） | 无端点时为 no-op |
 
 **刻意不引入**：消息队列、MinIO、Elasticsearch、GraphRAG。
@@ -100,14 +100,15 @@ docker compose -f infra/compose/docker-compose.yml up -d --build
 ```
 
 网站 http://localhost:3000 ，内容 API :8080 ，AI 服务 :8000 。
-Flyway 在 core-api 启动时自动迁移（V001–V022，含 V017.1 补序迁移）。
+Flyway 在 core-api 启动时自动迁移（V001–V024，含 V017.1 补序迁移）。
 
 站内可看的页面：`/`（精选）· `/items` · `/hot` · `/stories` · `/topics` ·
-`/reports` · `/ask`（RAG 问答）· `/eval`（评测记录）· `/ops`（成本与延迟）· `/admin/sources`。
+`/reports` · `/ask`（RAG 问答）· `/eval`（RAG 质量）· `/ops`（运行状态）·
+`/admin/models`（生成模型配置）· `/admin/sources`。
 
 ## 测试
 
-当前三套单元/集成测试共 **1002 个**：Python 878 · Java 62 · Web 62；
+当前三套单元/集成测试共 **1023 个**：Python 878 · Java 74 · Web 71；
 另有 33 个浏览器 E2E 用例。Python 与 Java 大部分可断网通过。
 
 ```bash
@@ -127,8 +128,8 @@ docker run --rm -v "$PWD/apps/core-api:/build" -v "$PWD/database/migrations:/bui
 ## 还没做的（如实）
 
 - **M5 上线**：部署产物、失败即停预检、公网 smoke、只读监控、校验和备份与隔离恢复
-  已就绪，本地 100 MB 真实恢复演练通过。剩下的是主人侧密钥轮换与消费上限、服务器、
-  DNS/TLS、真实 webhook、异机备份和目标机复演——见
+  已就绪，本地 102 MiB、V024 真实恢复演练通过。服务器与 DNS 已准备；剩下的是新的
+  不可变镜像、专用密钥与消费上限、生产 SMTP、TLS、真实 webhook、异机备份和目标机复演——见
   `docs/status/handoff-20260811.md`。
 - **日报/周报/月报已启用非阻塞发布门和邮件订阅**：PUBLISHED 报告可在报告页通过邮箱
   双重确认订阅，按收件人时区每天 08:30 后投递；退订即时生效，同一期同一收件人只会建立
