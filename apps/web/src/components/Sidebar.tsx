@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 import { SidebarResizer } from "@/components/SidebarResizer";
+import { RouteLoading } from "@/components/RouteLoading";
 
 /**
  * Primary navigation.
@@ -135,10 +137,35 @@ function isActive(pathname: string, href: string): boolean {
 
 export function Sidebar() {
   const pathname = usePathname() ?? "/";
+  const router = useRouter();
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const navigationPending =
+    pendingHref !== null && !isActive(pathname, pendingHref);
+
+  // A network failure must not leave the reading surface covered forever.
+  // Successful navigation clears the visible state through `isActive`; this
+  // timer is only the failure escape hatch.
+  useEffect(() => {
+    if (pendingHref === null) return undefined;
+    const timeout = window.setTimeout(() => setPendingHref(null), 15_000);
+    return () => window.clearTimeout(timeout);
+  }, [pendingHref]);
 
   return (
     <aside className="sidebar">
-      <Link className="brand" href="/">
+      <Link
+        className="brand"
+        href="/"
+        onClick={() => {
+          if (pathname !== "/") setPendingHref("/");
+        }}
+        onMouseEnter={() => {
+          if (pathname !== "/") router.prefetch("/");
+        }}
+        onFocus={() => {
+          if (pathname !== "/") router.prefetch("/");
+        }}
+      >
         <span className="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="9" />
@@ -160,12 +187,32 @@ export function Sidebar() {
           <ul className="nav-list" aria-labelledby={`nav-${section.label}`}>
             {section.entries.map((entry) => {
               const active = isActive(pathname, entry.href);
+              // Keep the previous screen in place while the dynamic route is
+              // streamed, but acknowledge the click immediately. Once the URL
+              // changes, `active` wins and the pending treatment disappears.
+              const pending = pendingHref === entry.href && !active;
               return (
                 <li key={entry.href}>
                   <Link
-                    className={active ? "nav-link nav-link-active" : "nav-link"}
+                    className={[
+                      "nav-link",
+                      active ? "nav-link-active" : "",
+                      pending ? "nav-link-pending" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                     href={entry.href}
                     aria-current={active ? "page" : undefined}
+                    aria-busy={pending || undefined}
+                    onClick={() => {
+                      if (!active) setPendingHref(entry.href);
+                    }}
+                    onMouseEnter={() => {
+                      if (!active) router.prefetch(entry.href);
+                    }}
+                    onFocus={() => {
+                      if (!active) router.prefetch(entry.href);
+                    }}
                   >
                     <Icon>{ICONS[entry.icon]}</Icon>
                     {entry.label}
@@ -178,6 +225,9 @@ export function Sidebar() {
       ))}
 
       <SidebarResizer />
+      {navigationPending && typeof document !== "undefined"
+        ? createPortal(<RouteLoading />, document.body)
+        : null}
     </aside>
   );
 }
