@@ -258,26 +258,27 @@ Compose 与已通过的 M4/M5 质量门禁。
 
 ### TASK-M5-006｜首次生产部署与外部闭环
 
-**状态**：🚧 2026-08-11 进行中；主人已提供香港 2C4G 目标机并授权开始上线。
+**状态**：✅ 2026-08-12 完成；首次生产闭环见
+`docs/status/production-deployment-20260811.md`，当前交接见
+`docs/status/handoff-20260812.md`。
 **读取**：`02-system-architecture.md`、`07-quality-security-ops.md`、
 `11-end-to-end-runbook.md`、`docs/design/m5-deployment.md`、
 `docs/design/m5-first-deploy-checklist.md`、TASK-M5-005 验收记录。
 **输入**：主人待提供的新域名、香港 2C4G 目标服务器、公网部署脚本、不可变镜像发布门和
 本地恢复证据。旧 `kuritian.online` 不续费，不再作为本卡上线域名。
 **产出**：专用 SSH 密钥与非 root 运维边界、目标机系统审计、Docker/防火墙、生产配置、
-Cloudflare DNS/TLS、按提交 SHA 的首次部署、公网 smoke、真实告警、异机备份和恢复复演。
+DNS/Caddy TLS、按提交 SHA 的首次部署、公网 smoke、真实告警、异机备份和恢复复演。
 **边界**：聊天中出现的口令视为泄露，不在命令、文件或日志中复述/使用；真实密钥不得进入
 Git；出租方账号下的服务器按半可信主机处理，模型密钥必须专用且低额度；删除、覆盖数据库、
 关闭 SSH 或变更域名所有权前必须有明确且可恢复的目标；已完成的 TASK-M5-004 不改变这些
 生产安全边界。
 **完成标准**：域名续费与 A 记录生效；80/443 只到 Caddy，内部端口公网不可达；HTTPS
-Full (strict) 与安全头通过；核心服务健康；AI 动态、精选、三周期报告与 RAG 公网可用；
+证书与安全头通过；核心服务健康；AI 动态、精选、三周期报告与 RAG 公网可用；
 告警失败/恢复均实收；异机备份存在且隔离恢复成功；部署提交、RPO/RTO 和回滚命令有记录。
-**当前证据**：见 `docs/status/production-deployment-20260811.md`。PR #3 五项 CI 全绿后已合并；
-`v0.1.3@4c497357` 的同提交 Release 与 web/ai-service/core-api 三张不可变镜像全部成功。
-服务器 `production` 已严格 fast-forward 到该提交，工作树干净且可读取 GHCR manifest；
-生产容器仍为 0。新版 preflight 正确阻断缺失的轮换后供应商凭据、生产 SMTP、HTTPS 告警、
-消费上限与异机备份确认；TLS、公网 smoke 和真实投递尚未执行，因此本卡继续保持“进行中”。
+**当前证据**：`v0.1.4@6e192a7` 的 GitHub `main`、服务器 checkout、`IMAGE_TAG` 与三张业务
+镜像一致；10 个生产容器运行，核心健康检查通过。`aihotradar.online` 的 Caddy HTTPS、
+公网 smoke、真实 RAG 引用、Gmail SMTP 实投、故障/恢复告警、校验和异机备份与 V024
+隔离恢复均通过。首次生产目标已经关闭，后续升级按独立维护任务走 PR/Release/SHA 部署。
 
 ### TASK-M5-007｜DeepSeek 生成模型可见、可切换、可审计
 

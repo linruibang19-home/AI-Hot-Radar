@@ -72,6 +72,30 @@ test.describe("navigation", () => {
     }
   });
 
+  test("a slow dynamic route acknowledges the click immediately", async ({
+    page,
+  }) => {
+    await page.goto("/");
+
+    // Dynamic App Router navigation is a fetch for an RSC payload. Hold that
+    // payload briefly to make the in-between state deterministic instead of
+    // depending on how fast the local Core API happens to respond.
+    await page.route(/\/hot\?_rsc=/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      await route.continue();
+    });
+
+    const target = page
+      .locator(".sidebar")
+      .getByRole("link", { name: "热点榜", exact: true });
+    await target.click();
+
+    await expect(target).toHaveAttribute("aria-busy", "true");
+    await expect(page.locator(".route-loading")).toBeVisible();
+    await expect(page).toHaveURL(/\/hot$/);
+    await expect(target).not.toHaveAttribute("aria-busy", "true");
+  });
+
   test("a selected item opens its detail page and links to the source", async ({
     page,
   }) => {
@@ -116,7 +140,7 @@ test.describe("navigation", () => {
     // ADR-009. Asserting an internal /items/ link here would be asserting the
     // opposite of the locked decision. §7 traceability is satisfied by the
     // outbound link plus the source name shown beside it.
-    const outbound = page.locator('.detail-body a[target="_blank"][href^="http"]');
+    const outbound = page.locator('.report-page a[target="_blank"][href^="http"]');
     expect(await outbound.count()).toBeGreaterThan(0);
   });
 
