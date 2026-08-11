@@ -34,4 +34,9 @@ describe("report workspace", () => {
     expect(SOURCE).toContain("DRAFT 预览");
     expect(SOURCE).toContain("事实以原文为准");
   });
+
+  it("adds email delivery without turning the report reader client-only", () => {
+    expect(SOURCE).toContain("<ReportSubscribe period={period} />");
+    expect(SOURCE).not.toContain('"use client"');
+  });
 });

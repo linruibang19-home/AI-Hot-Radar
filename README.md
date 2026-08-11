@@ -130,9 +130,9 @@ docker run --rm -v "$PWD/apps/core-api:/build" -v "$PWD/database/migrations:/bui
   已就绪，本地 100 MB 真实恢复演练通过。剩下的是主人侧密钥轮换与消费上限、服务器、
   DNS/TLS、真实 webhook、异机备份和目标机复演——见
   `docs/status/handoff-20260811.md`。
-- **日报/周报/月报已启用非阻塞发布门**：当前 14 份（日报 10、周报 3、月报 1）均为
-  PUBLISHED；不合格版本进入 REVIEW_REQUIRED，人工 WITHDRAWN 不会被 pipeline 自动解除。
-  站内发布是自动的；邮件目前仍是受保护的手工 `send-report`，订阅与定时群发尚未实现。
+- **日报/周报/月报已启用非阻塞发布门和邮件订阅**：PUBLISHED 报告可在报告页通过邮箱
+  双重确认订阅，按收件人时区每天 08:30 后投递；退订即时生效，同一期同一收件人只会建立
+  一条投递事实。SMTP 失败最多重试三次且不阻塞 pipeline、站内发布、AI 动态或精选。
 - **管理端写操作只有 API，没有浏览器 UI**。鉴权、二次确认、审计都已实现并实测，
   但把 OPERATOR 令牌放进 localStorage 需要单独想清楚 XSS 面（ADR-0019）。
 - **`outbox_event` 只写不读**：`published_at` 全空、没有消费者。
