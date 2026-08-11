@@ -2291,6 +2291,119 @@ summary:focus-visible {
   letter-spacing: 0.04em;
 }
 
+/* The engineering pages now lead with a decision, while preserving the
+   existing quiet card language and all of the detailed tables below. */
+.quality-hero {
+  margin-bottom: 16px;
+  padding: 20px 22px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+}
+
+.quality-hero-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.quality-hero h2 {
+  margin: 4px 0 8px;
+  font-size: 1.2rem;
+}
+
+.quality-hero p {
+  max-width: 860px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.quality-run-ids {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.quality-run-ids code {
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.quality-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.quality-card {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.quality-card-index {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.quality-card h3 {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+}
+
+.quality-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
+.quality-card a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.quality-card-risk {
+  border-color: #eadcae;
+  background: #fffdf5;
+}
+
+.quality-card-action {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+@media (max-width: 900px) {
+  .quality-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quality-hero-head {
+    align-items: center;
+  }
+}
+
 .report-masthead-actions {
   display: flex;
   justify-content: center;
