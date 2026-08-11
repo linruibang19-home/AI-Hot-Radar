@@ -25,7 +25,6 @@ from typing import Any
 import psycopg
 
 from ahr.config import get_settings
-from ahr.ingestion.article import extract_article
 from ahr.ingestion.errors import IngestionError
 from ahr.ingestion.fulltext_gate import Decision, ExtractedDocument, evaluate
 from ahr.ingestion.http import HttpConfig, HttpFetcher
@@ -120,12 +119,10 @@ async def probe_source(
                 )
                 result = evaluate(document, is_release=True)
             else:
-                response = await fetcher.fetch(item.candidate_url)
-                extraction = extract_article(
-                    response,
-                    source_id=source.id,
-                    title_hint=item.title_hint,
-                    published_hint=item.published_at_hint,
+                from ahr.ingestion.pipeline import _acquire_fulltext
+
+                _response, extraction, _requested_url = await _acquire_fulltext(
+                    adapter, source, item, fetcher
                 )
                 document = extraction.document
                 result = evaluate(document, is_release=source.is_release_like)
@@ -179,7 +176,7 @@ def _load_from_db(limit: int, profile: str | None) -> list[SourceConfig]:
                verification, configured_enabled, discovery_url, repository, subject,
                homepage_url, region, source_group
         FROM source
-        WHERE configured_enabled
+        WHERE effective_enabled
     """
     params: list[Any] = []
     if profile:

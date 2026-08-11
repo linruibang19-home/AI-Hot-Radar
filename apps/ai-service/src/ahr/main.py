@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from ahr import tracing
 from ahr.config import get_settings
 from ahr.health import router as health_router
 from ahr.observability import RequestIdMiddleware, configure_logging
@@ -18,6 +19,10 @@ from ahr.rag.api import router as rag_router
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.service_name)
+    # No-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set and the optional exporter
+    # is installed. Logging is configured first so the tracer's own startup
+    # line is formatted like everything else.
+    tracing.configure(settings.service_name)
 
     app = FastAPI(
         title="AI Hot Radar AI Service",

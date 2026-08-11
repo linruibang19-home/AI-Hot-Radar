@@ -1,0 +1,749 @@
+{
+  "generatedFrom": "docs/status/eval/m4-rag-eval-*.json",
+  "ragas": [
+    {
+      "ragas": "Faithfulness",
+      "asks": "答案有没有说出证据里没有的东西",
+      "ours": "support_mean / support_supported（交叉编码器对「论断 × 被引段落」打分）",
+      "value": "0.8330 / 0.8986",
+      "note": "另有一条硬约束不在指标里：`check_invariants` 会把「有 [n] 却解析不到引用」或「零引用却不是拒答」的回答直接判为不可发布。指标衡量程度，不变量划定底线。"
+    },
+    {
+      "ragas": "Answer Relevancy",
+      "asks": "答案是不是在回答这个问题",
+      "ours": "must_contain_hit + over_refusal_rate",
+      "value": "0.9091 / 0.0128",
+      "note": "误拒率必须与拒答率一起看：**全都拒答的系统在拒答指标上满分且毫无用处**。把「该答的没答」算作最严重的一种不切题。"
+    },
+    {
+      "ragas": "Context Precision",
+      "asks": "检索到的上下文里相关的占比，且相关的是否排在前面",
+      "ours": "citation_precision + MRR + nDCG@10",
+      "value": "0.5883 / 0.8741 / 0.8203",
+      "note": "拆成两个数：引用精度看**模型选了什么**，MRR/nDCG 看**检索排了什么**。B8 那一轮的教训是这两者会分离——融合前的排序指标提升 5.9 点，接上重排后差距塌缩到 0.0004。"
+    },
+    {
+      "ragas": "Context Recall",
+      "asks": "该被检索到的内容有没有被检索到",
+      "ours": "Recall@10 / Recall@20（对黄金集标注）",
+      "value": "0.8669 / 0.8923",
+      "note": "标注是人工的，127 个 item 全部经库校验；零分块的条目会被守卫拦下并计数。"
+    },
+    {
+      "ragas": "（无对应）",
+      "asks": "同一事件被多少家独立信源覆盖",
+      "ours": "story_coverage",
+      "value": "0.7797",
+      "note": "RAGAS 没有这一项，因为它假设文档之间彼此独立。资讯语料不是：四家媒体报道同一次披露是**一条**证据不是四条，M3 的事件聚类就是为此存在的。"
+    },
+    {
+      "ragas": "（无对应）",
+      "asks": "答案里带引用的句子占比",
+      "ours": "citation_coverage",
+      "value": "0.7431",
+      "note": "本项目的核心主张是「每条事实可回原文」，所以句级覆盖率是一个独立的验收项。"
+    },
+    {
+      "ragas": "Noise Sensitivity（暂未测）",
+      "asks": "混入无关上下文时答案会不会被带偏",
+      "ours": "—",
+      "value": "—",
+      "note": "**诚实标注为未测。** 需要构造带噪上下文的对照集，当前黄金集是按真实语料标注的，没有这个维度。"
+    }
+  ],
+  "goldenQuestions": 90,
+  "rounds": [
+    {
+      "id": "B1",
+      "title": "纯稠密基线",
+      "runId": "B1-20260803T155249Z",
+      "variant": "B1-dense-only",
+      "changed": "bge-m3 向量检索，无融合、无重排。先测基线，再加任何东西。",
+      "criterion": "无门槛——这一轮的目的是产出后续所有轮次的比较对象。",
+      "finding": "总分掩盖了三件事：recent_updates 是最弱类别（MRR 0.468，最差两题首个命中排第 16、17 位），因为稠密向量里没有时间；MXFP4 单题 Recall@20 只有 0.33，被 fact_check 整体 0.9556 盖住；可答题最低分 0.5778 与不可答题最高分 0.7205 重叠 0.1427，说明拒答不可能靠相似度阈值决定。",
+      "verdict": "baseline",
+      "metrics": {
+        "recall10": 0.8045,
+        "recall20": 0.8876,
+        "mrr": 0.763,
+        "ndcg10": 0.7381,
+        "questions": 90,
+        "scored": 78
+      },
+      "byCategory": {
+        "recent_updates": {
+          "recall10": 0.6189,
+          "mrr": 0.4676,
+          "ndcg10": 0.4621
+        },
+        "timeline": {
+          "recall10": 0.82,
+          "mrr": 0.7944,
+          "ndcg10": 0.7922
+        },
+        "comparison": {
+          "recall10": 0.8,
+          "mrr": 0.7363,
+          "ndcg10": 0.6749
+        },
+        "fact_check": {
+          "recall10": 0.9556,
+          "mrr": 0.8833,
+          "ndcg10": 0.8862
+        },
+        "explainer": {
+          "recall10": 0.8556,
+          "mrr": 0.9467,
+          "ndcg10": 0.8894
+        },
+        "abstention": {
+          "recall10": 0.6667,
+          "mrr": 0.697,
+          "ndcg10": 0.6667
+        }
+      }
+    },
+    {
+      "id": "B2",
+      "title": "稀疏通道",
+      "runId": "B2-20260803T155644Z",
+      "variant": "B2-union-interleave",
+      "changed": "加入 Postgres tsvector 关键词通道，先用轮转交错与稠密合并。",
+      "criterion": "修好 B1 点名的精确词失败（MXFP4 题 Recall@20 0.33）。",
+      "finding": "预测被证实：MXFP4 题 R@20 0.33 → 1.00、排名 4 → 1。没预测到的是**并集比纯稠密还差**——轮转交错无条件给弱通道一半名额，好结果被挤出去了。RRF 因此从「验证权重」升级为必需项。另量到中文缺口 52.1 个百分点：稀疏通道对含 ASCII 专名的问句 R@20 = 0.5798，纯中文只有 0.0588。",
+      "verdict": "mixed",
+      "metrics": {
+        "recall10": 0.7637,
+        "recall20": 0.8733,
+        "mrr": 0.748,
+        "ndcg10": 0.6936,
+        "questions": 90,
+        "scored": 78
+      },
+      "byCategory": {
+        "recent_updates": {
+          "recall10": 0.4678,
+          "mrr": 0.4241,
+          "ndcg10": 0.3674
+        },
+        "timeline": {
+          "recall10": 0.8367,
+          "mrr": 0.7956,
+          "ndcg10": 0.743
+        },
+        "comparison": {
+          "recall10": 0.7333,
+          "mrr": 0.7019,
+          "ndcg10": 0.6075
+        },
+        "fact_check": {
+          "recall10": 0.9444,
+          "mrr": 0.8889,
+          "ndcg10": 0.8741
+        },
+        "explainer": {
+          "recall10": 0.8556,
+          "mrr": 0.94,
+          "ndcg10": 0.8817
+        },
+        "abstention": {
+          "recall10": 0.6667,
+          "mrr": 0.697,
+          "ndcg10": 0.6667
+        }
+      },
+      "alt": {
+        "label": "纯稀疏通道单独测",
+        "runId": "B2-20260803T150939Z",
+        "metrics": {
+          "recall10": 0.3613,
+          "recall20": 0.4662,
+          "mrr": 0.3138,
+          "ndcg10": 0.2759,
+          "questions": 90,
+          "scored": 78
+        }
+      }
+    },
+    {
+      "id": "B3",
+      "title": "RRF 融合 + 时间过滤",
+      "runId": "B3-20260803T174553Z",
+      "variant": "B3-rrf",
+      "changed": "加权 RRF 取代轮转交错；解析出的时间窗作为两个通道的过滤器。",
+      "criterion": "把 B1 点名的最大缺口 recent_updates 关上。",
+      "finding": "recent_updates MRR 0.4676 → 0.7333（+26.6pt），R@20 做到 0.9036 击败 B1 与 B2。起作用的是把时间窗当**过滤器**，而不是加一条独立的时间通道（实测只贡献 +0.004 Recall）。但其余五类 MRR 下降——答案进了候选集却排得靠后，这正是 reranker 的适用场景，B4 因此有了可证伪的门槛。",
+      "verdict": "mixed",
+      "metrics": {
+        "recall10": 0.7991,
+        "recall20": 0.9036,
+        "mrr": 0.6911,
+        "ndcg10": 0.6597,
+        "questions": 90,
+        "scored": 78
+      },
+      "byCategory": {
+        "recent_updates": {
+          "recall10": 0.68,
+          "mrr": 0.7333,
+          "ndcg10": 0.6187
+        },
+        "timeline": {
+          "recall10": 0.7922,
+          "mrr": 0.6249,
+          "ndcg10": 0.6222
+        },
+        "comparison": {
+          "recall10": 0.8389,
+          "mrr": 0.643,
+          "ndcg10": 0.6098
+        },
+        "fact_check": {
+          "recall10": 0.9222,
+          "mrr": 0.7472,
+          "ndcg10": 0.741
+        },
+        "explainer": {
+          "recall10": 0.7222,
+          "mrr": 0.6952,
+          "ndcg10": 0.6764
+        },
+        "abstention": {
+          "recall10": 1.0,
+          "mrr": 0.75,
+          "ndcg10": 0.8102
+        }
+      }
+    },
+    {
+      "id": "B4",
+      "title": "交叉编码器重排",
+      "runId": "B4-20260803T174404Z",
+      "variant": "B4-rerank-40",
+      "changed": "bge-reranker-v2-m3 对融合后的前 40 个候选重排序。",
+      "criterion": "**先立后测**：MRR 需 > 0.7630 且 R@20 ≥ 0.9036，两条都达标才准进 MVP。",
+      "finding": "MRR 0.8574、R@20 0.9126、nDCG +23.7%，全部达标。B3「Recall 升、MRR 降」的形态被完全纠正。候选数 40 比 100 在四项指标上都略高，而且快 3.2 倍（1376ms vs 4378ms）——融合排在 40 名之后的候选几乎不含答案，喂进去只是给交叉编码器加噪声。唯一退化的是 recent_updates（MRR 0.7333 → 0.6484）：交叉编码器不知道时间。",
+      "verdict": "pass",
+      "metrics": {
+        "recall10": 0.875,
+        "recall20": 0.9126,
+        "mrr": 0.8574,
+        "ndcg10": 0.8162,
+        "questions": 90,
+        "scored": 78
+      },
+      "byCategory": {
+        "recent_updates": {
+          "recall10": 0.7911,
+          "mrr": 0.6484,
+          "ndcg10": 0.6611
+        },
+        "timeline": {
+          "recall10": 0.8867,
+          "mrr": 0.9022,
+          "ndcg10": 0.8202
+        },
+        "comparison": {
+          "recall10": 0.8944,
+          "mrr": 0.8244,
+          "ndcg10": 0.7542
+        },
+        "fact_check": {
+          "recall10": 0.9556,
+          "mrr": 0.9667,
+          "ndcg10": 0.9433
+        },
+        "explainer": {
+          "recall10": 0.8222,
+          "mrr": 0.9667,
+          "ndcg10": 0.9034
+        },
+        "abstention": {
+          "recall10": 1.0,
+          "mrr": 0.75,
+          "ndcg10": 0.8102
+        }
+      },
+      "alt": {
+        "label": "100 候选",
+        "runId": "B4-20260803T175525Z",
+        "metrics": {
+          "recall10": 0.8665,
+          "recall20": 0.91,
+          "mrr": 0.8562,
+          "ndcg10": 0.8108,
+          "questions": 90,
+          "scored": 78
+        }
+      }
+    },
+    {
+      "id": "B7",
+      "title": "时效融合",
+      "runId": "B7-20260804T075951Z",
+      "variant": "B7-temporal-fit",
+      "changed": "对 freshness_required 为真的问题，在重排之后把新近度与相关性融合，权重 0.30。",
+      "criterion": "补回 B4 唯一的退化，且不得影响其他类别。",
+      "finding": "recent_updates MRR +10.4pt，其余五类**逐位相同**——不是影响很小，是没有影响。这是作用域正确的改动应有的样子。权重刻意只占 0.30：相关性仍主导，「只是新」不能压过真正回答问题的。",
+      "verdict": "pass",
+      "metrics": {
+        "recall10": 0.8739,
+        "recall20": 0.9092,
+        "mrr": 0.8868,
+        "ndcg10": 0.8334,
+        "questions": 88,
+        "scored": 76
+      },
+      "byCategory": {
+        "recent_updates": {
+          "recall10": 0.7911,
+          "mrr": 0.7522,
+          "ndcg10": 0.7247
+        },
+        "timeline": {
+          "recall10": 0.9033,
+          "mrr": 0.9133,
+          "ndcg10": 0.8231
+        },
+        "comparison": {
+          "recall10": 0.881,
+          "mrr": 0.869,
+          "ndcg10": 0.7852
+        },
+        "fact_check": {
+          "recall10": 0.9524,
+          "mrr": 0.9643,
+          "ndcg10": 0.9392
+        },
+        "explainer": {
+          "recall10": 0.8222,
+          "mrr": 0.9667,
+          "ndcg10": 0.9034
+        },
+        "abstention": {
+          "recall10": 1.0,
+          "mrr": 0.75,
+          "ndcg10": 0.8102
+        }
+      }
+    },
+    {
+      "id": "B8",
+      "title": "融合权重网格调优",
+      "runId": "B7-20260804T102253Z",
+      "variant": "B7-temporal-fit",
+      "changed": "42 组 dense/sparse/temporal 权重组合全扫一遍。",
+      "criterion": "规格要求权重必须用评测集调优，而不是拍脑袋。",
+      "finding": "**负结果，保持原权重不变。** 网格确实找到更好的融合序（融合前 MRR +5.9 点），但接上重排后两组权重的差距塌缩到 **0.0004**，四个类别逐位完全相同。→ 融合前指标是个**会骗人的优化目标**，它测的是一个马上会被交叉编码器覆盖的中间态。网格的真正价值是证明现行值在平台区（全网格 R@40 只波动 0.0043）而非悬崖边（sparse ≥ 0.8 才开始伤 R@20）。",
+      "verdict": "no-change",
+      "metrics": {
+        "recall10": 0.8547,
+        "recall20": 0.8923,
+        "mrr": 0.8645,
+        "ndcg10": 0.8129,
+        "questions": 90,
+        "scored": 78
+      },
+      "byCategory": {
+        "recent_updates": {
+          "recall10": 0.7911,
+          "mrr": 0.7522,
+          "ndcg10": 0.7243
+        },
+        "timeline": {
+          "recall10": 0.8867,
+          "mrr": 0.9022,
+          "ndcg10": 0.813
+        },
+        "comparison": {
+          "recall10": 0.8556,
+          "mrr": 0.8244,
+          "ndcg10": 0.7476
+        },
+        "fact_check": {
+          "recall10": 0.8889,
+          "mrr": 0.9,
+          "ndcg10": 0.8766
+        },
+        "explainer": {
+          "recall10": 0.8222,
+          "mrr": 0.9667,
+          "ndcg10": 0.9034
+        },
+        "abstention": {
+          "recall10": 1.0,
+          "mrr": 0.75,
+          "ndcg10": 0.8102
+        }
+      },
+      "alt": {
+        "label": "网格最优权重",
+        "runId": "B7-20260804T102745Z",
+        "metrics": {
+          "recall10": 0.853,
+          "recall20": 0.8838,
+          "mrr": 0.8641,
+          "ndcg10": 0.8101,
+          "questions": 90,
+          "scored": 78
+        }
+      }
+    },
+    {
+      "id": "B9",
+      "title": "§6 directness / source_fit",
+      "runId": "B9-20260804T104220Z",
+      "variant": "B9-dimensions",
+      "changed": "在交叉编码器之后补上两个重排维度：问题词项在标题中的覆盖率、信源等级与问题类型的亲和度。",
+      "criterion": "增益应落在 timeline 与 explainer，其余类别不得退化。",
+      "finding": "timeline MRR +4.45pt、explainer R@10 +3.34pt，其余类别在噪声内（最差 −0.07pt），abstention 逐位相同。R@20 不变是对的——这两维只在重排结果内部重排序，不引入新文档。写这个模块时踩到中文分词坑：`MIN_TERM_CHARS = 2` 把中文全删了，directness 对每道纯中文问题稳定返回 0.0 且不报错。",
+      "verdict": "pass",
+      "metrics": {
+        "recall10": 0.8611,
+        "recall20": 0.8923,
+        "mrr": 0.8731,
+        "ndcg10": 0.8178,
+        "questions": 90,
+        "scored": 78
+      },
+      "byCategory": {
+        "recent_updates": {
+          "recall10": 0.7911,
+          "mrr": 0.7522,
+          "ndcg10": 0.7239
+        },
+        "timeline": {
+          "recall10": 0.8867,
+          "mrr": 0.9467,
+          "ndcg10": 0.8249
+        },
+        "comparison": {
+          "recall10": 0.8556,
+          "mrr": 0.8244,
+          "ndcg10": 0.7469
+        },
+        "fact_check": {
+          "recall10": 0.8889,
+          "mrr": 0.9,
+          "ndcg10": 0.8851
+        },
+        "explainer": {
+          "recall10": 0.8556,
+          "mrr": 0.9667,
+          "ndcg10": 0.91
+        },
+        "abstention": {
+          "recall10": 1.0,
+          "mrr": 0.75,
+          "ndcg10": 0.8102
+        }
+      }
+    },
+    {
+      "id": "B10",
+      "title": "§6 entity_subject / repost",
+      "runId": "B9-20260804T114016Z",
+      "variant": "B9-dimensions",
+      "changed": "补上最后两条元数据调整：目标实体为主语 +0.05、重复转载 −0.10。",
+      "criterion": "此前判定为「拿不到数据」，本轮先回库核对该判定。",
+      "finding": "**先前的「拿不到数据」是错判，从没去库里核对过。** 实际查：item_entity.role 有 subject 1848 / mention 2593 / object 1496，`duplicate_of_id` 也一直在写——数据从 M2 起就在库里。修完后 timeline R@10 +1.66pt、recent_updates +1.33pt、abstention nDCG +2.31pt，**没有任何一个类别、任何一项指标下降**，这在十轮评测里是第一次。至此 §6 的五条调整全部实现。",
+      "verdict": "pass",
+      "metrics": {
+        "recall10": 0.8669,
+        "recall20": 0.8923,
+        "mrr": 0.8741,
+        "ndcg10": 0.8203,
+        "questions": 90,
+        "scored": 78
+      },
+      "byCategory": {
+        "recent_updates": {
+          "recall10": 0.8044,
+          "mrr": 0.7522,
+          "ndcg10": 0.7276
+        },
+        "timeline": {
+          "recall10": 0.9033,
+          "mrr": 0.9467,
+          "ndcg10": 0.8282
+        },
+        "comparison": {
+          "recall10": 0.8556,
+          "mrr": 0.8244,
+          "ndcg10": 0.7482
+        },
+        "fact_check": {
+          "recall10": 0.8889,
+          "mrr": 0.9,
+          "ndcg10": 0.8851
+        },
+        "explainer": {
+          "recall10": 0.8556,
+          "mrr": 0.9667,
+          "ndcg10": 0.91
+        },
+        "abstention": {
+          "recall10": 1.0,
+          "mrr": 0.7778,
+          "ndcg10": 0.8333
+        }
+      }
+    },
+    {
+      "id": "B12",
+      "title": "自适应重排深度",
+      "runId": "B9-20260807T070516Z",
+      "variant": "B9-dimensions",
+      "changed": "把重排候选数按问题类型路由：两类走 20，其余保持 40。",
+      "criterion": "只有在某一类的指标**逐位不变**时才允许减半，任何下降都保持 40。",
+      "finding": "**先死掉两个直觉规则，才找到能站住的那个。** 规则一「简单事实题跳过重排」——B3→B4 实测 fact_check 从重排拿到 **+0.2195 MRR**，是收益第二大的类别，直觉完全反了；唯一不受重排影响的是 abstention，而 B1 已证明不可答题无法事先识别（与可答题的相似度区间重叠 0.14）。规则二「候选少时跳过重排」逻辑上成立——候选数不超过证据预算时，重排改变不了模型读到哪些段落——但 128 次真实查询里融合候选数**从未低于 60**，规则永远不触发。真正成立的是**深度**而不是**有无**：depth 20 整体掉 2.9 个点，但 comparison 与 recent_updates **逐位完全相同**，而 explainer −6.3pt、fact_check −5.9pt、timeline −3.6pt。于是只对那两类减半，形状与 B7 一致：在测过有效的地方生效，其余原样不动。样本量写在明处：每类 15 题。",
+      "verdict": "pass",
+      "metrics": {
+        "recall10": 0.8669,
+        "recall20": 0.8923,
+        "mrr": 0.8731,
+        "ndcg10": 0.8191,
+        "questions": 90,
+        "scored": 78
+      },
+      "byCategory": {
+        "recent_updates": {
+          "recall10": 0.8044,
+          "mrr": 0.7522,
+          "ndcg10": 0.7273
+        },
+        "timeline": {
+          "recall10": 0.9033,
+          "mrr": 0.9467,
+          "ndcg10": 0.8282
+        },
+        "comparison": {
+          "recall10": 0.8556,
+          "mrr": 0.8244,
+          "ndcg10": 0.7469
+        },
+        "fact_check": {
+          "recall10": 0.8889,
+          "mrr": 0.9,
+          "ndcg10": 0.8851
+        },
+        "explainer": {
+          "recall10": 0.8556,
+          "mrr": 0.9667,
+          "ndcg10": 0.91
+        },
+        "abstention": {
+          "recall10": 1.0,
+          "mrr": 0.75,
+          "ndcg10": 0.8102
+        }
+      },
+      "alt": {
+        "label": "重排深度 20",
+        "runId": "B9-20260807T070053Z",
+        "metrics": {
+          "recall10": 0.8365,
+          "recall20": 0.8833,
+          "mrr": 0.8438,
+          "ndcg10": 0.7907,
+          "questions": 90,
+          "scored": 78
+        }
+      }
+    },
+    {
+      "id": "B13",
+      "title": "中文分词：修好了通道，系统没动",
+      "runId": "B9-20260807T114536Z",
+      "variant": "B9-dimensions",
+      "changed": "Postgres `simple` 把整段中文切成一个词元。加 CJK 字符 bigram，索引与查询共用同一个 IMMUTABLE 函数（ADR-0018）。",
+      "criterion": "B2 量到纯中文问句稀疏 R@20 仅 0.0588（含 ASCII 专名 0.5798），本轮应把这个差距关上。",
+      "finding": "**通道确实修好了，端到端却没动。** MRR ±0.0000，R@10 −0.0043，六类里五类逐位相同。原因 B2 自己就写过、当时没被当回事：「稠密通道对中文只低 4.9 个百分点——缺口在通道设计边界内，不在系统层」。稀疏通道的中文失败一直被稠密通道兜住了。但**站内搜索是另一回事**，它只有 FTS 没有稠密兜底，实测：「开源」4 → 130 条、「量化」5 → 48、「融资」2 → 18、「智谱」0 → 2，而 ASCII 查询「GLM」15 → 15 不变。所以改动保留——收益在另一个界面上，且是真的；RAG 侧记为负结果，代价是索引 15MB → 18MB。",
+      "verdict": "no-change",
+      "metrics": {
+        "recall10": 0.8626,
+        "recall20": 0.8838,
+        "mrr": 0.8731,
+        "ndcg10": 0.816,
+        "questions": 90,
+        "scored": 78
+      },
+      "byCategory": {
+        "recent_updates": {
+          "recall10": 0.7822,
+          "mrr": 0.7522,
+          "ndcg10": 0.7117
+        },
+        "timeline": {
+          "recall10": 0.9033,
+          "mrr": 0.9467,
+          "ndcg10": 0.8282
+        },
+        "comparison": {
+          "recall10": 0.8556,
+          "mrr": 0.8244,
+          "ndcg10": 0.7464
+        },
+        "fact_check": {
+          "recall10": 0.8889,
+          "mrr": 0.9,
+          "ndcg10": 0.8851
+        },
+        "explainer": {
+          "recall10": 0.8556,
+          "mrr": 0.9667,
+          "ndcg10": 0.9098
+        },
+        "abstention": {
+          "recall10": 1.0,
+          "mrr": 0.75,
+          "ndcg10": 0.8102
+        }
+      },
+      "alt": {
+        "label": "修复前（无 bigram）",
+        "runId": "B9-20260807T070516Z",
+        "metrics": {
+          "recall10": 0.8669,
+          "recall20": 0.8923,
+          "mrr": 0.8731,
+          "ndcg10": 0.8191,
+          "questions": 90,
+          "scored": 78
+        }
+      }
+    }
+  ],
+  "extra": [
+    {
+      "id": "GEN",
+      "title": "生成侧评测（含拒答判定）",
+      "runId": "GEN-20260807T120415Z",
+      "changed": "90 题端到端真实生成。本轮新增**拒答判定**：对 12 道诱导题，用受控的二值判官问「这段回答有没有把那个假前提当事实陈述出来」。",
+      "finding": "**先修指标，再读结果。** 原来的 `refusal_rate_on_unanswerable` 从 66.67% 掉到 8.33%，看着像核心能力崩了。查下去发现它测的是**形式不是正确性**：拒答被定义为「文本为空或零引用」，而 §3.13 刻意把死胡同式拒答改成了**有据可查的否认**——「证据里没有提到罚款，也没有任何监管机构开出罚单的记载」并附上检索到的内容。这类回答有引用，于是被判成「没拒答」。另一个信号 `must_not_claim` 是子串匹配，它自己的注释就写着「否认时提到该词也算命中」，而且只覆盖 15 题里的 4 题。**两个信号都在测表面形态。**新增判官后：**12 道诱导题里断言假前提的为 0**，支持度 0.8330 → 0.8313 基本不动，引用覆盖率 +12.5pt。**结论：拒答能力没有退化，退化的是衡量它的方式。**本轮同时暴露一条真问题：**误拒率 1.28% → 7.69%**（1 题变 6 题）、Story 覆盖 −8.2pt。当时记下的假设是「语料涨到 1473 条后证据位竞争加剧」，并写明那是假设不是结论——下一轮证明它是错的。",
+      "overall": {
+        "questions": 90,
+        "answerable": 78,
+        "unanswerable": 12,
+        "citation_coverage": 0.868,
+        "citation_precision": 0.5844,
+        "story_coverage": 0.6976,
+        "support_mean": 0.8313,
+        "support_supported": 0.9078,
+        "must_contain_hit": 0.9091,
+        "avg_citations": 3.47,
+        "latency_ms_mean": 6893.0,
+        "refusal_rate_on_unanswerable": 0.0833,
+        "forbidden_term_mentioned": 4,
+        "judged_unanswerable": 12,
+        "presupposition_asserted_rate": 0.0,
+        "over_refusal_rate": 0.0769
+      },
+      "stages": {},
+      "tokens": {}
+    },
+    {
+      "id": "GEN-FIX",
+      "title": "生成侧复测：误拒归零",
+      "runId": "GEN-20260807T153537Z",
+      "changed": "同样 90 题，只改了一处：解析模型输出时的**失败分支**。把上一轮那六道误拒的原始模型响应抓出来看了之后改的。",
+      "finding": "**语料竞争那个假设是错的，六道题一道都不是检索问题。** 抓原始响应发现两条各自独立的失效路径，都在出口处：①**模型直接用 markdown 回答、没套 JSON**——答案完整、`[E1][E2]` 一个不缺，只是 `json.loads` 失败，于是正文被清空、判成拒答；②**模型把证据编号只写进 `claims[].evidence_ids`、正文里不标**——而绑定只扫正文，四条论断六个编号绑出零条引用。两条都是「模型偶发偏离输出契约，而每次偏离赔上整个答案」，也解释了为什么两轮之间会从 1 题跳到 6 题：这是随机脱靶，不是某类问题的固定缺陷。修法是给失败分支加**带守卫的回退**（不像 JSON 且至少有一个编号，才按正文解析；正文一个编号都没有，才回退到 claims），**核验一寸不放**——两条路径照走同一套绑定与不变量检查，编造的编号照样剥掉。结果：**误拒率 7.69% → 0.00%**（78 道可答题零误拒，比 08-04 基线还低），Story 覆盖收回 5.6pt，引用覆盖率 90.7%，must_contain 命中 100%，而**断言假前提仍是 0**——放宽没有换来幻觉。唯一下行的是支持度 −2.2pt：被救回的六题分数确实偏低（0.7046 对 0.7707），但它们的 Story 覆盖是 **0.8889**、远高于全体的 0.7419，救回来的是覆盖面更宽的实质答案；其余 72 题代码路径逐字未变却也动了 −2.0pt，那是模型自身的轮间抖动。**多发表六个答案换来均值略降，这是正确的代价。**",
+      "overall": {
+        "questions": 90,
+        "answerable": 78,
+        "unanswerable": 12,
+        "citation_coverage": 0.9069,
+        "citation_precision": 0.5782,
+        "story_coverage": 0.7532,
+        "support_mean": 0.809,
+        "support_supported": 0.8602,
+        "must_contain_hit": 1.0,
+        "avg_citations": 3.9,
+        "latency_ms_mean": 7501.0,
+        "refusal_rate_on_unanswerable": 0.0,
+        "forbidden_term_mentioned": 4,
+        "judged_unanswerable": 12,
+        "presupposition_asserted_rate": 0.0,
+        "over_refusal_rate": 0.0
+      },
+      "stages": {},
+      "tokens": {}
+    },
+    {
+      "id": "LAT",
+      "title": "端到端延迟",
+      "runId": "LAT-20260804T092526Z",
+      "changed": "24 题实测 p50 / p95 与各阶段耗时占比。",
+      "finding": "**这组数字推翻了此前的一个判断。** 原以为「父块/折叠是打磨项，检索是大头」，数据说反了：本地计算（dense + sparse + fuse + select + parent）合计不到 1%，99% 的时间花在三次外部 API 往返上。直接后果是压延迟只能动网络侧，而任何「多算几路」的实验成本可以忽略。",
+      "overall": {
+        "p50_ms": 10521,
+        "p95_ms": 13875,
+        "max_ms": 14488,
+        "mean_ms": 10642
+      },
+      "stages": {
+        "plan": {
+          "p50_ms": 0,
+          "p95_ms": 0,
+          "mean_ms": 0,
+          "share": 0.0
+        },
+        "embed": {
+          "p50_ms": 1853,
+          "p95_ms": 2412,
+          "mean_ms": 1859,
+          "share": 0.175
+        },
+        "dense": {
+          "p50_ms": 42,
+          "p95_ms": 54,
+          "mean_ms": 41,
+          "share": 0.004
+        },
+        "sparse": {
+          "p50_ms": 24,
+          "p95_ms": 30,
+          "mean_ms": 23,
+          "share": 0.002
+        },
+        "fuse": {
+          "p50_ms": 1,
+          "p95_ms": 1,
+          "mean_ms": 1,
+          "share": 0.0
+        },
+        "rerank": {
+          "p50_ms": 3131,
+          "p95_ms": 3654,
+          "mean_ms": 3022,
+          "share": 0.284
+        },
+        "select": {
+          "p50_ms": 2,
+          "p95_ms": 3,
+          "mean_ms": 2,
+          "share": 0.0
+        },
+        "parent": {
+          "p50_ms": 5,
+          "p95_ms": 6,
+          "mean_ms": 5,
+          "share": 0.0
+        },
+        "generate": {
+          "p50_ms": 5656,
+          "p95_ms": 8704,
+          "mean_ms": 5677,
+          "share": 0.533
+        }
+      },
+      "tokens": {
+        "prompt_p50": 13646,
+        "prompt_p95": 21654,
+        "completion_p50": 557,
+        "total_prompt": 349590,
+        "total_completion": 15376
+      }
+    }
+  ]
+}

@@ -73,6 +73,7 @@ def fold_by_story(
     facts: dict[str, ChunkFacts],
     *,
     limit: int,
+    reasons: dict[str, str] | None = None,
 ) -> list[str]:
     """Collapse same-event passages, preserving retrieval order otherwise.
 
@@ -85,15 +86,34 @@ def fold_by_story(
     release note that answers it less directly should not displace the article
     that answers it. Tier decides who counts as the main source when they are
     otherwise equal, which is what `_TIER_RANK` is for.
+
+    `reasons`, when supplied, is filled with why each dropped passage was
+    dropped. Reported from here rather than reconstructed by the caller: only
+    this loop knows whether a passage lost to a same-event sibling or simply
+    arrived after the budget was full, and inferring it from positions
+    afterwards would be a guess presented as an explanation.
     """
     kept: list[str] = []
     per_story: dict[str, int] = {}
     sources_per_story: dict[str, set[str]] = {}
     seen_items: set[str] = set()
 
+    def note(chunk_id: str, why: str) -> None:
+        if reasons is not None:
+            reasons[chunk_id] = why
+
+    full = False
     for chunk_id in ranked_chunk_ids:
         fact = facts.get(chunk_id)
         if fact is None:
+            note(chunk_id, "no_facts")
+            continue
+
+        # Everything past the budget is a budget drop, not a folding decision.
+        # Recorded rather than skipped so the trace can show what was still
+        # queued when the evidence set filled up.
+        if full:
+            note(chunk_id, "budget")
             continue
 
         story = fact.story_id
@@ -102,14 +122,17 @@ def fold_by_story(
         else:
             taken = per_story.get(story, 0)
             if taken >= MAX_PER_STORY:
+                note(chunk_id, "story_fold")
                 continue
 
             sources = sources_per_story.setdefault(story, set())
             if fact.source_id in sources:
                 # Same outlet, same event: one source counted twice adds no
                 # independent confirmation.
+                note(chunk_id, "story_fold")
                 continue
             if len(sources) > MAX_SUPPORTING_SOURCES:
+                note(chunk_id, "story_fold")
                 continue
 
             sources.add(fact.source_id)
@@ -118,7 +141,8 @@ def fold_by_story(
 
         seen_items.add(fact.content_item_id)
         if len(kept) >= limit:
-            break
+            # Keep walking so the remainder can be labelled, but stop selecting.
+            full = True
 
     return kept
 

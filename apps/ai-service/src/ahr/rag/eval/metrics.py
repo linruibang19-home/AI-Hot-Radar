@@ -19,6 +19,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from ahr.rag.retrieval import ChunkHit
+
 
 @dataclass(frozen=True)
 class RankedResult:
@@ -26,6 +28,8 @@ class RankedResult:
 
     item_id: str
     score: float
+    source_id: str = ""
+    source_tier: str = ""
 
 
 def recall_at_k(ranked: list[RankedResult], relevant: frozenset[str], k: int) -> float:
@@ -92,3 +96,54 @@ def dedupe_to_items(chunk_hits: list[tuple[str, float]]) -> list[RankedResult]:
         seen.add(item_id)
         ranked.append(RankedResult(item_id=item_id, score=score))
     return ranked
+
+
+def dedupe_hits_to_items(chunk_hits: list[ChunkHit]) -> list[RankedResult]:
+    """Collapse ``ChunkHit`` objects while retaining source diagnostics.
+
+    The original tuple helper remains the small metric primitive used by unit
+    tests and sweep code.  Evaluation reports need the source identity and tier
+    as well, otherwise `source diversity` and `primary-source@5` from §14 are
+    impossible to measure even though retrieval already returns that metadata.
+    """
+    seen: set[str] = set()
+    ranked: list[RankedResult] = []
+    for hit in chunk_hits:
+        item_id = hit.content_item_id
+        if item_id in seen:
+            continue
+        seen.add(item_id)
+        ranked.append(
+            RankedResult(
+                item_id=item_id,
+                score=hit.score,
+                source_id=hit.source_id,
+                source_tier=hit.source_tier,
+            )
+        )
+    return ranked
+
+
+def source_diagnostics(ranked: list[RankedResult], *, depth: int = 10) -> dict[str, float | int]:
+    """Source concentration and primary evidence ratio at an item cutoff."""
+    rows = ranked[:depth]
+    if not rows:
+        return {
+            "distinct_sources": 0,
+            "dominant_source_share": 0.0,
+            "primary_source_share": 0.0,
+        }
+
+    counts: dict[str, int] = {}
+    for index, row in enumerate(rows):
+        # Missing provenance must not collapse unrelated items into one fake
+        # source.  Keep it visible as an item-specific unknown instead.
+        key = row.source_id or f"unknown:{index}"
+        counts[key] = counts.get(key, 0) + 1
+    primary_depth = min(5, len(ranked))
+    primary = sum(1 for row in ranked[:primary_depth] if row.source_tier == "primary")
+    return {
+        "distinct_sources": len(counts),
+        "dominant_source_share": max(counts.values()) / len(rows),
+        "primary_source_share": primary / primary_depth if primary_depth else 0.0,
+    }

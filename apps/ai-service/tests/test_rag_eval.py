@@ -21,10 +21,12 @@ from ahr.rag.eval.golden import (
 )
 from ahr.rag.eval.metrics import (
     RankedResult,
+    dedupe_hits_to_items,
     dedupe_to_items,
     ndcg_at_k,
     recall_at_k,
     reciprocal_rank,
+    source_diagnostics,
 )
 from ahr.rag.retrieval import ChunkHit, _escape_lexeme, interleave
 
@@ -147,6 +149,29 @@ def test_dedupe_prevents_one_document_from_inflating_recall() -> None:
 
 def test_dedupe_of_an_empty_result_is_empty() -> None:
     assert dedupe_to_items([]) == []
+
+
+def test_source_diagnostics_measure_concentration_and_primary_ratio() -> None:
+    ranked = [
+        RankedResult("a", 1.0, source_id="vendor", source_tier="primary"),
+        RankedResult("b", 0.9, source_id="vendor", source_tier="primary"),
+        RankedResult("c", 0.8, source_id="press", source_tier="secondary"),
+        RankedResult("d", 0.7, source_id="expert", source_tier="expert"),
+        RankedResult("e", 0.6, source_id="press", source_tier="secondary"),
+    ]
+    result = source_diagnostics(ranked)
+    assert result["distinct_sources"] == 3
+    assert result["dominant_source_share"] == pytest.approx(2 / 5)
+    assert result["primary_source_share"] == pytest.approx(2 / 5)
+
+
+def test_dedupe_hits_keeps_provenance_from_the_best_rank() -> None:
+    hits = [
+        ChunkHit("c1", "a", 1.0, "", "Vendor", "vendor", "primary"),
+        ChunkHit("c2", "a", 0.9, "", "Press", "press", "secondary"),
+    ]
+    ranked = dedupe_hits_to_items(hits)
+    assert ranked == [RankedResult("a", 1.0, "vendor", "primary")]
 
 
 # --------------------------------------------------------------------------
@@ -310,6 +335,64 @@ def test_rejects_out_of_range_grade(tmp_path: Path) -> None:
         load_golden_set(tmp_path, require_full=False)
 
 
+def test_distractors_are_typed_and_kept_separate_from_relevant_items(tmp_path: Path) -> None:
+    _write(
+        tmp_path,
+        "x.yaml",
+        {
+            "category": "fact_check",
+            "questions": [
+                {
+                    "id": "Q1",
+                    "cohort": "vendor_alias",
+                    "question": "q",
+                    "asked_at": "2026-08-03T12:00:00+08:00",
+                    "answerable": True,
+                    "relevant_items": [{"id": "i1", "grade": 2}],
+                    "distractor_items": [{"id": "i2", "reason": "nearby model"}],
+                }
+            ],
+        },
+    )
+    golden = load_golden_set(tmp_path, require_full=False)
+    question = golden.questions[0]
+    assert question.cohort == "vendor_alias"
+    assert question.distractor_ids == frozenset({"i2"})
+    assert golden.item_ids == frozenset({"i1"})
+    assert golden.annotated_item_ids == frozenset({"i1", "i2"})
+
+
+@pytest.mark.parametrize(
+    ("distractors", "message"),
+    [
+        ([{"id": "i2"}], "need an 'id' and a 'reason'"),
+        ([{"id": "i1", "reason": "same row"}], "both relevant and distractors"),
+    ],
+)
+def test_rejects_invalid_distractor_annotations(
+    tmp_path: Path, distractors: list[dict[str, str]], message: str
+) -> None:
+    _write(
+        tmp_path,
+        "x.yaml",
+        {
+            "category": "fact_check",
+            "questions": [
+                {
+                    "id": "Q1",
+                    "question": "q",
+                    "asked_at": "2026-08-03T12:00:00+08:00",
+                    "answerable": True,
+                    "relevant_items": [{"id": "i1", "grade": 2}],
+                    "distractor_items": distractors,
+                }
+            ],
+        },
+    )
+    with pytest.raises(GoldenSetError, match=message):
+        load_golden_set(tmp_path, require_full=False)
+
+
 def test_require_full_enforces_the_per_category_minimum(tmp_path: Path) -> None:
     _write(
         tmp_path,
@@ -366,3 +449,13 @@ def test_shipped_golden_set_ids_are_sequential_and_unique() -> None:
     golden = load_golden_set(GOLDEN_DIR, require_full=True)
     numbers = sorted(int(q.id.rsplit("-", 1)[1]) for q in golden.questions)
     assert numbers == list(range(1, 91))
+
+
+@pytest.mark.skipif(GOLDEN_DIR is None, reason="golden set not mounted")
+def test_vendor_alias_specialist_set_is_complete_and_adversarial() -> None:
+    assert GOLDEN_DIR is not None
+    golden = load_golden_set(GOLDEN_DIR / "vendor-alias", require_full=False)
+    assert len(golden) == 15
+    assert {q.cohort for q in golden.questions} == {"zh_vendor_to_latin_model"}
+    assert all(q.distractor_items for q in golden.questions)
+    assert all(q.must_contain for q in golden.questions)

@@ -1,0 +1,201 @@
+# 专项集：中文厂商名必须召回英文产品/模型名。
+#
+# 这 15 题不混入主 90 题的长期趋势分数；运行时使用独立目录和
+# `--allow-partial`。每个事实均在 2026-08-11 对当前
+# `content_revision.body_text` 重新核验，`distractor_items` 是会混淆模型的真实
+# 竞争产品原文，供固定候选快照的噪声 A/B 使用。
+category: fact_check
+questions:
+  - id: RAG-VENDOR-001
+    cohort: zh_vendor_to_latin_model
+    question: 阿里最新发布的旗舰大模型叫什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 6081607a-9e0c-4f31-9a7c-14c9271053e6, grade: 2}
+      - {id: 1418aaf4-7fe3-4f2e-85c3-d574c617a75e, grade: 1}
+      - {id: 845e4161-2365-426a-a856-d7a601a0bf09, grade: 1}
+    must_contain: ["Qwen3.8-Max"]
+    distractor_items:
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, reason: "同期中国开放权重模型 Kimi K3"}
+      - {id: 6b5ddf5f-1b79-416b-b69f-e4a6a70111da, reason: "同期中国旗舰模型 GLM-5.2"}
+    notes: 问句没有 Qwen，必须由阿里映射到 Qwen 家族。
+
+  - id: RAG-VENDOR-002
+    cohort: zh_vendor_to_latin_model
+    question: 阿里这次的新旗舰总参数量是多少？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 1418aaf4-7fe3-4f2e-85c3-d574c617a75e, grade: 2}
+      - {id: 845e4161-2365-426a-a856-d7a601a0bf09, grade: 2}
+      - {id: 6081607a-9e0c-4f31-9a7c-14c9271053e6, grade: 1}
+    must_contain: ["2.4"]
+    distractor_items:
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, reason: "Kimi K3 的 2.8T 参数是近邻数字"}
+    notes: 同时考厂商别名和 2.4T/2.8T 近邻数字不串线。
+
+  - id: RAG-VENDOR-003
+    cohort: zh_vendor_to_latin_model
+    question: 阿里新模型能连续自主编码多久？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 845e4161-2365-426a-a856-d7a601a0bf09, grade: 2}
+    must_contain: ["10"]
+    evidence_must_contain: ["十多天"]
+    distractor_items:
+      - {id: 9d19aad4-9d58-4164-b36a-243b795de97e, reason: "另一模型的编码评测与时长信息"}
+    notes: 原文明确“无人干预下自主推进十多天”。
+
+  - id: RAG-VENDOR-004
+    cohort: zh_vendor_to_latin_model
+    question: 阿里最新旗舰和 Claude 相比表现怎样？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 845e4161-2365-426a-a856-d7a601a0bf09, grade: 2}
+      - {id: 1418aaf4-7fe3-4f2e-85c3-d574c617a75e, grade: 2}
+      - {id: 6081607a-9e0c-4f31-9a7c-14c9271053e6, grade: 1}
+    must_contain: ["Claude"]
+    distractor_items:
+      - {id: 9d19aad4-9d58-4164-b36a-243b795de97e, reason: "Kimi 与 GPT 的另一组编码对比"}
+    notes: 阿里自测和媒体转述必须标明来源，不能包装成独立基准。
+
+  - id: RAG-VENDOR-005
+    cohort: zh_vendor_to_latin_model
+    question: 阿里是否承诺开放这款新旗舰的权重，时间怎么说？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 1418aaf4-7fe3-4f2e-85c3-d574c617a75e, grade: 2}
+    must_contain: ["下周"]
+    evidence_must_contain: ["next week"]
+    distractor_items:
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, reason: "Kimi K3 已公布开放权重时间"}
+    notes: 只能回答当时承诺“下周”，不能把后来状态倒灌进快照。
+
+  - id: RAG-VENDOR-006
+    cohort: zh_vendor_to_latin_model
+    question: 月之暗面最近开源的超大模型叫什么？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 35c0ccc3-af39-4181-a42c-3aa98cf377c4, grade: 2}
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, grade: 2}
+    must_contain: ["Kimi K3"]
+    distractor_items:
+      - {id: 1418aaf4-7fe3-4f2e-85c3-d574c617a75e, reason: "同期阿里超大开放权重模型"}
+      - {id: 6b5ddf5f-1b79-416b-b69f-e4a6a70111da, reason: "同期智谱旗舰模型"}
+    notes: 问句没有 Kimi/Moonshot，必须由月之暗面映射到 Kimi 家族。
+
+  - id: RAG-VENDOR-007
+    cohort: zh_vendor_to_latin_model
+    question: 月之暗面的新模型总参数和每次激活参数分别是多少？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, grade: 2}
+    must_contain: ["2.8", "50B"]
+    distractor_items:
+      - {id: 1418aaf4-7fe3-4f2e-85c3-d574c617a75e, reason: "Qwen3.8-Max 的 2.4T 参数是近邻数字"}
+    notes: 原文表格为 2.8T 总参数、约 50B 等效激活参数。
+
+  - id: RAG-VENDOR-008
+    cohort: zh_vendor_to_latin_model
+    question: 月之暗面的新模型有多少专家，每个 token 激活多少个？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, grade: 2}
+    must_contain: ["896", "16"]
+    distractor_items:
+      - {id: 6b5ddf5f-1b79-416b-b69f-e4a6a70111da, reason: "GLM 同为 MoE 长上下文旗舰"}
+    notes: 两个数字必须绑定同一段原始模型表格。
+
+  - id: RAG-VENDOR-009
+    cohort: zh_vendor_to_latin_model
+    question: 月之暗面的新模型原生采用什么权重量化？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, grade: 2}
+    must_contain: ["MXFP4"]
+    must_not_claim: ["NVFP4"]
+    distractor_items:
+      - {id: 2717b0e9-c80b-490b-83a1-a77fd34a9aa4, reason: "NVFP4 是最相似但错误的量化格式"}
+    notes: 精确型号对抗题；不得把 MXFP4 与 NVFP4 混为一谈。
+
+  - id: RAG-VENDOR-010
+    cohort: zh_vendor_to_latin_model
+    question: 月之暗面的新模型和 GPT-5.6 Sol 做编码任务时成本差多少？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 9d19aad4-9d58-4164-b36a-243b795de97e, grade: 2}
+    must_contain: ["64%"]
+    distractor_items:
+      - {id: 845e4161-2365-426a-a856-d7a601a0bf09, reason: "Qwen 与 Claude 的另一组编码成本/能力叙述"}
+    notes: 原文为每个完成任务便宜 64%，并给出 $4.65 对 $8.37。
+
+  - id: RAG-VENDOR-011
+    cohort: zh_vendor_to_latin_model
+    question: 智谱当时上线的新旗舰叫什么，支持多长上下文？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 6b5ddf5f-1b79-416b-b69f-e4a6a70111da, grade: 2}
+    must_contain: ["GLM-5.2", "1M"]
+    distractor_items:
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, reason: "Kimi K3 同样宣称 1M 上下文"}
+    notes: 问句没有 GLM/Z.ai，必须由智谱映射到 GLM 家族。
+
+  - id: RAG-VENDOR-012
+    cohort: zh_vendor_to_latin_model
+    question: 智谱团队版会不会拿客户代码和提示词训练模型？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 6b5ddf5f-1b79-416b-b69f-e4a6a70111da, grade: 2}
+    must_contain: ["不会", "代码", "提示词"]
+    evidence_must_contain: ["默认不将代码、提示词和对话内容用于模型训练"]
+    distractor_items:
+      - {id: cdb9242f-bc26-4199-b0a0-c62ed53d15e2, reason: "另一供应商的企业推理 SLA，不回答数据训练政策"}
+    notes: 安全政策必须逐字来自官方正文，不能从产品宣传推断。
+
+  - id: RAG-VENDOR-013
+    cohort: zh_vendor_to_latin_model
+    question: Cloudflare 为智谱和月之暗面的模型用了哪三类推理优化？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: 4bd0491a-dbe5-42fd-b6fc-2c6089d5e8db, grade: 2}
+    must_contain: ["KV", "权重", "缓存"]
+    evidence_must_contain: ["quantizing the KV cache", "compressing the model weights", "protecting the cache"]
+    distractor_items:
+      - {id: cdb9242f-bc26-4199-b0a0-c62ed53d15e2, reason: "Together AI 的容量产品同属推理主题但技术不同"}
+    notes: 同一原文同时出现 Z.ai/GLM 与 Moonshot/Kimi，考多实体准确绑定。
+
+  - id: RAG-VENDOR-014
+    cohort: zh_vendor_to_latin_model
+    question: 智谱的 GLM-5.2 在哪项托管服务里提供了怎样的可用性承诺？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: cdb9242f-bc26-4199-b0a0-c62ed53d15e2, grade: 2}
+    must_contain: ["Provisioned Throughput", "99%"]
+    distractor_items:
+      - {id: 4bd0491a-dbe5-42fd-b6fc-2c6089d5e8db, reason: "Cloudflare 的推理优化不提供该 SLA"}
+    notes: 原文明确 Together AI、99% uptime SLA 与 GLM-5.2 可用区域。
+
+  - id: RAG-VENDOR-015
+    cohort: zh_vendor_to_latin_model
+    question: 哪个 SGLang 版本加入了智谱 GLM-5.2 支持？
+    asked_at: 2026-08-03T23:59:00+08:00
+    answerable: true
+    relevant_items:
+      - {id: a00f611c-c5c7-489f-b7bf-7819f73dfc5d, grade: 2}
+    must_contain: ["v0.5.14", "GLM-5.2"]
+    distractor_items:
+      - {id: 4bd0491a-dbe5-42fd-b6fc-2c6089d5e8db, reason: "同样提到 SGLang 和 GLM，但不是版本发布说明"}
+    notes: 型号与版本号必须同时命中，不接受只召回一般部署文章。

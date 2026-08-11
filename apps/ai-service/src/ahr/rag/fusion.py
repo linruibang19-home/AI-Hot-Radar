@@ -45,7 +45,15 @@ RRF_K = 60
 # cliff: Recall@40 varies by 0.0043 across the whole grid, while sparse >= 0.8
 # starts destroying Recall@20 (0.8833 -> 0.8124 at 1.2). Tuning these further is
 # not a lever on this system; the reranker owns the ordering.
-DEFAULT_WEIGHTS = {"dense": 1.0, "sparse": 0.6, "temporal": 0.15}
+DEFAULT_WEIGHTS = {
+    "dense": 1.0,
+    "sparse": 0.6,
+    "temporal": 0.15,
+    # Unlike the broad recency stream, this channel is already constrained to
+    # items whose structured subject belongs to the vendor named in the query.
+    # It is therefore a relevance signal, not merely coverage.
+    "entity_temporal": 1.0,
+}
 
 # §6 fixes these magnitudes. They are bounded on purpose: a boost large enough
 # to reorder the top of the list would make the metadata, not the question,
@@ -65,6 +73,8 @@ class FusedHit:
     title: str
     source_name: str
     channels: tuple[str, ...]
+    source_id: str = ""
+    source_tier: str = ""
     boosts: tuple[str, ...] = ()
 
 
@@ -100,6 +110,8 @@ def reciprocal_rank_fusion(
             score=score,
             title=seen[chunk_id].title,
             source_name=seen[chunk_id].source_name,
+            source_id=seen[chunk_id].source_id,
+            source_tier=seen[chunk_id].source_tier,
             channels=tuple(found_in[chunk_id]),
         )
         for chunk_id, score in scores.items()

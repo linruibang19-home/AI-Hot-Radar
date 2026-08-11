@@ -58,8 +58,30 @@ class RerankConfig:
     base_url: str
     api_key: str
     model: str
-    timeout_seconds: float = 60.0
-    max_attempts: int = 3
+    timeout_seconds: float = 20.0
+    max_attempts: int = 2
+
+
+def _env_number(name: str, default: float, *, minimum: float, maximum: float) -> float:
+    raw = os.environ.get(name, "").strip()
+    try:
+        value = float(raw) if raw else default
+    except ValueError as exc:
+        raise RerankUnavailableError(f"{name} must be numeric") from exc
+    if not minimum <= value <= maximum:
+        raise RerankUnavailableError(f"{name} must be between {minimum:g} and {maximum:g}")
+    return value
+
+
+def _env_attempts(name: str, default: int, *, maximum: int) -> int:
+    raw = os.environ.get(name, "").strip()
+    try:
+        value = int(raw) if raw else default
+    except ValueError as exc:
+        raise RerankUnavailableError(f"{name} must be an integer") from exc
+    if not 1 <= value <= maximum:
+        raise RerankUnavailableError(f"{name} must be between 1 and {maximum}")
+    return value
 
 
 def build_config_from_env() -> RerankConfig:
@@ -88,7 +110,13 @@ def build_config_from_env() -> RerankConfig:
     if missing:
         raise RerankUnavailableError(f"reranker not configured: missing {', '.join(missing)}")
 
-    return RerankConfig(base_url=base_url, api_key=api_key, model=model)
+    return RerankConfig(
+        base_url=base_url,
+        api_key=api_key,
+        model=model,
+        timeout_seconds=_env_number("RERANKER_TIMEOUT_SECONDS", 20.0, minimum=1.0, maximum=60.0),
+        max_attempts=_env_attempts("RERANKER_MAX_ATTEMPTS", 2, maximum=3),
+    )
 
 
 @dataclass

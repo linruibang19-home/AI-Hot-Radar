@@ -2,7 +2,7 @@
 
 `eval_run_id`：`B2-20260803T150939Z`（稀疏单通道）、`B2-20260803T151108Z`（并集）
 逐题数据：[稀疏](m4-rag-eval-B2-sparse-20260803.json) ｜ [并集](m4-rag-eval-B2-union-20260803.json)
-对照基线：[B1](m4-rag-eval-B1.md) ｜ 决策：[ADR-0015](../adr/0015-rag-sparse-channel-uses-postgres.md)
+对照基线：[B1](m4-rag-eval-B1.md) ｜ 决策：[ADR-0015](../../adr/0015-rag-sparse-channel-uses-postgres.md)
 
 ## 结论先说
 

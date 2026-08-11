@@ -46,6 +46,7 @@ from dataclasses import dataclass
 # spread was 0.008, and metadata silently became the ranking function.
 DIRECTNESS_WEIGHT = 0.10
 SOURCE_FIT_WEIGHT = 0.08
+IDENTIFIER_FIT_WEIGHT = 0.12
 
 # How well each source tier answers each kind of question, in [-1, 1].
 #
@@ -65,6 +66,12 @@ SOURCE_AFFINITY: dict[str, dict[str, float]] = {
 # the sparse channel relies on, for the same reason — one rule, both languages.
 _CJK = re.compile(r"[一-鿿぀-ヿ]")
 _TOKEN = re.compile(r"[一-鿿぀-ヿ]|[a-z0-9][a-z0-9.+-]*")
+_IDENTIFIER = re.compile(
+    r"(?<![a-z0-9])(?=[a-z0-9.+-]{3,}(?![a-z0-9]))"
+    r"(?=[a-z0-9.+-]*[a-z])(?=[a-z0-9.+-]*\d)"
+    r"[a-z0-9]+(?:[.+-][a-z0-9]+)*(?![a-z0-9])",
+    re.IGNORECASE,
+)
 
 # A one-letter Latin token is punctuation or an article and matching on it would
 # make every title look direct. The floor applies to Latin only: a CJK character
@@ -81,6 +88,7 @@ class Candidate:
     relevance: float
     title: str
     source_tier: str | None = None
+    passage: str = ""
 
 
 def tokenize(text: str) -> set[str]:
@@ -117,6 +125,25 @@ def source_fit(query_type: str, source_tier: str | None) -> float:
     return SOURCE_AFFINITY.get(query_type, {}).get(source_tier, 0.0)
 
 
+def identifiers(text: str) -> set[str]:
+    """Return product/model identifiers that mix Latin letters and digits.
+
+    This deliberately excludes ordinary words and dates.  The cross-lingual
+    failure it guards is narrow: a Chinese question names ``GLM-5.2`` exactly,
+    the English passage contains ``GLM-5.2`` exactly, yet the cross-encoder
+    places it below semantically nearby vendor news.
+    """
+    return {match.group(0).casefold() for match in _IDENTIFIER.finditer(text)}
+
+
+def identifier_fit(question: str, passage: str) -> float:
+    """Share of explicit question identifiers preserved by the passage."""
+    query_identifiers = identifiers(question)
+    if not query_identifiers:
+        return 0.0
+    return len(query_identifiers & identifiers(passage)) / len(query_identifiers)
+
+
 def _normalise(values: list[float]) -> list[float]:
     """Map onto [0, 1]. A flat list becomes all-1.0, never all-0.
 
@@ -140,6 +167,7 @@ def apply_dimensions(
     query_type: str,
     directness_weight: float = DIRECTNESS_WEIGHT,
     source_fit_weight: float = SOURCE_FIT_WEIGHT,
+    identifier_fit_weight: float = 0.0,
 ) -> list[str]:
     """Reorder by relevance adjusted with the two remaining §6 dimensions.
 
@@ -157,6 +185,7 @@ def apply_dimensions(
             base
             + directness_weight * directness(question, candidate.title)
             + source_fit_weight * source_fit(query_type, candidate.source_tier)
+            + identifier_fit_weight * identifier_fit(question, candidate.passage)
         )
         # Ties broken by key so a rerun is reproducible.
         adjusted.append((score, candidate.key))

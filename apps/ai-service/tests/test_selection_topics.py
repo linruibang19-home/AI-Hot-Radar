@@ -90,9 +90,29 @@ def test_unknown_labels_are_dropped(raw: str) -> None:
     assert resolve(raw, VOCABULARY) is None
 
 
-def test_known_slugs_includes_parents_and_children() -> None:
-    taxonomy = {"models": ["llm", "multimodal"], "business": ["funding"]}
-    assert known_slugs(taxonomy) == {"models", "llm", "multimodal", "business", "funding"}
+def test_known_slugs_offers_leaves_only_never_a_group_name() -> None:
+    """A group is a place to put topics, not a topic.
+
+    This test used to assert the opposite, and so pinned the defect instead of
+    catching it: group keys were offered to the extraction step, and 23 items
+    ended up tagged `business` — a bucket the topic map renders as a section
+    heading rather than a card, leaving those items reachable from nowhere.
+    """
+    taxonomy = {"tech": ["llm", "multimodal"], "industry": ["funding"]}
+
+    assert known_slugs(taxonomy) == {"llm", "multimodal", "funding"}
+    assert resolve("tech", known_slugs(taxonomy)) is None
+
+
+def test_a_retired_topic_resolves_to_the_one_that_absorbed_it() -> None:
+    """The merges are in the alias table as well as in the migration, so a
+    label extracted tomorrow lands where yesterday's tags were moved to."""
+    vocabulary = {"ai_coding", "inference", "rag", "enterprise"}
+
+    assert resolve("spring_ai", vocabulary) == "ai_coding"
+    assert resolve("observability", vocabulary) == "inference"
+    assert resolve("embedding", vocabulary) == "rag"
+    assert resolve("business", vocabulary) == "enterprise"
 
 
 # --- selection scoring ---------------------------------------------------

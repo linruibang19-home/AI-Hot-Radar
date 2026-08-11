@@ -10,6 +10,7 @@ from ahr.processing.email import (
     build_message,
     delivery_key,
     render_html,
+    report_delivery_allowed,
 )
 
 MARKDOWN = """# AI Hot Radar 日报 · 2026-08-01
@@ -61,6 +62,17 @@ def test_delivery_key_differs_per_recipient_and_date() -> None:
 def test_delivery_key_does_not_leak_the_address() -> None:
     """The key is stored; the raw address should not be recoverable from it."""
     assert "example.com" not in delivery_key("2026-08-01", "a@example.com")
+
+
+def test_formal_delivery_requires_a_published_report() -> None:
+    assert report_delivery_allowed("PUBLISHED", dry_run=False) is True
+    assert report_delivery_allowed("DRAFT", dry_run=False) is False
+    assert report_delivery_allowed("REVIEW_REQUIRED", dry_run=False) is False
+    assert report_delivery_allowed("WITHDRAWN", dry_run=False) is False
+
+
+def test_dry_run_can_preview_a_draft_without_sending() -> None:
+    assert report_delivery_allowed("DRAFT", dry_run=True) is True
 
 
 # --- html rendering ------------------------------------------------------

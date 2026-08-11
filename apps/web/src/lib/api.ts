@@ -65,9 +65,23 @@ export interface TopicRef {
 
 const EMPTY_PAGE: ItemPage = { data: [], page: { nextCursor: null, hasMore: false } };
 
+/**
+ * The web tier's own admin credential — read-only by role.
+ *
+ * Server-side only, so it never reaches a browser. The role matters more than
+ * the secrecy: this container renders the source console and never mutates, so
+ * the token it holds is one that *cannot* mutate. Compromising the web tier
+ * therefore does not hand over the ingestion pipeline.
+ */
+const ADMIN_VIEWER_TOKEN = process.env.AHR_ADMIN_VIEWER_TOKEN ?? "";
+
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
+      headers:
+        path.startsWith("/api/v1/admin/") && ADMIN_VIEWER_TOKEN
+          ? { Authorization: `Bearer ${ADMIN_VIEWER_TOKEN}` }
+          : {},
       // Deliberately uncached at this layer.
       //
       // `next: { revalidate: 60 }` was serving stale responses long past the
@@ -287,12 +301,45 @@ export interface SourceHealth {
   lastErrorCode?: string | null;
   consecutiveFailures: number;
   nextPollAt?: string | null;
+  /** Operator override of the registry: null means "follow config/sources.yaml". */
+  operatorEnabled?: boolean | null;
+  operatorNote?: string | null;
   items: number;
   fulltextSuccessRate?: number | null;
 }
 
 export function fetchSourceHealth(): Promise<SourceHealth[]> {
   return getJson<SourceHealth[]>("/api/v1/admin/sources", []);
+}
+
+/**
+ * One card on a topic-map dimension that is not the topic vocabulary.
+ *
+ * Vendors and content forms share a shape because they are the same thing to a
+ * reader: a name, a blurb, and how many items are behind it. They differ only
+ * in where the count comes from — `item_entity` for one, `content_type` for the
+ * other — and that difference belongs in SQL, not in two near-identical types.
+ */
+export interface MapCard {
+  slug: string;
+  name: string;
+  description?: string | null;
+  total: number;
+}
+
+export function fetchVendorMap(): Promise<MapCard[]> {
+  return getJson<MapCard[]>("/api/v1/vendors/map", []);
+}
+
+export function fetchContentTypeMap(): Promise<MapCard[]> {
+  return getJson<MapCard[]>("/api/v1/content-types/map", []);
+}
+
+export function fetchVendorItems(slug: string, limit = 40): Promise<ContentItem[]> {
+  return getJson<ContentItem[]>(
+    `/api/v1/vendors/${encodeURIComponent(slug)}?limit=${limit}`,
+    [],
+  );
 }
 
 export interface ReportSummary {
@@ -302,11 +349,51 @@ export interface ReportSummary {
   itemCount: number;
   generatedAt: string;
   modelName?: string | null;
+  status: string;
+}
+
+export interface ReportEntry {
+  section: string;
+  position: number;
+  id: string;
+  title: string;
+  summary?: string | null;
+  canonicalUrl: string;
+  contentType?: string | null;
+  sourceId: string;
+  sourceName: string;
+  organization?: string | null;
+  sourceTier: string;
+  storySlug?: string | null;
+  independentSources: number;
+}
+
+export interface ReportSection {
+  key: string;
+  label: string;
+  count: number;
+  items: ReportEntry[];
+}
+
+export interface ReportStats {
+  items: number;
+  sections: number;
+  sources: number;
+  primarySources: number;
+  stories: number;
+  readingMinutes: number;
 }
 
 export interface ReportDetail extends ReportSummary {
   bodyMarkdown: string;
   promptVersion?: string | null;
+  publishedAt?: string | null;
+  sections: ReportSection[];
+  stats: ReportStats;
+  navigation: {
+    previousKey?: string | null;
+    nextKey?: string | null;
+  };
 }
 
 export type ReportPeriod = "daily" | "weekly" | "monthly";
@@ -354,6 +441,34 @@ export function formatPeriodKey(period: ReportPeriod, key: string): string {
   }
   const [year, month, day] = key.split("-");
   return `${year} 年 ${Number(month)} 月 ${Number(day)} 日`;
+}
+
+/** The inclusive calendar window represented by a persisted report key. */
+export function reportWindow(period: ReportPeriod, key: string): string {
+  if (period === "daily") return key;
+  if (period === "monthly") {
+    const match = /^(\d{4})-(\d{2})$/.exec(key);
+    if (!match) return key;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return `${key}-01 — ${key}-${String(last).padStart(2, "0")}`;
+  }
+
+  const match = /^(\d{4})-W(\d{2})$/.exec(key);
+  if (!match) return key;
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  const fourthOfJanuary = new Date(Date.UTC(year, 0, 4));
+  const mondayOfWeekOne = new Date(fourthOfJanuary);
+  mondayOfWeekOne.setUTCDate(
+    fourthOfJanuary.getUTCDate() - ((fourthOfJanuary.getUTCDay() + 6) % 7),
+  );
+  const start = new Date(mondayOfWeekOne);
+  start.setUTCDate(start.getUTCDate() + (week - 1) * 7);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 6);
+  return `${start.toISOString().slice(0, 10)} — ${end.toISOString().slice(0, 10)}`;
 }
 
 /**

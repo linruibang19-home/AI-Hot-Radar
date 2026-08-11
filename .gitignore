@@ -38,11 +38,16 @@ Thumbs.db
 source-health.json
 source-health.md
 
+# Database dumps written by the production backup worker.
+infra/compose/backups/
+
 # Playwright e2e artefacts (the suite installs into its own directory so it
 # never enters the web app's runtime image).
 apps/web/e2e/node_modules/
 apps/web/e2e/test-results/
 apps/web/e2e/playwright-report/
+# Playwright run from apps/web instead of apps/web/e2e lands here.
+apps/web/test-results/
 
 # Agent worktrees created by the coding tool.
 .claude/worktrees/

@@ -122,6 +122,157 @@ Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互
 **产出**：黄金集、SQL/FTS baseline、Vector baseline、RRF、离线报告。  
 **顺序**：先测 baseline，再加 reranker；不得只展示几个主观示例宣布有效。
 
+### TASK-M5-001｜发布基线整合与全量门禁
+
+**状态**：✅ 2026-08-11 完成；验收记录见 `docs/status/project-status.md` §0。
+**读取**：`07-quality-security-ops.md`、`11-end-to-end-runbook.md`、
+`12-delivery-index.md`、`docs/status/project-status.md`。
+**输入**：当前已由 Docker Compose 实测运行的最新开发分支。
+**产出**：以最新开发提交为起点的正式发布候选基线、可重复的全量验收记录，
+以及与实测结果一致的状态文档。
+**关键测试**：Python pytest/mypy、Java Maven test、Web typecheck/lint/unit、
+契约生成无 diff、Compose 服务健康、数据库迁移与核心页面/API smoke。
+**完成标准**：所有门禁通过；失败项有根因和修复证据；发布候选可 fast-forward
+纳入 `main`；不打印或提交 `.env`，不推送远端，不执行生产部署。
+
+### TASK-M4-002｜RAG 专项黄金集与引用发布门禁
+
+**状态**：✅ 2026-08-11 完成。15 题专项集、8 个真实近邻噪声、同候选快照 A/B、
+90 题检索/生成回归、数值关系审计与逐题人工 P0 核验均已落地；证据见
+`docs/status/rag-specialist-audit-20260811.md`。Planner 的 query-type 代理经扫描确认
+在当前语料上不可操作，未用默认关闭的 LLM 结果冒充线上门禁通过。
+**读取**：`04-rag-agent-design.md`、`07-quality-security-ops.md`、
+`docs/design/m4-rag-evaluation.md`、`data/golden/README.md`、
+`docs/status/rag-product-readiness-20260810.md`。
+**输入**：现有 90 题黄金集、ENTITY/B15/GEN 基线和线上 `rag_query` 证据链。
+**产出**：中文厂商名到英文产品/模型的专项黄金集、噪声敏感性样本、同候选快照
+的重排 A/B、关键问题逐条人工引用核验，以及可阻断发布的回归结果。
+**边界**：先用专项集证明召回缺口；只有缺口成立才试验查询改写。改写只能新增
+候选，不得改变冻结的原始问题、实体、时间窗或覆盖原始查询结果。
+**完成标准**：每个样本均由原始 passage 人工核验；关键问题不存在“引用存在但
+不支持结论”的 P0；回归绑定 `eval_run_id`、候选快照、模型/配置版本，结果可复现。
+
+### TASK-M4-003｜RAG 上线前安全与性能稳定性
+
+**状态**：✅ 2026-08-11 完成。安全边界、凭据 fail-closed、供应商快速失败、分阶段
+p95/p99 SLO、全库门禁与当前镜像 smoke 均已验证；服务器依赖项按边界保留。证据见
+`docs/status/rag-security-performance-20260811.md`。
+**读取**：`04-rag-agent-design.md`、`07-quality-security-ops.md`、
+`docs/status/rag-product-readiness-20260810.md`、ADR-0017、ADR-0023、ADR-0024。
+**输入**：当前公开问答入口、原始网页证据、三类供应商调用、`rag_query.metrics` 与
+08-11 全量延迟证据。
+**产出**：不可信证据提示边界、最终答案凭据泄漏 fail-closed、可配置且有界的供应商
+超时/尝试次数、分阶段 p95/p99 SLO 判定、Compose 当前源码全量门禁。
+**边界**：不按关键词删除安全类文章；不引入新中间件；没有第二供应商真实配置与回归时
+不宣称备用模型已完成；密钥轮换、DNS/TLS、真实告警和恢复演练留到服务器就绪后执行。
+**完成标准**：安全 canary、超时/重试和 SLO 单测通过；Ruff、全库 mypy、全量 pytest
+通过；Compose 服务健康，公开 API smoke 无回归。
+
+### TASK-M4-004｜RAG 问答界面精修与可信引导
+
+**状态**：✅ 2026-08-11 完成；验收记录见
+`docs/status/rag-ui-polish-20260811.md`。
+**读取**：`06-frontend-spec.md`、`04-rag-agent-design.md`。
+**输入**：现有 `/ask` 多轮对话、示例问题、证据质量与引用交互。
+**产出**：不改变页面骨架的空状态层级、能力边界提示、示例问题布局、输入区视觉与
+键盘焦点精修，以及对应的前端回归测试。
+**边界**：保留侧栏、标题、对话头、答案卡片和引用结构；不引入新组件库或整页重做；
+不得用“智能”“准确”等无法验证的宣传词替代具体产品能力。
+**完成标准**：空状态在桌面与移动端均无大面积无意义留白；一眼可见原文引用、时间范围
+和证据不足拒答三项边界；typecheck、lint、unit 与 production build 通过；Docker 当前
+镜像 `/ask` 可访问且包含新版可信提示。
+
+### TASK-DOC-001｜发布候选文档与交接收口
+
+**状态**：✅ 2026-08-11 完成；当前交接见
+`docs/status/handoff-20260811.md`。
+**读取**：`README.md`、`12-delivery-index.md`、`docs/status/project-status.md`、
+`docs/status/handoff-20260810.md` 以及 08-11 三份 RAG 验收记录。
+**输入**：当前 Git 分支/提交、Docker Compose 运行态、数据库实测快照与本轮门禁结果。
+**产出**：更新总入口、交付索引、累计项目状态和新的当前交接文档；旧交接保留为历史记录。
+**完成标准**：当前分支、数据量、测试数、RAG 门禁、报告状态和剩余任务在各入口口径一致；
+不把服务器权限事项、人工视觉验收或未来产品化能力写成已完成。
+
+### TASK-M5-002｜报告阅读体验与结构化只读模型
+
+**状态**：🟡 2026-08-11 实现与自动化验收完成，Chrome 视觉门禁待补；证据见
+`docs/status/report-reader-20260811.md`。
+**读取**：`01-product-requirements.md`、`06-frontend-spec.md`、
+`docs/status/handoff-20260811.md`。
+**输入**：现有 daily/weekly/monthly DRAFT 报告、`report_item` 证据关系和当前报告路由。
+**产出**：向后兼容的结构化报告只读 API；保留全站侧栏的“档案栏 + 刊物正文”报告界面；
+日报、周报、月报使用同一组件但呈现不同周期语义；桌面与移动端可用。
+**边界**：不得复制 AIHOT 品牌、Logo、完整文案或像素布局；不得新增浏览器写凭据；
+本卡不实现人工发布、下架或编辑，DRAFT 必须明确显示；不新增数据库表或迁移。
+**完成标准**：详情返回真实 `report_item`、来源、Story、章节、统计与前后期导航；三周期
+页面可访问；Python 报告测试、Java 测试、Web typecheck/lint/unit/build、Docker smoke 和
+Chrome 桌面/窄屏验收通过。
+
+### TASK-M5-003｜非阻塞报告发布状态机与审核 API
+
+**状态**：✅ 2026-08-11 完成；决策见 ADR-0025，验收见
+`docs/status/report-publication-20260811.md`。
+**读取**：`01-product-requirements.md`、`05-api-contract.md`、
+`07-quality-security-ops.md`、`11-end-to-end-runbook.md`、ADR-0019、ADR-0025。
+**输入**：持续生成的 daily/weekly/monthly DRAFT、现有 OPERATOR Bearer 鉴权与
+`admin_audit`、手工 `send-report`。
+**产出**：确定性自动发布门禁、PUBLISHED 公共读取、受保护的报告发布/下架与预览 API、
+持久化幂等键、正式邮件状态保护及历史 DRAFT 安全回填。
+**边界**：报告状态不得参与内容入库、精选、Story 或 RAG；不得在浏览器或 Web 容器加入
+OPERATOR 凭据；本卡不实现订阅、自动邮件调度或管理写 UI。
+**完成标准**：合格报告可自动发布，不合格报告进入 REVIEW_REQUIRED，WITHDRAWN 不被
+pipeline 自动解除；正式邮件拒绝非 PUBLISHED、dry-run 可预览；管理变更满足 RBAC、
+二次确认、幂等和审计；历史报告不丢失；Python/Java/Flyway/Compose smoke 通过。
+
+### TASK-M5-004｜报告订阅与定时投递闭环
+
+**状态**：⬜ 待领取；不得与 TASK-M5-003 混做。
+**读取**：`01-product-requirements.md`、`05-api-contract.md`、
+`07-quality-security-ops.md`、`11-end-to-end-runbook.md`、ADR-0025。
+**输入**：只允许投递 PUBLISHED 的 `send-report`、现有 `delivery_log` 与报告周期状态。
+**产出**：明确收件人/订阅事实模型、daily/weekly/monthly 定时投递、失败重试与可观测状态。
+**边界**：在收件人来源、退订语义和时区策略得到确认前不得默认群发；不得把
+`outbox_event` 描述成已有消费者；投递失败不得反向阻塞采集、精选或站内报告发布。
+**完成标准**：同一期同一收件人至多一次正式投递；只发送 PUBLISHED；失败可重试、可审计、
+可人工 dry-run；无订阅者时安全空跑；Compose 运行态与邮件沙箱验收通过。
+
+### TASK-M5-005｜生产部署预检与恢复门禁
+
+**状态**：✅ 2026-08-11 完成；所有不依赖目标服务器的上线准备与本地真实恢复演练通过。
+**读取**：`02-system-architecture.md`、`07-quality-security-ops.md`、
+`11-end-to-end-runbook.md`、`docs/design/m5-deployment.md`、
+`docs/design/m5-first-deploy-checklist.md`。
+**输入**：现有 production Compose、Caddy、GHCR release workflow、备份 worker、当前本地
+Compose 与已通过的 M4/M5 质量门禁。
+**产出**：可执行的生产环境预检、不可变镜像与密钥占位检查、正确的 Cloudflare 客户端 IP
+信任链、同提交发布测试门、内部端口不暴露、备份完整性检查、隔离恢复演练和公网 smoke。
+**边界**：不创建或轮换真实供应商密钥，不修改 DNS/Cloudflare/服务器防火墙，不 push、
+打 tag 或部署；这些动作必须在主人提供目标机与相应权限后执行。TASK-M5-004 仍为独立 P1，
+不得把订阅功能塞进 ai-service 违反服务边界。
+**完成标准**：生产 Compose 使用脱敏 fixture 可完整解析；危险默认值会被预检拒绝；release
+只有同提交全量门禁通过后才构建推送；本地真实数据库完成 dump/restore 数据核对；本地核心
+服务与关键页面保持健康；文档明确目标服务器到位后仅剩的外部执行步骤。
+
+### TASK-M5-006｜首次生产部署与外部闭环
+
+**状态**：🚧 2026-08-11 进行中；主人已提供香港 2C4G 目标机并授权开始上线。
+**读取**：`02-system-architecture.md`、`07-quality-security-ops.md`、
+`11-end-to-end-runbook.md`、`docs/design/m5-deployment.md`、
+`docs/design/m5-first-deploy-checklist.md`、TASK-M5-005 验收记录。
+**输入**：主人待提供的新域名、香港 2C4G 目标服务器、公网部署脚本、不可变镜像发布门和
+本地恢复证据。旧 `kuritian.online` 不续费，不再作为本卡上线域名。
+**产出**：专用 SSH 密钥与非 root 运维边界、目标机系统审计、Docker/防火墙、生产配置、
+Cloudflare DNS/TLS、按提交 SHA 的首次部署、公网 smoke、真实告警、异机备份和恢复复演。
+**边界**：聊天中出现的口令视为泄露，不在命令、文件或日志中复述/使用；真实密钥不得进入
+Git；出租方账号下的服务器按半可信主机处理，模型密钥必须专用且低额度；删除、覆盖数据库、
+关闭 SSH 或变更域名所有权前必须有明确且可恢复的目标；TASK-M5-004 仍为独立 P1。
+**完成标准**：域名续费与 A 记录生效；80/443 只到 Caddy，内部端口公网不可达；HTTPS
+Full (strict) 与安全头通过；核心服务健康；AI 动态、精选、三周期报告与 RAG 公网可用；
+告警失败/恢复均实收；异机备份存在且隔离恢复成功；部署提交、RPO/RTO 和回滚命令有记录。
+**当前证据**：见 `docs/status/production-deployment-20260811.md`。服务器、SSH/UFW/Docker、
+不可变镜像和权限 600 的 fail-closed 生产配置已就绪；域名、专用供应商凭据、告警与异机
+备份仍等待主人侧外部状态。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：
