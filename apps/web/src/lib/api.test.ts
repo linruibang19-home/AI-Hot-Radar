@@ -6,6 +6,7 @@ import {
   groupByDay,
   groupReports,
   normalisePeriod,
+  reportWindow,
 } from "./api";
 
 import type { ContentItem, ReportSummary } from "./api";
@@ -17,6 +18,7 @@ function report(date: string): ReportSummary {
     summary: "",
     itemCount: 1,
     generatedAt: "2026-08-02T00:00:00Z",
+    status: "DRAFT",
   };
 }
 
@@ -99,6 +101,21 @@ describe("formatPeriodKey", () => {
 
   it("returns a malformed week key unchanged rather than inventing a date", () => {
     expect(formatPeriodKey("weekly", "garbage")).toBe("garbage");
+  });
+});
+
+describe("reportWindow", () => {
+  it("resolves an ISO week to its inclusive Monday to Sunday range", () => {
+    expect(reportWindow("weekly", "2026-W32")).toBe("2026-08-03 — 2026-08-09");
+  });
+
+  it("uses the actual last day of a month", () => {
+    expect(reportWindow("monthly", "2026-02")).toBe("2026-02-01 — 2026-02-28");
+    expect(reportWindow("monthly", "2024-02")).toBe("2024-02-01 — 2024-02-29");
+  });
+
+  it("keeps a daily key unchanged", () => {
+    expect(reportWindow("daily", "2026-08-11")).toBe("2026-08-11");
   });
 });
 
