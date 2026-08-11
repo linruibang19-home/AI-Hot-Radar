@@ -206,7 +206,7 @@ def _record_usage(
     item_id: uuid.UUID | None,
     usage: TokenUsage,
     *,
-    model: str,
+    client: LlmClient,
     succeeded: bool,
 ) -> None:
     """Persist provider-reported usage so spend is auditable (AHR-QSO-700 §5)."""
@@ -216,13 +216,16 @@ def _record_usage(
             INSERT INTO llm_usage (
                 id, content_item_id, operation, model, prompt_version,
                 prompt_tokens, completion_tokens, cached_tokens,
-                attempts, succeeded, latency_ms
-            ) VALUES (%s, %s, 'enrich', %s, %s, %s, %s, %s, %s, %s, %s)
+                attempts, succeeded, latency_ms, model_config_version,
+                input_cny_per_million, cached_input_cny_per_million,
+                output_cny_per_million
+            ) VALUES (%s, %s, 'enrich', %s, %s, %s, %s, %s, %s, %s, %s,
+                      %s, %s, %s, %s)
             """,
             (
                 uuid.uuid4(),
                 item_id,
-                model,
+                client.model_name,
                 prompt_version(),
                 usage.prompt_tokens,
                 usage.completion_tokens,
@@ -230,6 +233,8 @@ def _record_usage(
                 usage.attempts,
                 succeeded,
                 usage.latency_ms,
+                client.model_config_version,
+                *client.price_snapshot,
             ),
         )
 
@@ -367,7 +372,7 @@ async def process_pending(
             llm = None
 
     if llm is not None:
-        model_name = llm._config.model  # noqa: SLF001 - recorded for provenance
+        model_name = llm.model_name
         if owns_client:
             await llm.__aenter__()
 
@@ -437,7 +442,7 @@ async def process_pending(
                     result, usage = await llm.enrich(
                         title=title or "", body_text=body, source_name=source_name
                     )
-                    _record_usage(connection, item_id, usage, model=model_name, succeeded=True)
+                    _record_usage(connection, item_id, usage, client=llm, succeeded=True)
                     stats.prompt_tokens += usage.prompt_tokens
                     stats.completion_tokens += usage.completion_tokens
                     stats.cached_tokens += usage.cached_tokens

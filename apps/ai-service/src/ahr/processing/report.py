@@ -21,7 +21,7 @@ from urllib.parse import urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from ahr.processing.llm import LlmClient, LlmUnavailableError
+from ahr.processing.llm import LlmClient, LlmUnavailableError, TokenUsage
 
 REPORT_PROMPT_VERSION = "report-v3"
 
@@ -101,6 +101,7 @@ class DailyReport:
     body_markdown: str
     items: list[ReportItem]
     model_name: str | None
+    model_config_version: int | None = None
 
 
 @dataclass(frozen=True)
@@ -292,6 +293,7 @@ async def build_report(
 
     summary = ""
     model_name: str | None = None
+    model_config_version: int | None = None
     if client is not None:
         # A month can hold hundreds of items; sending them all would blow the
         # context and the budget, so the digest is capped and the highest-scoring
@@ -302,8 +304,10 @@ async def build_report(
             f"{'：' + item.summary[:120] if item.summary else ''}"
             for item in items[:digest_limit]
         )
+        usage: TokenUsage | None = None
+        succeeded = False
         try:
-            raw, _usage = await client.summarize(
+            raw, usage = await client.summarize(
                 system_prompt=(
                     SUMMARY_PROMPTS[period]
                     + '\n5. 严格输出 JSON：{"summary":"总述正文"}，不得增加其他字段。'
@@ -313,10 +317,15 @@ async def build_report(
             )
             summary = ReportSummaryOutput.model_validate_json(raw).summary.strip()
             model_name = client.model_name
+            model_config_version = client.model_config_version
+            succeeded = True
         except (LlmUnavailableError, ValidationError, ValueError):
             # Invalid model output is untrusted. A deterministic digest is still
             # useful; a missing report or unvalidated narrative is not.
             summary = ""
+        finally:
+            if usage is not None:
+                _record_report_usage(connection, client, usage, succeeded=succeeded)
 
     if not summary:
         summary = f"{label} 共精选 {len(items)} 条内容，覆盖 {len(sections)} 个类别。"
@@ -331,7 +340,40 @@ async def build_report(
         body_markdown=render_markdown(title, summary, sections),
         items=items,
         model_name=model_name,
+        model_config_version=model_config_version,
     )
+
+
+def _record_report_usage(
+    connection: Any, client: LlmClient, usage: TokenUsage, *, succeeded: bool
+) -> None:
+    """Record report-summary usage, including the selected model snapshot."""
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            INSERT INTO llm_usage (
+                id, content_item_id, operation, model, prompt_version,
+                prompt_tokens, completion_tokens, cached_tokens,
+                attempts, succeeded, latency_ms, model_config_version,
+                input_cny_per_million, cached_input_cny_per_million,
+                output_cny_per_million
+            ) VALUES (%s, NULL, 'report', %s, %s, %s, %s, %s, %s, %s, %s,
+                      %s, %s, %s, %s)
+            """,
+            (
+                uuid.uuid4(),
+                client.model_name,
+                REPORT_PROMPT_VERSION,
+                usage.prompt_tokens,
+                usage.completion_tokens,
+                usage.cached_tokens,
+                max(usage.attempts, 1),
+                succeeded,
+                usage.latency_ms,
+                client.model_config_version,
+                *client.price_snapshot,
+            ),
+        )
 
 
 def save_report(connection: Any, report: DailyReport) -> uuid.UUID:
@@ -391,6 +433,8 @@ def save_report(connection: Any, report: DailyReport) -> uuid.UUID:
                 json.dumps(
                     {
                         "generated_at": datetime.now().isoformat(),
+                        "modelConfigVersion": report.model_config_version,
+                        "thinkingEnabled": False,
                         "publicationGate": gate_meta,
                     }
                 ),

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: AI Hot Radar API
-  version: 1.3.0
+  version: 1.4.0
   description: Public content, report subscriptions, RAG and source administration baseline contract.
 servers:
   - url: /api/v1
@@ -150,6 +150,44 @@ paths:
                 properties:
                   runId: {type: string, format: uuid}
                   status: {const: PENDING}
+  /admin/models/generation:
+    get:
+      operationId: getGenerationModelConfiguration
+      security: [{adminBearer: []}]
+      responses:
+        '200':
+          description: Current DeepSeek generation model and enabled catalog
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GenerationModelState'}
+        '401': {$ref: '#/components/responses/Problem'}
+  /admin/models/generation/{modelId}/select:
+    post:
+      operationId: selectGenerationModel
+      security: [{adminBearer: []}]
+      parameters:
+        - {name: modelId, in: path, required: true, schema: {type: string, enum: [deepseek-v4-flash, deepseek-v4-pro]}}
+        - {name: X-Confirm-Target, in: header, required: true, schema: {type: string}}
+        - {name: Idempotency-Key, in: header, required: true, schema: {type: string, minLength: 8, maxLength: 200}}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                reason: {type: string, maxLength: 300}
+      responses:
+        '200':
+          description: Selection stored; applies to future generation clients
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/GenerationModelSelection'}
+        '400': {$ref: '#/components/responses/Problem'}
+        '401': {$ref: '#/components/responses/Problem'}
+        '403': {$ref: '#/components/responses/Problem'}
+        '409': {$ref: '#/components/responses/Problem'}
+        '428': {$ref: '#/components/responses/Problem'}
 components:
   securitySchemes:
     adminBearer: {type: http, scheme: bearer, bearerFormat: JWT}
@@ -278,6 +316,37 @@ components:
         periods:
           type: array
           items: {$ref: '#/components/schemas/ReportPeriod'}
+    GenerationModel:
+      type: object
+      required: [model_id, display_name, description, context_window_tokens, input_cny_per_million, cached_input_cny_per_million, output_cny_per_million, pricing_effective_on, pricing_source]
+      properties:
+        model_id: {type: string, enum: [deepseek-v4-flash, deepseek-v4-pro]}
+        display_name: {type: string}
+        description: {type: string}
+        context_window_tokens: {type: integer}
+        input_cny_per_million: {type: number}
+        cached_input_cny_per_million: {type: number}
+        output_cny_per_million: {type: number}
+        pricing_effective_on: {type: string, format: date}
+        pricing_source: {type: string, format: uri}
+        version: {type: integer}
+        updated_at: {type: string, format: date-time}
+    GenerationModelState:
+      type: object
+      required: [current, available, thinkingEnabled, retrievalModels]
+      properties:
+        current: {$ref: '#/components/schemas/GenerationModel'}
+        available:
+          type: array
+          items: {$ref: '#/components/schemas/GenerationModel'}
+        thinkingEnabled: {type: boolean, const: false}
+        retrievalModels: {type: string, const: siliconflow-fixed}
+    GenerationModelSelection:
+      type: object
+      required: [current, thinkingEnabled]
+      properties:
+        current: {$ref: '#/components/schemas/GenerationModel'}
+        thinkingEnabled: {type: boolean, const: false}
     Problem:
       type: object
       required: [type, title, status]

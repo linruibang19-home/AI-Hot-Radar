@@ -3504,3 +3504,133 @@ summary:focus-visible {
     display: none;
   }
 }
+
+/* Model control keeps the engineering pages' existing card/table language;
+   the hierarchy comes from spacing and one accent edge, not a new visual system. */
+.model-current {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 18px;
+  margin: 24px 0 16px;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.model-current strong {
+  font-size: 1.35rem;
+}
+
+.model-kicker {
+  width: 100%;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.model-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.model-card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.model-card-active {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
+
+.model-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.model-card h2,
+.model-operator h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.model-card p,
+.model-operator p {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.model-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.model-metrics div {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.model-metrics dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.model-metrics dd {
+  margin: 4px 0 0;
+  font-weight: 650;
+}
+
+.model-operator {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.model-operator label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.model-operator input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.model-operator input:focus-visible {
+  border-color: var(--accent);
+  outline: 3px solid color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.model-message {
+  margin: 0;
+  color: var(--accent-ink) !important;
+}
+
+@media (max-width: 760px) {
+  .model-grid {
+    grid-template-columns: 1fr;
+  }
+}
