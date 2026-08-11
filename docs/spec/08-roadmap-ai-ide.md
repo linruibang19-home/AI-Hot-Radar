@@ -210,7 +210,8 @@ Chrome 桌面/窄屏验收通过。
 
 ### TASK-M5-003｜非阻塞报告发布状态机与审核 API
 
-**状态**：🚧 2026-08-11 进行中；决策见 ADR-0025。
+**状态**：✅ 2026-08-11 完成；决策见 ADR-0025，验收见
+`docs/status/report-publication-20260811.md`。
 **读取**：`01-product-requirements.md`、`05-api-contract.md`、
 `07-quality-security-ops.md`、`11-end-to-end-runbook.md`、ADR-0019、ADR-0025。
 **输入**：持续生成的 daily/weekly/monthly DRAFT、现有 OPERATOR Bearer 鉴权与
@@ -222,6 +223,18 @@ OPERATOR 凭据；本卡不实现订阅、自动邮件调度或管理写 UI。
 **完成标准**：合格报告可自动发布，不合格报告进入 REVIEW_REQUIRED，WITHDRAWN 不被
 pipeline 自动解除；正式邮件拒绝非 PUBLISHED、dry-run 可预览；管理变更满足 RBAC、
 二次确认、幂等和审计；历史报告不丢失；Python/Java/Flyway/Compose smoke 通过。
+
+### TASK-M5-004｜报告订阅与定时投递闭环
+
+**状态**：⬜ 待领取；不得与 TASK-M5-003 混做。
+**读取**：`01-product-requirements.md`、`05-api-contract.md`、
+`07-quality-security-ops.md`、`11-end-to-end-runbook.md`、ADR-0025。
+**输入**：只允许投递 PUBLISHED 的 `send-report`、现有 `delivery_log` 与报告周期状态。
+**产出**：明确收件人/订阅事实模型、daily/weekly/monthly 定时投递、失败重试与可观测状态。
+**边界**：在收件人来源、退订语义和时区策略得到确认前不得默认群发；不得把
+`outbox_event` 描述成已有消费者；投递失败不得反向阻塞采集、精选或站内报告发布。
+**完成标准**：同一期同一收件人至多一次正式投递；只发送 PUBLISHED；失败可重试、可审计、
+可人工 dry-run；无订阅者时安全空跑；Compose 运行态与邮件沙箱验收通过。
 
 ## 4. AI IDE 统一提示词
 
