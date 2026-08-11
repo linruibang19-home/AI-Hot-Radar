@@ -99,10 +99,12 @@ def cost_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
             """
             SELECT operation, model, count(*), sum(prompt_tokens), sum(completion_tokens),
                    sum(cached_tokens), count(*) FILTER (WHERE NOT succeeded),
-                   round(avg(latency_ms))
+                   round(avg(latency_ms)), input_cny_per_million,
+                   cached_input_cny_per_million, output_cny_per_million
               FROM llm_usage
              WHERE created_at > now() - (%s || ' days')::interval
-             GROUP BY operation, model
+             GROUP BY operation, model, input_cny_per_million,
+                      cached_input_cny_per_million, output_cny_per_million
              ORDER BY sum(prompt_tokens) + sum(completion_tokens) DESC
             """,
             (days,),
@@ -111,10 +113,23 @@ def cost_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
 
     operations = []
     total = 0.0
+    snapshot_calls = 0
     for row in rows:
         prompt, completion, cached = int(row[3] or 0), int(row[4] or 0), int(row[5] or 0)
-        estimate = _cost(prompt, completion, cached, table)
+        has_snapshot = all(value is not None for value in row[8:11])
+        row_rates = (
+            {
+                "input": float(row[8]),
+                "cached_input": float(row[9]),
+                "output": float(row[10]),
+            }
+            if has_snapshot
+            else table
+        )
+        estimate = _cost(prompt, completion, cached, row_rates)
         total += estimate
+        if has_snapshot:
+            snapshot_calls += int(row[2])
         operations.append(
             {
                 "operation": row[0],
@@ -127,6 +142,8 @@ def cost_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
                 "avgLatencyMs": int(row[7] or 0),
                 "estimatedCny": round(estimate, 4),
                 "cnyPerCall": round(estimate / row[2], 5) if row[2] else 0,
+                "rates": row_rates,
+                "rateSource": "model_snapshot" if has_snapshot else "legacy_fallback",
             }
         )
 
@@ -134,6 +151,8 @@ def cost_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
         "days": days,
         "rates": table,
         "ratesAreEstimates": True,
+        "snapshotCalls": snapshot_calls,
+        "legacyCalls": sum(item["calls"] for item in operations) - snapshot_calls,
         "operations": operations,
         "totalEstimatedCny": round(total, 4),
     }

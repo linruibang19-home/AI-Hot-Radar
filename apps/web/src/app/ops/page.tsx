@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 /**
  * Cost and latency, from production rows rather than a benchmark.
@@ -13,7 +14,7 @@ import type { Metadata } from "next";
  */
 
 export const metadata: Metadata = {
-  title: "成本与延迟",
+  title: "运行状态",
   description: "真实运行数据：provider 上报的 token、按配置价目表估算的成本、线上 p50/p95。",
 };
 
@@ -25,6 +26,8 @@ interface Stats {
   cost: {
     days: number;
     rates: Record<string, number>;
+    snapshotCalls: number;
+    legacyCalls: number;
     operations: {
       operation: string;
       model: string;
@@ -36,6 +39,8 @@ interface Stats {
       avgLatencyMs: number;
       estimatedCny: number;
       cnyPerCall: number;
+      rates: Record<string, number>;
+      rateSource: "model_snapshot" | "legacy_fallback";
     }[];
     totalEstimatedCny: number;
   };
@@ -99,6 +104,7 @@ const OPERATIONS: Record<string, string> = {
   // what the site cost to run — before the split, 62% of the "RAG answer"
   // line was evaluation.
   rag_answer_eval: "RAG 评测（非线上）",
+  report: "报告生成",
 };
 
 const STAGES: Record<string, string> = {
@@ -152,6 +158,10 @@ function ms(value: number) {
   return value >= 1000 ? `${(value / 1000).toFixed(1)}s` : `${value}ms`;
 }
 
+function percent(value: number) {
+  return `${(value * 100).toFixed(1)}%`;
+}
+
 export default async function OpsPage() {
   const stats = await load();
 
@@ -159,7 +169,7 @@ export default async function OpsPage() {
     return (
       <>
         <header className="page-head">
-          <h1 className="page-title">成本与延迟</h1>
+          <h1 className="page-title">运行状态</h1>
         </header>
         <div className="empty">暂时读不到运行统计。</div>
       </>
@@ -174,16 +184,66 @@ export default async function OpsPage() {
     .filter((s) => !EXTERNAL.has(s.stage))
     .reduce((sum, s) => sum + s.p50Ms, 0);
   const externalShare = latency.p50Ms ? externalMs / (externalMs + localMs) : 0;
+  const biggestCost = cost.operations.reduce(
+    (highest, row) => (row.estimatedCny > highest.estimatedCny ? row : highest),
+    cost.operations[0] ?? {
+      operation: "—",
+      model: "—",
+      calls: 0,
+      promptTokens: 0,
+      completionTokens: 0,
+      cachedTokens: 0,
+      failed: 0,
+      avgLatencyMs: 0,
+      estimatedCny: 0,
+      cnyPerCall: 0,
+      rates: {},
+      rateSource: "legacy_fallback" as const,
+    },
+  );
+  const slowestStage = latency.stages.reduce(
+    (slowest, stage) => (stage.p95Ms > slowest.p95Ms ? stage : slowest),
+    latency.stages[0] ?? {
+      stage: "—",
+      samples: 0,
+      p50Ms: 0,
+      p95Ms: 0,
+      p99Ms: 0,
+      sloP95Ms: 0,
+      sloStatus: "insufficient_data" as const,
+      shareOfP50: 0,
+    },
+  );
 
   return (
     <>
       <header className="page-head">
-        <h1 className="page-title">成本与延迟</h1>
+        <h1 className="page-title">运行状态</h1>
         <p className="page-subtitle">
-          近 {cost.days} 天 · token 由 provider 上报（非字符估算）· 金额按配置价目表换算 ·
-          延迟取自每一次真实提问，不是基准测试
+          近 {cost.days} 天 · 真实调用 token 与延迟 · 成本按调用时的模型价目快照估算
         </p>
       </header>
+
+      <section className="quality-hero" aria-labelledby="operations-conclusion-title">
+        <div className="quality-hero-head">
+          <div>
+            <div className="eyebrow">OPERATIONS CONCLUSION</div>
+            <h2 id="operations-conclusion-title">
+              当前 p95 {SLO_LABELS[latency.sloStatus]}，主要延迟来自外部模型 API
+            </h2>
+          </div>
+          <span
+            className={`state ${latency.sloStatus === "ok" ? "verdict-pass" : "verdict-mixed"}`}
+          >
+            {SLO_LABELS[latency.sloStatus]}
+          </span>
+        </div>
+        <p>
+          外部嵌入、重排、生成与支持度审计占中位请求约 {percent(externalShare)}；
+          当前最慢 p95 阶段是 {STAGES[slowestStage.stage] ?? slowestStage.stage}（
+          {ms(slowestStage.p95Ms)}）。优化优先级应放在供应商往返、超时和降级，不是本地 SQL 微调。
+        </p>
+      </section>
 
       <div className="stat-row">
         <div className="stat">
@@ -210,17 +270,47 @@ export default async function OpsPage() {
         </div>
       </div>
 
+      <div className="quality-grid">
+        <article className="quality-card">
+          <span className="quality-card-index">01</span>
+          <div>
+            <h3>成本最大的操作</h3>
+            <p>
+              {OPERATIONS[biggestCost.operation] ?? biggestCost.operation}：¥
+              {biggestCost.estimatedCny.toFixed(2)} / {biggestCost.calls.toLocaleString()} 次。
+              离线 RAG 评测与线上问答分开统计，不再把测试预算算成用户流量。
+            </p>
+          </div>
+        </article>
+        <article className="quality-card">
+          <span className="quality-card-index">02</span>
+          <div>
+            <h3>价格可追溯覆盖</h3>
+            <p>
+              {cost.snapshotCalls.toLocaleString()} 次使用调用时模型价目快照；
+              {cost.legacyCalls.toLocaleString()} 次旧记录只能使用历史 fallback。旧金额只适合看趋势，
+              不能当供应商账单。
+            </p>
+          </div>
+        </article>
+        <article className="quality-card quality-card-action">
+          <span className="quality-card-index">03</span>
+          <div>
+            <h3>建议动作</h3>
+            <p>
+              保持 SiliconFlow 嵌入/重排不变；在 <Link href="/admin/models">模型配置</Link>
+              中切换 DeepSeek 生成模型后，用新调用积累可比较的成本、延迟和质量快照。
+            </p>
+          </div>
+        </article>
+      </div>
+
       <div className="notice">
-        <strong>金额是估算，token 不是。</strong> provider 只上报 token 数，
-        换算成钱要用价目表，而价目表是会变的合同条款——所以它放在配置里
-        （当前 输入 ¥{cost.rates.input}/M · 命中缓存 ¥{cost.rates.cached_input}/M · 输出 ¥
-        {cost.rates.output}/M），不写死在代码里。
-        <br />
-        <br />
-        <strong>而这三个值目前是占位默认值，不是任何 provider 的真实费率。</strong>
-        上线前必须按现行价目设置 <code>LLM_PRICE_INPUT</code> /{" "}
-        <code>LLM_PRICE_CACHED_INPUT</code> / <code>LLM_PRICE_OUTPUT</code>，
-        否则本节每一个金额都是假的——一个看起来精确的错数字，比没有数字更坏。
+        <strong>金额是价目估算，不是供应商账单；token 与延迟是实测。</strong>
+        V024 之后每次生成都会保存模型、配置版本和当时的输入/缓存/输出单价，后续改价不会
+        篡改历史。更早的 {cost.legacyCalls.toLocaleString()} 次调用没有价目快照，仍按 fallback
+        （输入 ¥{cost.rates.input}/M · 缓存 ¥{cost.rates.cached_input}/M · 输出 ¥
+        {cost.rates.output}/M）回算，并在下表逐行标记。
       </div>
 
       <section className="eval-section">
@@ -237,6 +327,7 @@ export default async function OpsPage() {
                 <th>平均延迟</th>
                 <th>估算成本</th>
                 <th>每次</th>
+                <th>价格口径</th>
               </tr>
             </thead>
             <tbody>
@@ -262,6 +353,18 @@ export default async function OpsPage() {
                   <td className="eval-num">{ms(row.avgLatencyMs)}</td>
                   <td className="eval-num">¥{row.estimatedCny.toFixed(2)}</td>
                   <td className="eval-num">¥{row.cnyPerCall.toFixed(4)}</td>
+                  <td>
+                    <span
+                      className={`state ${
+                        row.rateSource === "model_snapshot" ? "verdict-pass" : "verdict-mixed"
+                      }`}
+                    >
+                      {row.rateSource === "model_snapshot" ? "调用时快照" : "历史 fallback"}
+                    </span>
+                    <div className="eval-meta">
+                      ¥{row.rates.input}/M · ¥{row.rates.cached_input}/M · ¥{row.rates.output}/M
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

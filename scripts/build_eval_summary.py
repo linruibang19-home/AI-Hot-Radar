@@ -216,7 +216,7 @@ RAGAS_MAPPING: list[dict[str, Any]] = [
         "ragas": "Faithfulness",
         "asks": "答案有没有说出证据里没有的东西",
         "ours": "support_mean / support_supported（交叉编码器对「论断 × 被引段落」打分）",
-        "value": "0.8330 / 0.8986",
+        "value": "0.8907 / 0.9344",
         "note": (
             "另有一条硬约束不在指标里：`check_invariants` 会把「有 [n] 却解析不到引用」"
             "或「零引用却不是拒答」的回答直接判为不可发布。指标衡量程度，不变量划定底线。"
@@ -226,7 +226,7 @@ RAGAS_MAPPING: list[dict[str, Any]] = [
         "ragas": "Answer Relevancy",
         "asks": "答案是不是在回答这个问题",
         "ours": "must_contain_hit + over_refusal_rate",
-        "value": "0.9091 / 0.0128",
+        "value": "1.0000 / 0.0000",
         "note": (
             "误拒率必须与拒答率一起看：**全都拒答的系统在拒答指标上满分且毫无用处**。"
             "把「该答的没答」算作最严重的一种不切题。"
@@ -236,7 +236,7 @@ RAGAS_MAPPING: list[dict[str, Any]] = [
         "ragas": "Context Precision",
         "asks": "检索到的上下文里相关的占比，且相关的是否排在前面",
         "ours": "citation_precision + MRR + nDCG@10",
-        "value": "0.5883 / 0.8741 / 0.8203",
+        "value": "0.6686 / 0.8608 / 0.8066",
         "note": (
             "拆成两个数：引用精度看**模型选了什么**，MRR/nDCG 看**检索排了什么**。"
             "B8 那一轮的教训是这两者会分离——融合前的排序指标提升 5.9 点，"
@@ -247,14 +247,14 @@ RAGAS_MAPPING: list[dict[str, Any]] = [
         "ragas": "Context Recall",
         "asks": "该被检索到的内容有没有被检索到",
         "ours": "Recall@10 / Recall@20（对黄金集标注）",
-        "value": "0.8669 / 0.8923",
+        "value": "0.8541 / 0.8994",
         "note": "标注是人工的，127 个 item 全部经库校验；零分块的条目会被守卫拦下并计数。",
     },
     {
         "ragas": "（无对应）",
         "asks": "同一事件被多少家独立信源覆盖",
         "ours": "story_coverage",
-        "value": "0.7797",
+        "value": "0.6921",
         "note": (
             "RAGAS 没有这一项，因为它假设文档之间彼此独立。资讯语料不是："
             "四家媒体报道同一次披露是**一条**证据不是四条，M3 的事件聚类就是为此存在的。"
@@ -264,17 +264,17 @@ RAGAS_MAPPING: list[dict[str, Any]] = [
         "ragas": "（无对应）",
         "asks": "答案里带引用的句子占比",
         "ours": "citation_coverage",
-        "value": "0.7431",
+        "value": "0.9881",
         "note": "本项目的核心主张是「每条事实可回原文」，所以句级覆盖率是一个独立的验收项。",
     },
     {
-        "ragas": "Noise Sensitivity（暂未测）",
+        "ragas": "Noise Sensitivity（专项小样本）",
         "asks": "混入无关上下文时答案会不会被带偏",
-        "ours": "—",
-        "value": "—",
+        "ours": "15 题同候选快照：entity / noise Recall@20",
+        "value": "0.9333 / 0.9333",
         "note": (
-            "**诚实标注为未测。** 需要构造带噪上下文的对照集，"
-            "当前黄金集是按真实语料标注的，没有这个维度。"
+            "已用 15 道中文厂商专项题与 8 个经原文核验的真实近邻噪声做同候选快照 A/B。"
+            "这是专项小样本，不冒充完整 90 题噪声回归。"
         ),
     },
 ]
@@ -418,8 +418,28 @@ def build() -> dict[str, Any]:
             }
         )
 
+    release_retrieval = _load("m4-rag-eval-B9-FINAL-20260811.json")
+    release_generation = _load("m4-rag-eval-GENERATION-FINAL-20260811.json")
+    release_specialist = _load("m4-rag-eval-SPECIALIST-20260811.json")
+    retrieval_overall = release_retrieval["summary"]["overall"]
+    generation_overall = release_generation["summary"]["overall"]
+    specialist_summaries = release_specialist["summaries"]
+
     return {
         "generatedFrom": "docs/status/eval/m4-rag-eval-*.json",
+        "release": {
+            "retrievalRunId": release_retrieval["run_id"],
+            "generationRunId": release_generation["run_id"],
+            "specialistRunId": release_specialist["run_id"],
+            "retrieval": retrieval_overall,
+            "generation": generation_overall,
+            "specialist": {
+                "questions": specialist_summaries["noise"]["overall"]["questions"],
+                "entityRecall20": specialist_summaries["entity"]["overall"]["recall@20"],
+                "noiseRecall20": specialist_summaries["noise"]["overall"]["recall@20"],
+                "passed": release_specialist["decision"]["entity_recall_at_20_passed"],
+            },
+        },
         "ragas": RAGAS_MAPPING,
         "goldenQuestions": _load(ROUNDS[0]["file"]).get("config", {}).get("golden_questions"),
         "rounds": rounds,

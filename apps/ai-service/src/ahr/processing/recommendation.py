@@ -179,8 +179,11 @@ async def backfill_reasons(
                 INSERT INTO llm_usage (
                     id, content_item_id, operation, model, prompt_version,
                     prompt_tokens, completion_tokens, cached_tokens,
-                    attempts, succeeded, latency_ms
-                ) VALUES (%s, %s, 'recommend', %s, %s, %s, %s, %s, %s, TRUE, %s)
+                    attempts, succeeded, latency_ms, model_config_version,
+                    input_cny_per_million, cached_input_cny_per_million,
+                    output_cny_per_million
+                ) VALUES (%s, %s, 'recommend', %s, %s, %s, %s, %s, %s, TRUE, %s,
+                          %s, %s, %s, %s)
                 """,
                 (
                     uuid.uuid4(),
@@ -192,6 +195,8 @@ async def backfill_reasons(
                     result.usage.cached_tokens,
                     result.usage.attempts,
                     result.usage.latency_ms,
+                    client.model_config_version,
+                    *client.price_snapshot,
                 ),
             )
         connection.commit()

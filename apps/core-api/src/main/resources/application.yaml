@@ -26,6 +26,18 @@ spring:
       url: ${REDIS_URL:redis://redis:6379/0}
       timeout: 3000
 
+  mail:
+    host: ${SMTP_HOST:mailpit}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${SMTP_STARTTLS:false}
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+
 # AHR-QSO-700 §3 / AHR-API-500: every /api/v1/admin/** request needs a bearer
 # token. Unset means no credential is registered and the admin API refuses
 # everything — a missing secret must fail closed, not open.
@@ -35,6 +47,13 @@ ahr:
     # The web tier's own credential, read-only: it renders the console during
     # SSR and never mutates.
     viewer-token: ${AHR_ADMIN_VIEWER_TOKEN:}
+  public-base-url: ${PUBLIC_BASE_URL:http://localhost:3000}
+  subscription:
+    token-secret: ${AHR_SUBSCRIPTION_TOKEN_SECRET:local-development-subscription-token-secret-do-not-deploy}
+  email:
+    from: ${EMAIL_FROM:noreply@localhost}
+    from-name: ${EMAIL_FROM_NAME:AI Hot Radar}
+    dispatch-interval-ms: ${EMAIL_DISPATCH_INTERVAL_MS:300000}
 
 server:
   port: 8080

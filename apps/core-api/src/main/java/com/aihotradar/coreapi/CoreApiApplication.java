@@ -2,6 +2,7 @@ package com.aihotradar.coreapi;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Core API entry point.
@@ -12,6 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * Python AI service.
  */
 @SpringBootApplication
+@EnableScheduling
 public class CoreApiApplication {
 
     public static void main(String[] args) {

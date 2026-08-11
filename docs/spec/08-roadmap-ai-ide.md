@@ -226,7 +226,7 @@ pipeline 自动解除；正式邮件拒绝非 PUBLISHED、dry-run 可预览；�
 
 ### TASK-M5-004｜报告订阅与定时投递闭环
 
-**状态**：⬜ 待领取；不得与 TASK-M5-003 混做。
+**状态**：✅ 2026-08-11 完成；与 TASK-M5-003 分卡实现并独立提交验收。
 **读取**：`01-product-requirements.md`、`05-api-contract.md`、
 `07-quality-security-ops.md`、`11-end-to-end-runbook.md`、ADR-0025。
 **输入**：只允许投递 PUBLISHED 的 `send-report`、现有 `delivery_log` 与报告周期状态。
@@ -235,6 +235,9 @@ pipeline 自动解除；正式邮件拒绝非 PUBLISHED、dry-run 可预览；�
 `outbox_event` 描述成已有消费者；投递失败不得反向阻塞采集、精选或站内报告发布。
 **完成标准**：同一期同一收件人至多一次正式投递；只发送 PUBLISHED；失败可重试、可审计、
 可人工 dry-run；无订阅者时安全空跑；Compose 运行态与邮件沙箱验收通过。
+**当前证据**：ADR-0026、Flyway V023、`docs/status/report-subscriptions-20260811.md`。
+Core API 持有双重确认、订阅与投递事实，Web 只做代理和交互；本地 Mailpit 已实测申请、确认、
+PUBLISHED 投递、在线阅读链接与退订，验收数据随后清理。
 
 ### TASK-M5-005｜生产部署预检与恢复门禁
 
@@ -247,8 +250,8 @@ Compose 与已通过的 M4/M5 质量门禁。
 **产出**：可执行的生产环境预检、不可变镜像与密钥占位检查、正确的 Cloudflare 客户端 IP
 信任链、同提交发布测试门、内部端口不暴露、备份完整性检查、隔离恢复演练和公网 smoke。
 **边界**：不创建或轮换真实供应商密钥，不修改 DNS/Cloudflare/服务器防火墙，不 push、
-打 tag 或部署；这些动作必须在主人提供目标机与相应权限后执行。TASK-M5-004 仍为独立 P1，
-不得把订阅功能塞进 ai-service 违反服务边界。
+打 tag 或部署；这些动作必须在主人提供目标机与相应权限后执行。TASK-M5-004 作为独立 P1
+后来已由 Core API 完成，没有把订阅功能塞进 ai-service 违反服务边界。
 **完成标准**：生产 Compose 使用脱敏 fixture 可完整解析；危险默认值会被预检拒绝；release
 只有同提交全量门禁通过后才构建推送；本地真实数据库完成 dump/restore 数据核对；本地核心
 服务与关键页面保持健康；文档明确目标服务器到位后仅剩的外部执行步骤。
@@ -265,13 +268,48 @@ Compose 与已通过的 M4/M5 质量门禁。
 Cloudflare DNS/TLS、按提交 SHA 的首次部署、公网 smoke、真实告警、异机备份和恢复复演。
 **边界**：聊天中出现的口令视为泄露，不在命令、文件或日志中复述/使用；真实密钥不得进入
 Git；出租方账号下的服务器按半可信主机处理，模型密钥必须专用且低额度；删除、覆盖数据库、
-关闭 SSH 或变更域名所有权前必须有明确且可恢复的目标；TASK-M5-004 仍为独立 P1。
+关闭 SSH 或变更域名所有权前必须有明确且可恢复的目标；已完成的 TASK-M5-004 不改变这些
+生产安全边界。
 **完成标准**：域名续费与 A 记录生效；80/443 只到 Caddy，内部端口公网不可达；HTTPS
 Full (strict) 与安全头通过；核心服务健康；AI 动态、精选、三周期报告与 RAG 公网可用；
 告警失败/恢复均实收；异机备份存在且隔离恢复成功；部署提交、RPO/RTO 和回滚命令有记录。
 **当前证据**：见 `docs/status/production-deployment-20260811.md`。服务器、SSH/UFW/Docker、
-不可变镜像和权限 600 的 fail-closed 生产配置已就绪；域名、专用供应商凭据、告警与异机
-备份仍等待主人侧外部状态。
+不可变镜像、权限 600 的 fail-closed 生产配置和域名 A 记录已就绪；服务器仓库已与
+`0ae2fa75` 对齐且生产容器保持停止。主人决定先完成邮箱订阅、生成模型切换和工程页面收口，
+三项现已在本地完成并通过 V024 空库迁移、102 MiB 隔离恢复与全栈回归；当前分支尚未
+push 或发布新不可变镜像。专用供应商凭据、消费上限、生产 SMTP、告警与异机备份仍未关闭。
+
+### TASK-M5-007｜DeepSeek 生成模型可见、可切换、可审计
+
+**状态**：✅ 2026-08-11 完成；验收见
+`docs/status/generation-model-selection-20260811.md`。
+**读取**：`01-product-requirements.md`、`05-api-contract.md`、
+`06-frontend-spec.md`、`07-quality-security-ops.md`、ADR-0027。
+**输入**：现有 DeepSeek OpenAI-compatible 客户端、`llm_usage`、Core Admin RBAC/审计与
+工程页面；硅基流动 embedding/reranker 保持现状。
+**产出**：受控模型目录、PostgreSQL 当前配置与版本、受保护的读取/切换 API、模型配置页，
+以及按实际模型配置快照记录的生成用量。
+**边界**：只开放 `deepseek-v4-flash` / `deepseek-v4-pro`；不保存或显示 API key；不开放
+任意模型字符串；不切换 embedding/reranker；不自动重算历史内容或历史向量；thinking 默认
+显式关闭，未经专项回归不开放。
+**完成标准**：OPERATOR 切换满足二次确认、幂等和审计；新生成调用采用新配置版本，历史
+调用保留原模型与价目快照；VIEWER 只能读取；Java/Python/Web/Flyway/Compose 回归通过。
+
+### TASK-M5-008｜RAG 质量与运行页面产品化收口
+
+**状态**：✅ 2026-08-11 完成；验收见
+`docs/status/rag-operations-ui-20260811.md`。
+**读取**：`04-rag-agent-design.md`、`06-frontend-spec.md`、
+`07-quality-security-ops.md`、TASK-M4-002、ADR-0021、ADR-0027。
+**输入**：既有 90 题检索/生成评测快照、线上 `rag_query` / `llm_usage` 聚合、
+模型配置与不可变价目快照。
+**产出**：在不删除原始实验记录、不改变原页面视觉语言的前提下，把 `/eval` 改为先给出
+发布门禁与剩余风险的 RAG 质量页，把 `/ops` 改为先给出 SLO、成本口径、瓶颈和建议动作的
+运行页；历史价目缺失必须明确标为 legacy fallback，不能冒充实际账单。
+**边界**：不修改检索策略、黄金集或评测结果；不新增基础设施；不把自动引用精度当作人工
+正确性；不把供应商价目估算写成真实扣费；底层逐轮记录与阶段明细必须仍可查看。
+**完成标准**：页面首屏能回答“是否达标、哪里有风险、下一步做什么”；价目来源可逐行追溯；
+Web 类型、Lint、测试、构建与 Docker 运行态通过，Chrome 视觉验收若受工具故障阻塞必须如实记录。
 
 ## 4. AI IDE 统一提示词
 
