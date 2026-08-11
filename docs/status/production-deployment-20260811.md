@@ -25,6 +25,13 @@
 生产保持停止是当前正确状态：代码、标签、镜像和服务器 checkout 已经就绪，但真实模型调用、
 邮件投递、告警、供应商预算与异机备份尚不能形成安全闭环。
 
+## 0A. 2026-08-12 SMTP 告警收敛
+
+- monitor 已增加 SMTP 故障/恢复告警，可复用报告投递账户并发送到 `ALERT_EMAIL_TO`；
+- 原 Slack-compatible HTTPS webhook 保留为可选第二通道；
+- preflight 改为要求两类告警目的地至少配置一个，没有降低告警门禁；
+- 交付测试、Ruff、结构 fixture 预检和生产 Compose 解析均通过；变更需随下一发布标签进入服务器。
+
 ## 1. 已完成
 
 - 香港 Ubuntu 22.04 目标机完成系统更新并重启；
@@ -62,7 +69,7 @@
 
 1. 轮换后的 `LLM_API_KEY`、`EMBEDDING_API_KEY` 和用于 GitHub 数据源限流的专用 token；
 2. 生产 SMTP 主机、发件地址、认证/TLS 选择、投递间隔和至少 32 字符的订阅签名密钥；
-3. 可实际接收的 HTTPS 告警 webhook；
+3. 可实际接收的 SMTP 告警收件地址，或 Slack-compatible HTTPS webhook；
 4. DeepSeek / SiliconFlow 控制台消费上限确认；
 5. 异机备份目标与持续同步责任确认。
 

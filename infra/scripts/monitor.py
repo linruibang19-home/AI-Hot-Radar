@@ -11,11 +11,14 @@ from __future__ import annotations
 import json
 import logging
 import os
+import smtplib
+import ssl
 import sys
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from email.message import EmailMessage
 from pathlib import Path
 
 logging.basicConfig(
@@ -77,10 +80,9 @@ def run_checks() -> list[Check]:
     return checks
 
 
-def notify(message: str) -> bool:
+def notify_webhook(message: str) -> bool:
     webhook = os.environ.get("ALERT_WEBHOOK_URL", "").strip()
     if not webhook:
-        logger.error("alert webhook is not configured; event=%s", message)
         return False
     request = urllib.request.Request(
         webhook,
@@ -94,6 +96,58 @@ def notify(message: str) -> bool:
     except (OSError, urllib.error.URLError, TimeoutError) as exc:
         logger.error("failed to deliver alert: %s", type(exc).__name__)
         return False
+
+
+def notify_email(message: str) -> bool:
+    recipient = os.environ.get("ALERT_EMAIL_TO", "").strip()
+    if not recipient:
+        return False
+
+    host = os.environ.get("SMTP_HOST", "").strip()
+    sender = os.environ.get("EMAIL_FROM", "").strip()
+    if not host or not sender:
+        logger.error("alert email is incomplete; host_or_sender_missing")
+        return False
+
+    email = EmailMessage()
+    email["Subject"] = "AI Hot Radar production alert"
+    email["From"] = sender
+    email["To"] = recipient
+    email.set_content(message)
+
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    auth = os.environ.get("SMTP_AUTH", "true").lower() == "true"
+    starttls = os.environ.get("SMTP_STARTTLS", "true").lower() == "true"
+    username = os.environ.get("SMTP_USERNAME", "").strip()
+    password = os.environ.get("SMTP_PASSWORD", "")
+
+    try:
+        with smtplib.SMTP(host, port, timeout=10) as smtp:
+            smtp.ehlo()
+            if starttls:
+                smtp.starttls(context=ssl.create_default_context())
+                smtp.ehlo()
+            if auth:
+                smtp.login(username, password)
+            smtp.send_message(email)
+        return True
+    except (OSError, smtplib.SMTPException, TimeoutError, ValueError) as exc:
+        logger.error("failed to deliver alert email: %s", type(exc).__name__)
+        return False
+
+
+def notify(message: str) -> bool:
+    configured = False
+    delivered = False
+    if os.environ.get("ALERT_WEBHOOK_URL", "").strip():
+        configured = True
+        delivered = notify_webhook(message) or delivered
+    if os.environ.get("ALERT_EMAIL_TO", "").strip():
+        configured = True
+        delivered = notify_email(message) or delivered
+    if not configured:
+        logger.error("no alert channel is configured; event=%s", message)
+    return delivered
 
 
 def main() -> int:

@@ -49,7 +49,7 @@
 | `.github/workflows/release.yml` | GHCR 构建发布 | `v0.1.3` 完整 CI 与三镜像发布成功 |
 | `infra/scripts/backup.sh` | PostgreSQL 定时备份 | 已实现目录校验与 SHA-256；本地真实恢复通过 |
 | `infra/scripts/preflight.sh` / `deploy-production.sh` | 生产配置与不可变提交部署门禁 | 目标机 preflight 已验证，待外部值齐全后正式启动 |
-| `infra/scripts/monitor.py` / `smoke-production.sh` | 健康、备份年龄告警与公网验收 | 逻辑验证通过，待接真实 HTTPS webhook |
+| `infra/scripts/monitor.py` / `smoke-production.sh` | 健康、备份年龄告警与公网验收 | SMTP/Webhook 双通道逻辑验证通过，待接真实 SMTP 并实收 |
 | `infra/scripts/restore-verify.sh` | 受保护隔离恢复核验 | 本地真实 100 MB dump 恢复通过 |
 | `api/openapi.yaml` / `schemas/` | 服务契约与生成类型来源 | 生成无 diff |
 | `config/` | 140 信源、9 类 Profile、taxonomy 与受限 watchlist | 已加载；社交监控保持关闭 |
@@ -100,7 +100,7 @@ DeepSeek 生成模型白名单切换已完成；生产 SMTP 与浏览器视觉�
 ## 5. 后续交付顺序
 
 1. 上线 P0（需主人/供应商权限）：轮换全部密钥、设置供应商消费上限、配置生产 SMTP、
-   DNS/TLS、HTTPS 告警 webhook 与异机备份；
+   DNS/TLS、SMTP 或 HTTPS webhook 告警与异机备份；
 2. 上线 P0（需服务器权限）：用 `deploy-production.sh` 按提交 SHA 首次部署，执行公网
    smoke、目标机隔离恢复和告警/恢复通知演练；
 3. 产品 P1：补管理写操作 UI、加工任务重跑入口和邮件退信/投诉处理；
