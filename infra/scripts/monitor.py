@@ -14,6 +14,7 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -37,6 +38,8 @@ TARGETS = {
     "ai-service": "http://ai-service:8000/health/ready",
     "web": "http://web:3000/health",
 }
+
+FEISHU_WEBHOOK_HOSTS = {"open.feishu.cn", "open.larksuite.com"}
 
 
 def check_url(name: str, url: str, *, timeout: float = 5.0) -> Check:
@@ -77,6 +80,14 @@ def run_checks() -> list[Check]:
     return checks
 
 
+def webhook_payload(webhook: str, message: str) -> dict[str, object]:
+    """Build the provider-specific payload without leaking webhook credentials."""
+    hostname = (urllib.parse.urlparse(webhook).hostname or "").lower()
+    if hostname in FEISHU_WEBHOOK_HOSTS:
+        return {"msg_type": "text", "content": {"text": message}}
+    return {"text": message}
+
+
 def notify(message: str) -> bool:
     webhook = os.environ.get("ALERT_WEBHOOK_URL", "").strip()
     if not webhook:
@@ -84,8 +95,8 @@ def notify(message: str) -> bool:
         return False
     request = urllib.request.Request(
         webhook,
-        data=json.dumps({"text": message}).encode(),
-        headers={"Content-Type": "application/json"},
+        data=json.dumps(webhook_payload(webhook, message), ensure_ascii=False).encode("utf-8"),
+        headers={"Content-Type": "application/json; charset=utf-8"},
         method="POST",
     )
     try:
