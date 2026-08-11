@@ -1103,6 +1103,8 @@ async def answer_question(
                 "completion_tokens": usage.completion_tokens,
                 "cached_tokens": usage.cached_tokens,
                 "prompt_version": ANSWER_PROMPT_VERSION,
+                "model_config_version": llm.model_config_version,
+                "thinking_enabled": False,
             }
         )
 
@@ -1113,7 +1115,7 @@ async def answer_question(
         # expensive one per call — reported its tokens solely into this query's
         # own metrics blob. Any spend report built from `llm_usage` was
         # therefore quietly excluding the thing most worth watching.
-        _record_answer_usage(connection, model=llm.model_name, usage=usage, serving=persist)
+        _record_answer_usage(connection, client=llm, usage=usage, serving=persist)
 
         # Support scoring used to sit here, after the answer was already fixed.
         # It has moved above `check_invariants`, because a score that arrives
@@ -1302,7 +1304,9 @@ def load_conversation(connection: Any, query_id: str) -> dict[str, Any] | None:
     return conversation
 
 
-def _record_answer_usage(connection: Any, *, model: str, usage: TokenUsage, serving: bool) -> None:
+def _record_answer_usage(
+    connection: Any, *, client: LlmClient, usage: TokenUsage, serving: bool
+) -> None:
     """Record one answer's provider-reported token usage (AHR-QSO-700 §5).
 
     `content_item_id` is null: an answer is about the corpus rather than about
@@ -1328,19 +1332,24 @@ def _record_answer_usage(connection: Any, *, model: str, usage: TokenUsage, serv
             INSERT INTO llm_usage (
                 id, content_item_id, operation, model, prompt_version,
                 prompt_tokens, completion_tokens, cached_tokens,
-                attempts, succeeded, latency_ms
-            ) VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, TRUE, %s)
+                attempts, succeeded, latency_ms, model_config_version,
+                input_cny_per_million, cached_input_cny_per_million,
+                output_cny_per_million
+            ) VALUES (%s, NULL, %s, %s, %s, %s, %s, %s, %s, TRUE, %s,
+                      %s, %s, %s, %s)
             """,
             (
                 uuid.uuid4(),
                 operation,
-                model,
+                client.model_name,
                 ANSWER_PROMPT_VERSION,
                 usage.prompt_tokens,
                 usage.completion_tokens,
                 usage.cached_tokens,
                 max(usage.attempts, 1),
                 usage.latency_ms,
+                client.model_config_version,
+                *client.price_snapshot,
             ),
         )
 
@@ -1466,7 +1475,14 @@ def _persist(connection: Any, answer: Answer) -> None:
                 Json(answer.plan.as_dict() if answer.plan else {}),
                 answer.answer_markdown,
                 "REFUSED" if answer.refused else "ANSWERED",
-                Json({"model": answer.model, "prompt_version": ANSWER_PROMPT_VERSION}),
+                Json(
+                    {
+                        "model": answer.model,
+                        "prompt_version": ANSWER_PROMPT_VERSION,
+                        "model_config_version": answer.metrics.get("model_config_version"),
+                        "thinking_enabled": answer.metrics.get("thinking_enabled", False),
+                    }
+                ),
                 Json(answer.metrics),
                 Json(answer.limitations),
             ),

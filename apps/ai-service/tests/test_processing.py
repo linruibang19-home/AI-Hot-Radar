@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import httpx
+import psycopg
 import pytest
 from pydantic import ValidationError
 
@@ -14,7 +17,13 @@ from ahr.processing.dedup import (
     simhash,
     to_signed_64,
 )
-from ahr.processing.llm import EnrichmentSchemaError, LlmClient, LlmConfig, LlmUnavailableError
+from ahr.processing.llm import (
+    EnrichmentSchemaError,
+    LlmClient,
+    LlmConfig,
+    LlmUnavailableError,
+    build_client_from_env,
+)
 from ahr.processing.schemas import EnrichmentResult
 
 PARAGRAPH = (
@@ -259,3 +268,49 @@ async def test_provider_error_raises_unavailable_not_schema_error() -> None:
     async with _client(handler) as client:
         with pytest.raises(LlmUnavailableError):
             await client.enrich(title="t", body_text="body", source_name="s")
+
+
+async def test_v4_explicitly_disables_thinking() -> None:
+    seen: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        import json
+
+        seen.update(json.loads(request.content))
+        return httpx.Response(200, json=_completion("{}"))
+
+    client = LlmClient(
+        LlmConfig(
+            base_url="https://api.deepseek.example",
+            api_key="k",
+            model="deepseek-v4-flash",
+            max_attempts=1,
+        ),
+        client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+    async with client:
+        await client.summarize(system_prompt="s", user_prompt="u")
+
+    assert seen["thinking"] == {"type": "disabled"}
+
+
+def test_running_client_reads_model_and_prices_from_postgres(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = MagicMock()
+    connection.__enter__.return_value = connection
+    cursor = MagicMock()
+    connection.cursor.return_value.__enter__.return_value = cursor
+    cursor.fetchone.return_value = ("deepseek-v4-pro", 7, 3, 0.025, 6)
+
+    monkeypatch.setenv("LLM_BASE_URL", "https://api.deepseek.example")
+    monkeypatch.setenv("LLM_API_KEY", "secret")
+    monkeypatch.setenv("LLM_MODEL", "legacy-must-not-win")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://db/example")
+    monkeypatch.setattr(psycopg, "connect", lambda *_args, **_kwargs: connection)
+
+    client = build_client_from_env()
+
+    assert client.model_name == "deepseek-v4-pro"
+    assert client.model_config_version == 7
+    assert client.price_snapshot == (3.0, 0.025, 6.0)

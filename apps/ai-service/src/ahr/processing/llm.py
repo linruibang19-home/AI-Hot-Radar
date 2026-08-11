@@ -79,6 +79,10 @@ class LlmConfig:
     read_timeout: float = 60.0
     max_attempts: int = 2
     temperature: float = 0.2
+    model_config_version: int | None = None
+    input_cny_per_million: float | None = None
+    cached_input_cny_per_million: float | None = None
+    output_cny_per_million: float | None = None
 
 
 def _strip_code_fence(text: str) -> str:
@@ -133,6 +137,11 @@ class LlmClient:
             "temperature": self._config.temperature if temperature is None else temperature,
             "stream": False,
         }
+        if self._config.model.startswith("deepseek-v4-"):
+            # V4 defaults to thinking. ADR-0027 keeps it explicitly disabled
+            # until its different latency, pricing and JSON behaviour have a
+            # dedicated regression rather than changing them with a model name.
+            payload["thinking"] = {"type": "disabled"}
         if json_mode:
             # Providers that support it return strict JSON; others ignore it and
             # the fence-stripping fallback handles the difference. Prose calls
@@ -171,6 +180,18 @@ class LlmClient:
     @property
     def model_name(self) -> str:
         return self._config.model
+
+    @property
+    def model_config_version(self) -> int | None:
+        return self._config.model_config_version
+
+    @property
+    def price_snapshot(self) -> tuple[float | None, float | None, float | None]:
+        return (
+            self._config.input_cny_per_million,
+            self._config.cached_input_cny_per_million,
+            self._config.output_cny_per_million,
+        )
 
     async def summarize(
         self,
@@ -234,6 +255,8 @@ class LlmClient:
             # than estimates.
             "stream_options": {"include_usage": True},
         }
+        if self._config.model.startswith("deepseek-v4-"):
+            payload["thinking"] = {"type": "disabled"}
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
 
@@ -313,15 +336,71 @@ class LlmClient:
 
 
 def build_client_from_env() -> LlmClient:
-    """Construct a client from environment configuration."""
+    """Construct the generation client, using PostgreSQL in a running deployment.
+
+    Credentials and the provider URL remain environment secrets. The model is a
+    product setting and therefore comes from PostgreSQL (ADR-0027). `LLM_MODEL`
+    remains only for isolated tests and tools that intentionally have no
+    `DATABASE_URL`.
+    """
     import os
+
+    import psycopg
 
     base_url = os.environ.get("LLM_BASE_URL", "").strip()
     api_key = os.environ.get("LLM_API_KEY", "").strip()
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    if not database_url and all(
+        os.environ.get(name, "").strip()
+        for name in ("POSTGRES_DB", "POSTGRES_USER", "POSTGRES_PASSWORD")
+    ):
+        # Local/production Compose deliberately passes discrete values so a
+        # password containing URL syntax cannot be truncated (ahr.config).
+        from ahr.config import get_settings
+
+        database_url = get_settings().database_url
     model = os.environ.get("LLM_MODEL", "").strip()
 
-    if not (base_url and api_key and model):
-        raise LlmUnavailableError("LLM_BASE_URL, LLM_API_KEY and LLM_MODEL must all be set")
+    if not (base_url and api_key):
+        raise LlmUnavailableError("LLM_BASE_URL and LLM_API_KEY must both be set")
+
+    if database_url:
+        try:
+            with (
+                psycopg.connect(database_url, connect_timeout=5) as connection,
+                connection.cursor() as cursor,
+            ):
+                cursor.execute(
+                    """
+                    SELECT c.model_id, c.version,
+                           m.input_cny_per_million,
+                           m.cached_input_cny_per_million,
+                           m.output_cny_per_million
+                      FROM generation_model_config c
+                      JOIN generation_model_catalog m ON m.model_id = c.model_id
+                     WHERE c.singleton_key = 1 AND m.enabled
+                    """
+                )
+                row = cursor.fetchone()
+        except psycopg.Error as exc:
+            raise LlmUnavailableError(f"generation model setting unavailable: {exc}") from exc
+        if row is None:
+            raise LlmUnavailableError("generation model setting is missing or disabled")
+        model = str(row[0])
+        return LlmClient(
+            LlmConfig(
+                base_url=base_url,
+                api_key=api_key,
+                model=model,
+                model_config_version=int(row[1]),
+                input_cny_per_million=float(row[2]),
+                cached_input_cny_per_million=float(row[3]),
+                output_cny_per_million=float(row[4]),
+            )
+        )
+
+    if not model:
+        raise LlmUnavailableError("LLM_MODEL must be set when DATABASE_URL is absent")
 
     return LlmClient(LlmConfig(base_url=base_url, api_key=api_key, model=model))
 

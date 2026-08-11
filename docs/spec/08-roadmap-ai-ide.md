@@ -278,6 +278,22 @@ Full (strict) 与安全头通过；核心服务健康；AI 动态、精选、三
 `0ae2fa75` 对齐且生产容器保持停止。主人决定先完成邮箱订阅、生成模型切换和工程页面收口，
 再以新的不可变镜像恢复部署；专用供应商凭据、告警与异机备份仍未关闭。
 
+### TASK-M5-007｜DeepSeek 生成模型可见、可切换、可审计
+
+**状态**：✅ 2026-08-11 完成；验收见
+`docs/status/generation-model-selection-20260811.md`。
+**读取**：`01-product-requirements.md`、`05-api-contract.md`、
+`06-frontend-spec.md`、`07-quality-security-ops.md`、ADR-0027。
+**输入**：现有 DeepSeek OpenAI-compatible 客户端、`llm_usage`、Core Admin RBAC/审计与
+工程页面；硅基流动 embedding/reranker 保持现状。
+**产出**：受控模型目录、PostgreSQL 当前配置与版本、受保护的读取/切换 API、模型配置页，
+以及按实际模型配置快照记录的生成用量。
+**边界**：只开放 `deepseek-v4-flash` / `deepseek-v4-pro`；不保存或显示 API key；不开放
+任意模型字符串；不切换 embedding/reranker；不自动重算历史内容或历史向量；thinking 默认
+显式关闭，未经专项回归不开放。
+**完成标准**：OPERATOR 切换满足二次确认、幂等和审计；新生成调用采用新配置版本，历史
+调用保留原模型与价目快照；VIEWER 只能读取；Java/Python/Web/Flyway/Compose 回归通过。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：
