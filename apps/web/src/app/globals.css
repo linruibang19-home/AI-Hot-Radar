@@ -163,6 +163,27 @@ a {
   opacity: 1;
 }
 
+/* Dynamic routes normally keep the old page visible until their RSC payload
+   arrives. This state makes the click visible during that short interval, so
+   readers never need to click twice or wonder whether navigation started. */
+.nav-link-pending {
+  color: var(--accent-ink);
+  background: color-mix(in srgb, var(--accent-soft) 65%, transparent);
+  cursor: progress;
+}
+
+.nav-link-pending .nav-icon {
+  opacity: 1;
+  animation: nav-pending-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes nav-pending-pulse {
+  to {
+    transform: scale(0.82);
+    opacity: 0.5;
+  }
+}
+
 /* A left rail on the active item, grown from zero so switching pages reads as
    movement rather than a jump. */
 .nav-link-active::before {
@@ -187,6 +208,95 @@ a {
     height: 60%;
     opacity: 1;
   }
+}
+
+/* ---------- route loading ---------- */
+
+.route-loading {
+  width: 100%;
+  max-width: 940px;
+  padding-top: 8px;
+}
+
+.route-loading-overlay {
+  position: fixed;
+  z-index: 20;
+  inset: 0 0 0 var(--sidebar-w);
+  overflow: hidden;
+  padding: 30px 34px 72px;
+  background: var(--bg);
+}
+
+.route-loading-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: #e9eceb;
+  border-radius: 8px;
+}
+
+.route-loading-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.75),
+    transparent
+  );
+  animation: route-loading-shimmer 1.2s ease-in-out infinite;
+}
+
+.route-loading-heading {
+  width: min(260px, 60%);
+  height: 38px;
+}
+
+.route-loading-subtitle {
+  width: min(560px, 88%);
+  height: 16px;
+  margin-top: 16px;
+}
+
+.route-loading-tabs {
+  width: min(680px, 92%);
+  height: 38px;
+  margin-top: 34px;
+}
+
+.route-loading-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.route-loading-card {
+  height: 88px;
+}
+
+.route-loading-panel {
+  height: 250px;
+  margin-top: 24px;
+}
+
+@keyframes route-loading-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ---------- sidebar resizer ---------- */
@@ -1101,6 +1211,17 @@ summary:focus-visible {
   .main {
     margin-left: 0;
     padding: 20px 16px 48px;
+  }
+
+  .route-loading-cards {
+    grid-template-columns: 1fr;
+  }
+
+  /* On a phone the navigation is a full-width document section rather than a
+     fixed rail. The pending link remains visible feedback; a fixed overlay
+     would cover the navigation itself and make the layout feel unstable. */
+  .route-loading-overlay {
+    display: none;
   }
 
   .hero {

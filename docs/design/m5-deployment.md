@@ -1,19 +1,20 @@
 # M5 上线方案
 
 上级规格：`AHR-QSO-700`（安全与运维）、`AHR-ROADMAP-800` M5
-状态：**生产预检、邮件/Webhook 双通道监控、备份恢复工具和本地演练已完成；目标服务器待执行**
+状态：**首次生产闭环完成；v0.1.4 正在 aihotradar.online 运行**
 
 ## 0. 已查明的事实
 
 | 项 | 实测 |
 |---|---|
-| 域名 | `kuritian.online`，阿里云注册 |
-| **DNS 托管** | **Cloudflare**（`zelda.ns` / `chip.ns`），不是阿里云 DNS |
-| A 记录 | **无** —— 域名当前不指向任何服务器 |
-| MX | Cloudflare Email Routing |
-| 代码仓库 | `github.com/linruibang19-home/AI-Hot-Radar`，265 文件，无密钥 |
+| 域名 | `aihotradar.online`，腾讯云注册 |
+| **DNS 托管** | **腾讯云 DNSPod** |
+| A 记录 | `47.242.229.41`（香港 Ubuntu 22.04） |
+| TLS | Caddy 直接申请与续期 Let's Encrypt 证书 |
+| 代码仓库 | `github.com/linruibang19-home/AI-Hot-Radar`，无生产密钥 |
 
-**DNS 已在 Cloudflare 是个有利条件**：免费 TLS 证书、CDN、DDoS 防护、以及把源站 IP 藏在代理后面，都不用额外做。原计划里的 Let's Encrypt + certbot 续期可以整段省掉。
+当前未使用 CDN 代理；DNSPod A 记录直连源站，Caddy 自动完成 ACME，不安装 certbot。
+如果以后引入 CDN，必须先在源站证书正常的前提下使用严格 TLS，并复验真实客户端 IP。
 
 ## 1. 第一个决定：服务器放哪里（这条决定其他所有事）
 
@@ -52,13 +53,13 @@
 ## 3. 网络与 TLS
 
 ```
-访问者 → Cloudflare（TLS 终止 + 缓存）→ 源站 :443 → Caddy → web:3000
-                                                        └→ core-api:8080（仅内网）
-                                                        └→ ai-service:8000（仅内网）
+访问者 → 源站 :443 → Caddy → web:3000
+                               └→ core-api:8080（仅内网）
+                               └→ ai-service:8000（仅内网）
 ```
 
-- Cloudflare SSL/TLS 模式设为 **Full (strict)**，源站用 Caddy 自动申请证书；
-  设成 Flexible 会让 Cloudflare 到源站这一段是明文，等于自欺欺人。
+- 当前 Caddy 直接终止 TLS 并自动申请证书。未来若增加 CDN，必须使用等价于
+  **Full (strict)** 的源站验证；不得使用到源站明文的 Flexible 模式。
 - **只暴露 80/443**。`core-api`、`ai-service`、`postgres`、`redis` 全部不映射到宿主机端口——
   它们现在为了本地开发才映射的，上线必须去掉。
 - 用 **Caddy** 而不是 nginx：两行配置自动签发与续期，本项目没有需要 nginx 的复杂路由。
@@ -108,4 +109,4 @@ Slack-compatible `ALERT_WEBHOOK_URL`。两个通道均配置时都会尝试，�
 | 公开 `/ask` 被刷，LLM 成本失控 | 已实现匿名 3/min、20/day 和部署级 token 日预算；生产还必须在供应商侧设消费上限 |
 | 原始 HTML 占库一半且线性增长 | 加保留期，或迁对象存储 |
 | 单机无冗余 | 作品站可接受；每日校验和备份、备份年龄告警、每月隔离恢复演练和异机副本是底线 |
-| 香港节点大陆访问偶有抖动 | Cloudflare 代理可缓解；必要时再考虑备案迁大陆 |
+| 香港节点大陆访问偶有抖动 | 先监控真实 TTFB；必要时增加合规 CDN，或备案后平行迁移大陆节点 |
