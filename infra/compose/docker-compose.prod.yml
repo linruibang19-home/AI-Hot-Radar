@@ -272,7 +272,15 @@ services:
     image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/ai-service:${IMAGE_TAG:-latest}
     command: ["python", "/monitor.py"]
     environment:
-      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:?ALERT_WEBHOOK_URL must be set}
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+      ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      SMTP_AUTH: ${SMTP_AUTH:-true}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
       ALERT_FAILURE_THRESHOLD: ${ALERT_FAILURE_THRESHOLD:-3}
       MONITOR_INTERVAL_SECONDS: ${MONITOR_INTERVAL_SECONDS:-60}
       BACKUP_MAX_AGE_SECONDS: ${BACKUP_MAX_AGE_SECONDS:-93600}
