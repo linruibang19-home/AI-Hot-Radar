@@ -114,6 +114,31 @@ def test_backup_check_requires_a_recent_nonempty_dump_and_checksum(tmp_path: Pat
     assert healthy.detail == "age_50s"
 
 
+@pytest.mark.parametrize(
+    "webhook",
+    [
+        "https://open.feishu.cn/open-apis/bot/v2/hook/example",
+        "https://open.larksuite.com/open-apis/bot/v2/hook/example",
+    ],
+)
+def test_monitor_builds_feishu_text_payload(webhook: str) -> None:
+    monitor = load_monitor()
+
+    assert monitor.webhook_payload(webhook, "AI Hot Radar alert: backup missing") == {
+        "msg_type": "text",
+        "content": {"text": "AI Hot Radar alert: backup missing"},
+    }
+
+
+def test_monitor_preserves_generic_webhook_payload() -> None:
+    monitor = load_monitor()
+
+    assert monitor.webhook_payload(
+        "https://hooks.example.test/services/example",
+        "AI Hot Radar recovered: web",
+    ) == {"text": "AI Hot Radar recovered: web"}
+
+
 def test_backup_script_catalog_checks_before_publishing_dump() -> None:
     script = (REPO / "infra" / "scripts" / "backup.sh").read_text(encoding="utf-8")
     assert 'pg_restore --list "$target.partial"' in script
