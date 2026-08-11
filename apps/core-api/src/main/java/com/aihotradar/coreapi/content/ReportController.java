@@ -32,8 +32,8 @@ public class ReportController {
     static final String LIST_SQL =
             """
             SELECT period_key, title, summary, item_count, generated_at, model_name, status
-              FROM report
-             WHERE period_type = :period
+             FROM report
+             WHERE period_type = :period AND status = 'PUBLISHED'
              ORDER BY period_key DESC
              LIMIT :limit
             """;
@@ -43,7 +43,7 @@ public class ReportController {
             SELECT id, period_key, title, summary, body_markdown, item_count,
                    generated_at, model_name, prompt_version, status, published_at
               FROM report
-             WHERE period_type = :period AND period_key = :key
+             WHERE period_type = :period AND period_key = :key AND status = 'PUBLISHED'
             """;
 
     static final String ITEMS_SQL =

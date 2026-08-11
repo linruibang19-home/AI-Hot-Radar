@@ -208,6 +208,21 @@ p95/p99 SLO、全库门禁与当前镜像 smoke 均已验证；服务器依赖�
 页面可访问；Python 报告测试、Java 测试、Web typecheck/lint/unit/build、Docker smoke 和
 Chrome 桌面/窄屏验收通过。
 
+### TASK-M5-003｜非阻塞报告发布状态机与审核 API
+
+**状态**：🚧 2026-08-11 进行中；决策见 ADR-0025。
+**读取**：`01-product-requirements.md`、`05-api-contract.md`、
+`07-quality-security-ops.md`、`11-end-to-end-runbook.md`、ADR-0019、ADR-0025。
+**输入**：持续生成的 daily/weekly/monthly DRAFT、现有 OPERATOR Bearer 鉴权与
+`admin_audit`、手工 `send-report`。
+**产出**：确定性自动发布门禁、PUBLISHED 公共读取、受保护的报告发布/下架与预览 API、
+持久化幂等键、正式邮件状态保护及历史 DRAFT 安全回填。
+**边界**：报告状态不得参与内容入库、精选、Story 或 RAG；不得在浏览器或 Web 容器加入
+OPERATOR 凭据；本卡不实现订阅、自动邮件调度或管理写 UI。
+**完成标准**：合格报告可自动发布，不合格报告进入 REVIEW_REQUIRED，WITHDRAWN 不被
+pipeline 自动解除；正式邮件拒绝非 PUBLISHED、dry-run 可预览；管理变更满足 RBAC、
+二次确认、幂等和审计；历史报告不丢失；Python/Java/Flyway/Compose smoke 通过。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

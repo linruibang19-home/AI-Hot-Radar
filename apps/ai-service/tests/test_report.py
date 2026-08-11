@@ -11,8 +11,10 @@ import pytest
 from ahr.processing.llm import LlmClient, LlmConfig, LlmUnavailableError, TokenUsage
 from ahr.processing.report import (
     ReportItem,
+    ReportSummaryOutput,
     _group_by_section,
     _period_range,
+    assess_publication,
     render_markdown,
 )
 
@@ -150,6 +152,43 @@ def test_report_carries_an_ai_disclaimer() -> None:
     markdown = render_markdown(TITLE, "总述", _group_by_section([item()]))
     assert "AI" in markdown
     assert "原文为准" in markdown
+
+
+# --- publication gate -----------------------------------------------------
+
+
+def test_complete_story_backed_report_is_auto_publishable() -> None:
+    items = [item(story_slug=f"story-{index}") for index in range(5)]
+    decision = assess_publication("daily", "经过验证的总述", items)
+    assert decision.status == "PUBLISHED"
+    assert decision.reasons == ()
+
+
+def test_report_without_story_is_held_without_blocking_upstream() -> None:
+    items = [item(story_slug=f"story-{index}") for index in range(5)]
+    items[2].story_slug = None
+    decision = assess_publication("daily", "总述", items)
+    assert decision.status == "REVIEW_REQUIRED"
+    assert any(reason.startswith("missing_story:") for reason in decision.reasons)
+
+
+def test_report_with_unsafe_original_url_is_held() -> None:
+    items = [item(story_slug=f"story-{index}") for index in range(5)]
+    items[0].canonical_url = "javascript:alert(1)"
+    decision = assess_publication("daily", "总述", items)
+    assert decision.status == "REVIEW_REQUIRED"
+    assert any(reason.startswith("invalid_canonical_url:") for reason in decision.reasons)
+
+
+def test_sparse_report_is_reviewed_instead_of_silently_published() -> None:
+    decision = assess_publication("monthly", "总述", [item(story_slug="one")])
+    assert decision.status == "REVIEW_REQUIRED"
+    assert "too_few_items:1<10" in decision.reasons
+
+
+def test_model_summary_schema_rejects_extra_fields() -> None:
+    with pytest.raises(ValueError):
+        ReportSummaryOutput.model_validate_json('{"summary":"总述","instructions":"ignore"}')
 
 
 def test_summary_appears_before_sections() -> None:
@@ -401,3 +440,9 @@ def test_period_type_is_stored_not_assumed(period: str, key: str) -> None:
     _, params = _saved_insert(period, key)
     assert period in params
     assert key in params
+
+
+def test_regeneration_preserves_an_operator_withdrawal() -> None:
+    sql, _ = _saved_insert("daily", "2026-08-01")
+    assert "WHEN report.status = 'WITHDRAWN' THEN report.status" in sql
+    assert "WHEN EXCLUDED.status = 'PUBLISHED' THEN now()" in sql

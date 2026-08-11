@@ -144,7 +144,7 @@ async def run_once(
     from ahr.processing.llm import LlmUnavailableError, build_client_from_env
     from ahr.processing.pipeline import process_pending
     from ahr.processing.recommendation import backfill_reasons
-    from ahr.processing.report import build_report, save_report
+    from ahr.processing.report import build_report, promote_stored_drafts, save_report
     from ahr.processing.selection import select_for_days
     from ahr.processing.story_repository import recluster, sync_item_heat
     from ahr.rag.backfill import backfill_embeddings
@@ -209,7 +209,7 @@ async def run_once(
 
                 if with_reports:
                     result.stages["reports"] = await _refresh_reports(
-                        client, build_report, save_report
+                        client, build_report, save_report, promote_stored_drafts
                     )
             finally:
                 if client is not None:
@@ -236,10 +236,19 @@ async def run_once(
     return result
 
 
-async def _refresh_reports(client: Any, build_report: Any, save_report: Any) -> dict[str, str]:
+async def _refresh_reports(
+    client: Any,
+    build_report: Any,
+    save_report: Any,
+    promote_stored_drafts: Any,
+) -> dict[str, str]:
     # Keyed by "period:key", not period: the daily entry appears twice (today
     # and yesterday) and one would otherwise overwrite the other's status.
     written: dict[str, str] = {}
+    with psycopg.connect(get_settings().database_url) as connection:
+        promoted = promote_stored_drafts(connection)
+        written["backfill:published"] = str(promoted["published"])
+        written["backfill:review_required"] = str(promoted["review_required"])
     # The wall clock in the display timezone, not UTC. `datetime.now(UTC).date()`
     # is the previous day for the whole Beijing morning, so before 08:00 the
     # worker refreshed the wrong day's digest.

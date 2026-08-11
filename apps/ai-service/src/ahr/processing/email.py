@@ -163,6 +163,11 @@ def record_delivery(
     connection.commit()
 
 
+def report_delivery_allowed(status: str, *, dry_run: bool) -> bool:
+    """Preview any stored edition; formally deliver only published reports."""
+    return dry_run or status == "PUBLISHED"
+
+
 def send_message(config: SmtpConfig, message: EmailMessage) -> None:
     """Deliver via SMTP with STARTTLS."""
     context = ssl.create_default_context()
