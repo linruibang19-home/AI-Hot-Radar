@@ -9,10 +9,11 @@
 
 本仓库已经不是“等待 TASK-M0 创建源码”的规格包，而是可由 Docker Compose 启动的完整
 实现。M0–M4 与 M5 代码侧功能、本地发布门禁已经完成；香港目标机、系统加固、Docker、
-生产配置骨架、域名 A 记录已经就绪。当前分支尚未发布新不可变镜像；专用供应商凭据、
-生产 SMTP、DNS/TLS、真实告警投递和异机备份尚未闭环；V024 本地真实备份恢复演练已通过。
+生产配置骨架、域名 A 记录已经就绪。`v0.1.3` 已在同提交全量 CI 后发布三张不可变镜像，
+服务器 checkout 已对齐该提交；专用供应商凭据、生产 SMTP、TLS、真实告警投递和异机备份
+尚未闭环，因此生产容器保持停止；V024 本地真实备份恢复演练已通过。
 
-当前工作分支为 `codex/prelaunch-product-completion`。权威入口按用途分为：
+当前发布基线为 `main@4c497357` / `v0.1.3`。权威入口按用途分为：
 
 | 需要了解什么 | 首选文档 |
 |---|---|
@@ -45,7 +46,7 @@
 | `infra/compose/docker-compose.yml` | 本地唯一启动入口 | 已验证 |
 | `infra/compose/docker-compose.prod.yml` | 生产 Compose | 目标机结构预检通过，真实配置缺外部值时 fail-closed |
 | `infra/caddy/Caddyfile` | HTTPS 反向代理 | 产物就绪，待域名与证书 |
-| `.github/workflows/release.yml` | GHCR 构建发布 | `v0.1.1` 完整 CI 与三镜像发布成功 |
+| `.github/workflows/release.yml` | GHCR 构建发布 | `v0.1.3` 完整 CI 与三镜像发布成功 |
 | `infra/scripts/backup.sh` | PostgreSQL 定时备份 | 已实现目录校验与 SHA-256；本地真实恢复通过 |
 | `infra/scripts/preflight.sh` / `deploy-production.sh` | 生产配置与不可变提交部署门禁 | 目标机 preflight 已验证，待外部值齐全后正式启动 |
 | `infra/scripts/monitor.py` / `smoke-production.sh` | 健康、备份年龄告警与公网验收 | 逻辑验证通过，待接真实 HTTPS webhook |
@@ -90,22 +91,21 @@ DeepSeek 生成模型白名单切换已完成；生产 SMTP 与浏览器视觉�
 - 运行态：PostgreSQL、Redis、Core API、AI Service、Web 健康，`/ask` 返回 200；
 - 报告：日报 11、周报 3、月报 1，均为 PUBLISHED；邮箱订阅闭环已用 Mailpit 验收。
 - 数据恢复：102 MiB V024 dump 目录/SHA 校验与隔离恢复通过。
-- 部署：Ubuntu 22.04 目标机已加固，80/443 可达但项目保持停止；旧 `v0.1.2` 不含本轮
-  V023/V024 与前端功能，必须发布当前提交的新不可变镜像后才能恢复上线。
+- 部署：Ubuntu 22.04 目标机已加固并对齐 `v0.1.3@4c497357`，三张精确 SHA 镜像已发布；
+  项目仍保持停止，等待真实供应商凭据、SMTP、告警、预算与异机备份门禁闭环。
 
 证据与限制分别见本页 §1 指向的四份 08-11 状态文档；不要脱离 run、样本量和口径引用
 单个指标。
 
 ## 5. 后续交付顺序
 
-1. 上线 P0：提交并 push 当前分支，PR/CI 全绿后合并并发布新的不可变镜像；
-2. 上线 P0（需主人/服务器权限）：轮换全部密钥、设置供应商消费上限、配置生产 SMTP、
+1. 上线 P0（需主人/供应商权限）：轮换全部密钥、设置供应商消费上限、配置生产 SMTP、
    DNS/TLS、HTTPS 告警 webhook 与异机备份；
-3. 上线 P0（需服务器权限）：用 `deploy-production.sh` 按提交 SHA 首次部署，执行公网
+2. 上线 P0（需服务器权限）：用 `deploy-production.sh` 按提交 SHA 首次部署，执行公网
    smoke、目标机隔离恢复和告警/恢复通知演练；
-4. 产品 P1：补管理写操作 UI、加工任务重跑入口和邮件退信/投诉处理；
-5. RAG P1：扩大实体/时间人工标注与噪声集，解决 SLA 类目标原文稳定排第 27 的缺口；
-6. 产品化 P2：反馈闭环、版本化知识快照、账号/租户/ACL（只在私有语料进入范围后）。
+3. 产品 P1：补管理写操作 UI、加工任务重跑入口和邮件退信/投诉处理；
+4. RAG P1：扩大实体/时间人工标注与噪声集，解决 SLA 类目标原文稳定排第 27 的缺口；
+5. 产品化 P2：反馈闭环、版本化知识快照、账号/租户/ACL（只在私有语料进入范围后）。
 
 执行时仍必须一次只领取 `08-roadmap-ai-ide.md` 中的一张任务卡；不得因为本索引列出后续
 事项而并行扩大里程碑范围。
