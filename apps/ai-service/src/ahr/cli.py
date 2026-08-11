@@ -1058,6 +1058,16 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_publish_ready_reports(_args: argparse.Namespace) -> int:
+    """Apply the deterministic publication gate to historical draft reports."""
+    from ahr.processing.report import promote_stored_drafts
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        result = promote_stored_drafts(connection)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
+
 def cmd_send_report(args: argparse.Namespace) -> int:
     """Send a stored daily report by email."""
     from ahr.processing.email import (
@@ -1067,6 +1077,7 @@ def cmd_send_report(args: argparse.Namespace) -> int:
         build_message,
         delivery_key,
         record_delivery,
+        report_delivery_allowed,
         send_message,
     )
 
@@ -1079,7 +1090,7 @@ def cmd_send_report(args: argparse.Namespace) -> int:
     with psycopg.connect(get_settings().database_url) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT title, summary, body_markdown FROM report"
+                "SELECT title, summary, body_markdown, status FROM report"
                 " WHERE period_type = 'daily' AND period_key = %s",
                 (args.date,),
             )
@@ -1089,12 +1100,25 @@ def cmd_send_report(args: argparse.Namespace) -> int:
             print(json.dumps({"status": "no_report", "date": args.date}, indent=2))
             return 1
 
-        title, summary, body_markdown = row
+        title, summary, body_markdown, report_status = row
         key = delivery_key(args.date, args.to)
 
         if already_delivered(connection, key) and not args.force:
             print(json.dumps({"status": "already_sent", "delivery_key": key[:16]}, indent=2))
             return 0
+
+        if not report_delivery_allowed(report_status, dry_run=args.dry_run):
+            print(
+                json.dumps(
+                    {
+                        "status": "not_published",
+                        "date": args.date,
+                        "report_status": report_status,
+                    },
+                    indent=2,
+                )
+            )
+            return 1
 
         if args.dry_run:
             print(
@@ -1104,6 +1128,7 @@ def cmd_send_report(args: argparse.Namespace) -> int:
                         "to": args.to,
                         "subject": title,
                         "body_chars": len(body_markdown),
+                        "report_status": report_status,
                     },
                     indent=2,
                     ensure_ascii=False,
@@ -1323,6 +1348,12 @@ def main(argv: list[str] | None = None) -> int:
     report.add_argument("--no-llm", action="store_true", help="skip the narrative summary")
     report.add_argument("--output", default=None, help="also write the markdown here")
     report.set_defaults(func=cmd_report)
+
+    publish_ready = sub.add_parser(
+        "publish-ready-reports",
+        help="evaluate historical draft reports with the non-blocking publication gate",
+    )
+    publish_ready.set_defaults(func=cmd_publish_ready_reports)
 
     send = sub.add_parser("send-report", help="email a stored daily report")
     send.add_argument("--date", required=True, help="YYYY-MM-DD")

@@ -10,20 +10,17 @@ import org.junit.jupiter.api.Test;
 class ReportControllerTest {
 
     @Test
-    void reader_list_keeps_generated_reports_visible_before_editorial_ui_exists() {
-        // The report generator intentionally stores every automatic run as DRAFT.
-        // Filtering here made all daily/weekly/monthly reports disappear because
-        // the planned editorial publish endpoint/UI has not been implemented yet.
+    void public_reader_lists_only_published_reports() {
         assertThat(ReportController.LIST_SQL)
                 .contains("period_type = :period")
-                .doesNotContain("status = 'PUBLISHED'");
+                .contains("status = 'PUBLISHED'");
     }
 
     @Test
-    void reader_detail_keeps_generated_reports_visible_before_editorial_ui_exists() {
+    void public_reader_detail_requires_a_published_report() {
         assertThat(ReportController.DETAIL_SQL)
                 .contains("period_key = :key")
-                .doesNotContain("status = 'PUBLISHED'");
+                .contains("status = 'PUBLISHED'");
     }
 
     @Test
