@@ -236,6 +236,23 @@ pipeline 自动解除；正式邮件拒绝非 PUBLISHED、dry-run 可预览；�
 **完成标准**：同一期同一收件人至多一次正式投递；只发送 PUBLISHED；失败可重试、可审计、
 可人工 dry-run；无订阅者时安全空跑；Compose 运行态与邮件沙箱验收通过。
 
+### TASK-M5-005｜生产部署预检与恢复门禁
+
+**状态**：✅ 2026-08-11 完成；所有不依赖目标服务器的上线准备与本地真实恢复演练通过。
+**读取**：`02-system-architecture.md`、`07-quality-security-ops.md`、
+`11-end-to-end-runbook.md`、`docs/design/m5-deployment.md`、
+`docs/design/m5-first-deploy-checklist.md`。
+**输入**：现有 production Compose、Caddy、GHCR release workflow、备份 worker、当前本地
+Compose 与已通过的 M4/M5 质量门禁。
+**产出**：可执行的生产环境预检、不可变镜像与密钥占位检查、正确的 Cloudflare 客户端 IP
+信任链、同提交发布测试门、内部端口不暴露、备份完整性检查、隔离恢复演练和公网 smoke。
+**边界**：不创建或轮换真实供应商密钥，不修改 DNS/Cloudflare/服务器防火墙，不 push、
+打 tag 或部署；这些动作必须在主人提供目标机与相应权限后执行。TASK-M5-004 仍为独立 P1，
+不得把订阅功能塞进 ai-service 违反服务边界。
+**完成标准**：生产 Compose 使用脱敏 fixture 可完整解析；危险默认值会被预检拒绝；release
+只有同提交全量门禁通过后才构建推送；本地真实数据库完成 dump/restore 数据核对；本地核心
+服务与关键页面保持健康；文档明确目标服务器到位后仅剩的外部执行步骤。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

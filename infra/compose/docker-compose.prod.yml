@@ -98,7 +98,7 @@ services:
       AHR_ADMIN_BOOTSTRAP_TOKEN: ${AHR_ADMIN_BOOTSTRAP_TOKEN:?AHR_ADMIN_BOOTSTRAP_TOKEN must be set}
       AHR_ADMIN_VIEWER_TOKEN: ${AHR_ADMIN_VIEWER_TOKEN:?AHR_ADMIN_VIEWER_TOKEN must be set}
     env_file:
-      - path: .env
+      - path: ${AHR_ENV_FILE:-.env}
         required: true
     depends_on:
       postgres:
@@ -126,8 +126,12 @@ services:
       # 0 disables it. Set it from `ahr.cli usage --days 7`, not from this
       # default.
       LLM_DAILY_TOKEN_LIMIT: ${LLM_DAILY_TOKEN_LIMIT:-2000000}
+      # Explicit production values; local Compose deliberately loosens these
+      # because every local caller shares the Docker gateway address.
+      RAG_RATE_PER_MINUTE: ${RAG_RATE_PER_MINUTE:-3}
+      RAG_RATE_PER_DAY: ${RAG_RATE_PER_DAY:-20}
     env_file:
-      - path: .env
+      - path: ${AHR_ENV_FILE:-.env}
         required: true
     volumes:
       - ../../config:/app/config:ro
@@ -152,12 +156,14 @@ services:
       CRAWLER_USER_AGENT: ${CRAWLER_USER_AGENT:-AIHotRadarBot/1.0 (+https://kuritian.online/bot)}
       PYTHONUNBUFFERED: "1"
     env_file:
-      - path: .env
+      - path: ${AHR_ENV_FILE:-.env}
         required: true
     volumes:
       - ../../config:/app/config:ro
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     # Measured 154 MB — the highest of the Python processes, because it
     # holds parsed feed documents while ingesting.
@@ -180,12 +186,14 @@ services:
       REDIS_URL: redis://redis:6379/0
       PYTHONUNBUFFERED: "1"
     env_file:
-      - path: .env
+      - path: ${AHR_ENV_FILE:-.env}
         required: true
     volumes:
       - ../../config:/app/config:ro
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     # Measured 46 MB, but it processes documents in batches of 60.
     mem_limit: 320m
@@ -205,8 +213,10 @@ services:
       # mutates, so compromising this container does not hand over ingestion.
       AHR_ADMIN_VIEWER_TOKEN: ${AHR_ADMIN_VIEWER_TOKEN:?AHR_ADMIN_VIEWER_TOKEN must be set}
     depends_on:
-      - core-api
-      - ai-service
+      core-api:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
     # Measured 54 MB. Next's server keeps a render cache.
     mem_limit: 320m
     restart: unless-stopped
@@ -225,7 +235,8 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     # Measured under 20 MB; it terminates TLS and proxies one upstream.
     mem_limit: 128m
     restart: unless-stopped
@@ -242,6 +253,7 @@ services:
       PGUSER: ${POSTGRES_USER:-ai_hot_radar}
       PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in production}
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
     volumes:
       - ../scripts/backup.sh:/backup.sh:ro
       - ./backups:/backups
@@ -252,6 +264,56 @@ services:
     # nightly run.
     mem_limit: 192m
     restart: unless-stopped
+
+  # Internal health and backup-age monitor. It has no Docker socket and cannot
+  # mutate the stack; after a bounded number of failures it posts a redacted
+  # event to the operator-provided HTTPS webhook.
+  monitor:
+    image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/ai-service:${IMAGE_TAG:-latest}
+    command: ["python", "/monitor.py"]
+    environment:
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:?ALERT_WEBHOOK_URL must be set}
+      ALERT_FAILURE_THRESHOLD: ${ALERT_FAILURE_THRESHOLD:-3}
+      MONITOR_INTERVAL_SECONDS: ${MONITOR_INTERVAL_SECONDS:-60}
+      BACKUP_MAX_AGE_SECONDS: ${BACKUP_MAX_AGE_SECONDS:-93600}
+      BACKUP_DIR: /backups
+    volumes:
+      - ../scripts/monitor.py:/monitor.py:ro
+      - ./backups:/backups:ro
+    depends_on:
+      core-api:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+      backup:
+        condition: service_started
+    mem_limit: 96m
+    restart: unless-stopped
+    healthcheck:
+      disable: true
+
+  # On-demand, isolated restore rehearsal. It only accepts a database whose
+  # name starts with ai_hot_radar_restore_verify and removes it on success.
+  restore-verify:
+    profiles: ["tools"]
+    image: pgvector/pgvector:pg16
+    entrypoint: ["/bin/sh", "/restore-verify.sh"]
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:-ai_hot_radar}
+      PGUSER: ${POSTGRES_USER:-ai_hot_radar}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in production}
+      BACKUP_FILE: ${BACKUP_FILE:-}
+      RESTORE_TARGET_DATABASE: ${RESTORE_TARGET_DATABASE:-ai_hot_radar_restore_verify}
+    volumes:
+      - ../scripts/restore-verify.sh:/restore-verify.sh:ro
+      - ./backups:/backups:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 256m
 
 volumes:
   postgres_data:

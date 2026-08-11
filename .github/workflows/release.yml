@@ -30,8 +30,19 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # A tag can be created from a commit whose branch CI never ran (or whose CI
+  # failed). Re-run the reusable full gate on the exact tag commit before any
+  # package is published; image provenance is only useful if the commit itself
+  # was accepted.
+  verify:
+    name: Verify release commit
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   build:
     name: Build ${{ matrix.service }}
+    needs: verify
     runs-on: ubuntu-latest
     permissions:
       contents: read

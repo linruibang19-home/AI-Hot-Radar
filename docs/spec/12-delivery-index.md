@@ -9,7 +9,7 @@
 
 本仓库已经不是“等待 TASK-M0 创建源码”的规格包，而是可由 Docker Compose 启动的完整
 实现。M0–M4 的功能与本地发布门禁已经完成；M5 部署产物已存在，但服务器、新密钥、
-DNS/TLS、真实告警和恢复演练尚未执行。
+目标服务器上的 DNS/TLS、真实告警投递和异机备份尚未执行；本地真实备份恢复演练已通过。
 
 当前工作分支为 `codex/rag-quality-gates`。权威入口按用途分为：
 
@@ -21,6 +21,7 @@ DNS/TLS、真实告警和恢复演练尚未执行。
 | RAG 当前发布门禁 | `docs/status/rag-specialist-audit-20260811.md` |
 | RAG 安全、超时和 SLO | `docs/status/rag-security-performance-20260811.md` |
 | RAG 问答 UI 精修 | `docs/status/rag-ui-polish-20260811.md` |
+| 生产预检与恢复演练 | `docs/status/production-preflight-20260811.md` |
 | 锁定产品与技术决策 | `docs/spec/00-master-spec.md` + `docs/adr/` |
 | 下一张任务卡 | `docs/spec/08-roadmap-ai-ide.md` |
 
@@ -39,7 +40,10 @@ DNS/TLS、真实告警和恢复演练尚未执行。
 | `infra/compose/docker-compose.prod.yml` | 生产 Compose | 产物就绪，未在目标服务器执行 |
 | `infra/caddy/Caddyfile` | HTTPS 反向代理 | 产物就绪，待域名与证书 |
 | `.github/workflows/release.yml` | GHCR 构建发布 | 已实现，未替代人工首次上线验收 |
-| `infra/scripts/backup.sh` | PostgreSQL 定时备份 | 已实现，真实恢复演练未完成 |
+| `infra/scripts/backup.sh` | PostgreSQL 定时备份 | 已实现目录校验与 SHA-256；本地真实恢复通过 |
+| `infra/scripts/preflight.sh` / `deploy-production.sh` | 生产配置与不可变提交部署门禁 | 本地验证通过，待目标机执行 |
+| `infra/scripts/monitor.py` / `smoke-production.sh` | 健康、备份年龄告警与公网验收 | 逻辑验证通过，待接真实 HTTPS webhook |
+| `infra/scripts/restore-verify.sh` | 受保护隔离恢复核验 | 本地真实 100 MB dump 恢复通过 |
 | `api/openapi.yaml` / `schemas/` | 服务契约与生成类型来源 | 生成无 diff |
 | `config/` | 140 信源、9 类 Profile、taxonomy 与受限 watchlist | 已加载；社交监控保持关闭 |
 
@@ -71,7 +75,7 @@ DNS/TLS、真实告警和恢复演练尚未执行。
 
 ## 4. 当前交付证据
 
-- Python：Ruff、mypy 86 个源码文件、pytest 871/871；
+- Python：Ruff、mypy 86 个源码文件、pytest 878/878；
 - Java：Maven test 62/62；
 - Web：typecheck、lint、Vitest 55/55、Next.js 15.5.23 production build；
 - 数据库：140 个信源、1855 条内容、7057 个分块且 100% 向量化、1448 个 Story；
@@ -85,8 +89,10 @@ DNS/TLS、真实告警和恢复演练尚未执行。
 
 ## 5. 后续交付顺序
 
-1. 上线 P0：轮换全部密钥、设置供应商消费上限、配置服务器/DNS/TLS/告警；
-2. 上线 P0：执行带提交 SHA 的首次部署并做真实 `pg_dump` 恢复演练；
+1. 上线 P0（需主人/服务器权限）：轮换全部密钥、设置供应商消费上限、配置服务器、
+   DNS/TLS、HTTPS 告警 webhook 与异机备份；
+2. 上线 P0（需主人/服务器权限）：用 `deploy-production.sh` 按提交 SHA 首次部署，执行公网
+   smoke、目标机隔离恢复和告警/恢复通知演练；
 3. 产品 P1：在明确订阅者、退订和时区策略后补报告定时投递；补管理写操作 UI 与加工任务重跑入口；
 4. RAG P1：扩大实体/时间人工标注与噪声集，解决 SLA 类目标原文稳定排第 27 的缺口；
 5. 产品化 P2：反馈闭环、版本化知识快照、账号/租户/ACL（只在私有语料进入范围后）。

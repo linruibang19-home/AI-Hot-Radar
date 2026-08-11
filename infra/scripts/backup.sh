@@ -31,9 +31,10 @@ run_backup() {
 	# Write to a temporary name and rename on success. A dump interrupted
 	# halfway would otherwise sit in the directory looking exactly like a good
 	# one, and would be found only when it was needed.
-	if pg_dump -Fc -f "$target.partial"; then
+	if pg_dump -Fc -f "$target.partial" && pg_restore --list "$target.partial" >/dev/null; then
 		mv "$target.partial" "$target"
-		echo "backup ok: $target ($(du -h "$target" | cut -f1))"
+		sha256sum "$target" > "$target.sha256"
+		echo "backup ok and catalog verified: $target ($(du -h "$target" | cut -f1))"
 	else
 		rm -f "$target.partial"
 		echo "backup FAILED at $stamp" >&2
@@ -42,10 +43,16 @@ run_backup() {
 
 	# Retention last, and only after a success: pruning first would let a run
 	# of failures quietly delete the last good copy.
-	find "$BACKUP_DIR" -name 'ai_hot_radar-*.dump' -mtime "+$KEEP_DAYS" -print -delete
+	find "$BACKUP_DIR" \( -name 'ai_hot_radar-*.dump' -o -name 'ai_hot_radar-*.dump.sha256' \) \
+		-mtime "+$KEEP_DAYS" -print -delete
 }
 
 echo "backup worker started: every ${INTERVAL}s, keeping ${KEEP_DAYS} days in ${BACKUP_DIR}"
+
+if [ "${BACKUP_RUN_ONCE:-false}" = "true" ]; then
+	run_backup
+	exit 0
+fi
 
 while true; do
 	# A failure must not kill the loop; tomorrow's attempt may well succeed, and
