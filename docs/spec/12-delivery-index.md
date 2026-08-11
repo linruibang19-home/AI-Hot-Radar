@@ -8,8 +8,9 @@
 ## 1. 当前交付状态
 
 本仓库已经不是“等待 TASK-M0 创建源码”的规格包，而是可由 Docker Compose 启动的完整
-实现。M0–M4 的功能与本地发布门禁已经完成；M5 部署产物已存在，但服务器、新密钥、
-目标服务器上的 DNS/TLS、真实告警投递和异机备份尚未执行；本地真实备份恢复演练已通过。
+实现。M0–M4 的功能与本地发布门禁已经完成；M5 目标机、系统加固、Docker、生产配置骨架和
+不可变镜像已经就绪。新域名、专用供应商凭据、DNS/TLS、真实告警投递和异机备份尚未闭环；
+本地真实备份恢复演练已通过。
 
 当前工作分支为 `codex/rag-quality-gates`。权威入口按用途分为：
 
@@ -22,6 +23,7 @@
 | RAG 安全、超时和 SLO | `docs/status/rag-security-performance-20260811.md` |
 | RAG 问答 UI 精修 | `docs/status/rag-ui-polish-20260811.md` |
 | 生产预检与恢复演练 | `docs/status/production-preflight-20260811.md` |
+| 首次生产部署与外部闸门 | `docs/status/production-deployment-20260811.md` |
 | 锁定产品与技术决策 | `docs/spec/00-master-spec.md` + `docs/adr/` |
 | 下一张任务卡 | `docs/spec/08-roadmap-ai-ide.md` |
 
@@ -37,11 +39,11 @@
 | `apps/ai-service/` | FastAPI 采集、加工、聚类、报告与 RAG | 已实现；当前镜像健康 |
 | `database/migrations/` | Flyway V001–V022（含 V017.1） | 当前库升级通过；V022 报告发布迁移已执行 |
 | `infra/compose/docker-compose.yml` | 本地唯一启动入口 | 已验证 |
-| `infra/compose/docker-compose.prod.yml` | 生产 Compose | 产物就绪，未在目标服务器执行 |
+| `infra/compose/docker-compose.prod.yml` | 生产 Compose | 目标机结构预检通过，真实配置缺外部值时 fail-closed |
 | `infra/caddy/Caddyfile` | HTTPS 反向代理 | 产物就绪，待域名与证书 |
-| `.github/workflows/release.yml` | GHCR 构建发布 | 已实现，未替代人工首次上线验收 |
+| `.github/workflows/release.yml` | GHCR 构建发布 | `v0.1.1` 完整 CI 与三镜像发布成功 |
 | `infra/scripts/backup.sh` | PostgreSQL 定时备份 | 已实现目录校验与 SHA-256；本地真实恢复通过 |
-| `infra/scripts/preflight.sh` / `deploy-production.sh` | 生产配置与不可变提交部署门禁 | 本地验证通过，待目标机执行 |
+| `infra/scripts/preflight.sh` / `deploy-production.sh` | 生产配置与不可变提交部署门禁 | 目标机 preflight 已验证，待外部值齐全后正式启动 |
 | `infra/scripts/monitor.py` / `smoke-production.sh` | 健康、备份年龄告警与公网验收 | 逻辑验证通过，待接真实 HTTPS webhook |
 | `infra/scripts/restore-verify.sh` | 受保护隔离恢复核验 | 本地真实 100 MB dump 恢复通过 |
 | `api/openapi.yaml` / `schemas/` | 服务契约与生成类型来源 | 生成无 diff |
@@ -83,6 +85,8 @@
   0.9344、拒答准确率 1.0000、关键问题 P0 为 0；
 - 运行态：PostgreSQL、Redis、Core API、AI Service、Web 健康，`/ask` 返回 200；
 - 报告：日报 10、周报 3、月报 1，均为 PUBLISHED；公开 API 只读取 PUBLISHED。
+- 部署：Ubuntu 22.04 目标机已加固；80/443 公网可达；`v0.1.1` 与
+  `sha-29cb967b2b32e347b5fdaa83edfd962d13abb8e0` 三镜像可读取。
 
 证据与限制分别见本页 §1 指向的四份 08-11 状态文档；不要脱离 run、样本量和口径引用
 单个指标。
