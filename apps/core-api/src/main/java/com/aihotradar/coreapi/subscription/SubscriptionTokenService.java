@@ -51,7 +51,9 @@ public class SubscriptionTokenService {
             }
             byte[] payload = DECODER.decode(parts[0]);
             byte[] providedSignature = DECODER.decode(parts[1]);
-            if (!MessageDigest.isEqual(sign(payload), providedSignature)) {
+            if (!ENCODER.encodeToString(payload).equals(parts[0])
+                    || !ENCODER.encodeToString(providedSignature).equals(parts[1])
+                    || !MessageDigest.isEqual(sign(payload), providedSignature)) {
                 throw new InvalidSubscriptionTokenException();
             }
 
