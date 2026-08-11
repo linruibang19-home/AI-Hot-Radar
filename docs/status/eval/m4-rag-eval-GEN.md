@@ -2,7 +2,7 @@
 
 `eval_run_id`：`GEN-20260804T060558Z`
 逐题数据：[m4-rag-eval-GEN-20260804.json](m4-rag-eval-GEN-20260804.json)
-方案：[design/m4-rag-evaluation.md](../design/m4-rag-evaluation.md) §5.5
+方案：[design/m4-rag-evaluation.md](../../design/m4-rag-evaluation.md) §5.5
 
 检索侧四轮（B1–B4）看不见生成的任何东西。B5 父块与 B6 折叠尤其如此——
 它们改变的是**模型读到什么**和**读到哪些来源**，不改变排序，

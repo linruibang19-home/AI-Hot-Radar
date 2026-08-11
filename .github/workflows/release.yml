@@ -1,0 +1,110 @@
+name: Release
+
+# Build the three images and push them to GHCR (M5).
+#
+# Building on the server was the alternative and it does not work: `next build`
+# and the Maven compile each peak well above what a 2 GB host has spare, so the
+# first deploy would OOM. Building here also ties an image to the commit that
+# produced it, which is what makes a rollback `IMAGE_TAG=<previous>` instead of
+# a rebuild from a checkout that may have moved on.
+#
+# Deploy after this finishes. Mind the tag *format*: `type=sha,format=long`
+# below produces `sha-<40 hex>`, not the bare commit sha, so a deploy that
+# passes the raw sha pulls nothing and Compose silently keeps running whatever
+# image is already on the host.
+#
+#   ssh <host> 'cd ai-hot-radar && export IMAGE_TAG=sha-<40 hex> && \
+#     docker compose -f infra/compose/docker-compose.prod.yml pull && \
+#     docker compose -f infra/compose/docker-compose.prod.yml up -d'
+#
+# GHCR packages are private by default, so the host authenticates once before
+# its first pull:
+#   echo <PAT with read:packages> | docker login ghcr.io -u <user> --password-stdin
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # A tag can be created from a commit whose branch CI never ran (or whose CI
+  # failed). Re-run the reusable full gate on the exact tag commit before any
+  # package is published; image provenance is only useful if the commit itself
+  # was accepted.
+  verify:
+    name: Verify release commit
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  build:
+    name: Build ${{ matrix.service }}
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      # One failing image must not cancel the others: a partial set is easier to
+      # reason about than a set where some builds were killed mid-flight.
+      fail-fast: false
+      matrix:
+        include:
+          - service: web
+            context: apps/web
+            dockerfile: apps/web/Dockerfile
+          - service: ai-service
+            context: apps/ai-service
+            dockerfile: apps/ai-service/Dockerfile
+          # Root context: Flyway migrations live at database/migrations and are
+          # copied into the image at build time, so the image and its schema
+          # ship together.
+          - service: core-api
+            context: .
+            dockerfile: apps/core-api/Dockerfile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}
+          # `sha-<40 hex>` is what a deployment pins, so it names the exact
+          # commit it is running.
+          #
+          # `latest` is what the compose file falls back to, and it has to
+          # exist for a first bring-up. The usual `enable={{is_default_branch}}`
+          # would not produce it here: this workflow triggers on `v*` tags, and
+          # a tag ref is not a branch — so the very run that publishes a release
+          # would publish no `latest`, and the first `up -d` would fail to pull.
+          tags: |
+            type=ref,event=tag
+            type=sha,format=long
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Layer cache in the registry: without it every run reinstalls the
+          # whole Python and npm dependency tree.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

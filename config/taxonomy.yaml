@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 content_types:
   - model_release
   - product_release
@@ -16,110 +16,129 @@ content_types:
 
 entity_types: [company, organization, product, model, technology, protocol, framework, person]
 
-topics:
-  models: [llm, multimodal, reasoning, embedding, reranker, image, video, audio, robotics]
-  engineering: [agent, rag, mcp, memory, evaluation, inference, fine_tuning, safety, observability]
-  ecosystems: [java_ai, spring_ai, python_ai, ai_coding, open_source, cloud_ai]
-  business: [funding, enterprise, regulation, chips, research]
-
-# Presentation metadata for the topic map.
+# --- 主题地图的三个维度 -------------------------------------------------------
 #
-# `topics` above remains the vocabulary authority: normalisation reads only that
-# mapping, so an entry here for an unrecognised slug changes nothing about which
-# labels are accepted. Kept in config rather than in the page because the site,
-# the report renderer and the email template all need the same display names,
-# and a slug titlecased in the frontend produced "Llm" and "Rag".
+# 主题地图原来只有一个维度（下面的 `topics`），而读者实际想要的另外两个维度
+# **数据早就在库里，只是没有读的路径**：
+#
+#   公司与模型  ← entity 表（company 677 条、model 832 条），从未被主题页用到
+#   技术方向    ← 下面的 topics
+#   内容形态    ← content_item.content_type（11 类，只有 8.7% 为空），从未被主题页用到
+#
+# 所以这次不是「往词表里加几十个主题」，而是把三个维度分别接到它们本来该接的
+# 数据源上。往词表里塞公司名会更糟：主题是内容**在讲什么**，公司是内容**关于谁**，
+# 混在一起之后「OpenAI 的多模态」就只能二选一。
+
+topics:
+  tech:
+    [
+      agent,
+      ai_coding,
+      reasoning,
+      multimodal,
+      image,
+      video,
+      audio,
+      robotics,
+      rag,
+      mcp,
+      memory,
+      evaluation,
+      inference,
+      fine_tuning,
+      safety,
+      open_source,
+      llm,
+    ]
+  industry: [chips, funding, enterprise, regulation, research]
+
+# 已合并掉的主题，以及去向。`item_topic` 的历史标注由 V017 按这张表迁移，
+# 一条都不丢——删标注等于把「当时确实这么判过」抹掉。
+#
+# 合并依据是实测标注量，不是感觉：java_ai 1 条、spring_ai 1 条、python_ai 0 条、
+# cloud_ai 0 条、reranker 0 条。四个几乎空的主题占着四张卡片，
+# 而参考站没有「语言生态」这一组是对的。
+topic_merges:
+  java_ai: ai_coding
+  spring_ai: ai_coding
+  python_ai: ai_coding
+  cloud_ai: inference
+  observability: inference
+  embedding: rag
+  reranker: rag
+  # `business` 是**组名**，不该出现在标注里。它有 23 条标注，是因为
+  # `known_slugs()` 把组 key 也放进了可选词表——条目被打进一个页面上只会
+  # 渲染成分组标题的桶。归到语义最近的叶子。
+  business: enterprise
+  models: null
+  engineering: null
+  ecosystems: null
+
 topic_groups:
-  models:
-    label: 模型能力
-    order: 1
-    description: 模型本身能做什么——发布、能力边界与技术路线
-  engineering:
-    label: 工程实践
+  tech:
+    label: 技术方向
     order: 2
-    description: 把模型变成可用系统的方法：检索、智能体、部署与安全
-  ecosystems:
-    label: 生态与工具链
-    order: 3
-    description: 语言生态、开发工具与云平台侧的动态
-  business:
+    description: 按技术领域深挖：Agent、多模态、具身智能……
+  industry:
     label: 产业与政策
-    order: 4
+    order: 3
     description: 资本、落地、算力与监管
 
 topic_display:
-  llm:
-    name: 大语言模型
-    description: 通用文本大模型的发布、能力更新与技术路线
+  agent:
+    name: Agent 智能体
+    description: 让模型自主规划、调用工具、完成多步任务的技术方向
+  ai_coding:
+    name: AI 编码
+    description: AI 写代码的一切：编码助手、Vibe Coding、代码模型与开发工作流
+  reasoning:
+    name: 推理能力
+    description: 模型推理能力的进展：思维链、推理模型、数学与逻辑基准
   multimodal:
     name: 多模态
-    description: 同时处理文本、图像与音视频的模型及其应用
-  reasoning:
-    name: 推理模型
-    description: 强调思维链与长程推理的模型方向
-  embedding:
-    name: 向量嵌入
-    description: 文本与多模态向量化模型，检索与聚类的基础设施
-  reranker:
-    name: 重排序
-    description: 检索结果的二次排序模型，直接决定 RAG 的命中质量
+    description: 文本之外的能力：视觉理解、图文混合、音视频输入输出的模型与产品
   image:
     name: 图像生成
-    description: 文生图与图像编辑模型
+    description: 文生图模型迭代、图像编辑能力与创作工具生态
   video:
-    name: 视频生成
-    description: 文生视频与视频编辑模型
+    name: AI 视频
+    description: AI 视频生成与理解：文生视频模型、视频编辑工具与影视创作
   audio:
     name: 语音与音频
-    description: 语音识别、语音合成与音乐生成
+    description: 语音合成、实时对话、音乐生成与音频理解
   robotics:
     name: 具身智能
-    description: 机器人控制与视觉-语言-动作模型
-  agent:
-    name: 智能体
-    description: 具备规划与工具调用能力的 Agent 框架与产品
+    description: AI 走进物理世界：人形机器人、具身基础模型与真实环境操作
   rag:
     name: 检索增强
-    description: 用外部知识约束模型输出的检索增强生成
+    description: 用外部知识约束模型输出的检索增强生成，含向量嵌入与重排序
   mcp:
-    name: MCP 协议
-    description: Model Context Protocol 及其周边工具生态
+    name: MCP 与工具调用
+    description: 模型连接外部世界的协议与实践：MCP 生态、function calling、工具链集成
   memory:
     name: 记忆与上下文
     description: 长期记忆、上下文管理与会话状态
   evaluation:
     name: 评测与基准
-    description: 榜单、评测集与模型能力的测量方法
+    description: 模型到底谁强：Benchmark 成绩、评测方法论争议与排行榜变化
   inference:
-    name: 推理与部署
-    description: 服务化、量化、加速与推理成本优化
+    name: 部署工程
+    description: 把模型跑起来的工程实践：推理优化、量化与成本、Serving 架构与可观测性
   fine_tuning:
-    name: 微调与后训练
-    description: SFT、RLHF、LoRA 等后训练方法
+    name: 数据与训练
+    description: 训练侧的门道：数据集构建、合成数据、预训练与后训练方法
   safety:
-    name: 安全与对齐
-    description: 对齐、越狱防护、内容安全与红队测试
-  observability:
-    name: 可观测性
-    description: 链路追踪、指标采集与线上效果监控
-  java_ai:
-    name: Java AI
-    description: Java 生态中的 AI 框架与集成
-  spring_ai:
-    name: Spring AI
-    description: Spring AI 项目的版本发布与工程实践
-  python_ai:
-    name: Python AI
-    description: Python 生态的 AI 库与工具链
-  ai_coding:
-    name: AI 编程
-    description: 代码助手、Agent 编程与研发流程变化
+    name: 安全对齐
+    description: AI 安全与对齐：越狱与防御、模型行为研究、安全评测与治理框架
   open_source:
-    name: 开源
-    description: 开源模型权重、工具与许可证动态
-  cloud_ai:
-    name: 云与平台
-    description: 云厂商 AI 平台与托管推理服务
+    name: 开源生态
+    description: 开源模型、框架与仓库动态：权重开放、社区项目、开源与闭源的力量对比
+  llm:
+    name: 大语言模型
+    description: 通用文本大模型的发布、能力更新与技术路线
+  chips:
+    name: 芯片与算力
+    description: 加速卡、算力供给与硬件供应链
   funding:
     name: 融资
     description: 融资、估值与资本动向
@@ -127,14 +146,140 @@ topic_display:
     name: 企业落地
     description: 企业级采用、行业方案与商业化进展
   regulation:
-    name: 政策与监管
+    name: 政策监管
     description: 法规、合规要求与政府动作
-  chips:
-    name: 芯片与算力
-    description: 加速卡、算力供给与硬件供应链
   research:
     name: 研究论文
     description: 学术论文与研究进展
+
+# --- 维度一：公司与模型 -------------------------------------------------------
+#
+# 从 `entity` 聚合，不是新的主题词表。
+#
+# **为什么要 curated 而不是自动取 top N**：实体是按出现的名字抽的，所以同一家
+# 公司的模型是分开的实体——实测 `deepseek`(23) / `deepseek-v4`(18) 是两条，
+# `gpt-5.6`(24) / `gpt-5.5`(23) / `gpt-5.6-sol`(21) 是三条。自动取 top N 会得到
+# 一堆版本号卡片，而读者想看的是「DeepSeek 最近怎么样」。
+#
+# `entities` 里列的是 entity.slug；计数按 item 去重，所以一条同时提到 OpenAI 和
+# GPT-5.6 的内容只算一次。未列出的实体不会凭空产生卡片——和主题词表一样，
+# 未命中即丢弃。
+vendors:
+  - slug: openai
+    name: OpenAI / ChatGPT
+    description: OpenAI 的全部动态：GPT 系列模型、ChatGPT 与 Sora 产品、公司战略与人事
+    entities: [openai, chatgpt, gpt-5.6, gpt-5.5, gpt-5.6-sol, gpt-5, sora, o3, codex]
+  - slug: anthropic
+    name: Anthropic / Claude
+    description: Anthropic 的全部动态：Claude 系列模型、Claude Code、安全研究路线与公司进展
+    entities:
+      [anthropic, claude, claude-opus-5, claude-sonnet-5, claude-code, claude-fable-5, mcp]
+  - slug: google
+    name: Google / Gemini
+    description: Google 与 DeepMind 的 AI 动态：Gemini 系列、Veo 视频模型、研究成果与云平台
+    entities: [google, google-deepmind, deepmind, gemini, gemma, veo, vertex-ai]
+  - slug: deepseek
+    name: DeepSeek
+    description: DeepSeek（深度求索）的模型发布、开源权重与技术报告——开源大模型价格与能力的搅局者
+    entities: [deepseek, deepseek-v4, deepseek-v3, deepseek-r1, deepseek-v4-flash]
+  - slug: qwen
+    name: 通义千问 Qwen
+    description: 阿里通义千问 Qwen 系列的开源发布与迭代：从旗舰模型到端侧小模型的全谱系
+    entities: [qwen, alibaba, tongyi, qwen3, qwen2-5]
+  - slug: kimi
+    name: Kimi / 月之暗面
+    description: 月之暗面 Kimi 系列模型与产品动态：K 系列开源模型、长上下文技术与产品演进
+    entities: [kimi, moonshot, moonshot-ai, kimi-k3, kimi-k2]
+  - slug: minimax
+    name: MiniMax
+    description: MiniMax 的模型与产品动态：M 系列大模型、语音与多模态能力、开源与商业化
+    entities: [minimax, minimax-m2, minimax-m2.1, abab]
+  - slug: zhipu
+    name: 智谱 GLM
+    description: 智谱的 GLM 系列模型动态：旗舰开源发布、代码与推理能力迭代、商业化与生态
+    entities: [zhipu, zhipu-ai, glm, glm-5.2, glm-4.6, chatglm]
+  - slug: xai
+    name: xAI / Grok
+    description: 马斯克 xAI 与 Grok 系列的全部动态：模型迭代、算力扩张与 X 平台整合
+    entities: [xai, grok, grok-5, grok-4]
+  - slug: meta
+    name: Meta / Llama
+    description: Meta 的 AI 动态：Llama 开源模型系列、超级智能实验室与元宇宙之外的 AI 押注
+    entities: [meta, meta-ai, llama, llama-4, facebook]
+  - slug: microsoft
+    name: Microsoft / Copilot
+    description: 微软的 AI 布局：Copilot 全家桶、Azure AI 基础设施与 OpenAI 合作关系
+    entities: [microsoft, copilot, github-copilot, azure, azure-ai, phi]
+  - slug: nvidia
+    name: NVIDIA 英伟达
+    description: 英伟达的 AI 芯片与生态动态：GPU 新品、CUDA 生态、机器人平台与 AI 算力供给
+    entities: [nvidia, cuda, blackwell, nemotron, tensorrt]
+  - slug: huggingface
+    name: Hugging Face
+    description: Hugging Face 开源社区动态：热门模型与数据集、排行榜变化与开源生态的晴雨表
+    entities: [hugging-face, huggingface, transformers, diffusers]
+  - slug: cursor
+    name: Cursor
+    description: Cursor 编辑器的产品迭代与生态动态——AI 编码工具竞争中最受关注的玩家之一
+    entities: [cursor, anysphere]
+  - slug: mistral
+    name: Mistral AI
+    description: 欧洲开源力量 Mistral 的模型发布与商业化进展
+    entities: [mistral-ai, mistral, mixtral, magistral]
+
+# --- 维度三：内容形态 ---------------------------------------------------------
+#
+# 从 `content_item.content_type` 聚合，同样不是新词表——这一列 M2 起就在写，
+# 1578 条里只有 137 条为空。参考站把「模型发布 / 论文研究 / 政策监管」做成卡片，
+# 我们本来就有这个字段，缺的只是把它渲染出来。
+#
+# `content_types` 列出的是允许的取值，这里是它们的展示元数据。两处刻意分开：
+# 上面那份是加工管线的契约，改动会影响 LLM 结构化的校验；这份只影响页面。
+content_type_display:
+  model_release:
+    name: 模型发布
+    description: 新模型的发布、开源与迭代：大模型厂商的旗舰更新、开源权重放出与性能对比
+    order: 1
+  product_release:
+    name: 产品更新
+    description: AI 产品与应用的功能上新、改版与商业化动态
+    order: 2
+  research:
+    name: 论文研究
+    description: 值得读的 AI 论文与研究成果：架构创新、训练方法、能力测量与理论进展
+    order: 3
+  benchmark:
+    name: 评测基准
+    description: 模型到底谁强：Benchmark 成绩、评测方法论争议与排行榜变化的持续记录
+    order: 4
+  tutorial:
+    name: 教程实践
+    description: 拿来就能用的实操内容：提示词技巧、工作流搭建、工具用法与踩坑经验
+    order: 5
+  opinion:
+    name: 大佬观点
+    description: 行业关键人物在想什么：创始人访谈、研究者论战、投资人判断的观点集合
+    order: 6
+  business:
+    name: 行业动态
+    description: AI 行业的商业脉搏：融资并购、人事变动、合作与竞争、政策与市场信号
+    order: 7
+  policy:
+    name: 政策监管
+    description: AI 相关政策法规与政府监管动态：立法进展、出口管制与全球治理框架
+    order: 8
+  open_source:
+    name: 开源发布
+    description: 开源项目、权重与工具链的放出与更新
+    order: 9
+  api_update:
+    name: 接口变更
+    description: API 与 SDK 的版本、定价与能力变更
+    order: 10
+  security:
+    name: 安全事件
+    description: 越狱、漏洞、数据泄露与安全响应
+    order: 11
 
 source_tiers:
   primary: "当事公司、官方文档、官方仓库、原始论文"
@@ -143,4 +288,3 @@ source_tiers:
 
 story_relation_types: [precedes, follows_up, corrects, contradicts, competes_with, caused_by, references]
 story_statuses: [emerging, developing, confirmed, corrected, closed]
-

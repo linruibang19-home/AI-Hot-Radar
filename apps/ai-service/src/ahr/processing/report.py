@@ -17,10 +17,13 @@ import uuid
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any
+from urllib.parse import urlparse
+
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ahr.processing.llm import LlmClient, LlmUnavailableError
 
-REPORT_PROMPT_VERSION = "report-v2"
+REPORT_PROMPT_VERSION = "report-v3"
 
 # Weekly and monthly digests reuse the daily pipeline; only the window and the
 # prompt emphasis change, so the rendering and provenance paths stay identical
@@ -47,22 +50,29 @@ SUMMARY_PROMPTS = {
 1. 3-5 句，先说当天最重要的变化，再说次要趋势。
 2. 只能使用给定条目中的事实，禁止补充任何未提供的信息。
 3. 不要罗列全部条目，抓主线。
-4. 只输出总述正文，不要标题、不要 markdown、不要编号。""",
+4. summary 字段只写总述正文，不要标题、markdown 或编号。""",
     "weekly": """你是 AI 行业周报主编。根据给定的本周精选条目，写一段中文总述。
 
 要求：
 1. 4-6 句。周报关注的是**趋势**而非单个事件：哪条主线在推进、哪些厂商在同一方向上动作。
 2. 如果多条内容指向同一变化，合并成一句话说清楚，不要重复罗列。
 3. 只能使用给定条目中的事实，禁止补充任何未提供的信息。
-4. 只输出总述正文，不要标题、不要 markdown、不要编号。""",
+4. summary 字段只写总述正文，不要标题、markdown 或编号。""",
     "monthly": """你是 AI 行业月报主编。根据给定的本月精选条目，写一段中文总述。
 
 要求：
 1. 5-8 句。月报关注**格局变化**：能力边界推到了哪里、竞争态势有何变化、哪些方向开始收敛或分化。
 2. 必须给出至少一个跨条目的归纳判断，而不是事件流水账。
 3. 只能使用给定条目中的事实，禁止补充任何未提供的信息，不确定的地方要说明是趋势推测。
-4. 只输出总述正文，不要标题、不要 markdown、不要编号。""",
+4. summary 字段只写总述正文，不要标题、markdown 或编号。""",
 }
+
+
+class ReportSummaryOutput(BaseModel):
+    """The only model-authored field in a report; unknown output is rejected."""
+
+    model_config = ConfigDict(extra="forbid")
+    summary: str = Field(min_length=1, max_length=1200)
 
 
 @dataclass
@@ -91,6 +101,45 @@ class DailyReport:
     body_markdown: str
     items: list[ReportItem]
     model_name: str | None
+
+
+@dataclass(frozen=True)
+class PublicationDecision:
+    status: str
+    reasons: tuple[str, ...]
+
+
+MIN_PUBLISHED_ITEMS = {"daily": 5, "weekly": 5, "monthly": 10}
+
+
+def assess_publication(period: str, summary: str, items: list[ReportItem]) -> PublicationDecision:
+    """Deterministic report-output gate locked by ADR-0025.
+
+    This gate never reaches back into ingestion, selection or RAG. It only
+    decides whether this report edition is safe to expose and formally send.
+    """
+    reasons: list[str] = []
+    minimum = MIN_PUBLISHED_ITEMS.get(period)
+    if minimum is None:
+        reasons.append("unsupported_period")
+    elif len(items) < minimum:
+        reasons.append(f"too_few_items:{len(items)}<{minimum}")
+    if not summary.strip():
+        reasons.append("missing_summary")
+
+    for item in items:
+        parsed = urlparse(item.canonical_url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            reasons.append(f"invalid_canonical_url:{item.item_id}")
+        if not item.title.strip() or not item.source_name.strip():
+            reasons.append(f"missing_identity:{item.item_id}")
+        if not item.story_slug:
+            reasons.append(f"missing_story:{item.item_id}")
+
+    return PublicationDecision(
+        status="REVIEW_REQUIRED" if reasons else "PUBLISHED",
+        reasons=tuple(reasons),
+    )
 
 
 def _period_range(period: str, key: str) -> tuple[date, date, str]:
@@ -255,13 +304,18 @@ async def build_report(
         )
         try:
             raw, _usage = await client.summarize(
-                system_prompt=SUMMARY_PROMPTS[period],
+                system_prompt=(
+                    SUMMARY_PROMPTS[period]
+                    + '\n5. 严格输出 JSON：{"summary":"总述正文"}，不得增加其他字段。'
+                ),
                 user_prompt=f"周期：{label}\n\n该周期精选条目：\n{digest}",
+                json_mode=True,
             )
-            summary = raw.strip()
+            summary = ReportSummaryOutput.model_validate_json(raw).summary.strip()
             model_name = client.model_name
-        except LlmUnavailableError:
-            # A report without a narrative is still useful; a missing report is not.
+        except (LlmUnavailableError, ValidationError, ValueError):
+            # Invalid model output is untrusted. A deterministic digest is still
+            # useful; a missing report or unvalidated narrative is not.
             summary = ""
 
     if not summary:
@@ -283,14 +337,25 @@ async def build_report(
 def save_report(connection: Any, report: DailyReport) -> uuid.UUID:
     """Persist the report and its provenance."""
     report_id = uuid.uuid4()
+    decision = assess_publication(report.period_type, report.summary, report.items)
+    gate_meta = {
+        "status": decision.status,
+        "reasons": list(decision.reasons),
+        "checkedAt": datetime.now().isoformat(),
+        "version": "report-publication-v1",
+    }
     with connection.cursor() as cursor:
         cursor.execute(
             """
             INSERT INTO report (
                 id, period_type, period_key, title, summary, body_markdown,
-                status, generated_at, item_count, prompt_version, model_name,
+                status, generated_at, published_at, item_count, prompt_version, model_name,
                 generation_meta
-            ) VALUES (%s, %s, %s, %s, %s, %s, 'DRAFT', now(), %s, %s, %s, %s::jsonb)
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, now(),
+                CASE WHEN %s = 'PUBLISHED' THEN now() ELSE NULL END,
+                %s, %s, %s, %s::jsonb
+            )
             ON CONFLICT (period_type, period_key) DO UPDATE SET
                 title = EXCLUDED.title,
                 summary = EXCLUDED.summary,
@@ -298,7 +363,17 @@ def save_report(connection: Any, report: DailyReport) -> uuid.UUID:
                 generated_at = now(),
                 item_count = EXCLUDED.item_count,
                 prompt_version = EXCLUDED.prompt_version,
-                model_name = EXCLUDED.model_name
+                model_name = EXCLUDED.model_name,
+                generation_meta = EXCLUDED.generation_meta,
+                status = CASE
+                    WHEN report.status = 'WITHDRAWN' THEN report.status
+                    ELSE EXCLUDED.status
+                END,
+                published_at = CASE
+                    WHEN report.status = 'WITHDRAWN' THEN report.published_at
+                    WHEN EXCLUDED.status = 'PUBLISHED' THEN now()
+                    ELSE NULL
+                END
             RETURNING id
             """,
             (
@@ -308,10 +383,17 @@ def save_report(connection: Any, report: DailyReport) -> uuid.UUID:
                 report.title,
                 report.summary,
                 report.body_markdown,
+                decision.status,
+                decision.status,
                 len(report.items),
                 REPORT_PROMPT_VERSION,
                 report.model_name,
-                json.dumps({"generated_at": datetime.now().isoformat()}),
+                json.dumps(
+                    {
+                        "generated_at": datetime.now().isoformat(),
+                        "publicationGate": gate_meta,
+                    }
+                ),
             ),
         )
         report_id = uuid.UUID(str(cursor.fetchone()[0]))
@@ -330,3 +412,82 @@ def save_report(connection: Any, report: DailyReport) -> uuid.UUID:
 
     connection.commit()
     return report_id
+
+
+def promote_stored_drafts(connection: Any) -> dict[str, int]:
+    """Evaluate historical DRAFT rows with the same gate used for new reports.
+
+    The public API switches to PUBLISHED-only. Running this before refreshing
+    current periods prevents a correct historical archive from disappearing,
+    while malformed rows move to REVIEW_REQUIRED instead of being waved through.
+    WITHDRAWN is intentionally absent from the query: an operator hold wins.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT r.id, r.period_type, r.summary,
+                   ci.id, COALESCE(ci.zh_title, ci.title), ci.summary_zh,
+                   s.name, ci.canonical_url, ci.content_type, 0.0,
+                   st.slug, COALESCE(st.independent_source_count, 1)
+              FROM report r
+              LEFT JOIN report_item ri ON ri.report_id = r.id
+              LEFT JOIN content_item ci ON ci.id = ri.content_item_id
+              LEFT JOIN source s ON s.id = ci.source_id
+              LEFT JOIN story st ON st.id = ci.story_id
+             WHERE r.status = 'DRAFT'
+             ORDER BY r.id, ri.position
+            """
+        )
+        rows = cursor.fetchall()
+
+    reports: dict[uuid.UUID, tuple[str, str, list[ReportItem]]] = {}
+    for row in rows:
+        report_id = uuid.UUID(str(row[0]))
+        period = str(row[1])
+        summary = str(row[2] or "")
+        reports.setdefault(report_id, (period, summary, []))
+        if row[3] is None:
+            continue
+        reports[report_id][2].append(
+            ReportItem(
+                item_id=uuid.UUID(str(row[3])),
+                title=str(row[4] or ""),
+                summary=row[5],
+                source_name=str(row[6] or ""),
+                canonical_url=str(row[7] or ""),
+                content_type=row[8],
+                score=float(row[9] or 0),
+                story_slug=row[10],
+                independent_sources=int(row[11] or 1),
+            )
+        )
+
+    counts = {"published": 0, "review_required": 0}
+    with connection.cursor() as cursor:
+        for report_id, (period, summary, items) in reports.items():
+            decision = assess_publication(period, summary, items)
+            gate_meta = json.dumps(
+                {
+                    "status": decision.status,
+                    "reasons": list(decision.reasons),
+                    "checkedAt": datetime.now().isoformat(),
+                    "version": "report-publication-v1",
+                    "historicalBackfill": True,
+                }
+            )
+            cursor.execute(
+                """
+                UPDATE report
+                   SET status = %s,
+                       published_at = CASE WHEN %s = 'PUBLISHED' THEN now() ELSE NULL END,
+                       generation_meta = jsonb_set(
+                           COALESCE(generation_meta, '{}'::jsonb),
+                           '{publicationGate}', %s::jsonb, true
+                       )
+                 WHERE id = %s AND status = 'DRAFT'
+                """,
+                (decision.status, decision.status, gate_meta, report_id),
+            )
+            counts["published" if decision.status == "PUBLISHED" else "review_required"] += 1
+    connection.commit()
+    return counts

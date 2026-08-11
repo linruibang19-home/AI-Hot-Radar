@@ -17,8 +17,15 @@ from typing import Any
 from ahr.rag.dimensions import Candidate, apply_dimensions
 from ahr.rag.embeddings import EmbeddingClient
 from ahr.rag.eval.golden import CATEGORIES, GoldenQuestion, GoldenSet
-from ahr.rag.eval.metrics import dedupe_to_items, ndcg_at_k, recall_at_k, reciprocal_rank
+from ahr.rag.eval.metrics import (
+    dedupe_hits_to_items,
+    ndcg_at_k,
+    recall_at_k,
+    reciprocal_rank,
+    source_diagnostics,
+)
 from ahr.rag.fusion import apply_boosts, reciprocal_rank_fusion
+from ahr.rag.llm_planner import plan_with_llm
 from ahr.rag.planner import plan
 from ahr.rag.rerank import (
     DEFAULT_CANDIDATE_LIMIT,
@@ -32,6 +39,9 @@ from ahr.rag.retrieval import (
     VECTOR_PASSAGE_TOP_K,
     ChunkHit,
     dense_search,
+    entity_names,
+    expand_vendor_aliases,
+    expand_vendor_entity_ids,
     interleave,
     load_chunk_texts,
     load_item_metadata,
@@ -96,6 +106,9 @@ class QuestionResult:
     ndcg: float | None = None
     first_hit_rank: int | None = None
     missed_items: list[str] = field(default_factory=list)
+    distinct_sources_at_10: int = 0
+    dominant_source_share_at_10: float = 0.0
+    primary_source_at_5: float = 0.0
 
 
 @dataclass
@@ -121,6 +134,15 @@ class EvalReport:
             overall[f"recall@{depth}"] = round(statistics.fmean(q.recall[depth] for q in scored), 4)
         overall["mrr"] = round(statistics.fmean(q.mrr or 0.0 for q in scored), 4)
         overall[f"ndcg@{NDCG_DEPTH}"] = round(statistics.fmean(q.ndcg or 0.0 for q in scored), 4)
+        overall["distinct_sources@10"] = round(
+            statistics.fmean(q.distinct_sources_at_10 for q in scored), 2
+        )
+        overall["dominant_source_share@10"] = round(
+            statistics.fmean(q.dominant_source_share_at_10 for q in scored), 4
+        )
+        overall["primary_source@5"] = round(
+            statistics.fmean(q.primary_source_at_5 for q in scored), 4
+        )
 
         by_category: dict[str, Any] = {}
         for category in CATEGORIES:
@@ -135,6 +157,13 @@ class EvalReport:
                 },
                 "mrr": round(statistics.fmean(q.mrr or 0.0 for q in rows), 4),
                 f"ndcg@{NDCG_DEPTH}": round(statistics.fmean(q.ndcg or 0.0 for q in rows), 4),
+                "distinct_sources@10": round(
+                    statistics.fmean(q.distinct_sources_at_10 for q in rows), 2
+                ),
+                "dominant_source_share@10": round(
+                    statistics.fmean(q.dominant_source_share_at_10 for q in rows), 4
+                ),
+                "primary_source@5": round(statistics.fmean(q.primary_source_at_5 for q in rows), 4),
             }
 
         return {
@@ -201,7 +230,7 @@ async def run_variant(
 
     for question in golden.questions:
         hits = await retrieve(question.question, question.asked_at)
-        ranked = dedupe_to_items([(hit.content_item_id, hit.score) for hit in hits])
+        ranked = dedupe_hits_to_items(hits)
         results.append(_score(question, ranked, top_chunk_score=hits[0].score if hits else 0.0))
 
     prefix = variant.split("-", 1)[0].upper()
@@ -257,6 +286,7 @@ def rrf_retriever(
     use_temporal: bool = True,
     use_boosts: bool = True,
     weights: dict[str, float] | None = None,
+    llm: Any | None = None,
 ) -> Retriever:
     """B3: weighted RRF over dense + sparse (+ temporal), then §6 boosts.
 
@@ -266,7 +296,15 @@ def rrf_retriever(
     """
 
     async def retrieve(question: str, asked_at: datetime) -> list[ChunkHit]:
-        retrieval_plan = plan(question, asked_at=asked_at)
+        # The planner under test, when one is supplied. Measured at 0.9067
+        # against the golden set's own categories versus the regex planner's
+        # 0.6667 — but classification accuracy is not retrieval accuracy, and
+        # B8 is the standing reminder that an upstream gain can vanish
+        # downstream. This is the switch that answers whether it survives.
+        if llm is not None:
+            retrieval_plan, _from_model = await plan_with_llm(llm, question, asked_at=asked_at)
+        else:
+            retrieval_plan = plan(question, asked_at=asked_at)
         vectors = await client.embed([question])
 
         window = None
@@ -283,14 +321,34 @@ def rrf_retriever(
             asked_at, window if retrieval_plan.freshness_required else None
         )
 
+        # Aliases before the keyword channel, exactly as `service.retrieve`
+        # does. Omitting them here would measure a configuration no reader ever
+        # gets — the same divergence B7 and the temporal channel were caught in,
+        # and the reason this line is a copy rather than a simplification.
+        query_entities = resolve_query_entities(connection, question)
+        query_family_entities = expand_vendor_entity_ids(connection, query_entities)
+        aliases = expand_vendor_aliases(connection, query_entities)
+        names = entity_names(connection, query_entities)
+
         channels: dict[str, list[ChunkHit]] = {
             "dense": dense_search(connection, vectors[0], limit=dense_depth, window=filter_window),
-            "sparse": sparse_search(connection, question, limit=sparse_depth, window=filter_window),
+            "sparse": sparse_search(
+                connection,
+                question,
+                limit=sparse_depth,
+                window=filter_window,
+                extra_terms=aliases,
+                entity_terms=names + aliases,
+            ),
         }
 
         if window is not None and use_temporal:
-            channels["temporal"] = temporal_search(
-                connection, window=snapshot_window(asked_at, window), limit=temporal_depth
+            temporal_channel = "entity_temporal" if query_family_entities else "temporal"
+            channels[temporal_channel] = temporal_search(
+                connection,
+                window=snapshot_window(asked_at, window),
+                limit=temporal_depth,
+                entity_ids=query_family_entities,
             )
 
         fused = reciprocal_rank_fusion(channels, weights=weights)
@@ -303,7 +361,7 @@ def rrf_retriever(
                 metadata,
                 query_type=retrieval_plan.query_type,
                 window=window,
-                query_entities=resolve_query_entities(connection, question),
+                query_entities=query_family_entities,
             )
 
         return [
@@ -313,6 +371,9 @@ def rrf_retriever(
                 score=hit.score,
                 title=hit.title,
                 source_name=hit.source_name,
+                source_id=hit.source_id,
+                source_tier=hit.source_tier,
+                channels=hit.channels,
             )
             for hit in fused
         ]
@@ -333,6 +394,7 @@ def rerank_retriever(
     use_temporal_fit: bool = False,
     use_dimensions: bool = False,
     weights: dict[str, float] | None = None,
+    llm: Any | None = None,
 ) -> Retriever:
     """B4: B3's candidate set, reordered by a cross-encoder.
 
@@ -349,6 +411,7 @@ def rerank_retriever(
         sparse_depth=sparse_depth,
         temporal_depth=temporal_depth,
         weights=weights,
+        llm=llm,
     )
 
     async def retrieve(question: str, asked_at: datetime) -> list[ChunkHit]:
@@ -376,6 +439,9 @@ def rerank_retriever(
                 score=score,
                 title=candidates[index].title,
                 source_name=candidates[index].source_name,
+                source_id=candidates[index].source_id,
+                source_tier=candidates[index].source_tier,
+                channels=candidates[index].channels,
             )
             for index, score in scored
         ]
@@ -398,6 +464,9 @@ def _apply_dimensions(
     hits: list[ChunkHit],
     question: str,
     asked_at: datetime,
+    *,
+    passages: dict[str, str] | None = None,
+    identifier_fit_weight: float = 0.0,
 ) -> list[ChunkHit]:
     """B9: §6's `directness` and `source_fit`, applied after the cross-encoder.
 
@@ -413,6 +482,7 @@ def _apply_dimensions(
             key=hit.chunk_id,
             relevance=hit.score,
             title=hit.title,
+            passage=(passages or {}).get(hit.chunk_id, ""),
             source_tier=(
                 str(tier)
                 if (tier := metadata.get(hit.content_item_id, {}).get("source_tier"))
@@ -421,7 +491,12 @@ def _apply_dimensions(
         )
         for hit in hits
     ]
-    order = apply_dimensions(candidates, question=question, query_type=retrieval_plan.query_type)
+    order = apply_dimensions(
+        candidates,
+        question=question,
+        query_type=retrieval_plan.query_type,
+        identifier_fit_weight=identifier_fit_weight,
+    )
     by_id = {hit.chunk_id: hit for hit in hits}
     return [by_id[key] for key in order if key in by_id]
 
@@ -499,6 +574,10 @@ def _score(
         top_score=round(top_chunk_score, 4),
         retrieved_items=len(ranked),
     )
+    source = source_diagnostics(ranked)
+    result.distinct_sources_at_10 = int(source["distinct_sources"])
+    result.dominant_source_share_at_10 = round(float(source["dominant_source_share"]), 4)
+    result.primary_source_at_5 = round(float(source["primary_source_share"]), 4)
 
     if not question.answerable:
         # Nothing is relevant, so recall/MRR/nDCG are undefined. The useful

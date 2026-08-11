@@ -169,3 +169,27 @@ def test_superseding_leaves_known_duplicates_alone() -> None:
     source = inspect.getsource(repository)
     move = source.index("SET current_revision_id = %s")
     assert "duplicate_of_id IS NULL" in source[move : move + 400]
+
+
+def test_refetch_replaces_the_raw_audit_copy() -> None:
+    """A stable external ID must not freeze the first response forever.
+
+    Source adapters can upgrade the acquisition route while keeping the same
+    item identity (for example arXiv ``/abs`` to ``/html`` or ``/pdf``).  The
+    audit row must describe the response that produced the current revision.
+    """
+    from ahr.ingestion import repository
+
+    source = inspect.getsource(repository)
+    conflict = source.index("ON CONFLICT (source_id, external_id) DO UPDATE SET")
+    window = source[conflict : conflict + 800]
+    for column in (
+        "requested_url",
+        "final_url",
+        "response_headers",
+        "content_type",
+        "body_bytes",
+        "body_sha256",
+        "parser_version",
+    ):
+        assert f"{column} = EXCLUDED.{column}" in window

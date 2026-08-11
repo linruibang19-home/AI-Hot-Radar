@@ -29,6 +29,7 @@ from ahr.config import get_settings
 from ahr.ingestion.http import HttpConfig, HttpFetcher
 from ahr.ingestion.models import SourceConfig
 from ahr.ingestion.pipeline import ingest_source
+from ahr.ingestion.retention import prune_outbox
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ def _claim_due_sources(connection: Any, limit: int) -> list[SourceConfig]:
             """
             WITH due AS (
                 SELECT id FROM source
-                 WHERE configured_enabled
+                 WHERE effective_enabled
                    AND runtime_state <> 'DISABLED'
                    AND (next_poll_at IS NULL OR next_poll_at <= now())
                  ORDER BY priority, next_poll_at NULLS FIRST
@@ -142,7 +143,11 @@ async def run_tick(*, batch_size: int = 20, max_documents: int = 5) -> TickResul
                         source, fetcher, connection, token=token, max_documents=max_documents
                     )
                     result.persisted += outcome.persisted
-                    if outcome.state in ("ACTIVE", "METADATA_ONLY"):
+                    # Judged on whether the poll raised, not on the resulting
+                    # state: a source below the demotion threshold keeps its
+                    # ACTIVE verdict (AHR-SOURCE-900 §5), and counting that as a
+                    # success would hide the failure from the tick log entirely.
+                    if outcome.error_code is None:
                         result.succeeded += 1
                     else:
                         result.failed += 1
@@ -157,12 +162,28 @@ async def run_tick(*, batch_size: int = 20, max_documents: int = 5) -> TickResul
     return result
 
 
+# Once a day is plenty for a 14-day window, and it keeps a cheap DELETE out of
+# the two-minute polling path.
+PRUNE_EVERY_TICKS = 720
+
+
 async def run_forever(
     *, interval_seconds: int = 60, batch_size: int = 20, max_documents: int = 5
 ) -> None:
     """Run ticks until cancelled."""
     logger.info("scheduler started: interval=%ss batch=%s", interval_seconds, batch_size)
+    ticks = 0
     while True:
+        ticks += 1
+        if ticks % PRUNE_EVERY_TICKS == 1:
+            # Bounded growth is an operational property, so it belongs to the
+            # process that is already running forever rather than to a cron
+            # entry someone has to remember to install on the server.
+            try:
+                with psycopg.connect(get_settings().database_url) as connection:
+                    prune_outbox(connection)
+            except Exception as exc:  # noqa: BLE001 - housekeeping must not stop ingestion
+                logger.warning("outbox prune failed: %s", exc)
         try:
             result = await run_tick(batch_size=batch_size, max_documents=max_documents)
             if result.claimed:
@@ -190,7 +211,7 @@ def seed_poll_schedule(connection: Any) -> int:
             """
             UPDATE source
                SET next_poll_at = now() + ((random() * 600) || ' seconds')::interval
-             WHERE configured_enabled AND next_poll_at IS NULL
+             WHERE effective_enabled AND next_poll_at IS NULL
             """
         )
         count = cursor.rowcount
@@ -205,7 +226,7 @@ def schedule_summary(connection: Any) -> dict[str, Any]:
             SELECT count(*) FILTER (WHERE next_poll_at IS NOT NULL),
                    count(*) FILTER (WHERE next_poll_at <= now()),
                    min(next_poll_at), max(next_poll_at)
-              FROM source WHERE configured_enabled
+              FROM source WHERE effective_enabled
             """
         )
         row = cursor.fetchone()

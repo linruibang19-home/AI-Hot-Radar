@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Evidence Grounded Retrieval for Time-Sensitive AI Intelligence</title>
+  <link rel="canonical" href="https://arxiv.org/abs/2608.01234">
+  <script type="application/ld+json">{"@type":"ScholarlyArticle","datePublished":"2026-08-03T00:00:00Z"}</script>
+</head>
+<body>
+<article>
+  <h1>Evidence Grounded Retrieval for Time-Sensitive AI Intelligence</h1>
+  <h2>Abstract</h2>
+  <p>Production retrieval systems must preserve original evidence, resolve temporal expressions into explicit intervals, and distinguish direct claims from surrounding industry context. This paper presents an auditable architecture for those requirements.</p>
+  <h2>Method</h2>
+  <p>The system combines dense semantic search with sparse lexical retrieval, fuses ranked candidates, applies a cross encoder, and selects passages under source and event diversity constraints. Every selected passage retains a canonical locator.</p>
+  <h2>Evaluation</h2>
+  <p>Evaluation covers retrieval recall, ranking quality, citation completeness, citation support, abstention, latency, and robustness to distracting passages. Saved traces make every failed question replayable without treating generated summaries as source facts.</p>
+  <h2>Operational safeguards</h2>
+  <p>External calls use bounded timeouts and retries, model output is schema validated, and publication requires a successful fulltext gate. These controls prevent feed abstracts, access-denied pages, or unrelated roundup items from silently entering the evidence index.</p>
+</article>
+</body>
+</html>

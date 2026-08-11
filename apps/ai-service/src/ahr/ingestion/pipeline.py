@@ -24,16 +24,17 @@ from ahr.ingestion.adapters.github_repo import GitHubRepoActivityAdapter
 from ahr.ingestion.adapters.listing import HtmlListingAdapter
 from ahr.ingestion.adapters.public_api import PublicJsonApiAdapter
 from ahr.ingestion.adapters.rss import RssAtomAdapter
-from ahr.ingestion.article import extract_article
+from ahr.ingestion.article import ArticleExtraction, extract_article
 from ahr.ingestion.errors import IngestionError
 from ahr.ingestion.fulltext_gate import ExtractedDocument, evaluate
-from ahr.ingestion.http import HttpConfig, HttpFetcher
-from ahr.ingestion.models import SourceConfig
+from ahr.ingestion.http import FetchResult, HttpConfig, HttpFetcher
+from ahr.ingestion.models import DiscoveredDocument, SourceConfig
 from ahr.ingestion.repository import (
     PersistStats,
     finish_crawl_run,
     load_cursor,
     persist_document,
+    record_source_failure,
     save_cursor,
     start_crawl_run,
     update_source_state,
@@ -77,6 +78,25 @@ def build_adapter(source: SourceConfig, fetcher: HttpFetcher, token: str | None)
             return PublicJsonApiAdapter(fetcher)
         case _:
             return None
+
+
+async def _acquire_fulltext(
+    adapter: Any, source: SourceConfig, item: DiscoveredDocument, fetcher: HttpFetcher
+) -> tuple[FetchResult, ArticleExtraction, str]:
+    """Return response, extraction and the URL actually requested."""
+
+    if isinstance(adapter, ArxivPaperAdapter):
+        acquired = await adapter.acquire(item, source_id=source.id)
+        return acquired.response, acquired.extraction, acquired.requested_url
+
+    response = await fetcher.fetch(item.candidate_url)
+    extraction = extract_article(
+        response,
+        source_id=source.id,
+        title_hint=item.title_hint,
+        published_hint=item.published_at_hint,
+    )
+    return response, extraction, item.candidate_url
 
 
 def _state_from_evidence(connection: Any, source_id: str) -> str | None:
@@ -131,7 +151,6 @@ async def ingest_source(
     try:
         batch = await adapter.discover(source, cursor_state)
     except IngestionError as exc:
-        result.state = "RATE_LIMITED" if exc.code == "RATE_LIMITED" else "QUARANTINED"
         result.error_code = exc.code
         result.errors.append(str(exc)[:160])
         finish_crawl_run(
@@ -143,8 +162,15 @@ async def ingest_source(
             error_code=exc.code,
             error_detail=str(exc),
         )
-        update_source_state(
-            connection, source.id, state=result.state, error_code=exc.code, error_detail=str(exc)
+        # The ladder in AHR-SOURCE-900 §5 decides the verdict. Quarantining here
+        # on the first error — which is what this used to do — meant a single
+        # DNS blip sidelined eighteen working first-party sources at once.
+        result.state = record_source_failure(
+            connection,
+            source.id,
+            error_code=exc.code,
+            error_detail=str(exc),
+            retryable=exc.retryable,
         )
         connection.commit()
         return result
@@ -154,12 +180,8 @@ async def ingest_source(
     for item in batch.items[:max_documents]:
         try:
             if item.requires_fetch:
-                response = await fetcher.fetch(item.candidate_url)
-                extraction = extract_article(
-                    response,
-                    source_id=source.id,
-                    title_hint=item.title_hint,
-                    published_hint=item.published_at_hint,
+                response, extraction, requested_url = await _acquire_fulltext(
+                    adapter, source, item, fetcher
                 )
                 document = extraction.document
                 gate = evaluate(document, is_release=source.is_release_like)
@@ -172,6 +194,8 @@ async def ingest_source(
                     gate=gate,
                     run_id=run_id,
                     raw_body=response.body,
+                    requested_url=requested_url,
+                    raw_content_type=response.headers.get("content-type"),
                     http_status=response.status_code,
                     response_headers=response.headers,
                     final_url=response.final_url,
@@ -283,7 +307,7 @@ def _load_sources(limit: int, profile: str | None, source_id: str | None) -> lis
                verification, configured_enabled, discovery_url, repository, subject,
                homepage_url, region, source_group
           FROM source
-         WHERE configured_enabled
+         WHERE effective_enabled
     """
     params: list[Any] = []
     if profile:

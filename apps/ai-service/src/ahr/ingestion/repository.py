@@ -17,6 +17,7 @@ mid-batch replays rather than skipping content.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from dataclasses import dataclass
@@ -24,6 +25,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from ahr.ingestion.fulltext_gate import Decision, GateResult
+from ahr.ingestion.health import next_state_after_failure
 from ahr.ingestion.models import DiscoveredDocument, SourceConfig, SourceCursor
 from ahr.ingestion.titles import resolve_title
 from ahr.ingestion.urls import canonicalize_url, content_hash, url_hash
@@ -123,6 +125,8 @@ def persist_document(
     gate: GateResult,
     run_id: uuid.UUID | None = None,
     raw_body: bytes | None = None,
+    requested_url: str | None = None,
+    raw_content_type: str | None = None,
     http_status: int | None = None,
     response_headers: dict[str, str] | None = None,
     final_url: str | None = None,
@@ -137,6 +141,9 @@ def persist_document(
     stats = stats or PersistStats()
     canonical = canonicalize_url(item.candidate_url)
     canonical_hash = url_hash(canonical)
+    content_type = (
+        raw_content_type or ("text/html" if item.requires_fetch else "application/json")
+    ).split(";", 1)[0][:200]
     now = datetime.now(UTC)
 
     with connection.cursor() as cursor:
@@ -153,10 +160,19 @@ def persist_document(
                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, %s
             )
             ON CONFLICT (source_id, external_id) DO UPDATE SET
+                crawl_run_id = EXCLUDED.crawl_run_id,
+                requested_url = EXCLUDED.requested_url,
+                final_url = EXCLUDED.final_url,
                 canonical_url = EXCLUDED.canonical_url,
                 canonical_url_hash = EXCLUDED.canonical_url_hash,
                 http_status = EXCLUDED.http_status,
+                response_headers = EXCLUDED.response_headers,
+                content_type = EXCLUDED.content_type,
+                body_bytes = EXCLUDED.body_bytes,
+                body_sha256 = EXCLUDED.body_sha256,
                 fetched_at = EXCLUDED.fetched_at,
+                parser_version = EXCLUDED.parser_version,
+                discovery_summary = EXCLUDED.discovery_summary,
                 processing_status = EXCLUDED.processing_status
             RETURNING id
             """,
@@ -165,15 +181,15 @@ def persist_document(
                 source.id,
                 run_id,
                 item.external_id,
-                item.candidate_url,
+                requested_url or item.candidate_url,
                 final_url or item.candidate_url,
                 canonical,
                 canonical_hash,
                 http_status,
                 json.dumps(response_headers or {}),
-                "text/html" if item.requires_fetch else "application/json",
+                content_type,
                 raw_body,
-                content_hash(raw_body.decode("utf-8", "replace")) if raw_body else None,
+                hashlib.sha256(raw_body).hexdigest() if raw_body else None,
                 now,
                 EXTRACTION_VERSION,
                 "PARSED" if gate.accepted else "FETCHED",
@@ -311,8 +327,14 @@ def persist_document(
                 """,
                 (revision[0], item_id),
             )
-            # AHR-ARCH-200 §6: the outbox row commits with the business write,
-            # so downstream enrichment can never miss a document.
+            # AHR-ARCH-200 §6: the outbox row commits with the business write.
+            #
+            # Stated precisely, because the obvious reading is wrong: this row
+            # is *written* transactionally and is *not read by anything*. What
+            # actually stops enrichment missing a document is the UPDATE above,
+            # which reopens the item as PENDING for the poller. Keeping the
+            # write means a consumer can be added without redoing it; until
+            # then `retention.prune_outbox` stops the table growing forever.
             cursor.execute(
                 """
                 INSERT INTO outbox_event (
@@ -473,3 +495,47 @@ def update_source_state(
                 """,
                 (state, source_id),
             )
+
+
+def record_source_failure(
+    connection: Any,
+    source_id: str,
+    *,
+    error_code: str,
+    error_detail: str,
+    retryable: bool,
+) -> str:
+    """Advance the failure ladder of AHR-SOURCE-900 §5 and return the new state.
+
+    The decision needs the row as it stands before the increment — the failure
+    count, the last success, and the verdict the source currently holds — so it
+    is read here and handed to `health.next_state_after_failure`, which is where
+    the rule lives and where it is tested.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT runtime_state, consecutive_failures, last_success_at, created_at, now()
+              FROM source WHERE id = %s FOR UPDATE
+            """,
+            (source_id,),
+        )
+        row = cursor.fetchone()
+
+    if row is None:
+        # Nothing to demote. The caller still reports the error.
+        return "QUARANTINED"
+
+    state = next_state_after_failure(
+        current_state=str(row[0]),
+        error_code=error_code,
+        retryable=retryable,
+        consecutive_failures=int(row[1] or 0),
+        last_success_at=row[2],
+        created_at=row[3],
+        now=row[4],
+    )
+    update_source_state(
+        connection, source_id, state=state, error_code=error_code, error_detail=error_detail
+    )
+    return state

@@ -12,6 +12,7 @@ import json
 import logging
 import re
 import time
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -116,7 +117,12 @@ class LlmClient:
             self._client = None
 
     async def _complete(
-        self, messages: list[dict[str, str]], usage: TokenUsage, *, json_mode: bool = True
+        self,
+        messages: list[dict[str, str]],
+        usage: TokenUsage,
+        *,
+        json_mode: bool = True,
+        temperature: float | None = None,
     ) -> str:
         if self._client is None:
             raise RuntimeError("LlmClient must be used as an async context manager")
@@ -124,7 +130,7 @@ class LlmClient:
         payload: dict[str, Any] = {
             "model": self._config.model,
             "messages": messages,
-            "temperature": self._config.temperature,
+            "temperature": self._config.temperature if temperature is None else temperature,
             "stream": False,
         }
         if json_mode:
@@ -166,11 +172,19 @@ class LlmClient:
     def model_name(self) -> str:
         return self._config.model
 
-    async def summarize(self, *, system_prompt: str, user_prompt: str) -> tuple[str, TokenUsage]:
-        """Free-text completion for narrative output such as report summaries.
+    async def summarize(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        json_mode: bool = False,
+        temperature: float | None = None,
+    ) -> tuple[str, TokenUsage]:
+        """Completion for narrative output or a caller-declared JSON contract.
 
-        Separate from `enrich` because there is no JSON contract to validate
-        here; the caller is expected to treat the result as prose.
+        Narrative callers keep the default. RAG supplies a JSON schema in its
+        prompt and opts in so compatible providers enforce the same contract at
+        transport level; the downstream parser remains the final validator.
         """
         usage = TokenUsage()
         text = await self._complete(
@@ -179,9 +193,87 @@ class LlmClient:
                 {"role": "user", "content": user_prompt},
             ],
             usage,
-            json_mode=False,
+            json_mode=json_mode,
+            temperature=temperature,
         )
         return text, usage
+
+    async def stream_summarize(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        usage: TokenUsage,
+        json_mode: bool = False,
+    ) -> AsyncIterator[str]:
+        """`summarize`, delivered as it is produced.
+
+        Yields raw content deltas exactly as the provider sends them — no
+        interpretation happens here, because what the deltas *mean* depends on
+        the caller's contract with the model, and the RAG path has a strict one.
+
+        Deliberately not retried. `_complete` can retry because a failed attempt
+        produced nothing the caller has seen; here the first token has already
+        left the building, and a retry would restart the answer from the
+        beginning on top of one already partly on screen.
+        """
+        if self._client is None:
+            raise RuntimeError("LlmClient must be used as an async context manager")
+
+        payload: dict[str, Any] = {
+            "model": self._config.model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": self._config.temperature,
+            "stream": True,
+            # Providers only report token counts on the final chunk when asked.
+            # Without this the cost of every streamed answer would be invisible,
+            # and `llm_usage` is meant to hold provider-reported numbers rather
+            # than estimates.
+            "stream_options": {"include_usage": True},
+        }
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+
+        started = time.monotonic()
+        try:
+            async with self._client.stream(
+                "POST", f"{self._config.base_url.rstrip('/')}/chat/completions", json=payload
+            ) as response:
+                if response.status_code >= 400:
+                    body = (await response.aread())[:200].decode("utf-8", "replace")
+                    raise LlmUnavailableError(
+                        f"provider rejected stream: {response.status_code} {body}"
+                    )
+
+                async for line in response.aiter_lines():
+                    if not line.startswith("data: "):
+                        continue
+                    data = line[6:].strip()
+                    if data == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data)
+                    except json.JSONDecodeError:
+                        # A malformed frame is not worth failing the answer over;
+                        # the caller validates the assembled result regardless.
+                        continue
+
+                    if chunk.get("usage"):
+                        usage.add(chunk["usage"], elapsed_ms=0)
+
+                    for choice in chunk.get("choices") or []:
+                        piece = (choice.get("delta") or {}).get("content")
+                        if piece:
+                            yield str(piece)
+        except httpx.HTTPError as exc:
+            raise LlmUnavailableError(f"llm stream failed: {exc}") from exc
+        finally:
+            usage.latency_ms += int((time.monotonic() - started) * 1000)
+            if not usage.attempts:
+                usage.attempts = 1
 
     async def enrich(
         self, *, title: str, body_text: str, source_name: str

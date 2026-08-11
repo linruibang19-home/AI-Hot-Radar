@@ -14,12 +14,19 @@ import json
 import sys
 from dataclasses import replace
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import psycopg
 
 from ahr.config import get_settings
 from ahr.ingestion.registry import load_sources, summarize, sync_sources
 from ahr.observability import configure_logging
+
+if TYPE_CHECKING:
+    # Type-only, so the eval modules are still imported lazily inside the
+    # commands that need them — importing them at module load would pull the
+    # embedding and rerank clients into every `sync-sources` run.
+    from ahr.rag.eval.golden import GoldenSet
 
 DEFAULT_SOURCES_PATH = Path("/app/config/sources.yaml")
 
@@ -107,6 +114,38 @@ def cmd_select(args: argparse.Namespace) -> int:
     with psycopg.connect(get_settings().database_url) as connection:
         result = select_for_days(connection, days=args.days)
     print(json.dumps(result, indent=2))
+    return 0
+
+
+def cmd_backfill_support(args: argparse.Namespace) -> int:
+    """Score citations written before support scoring existed.
+
+    `rag_citation.support_score` was defined in V001 and filled by nothing until
+    2026-08-07, so the rows already in the table carry NULL. NULL means "not
+    scored" everywhere it is read, which is correct but leaves most of the
+    history unexplained on a page whose point is that every claim is checkable.
+
+    Scored with the same cross-encoder the live path and the offline evaluation
+    use — a third method would produce a number that is not comparable with
+    either.
+    """
+    import asyncio
+
+    from ahr.rag.rerank import RerankUnavailableError
+    from ahr.rag.rerank import build_client_from_env as build_reranker
+    from ahr.rag.support import backfill
+
+    async def run() -> dict[str, object]:
+        try:
+            reranker = build_reranker()
+        except RerankUnavailableError as exc:
+            return {"error": str(exc)}
+
+        async with reranker:
+            with psycopg.connect(get_settings().database_url) as connection:
+                return await backfill(connection, reranker, limit=args.limit)
+
+    print(json.dumps(asyncio.run(run()), indent=2, ensure_ascii=False))
     return 0
 
 
@@ -279,7 +318,8 @@ def cmd_rechunk(args: argparse.Namespace) -> int:
                     "SELECT count(*) FROM content_chunk WHERE content_revision_id = %s",
                     (revision_id,),
                 )
-                before += cursor.fetchone()[0]
+                row = cursor.fetchone()
+                before += int(row[0]) if row else 0
 
             written = chunk_revision(connection, revision_id, body)
             after += written
@@ -320,10 +360,12 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
     """Score a retrieval configuration against the golden set (TASK-M4-001)."""
     from ahr.rag.embeddings import EmbeddingUnavailableError, build_client_from_env
     from ahr.rag.eval.golden import (
+        GoldenSet,
         GoldenSetError,
         describe_corpus_snapshot,
         load_golden_set,
         verify_items_exist,
+        verify_original_evidence,
     )
     from ahr.rag.eval.runner import (
         dense_retriever,
@@ -342,6 +384,34 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
     except GoldenSetError as exc:
         print(json.dumps({"error": str(exc)}, indent=2, ensure_ascii=False))
         return 1
+
+    if args.question_id:
+        selected = tuple(
+            question for question in golden.questions if question.id == args.question_id
+        )
+        if not selected:
+            print(
+                json.dumps(
+                    {"error": f"question id not found: {args.question_id}"},
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+            return 1
+        golden = GoldenSet(questions=selected, source_files=golden.source_files)
+
+    if args.variant == "query-type-sweep":
+        return _run_query_type_sweep(golden, args)
+
+    if args.variant == "planner-diff":
+        return _run_planner_diff(golden, args)
+
+    if args.variant == "planner":
+        # Before the connection, not after: the planner is pure functions over
+        # the question and `asked_at`, so this variant runs with no database and
+        # no provider — which is what lets it go in CI, where neither exists.
+        # Dispatching after `psycopg.connect` would have quietly made that false.
+        return _run_planner_eval(golden, args)
 
     with psycopg.connect(get_settings().database_url) as connection:
         missing = verify_items_exist(connection, golden)
@@ -386,7 +456,16 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
         golden = replace(golden, questions=kept)
 
     if args.validate:
+        from ahr.rag.eval.freshness import check as check_freshness
         from ahr.rag.eval.golden import CATEGORIES
+
+        # Structural validity was the only thing checked here, and it is the
+        # half that cannot rot: the YAML parses and the ids are well formed.
+        # Whether those ids still point at retrievable content is the half that
+        # decides if last week's numbers still mean anything.
+        with psycopg.connect(get_settings().database_url) as connection:
+            freshness = check_freshness(connection, golden)
+            evidence_issues = verify_original_evidence(connection, golden)
 
         print(
             json.dumps(
@@ -396,12 +475,20 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
                     "files": list(golden.source_files),
                     "by_category": {c: len(golden.by_category(c)) for c in CATEGORIES},
                     "annotated_items": len(golden.item_ids),
+                    "annotated_distractors": len(
+                        {item_id for q in golden.questions for item_id in q.distractor_ids}
+                    ),
+                    "original_evidence_issues": evidence_issues,
+                    "freshness": freshness,
                 },
                 indent=2,
                 ensure_ascii=False,
             )
         )
-        return 0
+        # Non-zero when the annotations no longer describe the corpus, so this
+        # can gate a scheduled run. Reporting a clean exit while pointing at
+        # missing items would make the check decorative.
+        return 1 if freshness["missing"] or freshness["unretrievable"] or evidence_issues else 0
 
     if args.variant in ("generation", "latency"):
         return _run_generation_eval(golden, args, snapshot)
@@ -413,6 +500,12 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
         # The sparse channel needs no embedding provider at all, so a
         # sparse-only run stays available when the provider is down or out of
         # quota — which is also what makes it a usable degradation path.
+        planner_llm = None
+        if getattr(args, "llm_planner", False):
+            from ahr.processing.llm import build_client_from_env as build_llm
+
+            planner_llm = build_llm()
+
         client = None
         if args.variant != "b2-sparse":
             try:
@@ -421,6 +514,29 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
                 return {"error": str(exc)}
 
         with psycopg.connect(get_settings().database_url) as connection:
+            if args.variant == "specialist-ab":
+                assert client is not None
+                from ahr.rag.eval.specialist_ab import run_specialist_ab
+
+                try:
+                    reranker = build_reranker_from_env()
+                except RerankUnavailableError as exc:
+                    return {"error": str(exc)}
+                async with client, reranker:
+                    payload = await run_specialist_ab(
+                        connection,
+                        golden,
+                        client,
+                        reranker,
+                        candidate_limit=args.rerank_candidates,
+                        top_n=args.rerank_top_n,
+                    )
+                payload["config"]["corpus_snapshot"] = snapshot
+                if args.output:
+                    Path(args.output).write_text(
+                        json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+                    )
+                return payload
             if args.variant == "b1":
                 assert client is not None
                 async with client:
@@ -466,6 +582,8 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
                 except RerankUnavailableError as exc:
                     return {"error": str(exc)}
                 async with client, reranker:
+                    if planner_llm is not None:
+                        await planner_llm.__aenter__()
                     report = await run_variant(
                         golden,
                         rerank_retriever(
@@ -476,6 +594,7 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
                             sparse_depth=args.sparse_depth,
                             candidate_limit=args.rerank_candidates,
                             top_n=args.rerank_top_n,
+                            llm=planner_llm,
                             # B9 keeps temporal_fit on: it is the shipped
                             # configuration, so the comparison isolates the two
                             # new dimensions rather than also removing B7.
@@ -524,6 +643,7 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
                             dense_depth=args.chunk_depth,
                             sparse_depth=args.sparse_depth,
                             use_temporal=use_temporal,
+                            llm=planner_llm,
                         ),
                         variant=("B3-rrf" if use_temporal else "B3-rrf-without-temporal"),
                         config={
@@ -547,8 +667,17 @@ def cmd_rag_eval(args: argparse.Namespace) -> int:
     if args.output and "error" not in payload:
         # The per-question rows went to --output; stdout gets the summary so a
         # regression run stays readable in a terminal.
-        summary = payload["summary"]
-        brief = {"run_id": payload["run_id"], **summary} if isinstance(summary, dict) else payload
+        summary = payload.get("summary", payload.get("summaries"))
+        brief = (
+            {
+                "run_id": payload["run_id"],
+                "summary": summary,
+                **({"deltas": payload["deltas"]} if "deltas" in payload else {}),
+                **({"decision": payload["decision"]} if "decision" in payload else {}),
+            }
+            if isinstance(summary, dict)
+            else payload
+        )
         print(json.dumps(brief, indent=2, ensure_ascii=False))
     else:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
@@ -571,7 +700,9 @@ def _parse_weights(raw: str | None) -> dict[str, float] | None:
     return weights
 
 
-def _run_weight_sweep(golden: object, args: argparse.Namespace, snapshot: object) -> int:
+def _run_weight_sweep(
+    golden: GoldenSet, args: argparse.Namespace, snapshot: dict[str, object]
+) -> int:
     """Grid-search the fusion weights (AHR-RAG-400 §5).
 
     One embedding round trip per question, then the whole grid is scored over
@@ -612,7 +743,9 @@ def _run_weight_sweep(golden: object, args: argparse.Namespace, snapshot: object
         return 1
 
     # stdout gets the podium and the incumbent; the full grid goes to --output.
-    results = payload["results"]
+    raw_results = payload["results"]
+    results: list[dict[str, Any]] = raw_results if isinstance(raw_results, list) else []
+    config = payload.get("config")
     incumbent = next(
         (r for r in results if r["weights"] == {"dense": 1.0, "sparse": 0.6, "temporal": 0.15}),
         None,
@@ -621,7 +754,7 @@ def _run_weight_sweep(golden: object, args: argparse.Namespace, snapshot: object
         json.dumps(
             {
                 "run_id": payload["run_id"],
-                "combinations": payload["config"]["combinations"],
+                "combinations": config.get("combinations") if isinstance(config, dict) else None,
                 "top": results[:5],
                 "incumbent": incumbent,
             },
@@ -632,7 +765,123 @@ def _run_weight_sweep(golden: object, args: argparse.Namespace, snapshot: object
     return 0
 
 
-def _run_generation_eval(golden: object, args: argparse.Namespace, snapshot: object) -> int:
+def _run_query_type_sweep(golden: Any, args: argparse.Namespace) -> int:
+    """Force each query_type per question and read the recall.
+
+    B16 left one question open: the LLM planner classified far better and
+    retrieved slightly worse, which is either a failure to transfer or a wrong
+    yardstick. This produces the label defined by what the planner exists to
+    serve, so the two can be told apart.
+    """
+    import asyncio
+
+    from ahr.rag.embeddings import EmbeddingUnavailableError
+    from ahr.rag.embeddings import build_client_from_env as build_embedder
+    from ahr.rag.eval.query_type_sweep import run_sweep
+    from ahr.rag.rerank import RerankUnavailableError
+    from ahr.rag.rerank import build_client_from_env as build_reranker
+
+    async def run() -> dict[str, Any]:
+        try:
+            client = build_embedder()
+            reranker = build_reranker()
+        except (EmbeddingUnavailableError, RerankUnavailableError) as exc:
+            return {"error": str(exc)}
+
+        async with client, reranker:
+            with psycopg.connect(get_settings().database_url) as connection:
+                return await run_sweep(
+                    golden, connection=connection, client=client, reranker=reranker
+                )
+
+    payload = asyncio.run(run())
+    if args.output:
+        Path(args.output).write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    summary = {k: v for k, v in payload.items() if k != "rows"}
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _run_planner_diff(golden: Any, args: argparse.Namespace) -> int:
+    """List where the two planners disagree, for a human to adjudicate.
+
+    Neither planner can be scored until the golden set carries
+    `expected_query_type`, and annotating ninety questions to find out is the
+    expensive way round. Agreement is weak evidence both are right; the
+    disagreements are the short list worth judging, and judging them *is* the
+    annotation.
+    """
+    import asyncio
+
+    from ahr.processing.llm import LlmUnavailableError
+    from ahr.processing.llm import build_client_from_env as build_llm
+    from ahr.rag.llm_planner import disagreements
+
+    try:
+        llm = build_llm()
+    except LlmUnavailableError as exc:
+        print(json.dumps({"error": f"llm unavailable: {exc}"}, ensure_ascii=False))
+        return 1
+
+    questions = [(q.id, q.question, q.asked_at) for q in golden.questions]
+
+    async def run() -> list[dict[str, Any]]:
+        async with llm:
+            return await disagreements(llm, questions)
+
+    rows = asyncio.run(run())
+    payload = {
+        "questions": len(questions),
+        "disagreements": len(rows),
+        "agreement_rate": round(1 - len(rows) / len(questions), 4) if questions else None,
+        "rows": rows,
+    }
+    if args.output:
+        Path(args.output).write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _run_planner_eval(golden: Any, args: argparse.Namespace) -> int:
+    """Score the planner, and refuse to look successful when nothing is annotated.
+
+    `AHR-QSO-700` §8's planner accuracy has never had a number. Exiting 0 on an
+    empty run would replace "unjudgeable" with "apparently fine", which is the
+    worse of the two states — so an unannotated set is a non-zero exit that says
+    what is missing.
+    """
+    from ahr.rag.eval.planner_accuracy import run_planner_eval
+
+    payload = run_planner_eval(golden)
+    if args.output:
+        Path(args.output).write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+    print(json.dumps(payload["summary"], ensure_ascii=False, indent=2))
+    for mistake in payload["mistakes"]:
+        for note in mistake["notes"]:
+            print(f"  {mistake['question_id']}  {note}")
+
+    if payload["summary"]["overall"]["annotated"] == 0:
+        print(
+            "\n黄金集尚无 planner 标注"
+            "（expected_query_type / expected_time / expected_entities）。\n"
+            "AHR-QSO-700 §8 的 planner accuracy 因此仍然不可判定——不是失败，是没有量过。\n"
+            "标注方法见 data/golden/README.md。",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
+def _run_generation_eval(
+    golden: GoldenSet, args: argparse.Namespace, snapshot: dict[str, object]
+) -> int:
     """Answer every golden question for real, then score the answers.
 
     Separate from the retrieval variants because it is a different kind of run:
@@ -662,24 +911,37 @@ def _run_generation_eval(golden: object, args: argparse.Namespace, snapshot: obj
         except RerankUnavailableError as exc:
             print(f"warning: reranker unavailable, support scores will be null: {exc}")
 
-        runner = measure_latency if args.variant == "latency" else run_generation_eval
-        kwargs: dict[str, object] = (
-            {"limit": args.gen_limit or 24}
-            if args.variant == "latency"
-            else {"limit": args.gen_limit}
-        )
+        # The two runners take a differently typed `limit`, so they are called
+        # separately rather than through one variable and a `**kwargs` bag. The
+        # bag needed three `type: ignore`s to compile, and those ignores were
+        # also hiding that `golden` had been annotated as `object`.
+        async def measure(reranker_client: object) -> dict[str, object]:
+            if args.variant == "latency":
+                return await measure_latency(
+                    golden,
+                    embedder=embedder,
+                    reranker=reranker_client,  # type: ignore[arg-type]
+                    llm=llm,
+                    limit=args.gen_limit or 24,
+                )
+            return await run_generation_eval(
+                golden,
+                embedder=embedder,
+                reranker=reranker_client,  # type: ignore[arg-type]
+                llm=llm,
+                limit=args.gen_limit,
+            )
 
         async with embedder, llm:
             if reranker is not None:
                 async with reranker:
-                    report = await runner(  # type: ignore[operator]
-                        golden, embedder=embedder, reranker=reranker, llm=llm, **kwargs
-                    )
+                    report = await measure(reranker)
             else:
-                report = await runner(  # type: ignore[operator]
-                    golden, embedder=embedder, reranker=None, llm=llm, **kwargs
-                )
-        report["config"]["corpus_snapshot"] = snapshot  # type: ignore[index]
+                report = await measure(None)
+
+        config = report.get("config")
+        if isinstance(config, dict):
+            config["corpus_snapshot"] = snapshot
         if args.output:
             Path(args.output).write_text(
                 json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -702,12 +964,27 @@ def cmd_seed_topics(args: argparse.Namespace) -> int:
     The enrichment pipeline seeds topics too, but editing a display name should
     not require re-running enrichment over the whole corpus.
     """
-    from ahr.processing.topics import load_display, load_taxonomy, seed_topics
+    from ahr.processing.topics import (
+        load_content_type_display,
+        load_display,
+        load_taxonomy,
+        load_vendors,
+        seed_content_types,
+        seed_topics,
+        seed_vendors,
+    )
 
     with psycopg.connect(get_settings().database_url) as connection:
-        written = seed_topics(connection, load_taxonomy(), load_display())
+        # All three dimensions of the topic map come from one file, so they are
+        # refreshed together — seeding topics without the vendors that were
+        # edited in the same commit would show half of an intended change.
+        topics = seed_topics(connection, load_taxonomy(), load_display())
+        vendors = seed_vendors(connection, load_vendors())
+        content_types = seed_content_types(connection, load_content_type_display())
         connection.commit()
-    print(json.dumps({"topics": written}, indent=2))
+    print(
+        json.dumps({"topics": topics, "vendors": vendors, "contentTypes": content_types}, indent=2)
+    )
     return 0
 
 
@@ -781,6 +1058,16 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_publish_ready_reports(_args: argparse.Namespace) -> int:
+    """Apply the deterministic publication gate to historical draft reports."""
+    from ahr.processing.report import promote_stored_drafts
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        result = promote_stored_drafts(connection)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
+
 def cmd_send_report(args: argparse.Namespace) -> int:
     """Send a stored daily report by email."""
     from ahr.processing.email import (
@@ -790,6 +1077,7 @@ def cmd_send_report(args: argparse.Namespace) -> int:
         build_message,
         delivery_key,
         record_delivery,
+        report_delivery_allowed,
         send_message,
     )
 
@@ -802,7 +1090,7 @@ def cmd_send_report(args: argparse.Namespace) -> int:
     with psycopg.connect(get_settings().database_url) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                "SELECT title, summary, body_markdown FROM report"
+                "SELECT title, summary, body_markdown, status FROM report"
                 " WHERE period_type = 'daily' AND period_key = %s",
                 (args.date,),
             )
@@ -812,12 +1100,25 @@ def cmd_send_report(args: argparse.Namespace) -> int:
             print(json.dumps({"status": "no_report", "date": args.date}, indent=2))
             return 1
 
-        title, summary, body_markdown = row
+        title, summary, body_markdown, report_status = row
         key = delivery_key(args.date, args.to)
 
         if already_delivered(connection, key) and not args.force:
             print(json.dumps({"status": "already_sent", "delivery_key": key[:16]}, indent=2))
             return 0
+
+        if not report_delivery_allowed(report_status, dry_run=args.dry_run):
+            print(
+                json.dumps(
+                    {
+                        "status": "not_published",
+                        "date": args.date,
+                        "report_status": report_status,
+                    },
+                    indent=2,
+                )
+            )
+            return 1
 
         if args.dry_run:
             print(
@@ -827,6 +1128,7 @@ def cmd_send_report(args: argparse.Namespace) -> int:
                         "to": args.to,
                         "subject": title,
                         "body_chars": len(body_markdown),
+                        "report_status": report_status,
                     },
                     indent=2,
                     ensure_ascii=False,
@@ -915,6 +1217,12 @@ def main(argv: list[str] | None = None) -> int:
     usage.add_argument("--days", type=int, default=30)
     usage.set_defaults(func=cmd_usage)
 
+    support = sub.add_parser(
+        "backfill-support", help="score citations that predate support scoring"
+    )
+    support.add_argument("--limit", type=int, default=200)
+    support.set_defaults(func=cmd_backfill_support)
+
     heat = sub.add_parser("heat", help="recompute hot_score for recent content")
     heat.add_argument("--days", type=int, default=7)
     heat.set_defaults(func=cmd_heat)
@@ -962,6 +1270,10 @@ def main(argv: list[str] | None = None) -> int:
             "sweep",
             "generation",
             "latency",
+            "planner",
+            "planner-diff",
+            "query-type-sweep",
+            "specialist-ab",
         ],
         default="b1",
         help=(
@@ -973,7 +1285,12 @@ def main(argv: list[str] | None = None) -> int:
             "b9-dimensions b7 plus §6 directness and source_fit, "
             "sweep grid-search the fusion weights on Recall@40 (AHR-RAG-400 §5), "
             "generation end-to-end answers scored for groundedness and citations, "
-            "latency per-stage p50/p95 (AHR-RAG-400 §14)"
+            "latency per-stage p50/p95 (AHR-RAG-400 §14), "
+            "planner query_type/time/entity accuracy against the golden set "
+            "(AHR-QSO-700 §8; needs no provider or database), "
+            "planner-diff where the regex and LLM planners disagree, "
+            "query-type-sweep which query_type actually retrieves best per question, "
+            "specialist-ab one-snapshot entity/noise rerank A/B for an annotated specialist set"
         ),
     )
     rag_eval.add_argument(
@@ -994,6 +1311,16 @@ def main(argv: list[str] | None = None) -> int:
     rag_eval.add_argument("--chunk-depth", type=int, default=60, help="AHR-RAG-400 §5 topK")
     rag_eval.add_argument("--sparse-depth", type=int, default=40, help="AHR-RAG-400 §5 FTS topK")
     rag_eval.add_argument("--output", default=None, help="write the full per-question report here")
+    rag_eval.add_argument(
+        "--question-id",
+        default=None,
+        help="replay one golden question by id before running the whole set",
+    )
+    rag_eval.add_argument(
+        "--llm-planner",
+        action="store_true",
+        help="plan with the model instead of the regexes (AHR-QSO-700 §8 planner accuracy)",
+    )
     rag_eval.add_argument("--validate", action="store_true", help="check the set, do not retrieve")
     rag_eval.add_argument(
         "--skip-unusable",
@@ -1021,6 +1348,12 @@ def main(argv: list[str] | None = None) -> int:
     report.add_argument("--no-llm", action="store_true", help="skip the narrative summary")
     report.add_argument("--output", default=None, help="also write the markdown here")
     report.set_defaults(func=cmd_report)
+
+    publish_ready = sub.add_parser(
+        "publish-ready-reports",
+        help="evaluate historical draft reports with the non-blocking publication gate",
+    )
+    publish_ready.set_defaults(func=cmd_publish_ready_reports)
 
     send = sub.add_parser("send-report", help="email a stored daily report")
     send.add_argument("--date", required=True, help="YYYY-MM-DD")

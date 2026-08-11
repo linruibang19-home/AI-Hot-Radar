@@ -112,4 +112,27 @@ class ContentCategoryTest {
             }
         }
     }
+
+    @Test
+    void an_exact_type_beats_the_tab_that_shares_its_name() {
+        // `tutorial` is both a tab (tutorial + open_source) and a content type.
+        // The topic map shows a count for the type, so its card has to open the
+        // type — otherwise it displays 28 and then lists 52.
+        assertThat(ContentCategory.resolve("type:tutorial")).containsExactly("tutorial");
+        assertThat(ContentCategory.resolve("tutorial"))
+                .containsExactlyInAnyOrder("tutorial", "open_source");
+    }
+
+    @Test
+    void the_exact_prefix_is_case_insensitive_and_survives_a_stray_space() {
+        assertThat(ContentCategory.resolve("TYPE:research")).containsExactly("research");
+        assertThat(ContentCategory.resolve("type: research")).containsExactly("research");
+    }
+
+    @Test
+    void an_empty_exact_type_filters_nothing_rather_than_everything() {
+        // `?category=type:` must not become `content_type IN ('')`, which matches
+        // no row and shows an empty page for what is really a malformed URL.
+        assertThat(ContentCategory.resolve("type:")).isEmpty();
+    }
 }

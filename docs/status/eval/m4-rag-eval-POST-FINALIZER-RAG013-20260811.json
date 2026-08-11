@@ -1,0 +1,67 @@
+{
+  "run_id": "GEN-20260810T202350Z",
+  "config": {
+    "variant": "generation",
+    "llm": "deepseek-chat",
+    "reranker": "BAAI/bge-reranker-v2-m3",
+    "support_threshold": 0.3,
+    "questions": 1,
+    "corpus_snapshot": {
+      "snapshot_cutoff": "2026-08-03T23:59:00+08:00",
+      "newest_item": "2026-08-10T20:00:00+00:00",
+      "items_in_snapshot": 915,
+      "items_total": 1697,
+      "items_ignored": 782
+    }
+  },
+  "summary": {
+    "overall": {
+      "questions": 1,
+      "answerable": 1,
+      "answered": 1,
+      "unanswerable": 0,
+      "citation_coverage": 1.0,
+      "citation_precision": 0.3333,
+      "story_coverage": 0.5,
+      "support_mean": 0.7023,
+      "support_supported": 1.0,
+      "support_as_read_mean": 0.7023,
+      "support_as_read_supported": 1.0,
+      "must_contain_hit": null,
+      "avg_citations": 6.0,
+      "latency_ms_mean": 10042.0,
+      "over_refusal_rate": 0.0
+    },
+    "by_category": {
+      "recent_updates": {
+        "questions": 1,
+        "answered": 1,
+        "citation_coverage": 1.0,
+        "citation_precision": 0.3333,
+        "support_mean": 0.7023
+      }
+    }
+  },
+  "questions": [
+    {
+      "question_id": "RAG-GOLD-013",
+      "category": "recent_updates",
+      "answerable": true,
+      "refused": false,
+      "citations": 6,
+      "must_contain_hit": null,
+      "must_not_claim_mentions": [],
+      "question": "Vercel AI SDK 最近的版本都修了什么？",
+      "answer_markdown": "在检索时间范围 2026-07-27 至 2026-08-03 内，Vercel AI SDK 的修复包括：修复 Fireworks 错误解析问题（2026-08-02）、修复遥测归因问题（7.0.44，2026-07-31）[1]，以及多个补丁更新（如 ai@7.0.45 支持实验性工具调用等）[2]。\n\n- 修复遥测归因：7.0.44 修复了语言模型调用解析到不同响应模型时的遥测归因问题。[1]\n- 7.0.45 新增实验性工具调用支持（streamText 和 ToolLoopAgent），并警告 generateText 收到仅流式超时设置（firstChunkMs/chunkMs）的情况。[2]\n- 其他补丁更新：ai@7.0.46、ai@7.0.47、ai@5.0.224、ai@6.0.239、@ai-sdk/xai@4.0.25 等，主要更新依赖（如 @ai-sdk/gateway、@ai-sdk/provider-utils）。[3][4][5][6]",
+      "asserted_presupposition": null,
+      "citation_coverage": 1.0,
+      "citation_precision": 0.3333333333333333,
+      "story_coverage": 0.5,
+      "support_mean": 0.7022509276866913,
+      "support_supported": 1.0,
+      "support_as_read_mean": 0.7022509276866913,
+      "support_as_read_supported": 1.0,
+      "latency_ms": 10042
+    }
+  ]
+}

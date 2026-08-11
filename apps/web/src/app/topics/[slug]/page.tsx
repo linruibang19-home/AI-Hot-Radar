@@ -1,5 +1,4 @@
 import { formatTime } from "@/lib/datetime";
-import Link from "next/link";
 
 import { BackLink } from "@/components/BackLink";
 

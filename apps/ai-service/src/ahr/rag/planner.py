@@ -20,7 +20,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
+from typing import Any
 from zoneinfo import ZoneInfo
 
 DISPLAY_TIMEZONE = ZoneInfo("Asia/Shanghai")
@@ -82,6 +83,45 @@ class RetrievalPlan:
         }
 
 
+def plan_from_dict(payload: dict[str, Any] | None) -> RetrievalPlan | None:
+    """Rebuild a plan from its serialised form.
+
+    Needed by the answer cache: a replayed answer has to carry the plan it was
+    produced with, or the page loses the resolved time window and the question
+    type — the two things that show a reader "最近" became a real interval. A
+    cached answer should differ from a fresh one only in being marked as cached.
+
+    Returns None on anything malformed rather than raising: this is reading back
+    a cache entry, and a bad entry should degrade to "no plan shown", never to a
+    failed request.
+    """
+    if not payload:
+        return None
+    try:
+        window = payload.get("time_range")
+        time_range = (
+            TimeRange(
+                start=datetime.fromisoformat(str(window["from"])),
+                end=datetime.fromisoformat(str(window["to"])),
+                basis=str(window.get("basis", "either")),
+                explicit=bool(window.get("explicit", False)),
+                label=str(window.get("label", "")),
+            )
+            if window
+            else None
+        )
+        return RetrievalPlan(
+            question=str(payload.get("question", "")),
+            query_type=str(payload.get("query_type", "explainer")),
+            time_range=time_range,
+            asked_at=datetime.fromisoformat(str(payload["asked_at"])),
+            freshness_required=bool(payload.get("freshness_required", False)),
+            notes=tuple(str(n) for n in payload.get("notes") or ()),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
 # Ordered: the first match wins, so specific phrases precede general ones.
 # "上周" has to be tested before "周" or it resolves to the current week.
 _EXPLICIT_WINDOWS: tuple[tuple[re.Pattern[str], str], ...] = (
@@ -95,14 +135,29 @@ _EXPLICIT_WINDOWS: tuple[tuple[re.Pattern[str], str], ...] = (
 
 _NUMBERED_DAYS = re.compile(r"(?:过去|近|最近|last|past)\s*(\d{1,3})\s*(?:天|日|days?)")
 _NUMBERED_WEEKS = re.compile(r"(?:过去|近|最近|last|past)\s*(\d{1,2})\s*(?:周|星期|weeks?)")
-_RECENT = re.compile(r"最近|近期|这几天|recent|lately")
+# "现在/目前/当前" ask about the present as plainly as "最近" does, and were
+# missing: 「现在有什么信源？」 resolved to no window at all, so the question was
+# planned as an explainer, the time filter never ran and `temporal_fit` stayed
+# off. Three downstream behaviours went wrong at once and nothing errored —
+# measured live before this line existed.
+_RECENT = re.compile(r"最近|近期|这几天|现在|目前|当前|如今|眼下|recent|lately|currently|right now")
 
 _TYPE_PATTERNS: tuple[tuple[re.Pattern[str], QueryType], ...] = (
-    (re.compile(r"时间线|先后|一步步|怎么发展|演进|从.*到.*发生|timeline"), "timeline"),
+    (
+        re.compile(
+            r"时间线|先后|一步步|怎么发展|演进|从.*到.*发生|发布顺序|什么顺序|时间顺序|timeline"
+        ),
+        "timeline",
+    ),
     (re.compile(r"相比|对比|区别|差距|哪个更|和.*比|vs\.?|versus"), "comparison"),
     (re.compile(r"为什么|怎么(实现|做到|工作|运作)|原理|是什么意思|如何实现"), "explainer"),
     (re.compile(r"最近|近期|本周|今天|昨天|这几天|有哪些新|新动作|更新了"), "recent_updates"),
-    (re.compile(r"是多少|叫什么|几个|是谁|多少参数|真的吗|是否|确认"), "fact_check"),
+    (
+        re.compile(
+            r"是多少|叫什么|几个|是谁|多少参数|真的吗|是否|确认|是哪个|是哪些|哪个模型|哪家"
+        ),
+        "fact_check",
+    ),
     (re.compile(r"推荐|值得|该用|选哪个"), "recommendation"),
 )
 
@@ -182,7 +237,39 @@ def classify(question: str) -> QueryType:
     return "explainer"
 
 
-def plan(question: str, *, asked_at: datetime | None = None) -> RetrievalPlan:
+def range_from_dates(start: date, end: date) -> TimeRange:
+    """A pair of local dates as a half-open range covering both in full.
+
+    Shared by the reader's date picker and the LLM planner so the two cannot
+    disagree about whether the last day is included — an off-by-one here is
+    invisible in the chip and changes which documents are retrievable.
+    """
+    return TimeRange(
+        datetime.combine(start, time.min, tzinfo=DISPLAY_TIMEZONE),
+        datetime.combine(end + timedelta(days=1), time.min, tzinfo=DISPLAY_TIMEZONE),
+        explicit=True,
+        label=f"{start.isoformat()} 至 {end.isoformat()}",
+    )
+
+
+def plan(
+    question: str,
+    *,
+    asked_at: datetime | None = None,
+    window_override: tuple[date, date] | None = None,
+) -> RetrievalPlan:
+    """Freeze a plan for this question.
+
+    `window_override` is the reader correcting the range, and it is an *input*
+    to planning rather than a downstream rewrite — §3 freezes the plan once
+    made, and this happens before that.
+
+    It exists because the resolved window was shown and not editable. The site
+    already argued that a reader who sees the wrong week should be able to fix
+    it instead of concluding the system is broken; what shipped let them see it
+    and retype the whole question. That is the same shape as citation numbers
+    being a guarantee with no path to it.
+    """
     moment = asked_at or datetime.now(UTC)
     if moment.tzinfo is None:
         raise ValueError("asked_at must be timezone-aware")
@@ -191,6 +278,21 @@ def plan(question: str, *, asked_at: datetime | None = None) -> RetrievalPlan:
     time_range = resolve_time_range(question, moment)
 
     notes: list[str] = []
+    if window_override is not None:
+        time_range = range_from_dates(*window_override)
+        notes.append("时间范围由提问者指定")
+        return RetrievalPlan(
+            question=question,
+            query_type=query_type,
+            time_range=time_range,
+            asked_at=moment,
+            # An explicit range is a request to filter by it, whatever the
+            # wording implies — otherwise correcting the window would change the
+            # chip and leave retrieval untouched.
+            freshness_required=True,
+            notes=tuple(notes),
+        )
+
     if time_range and not time_range.explicit:
         notes.append(f"未给出时间跨度，按默认 {RECENT_DAYS} 天检索")
     if query_type == "recent_updates" and time_range is None:

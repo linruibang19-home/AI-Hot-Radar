@@ -1,0 +1,31 @@
+services:
+  ai-service:
+    # Reuse the Dockerfile's network-isolated test stage through Compose so
+    # local verification follows the project's single supported run path.
+    build:
+      target: test
+    image: ai-hot-radar-ai-service-test:latest
+    working_dir: /workspace/apps/ai-service
+    environment:
+      PYTHONPATH: /workspace/apps/ai-service/src
+    volumes:
+      # The test image owns the toolchain; this bind mount keeps the code under
+      # test equal to the working tree without rebuilding after every edit. The
+      # repository depth is preserved because a few delivery tests resolve
+      # compose/config files from the test file's absolute path.
+      - ../../:/workspace
+
+  web:
+    # The deps stage contains the lockfile-exact toolchain. Bind the current
+    # source while keeping node_modules in a Docker volume, so UI checks do not
+    # depend on a host Node installation or a stale runtime image.
+    build:
+      target: deps
+    image: ai-hot-radar-web-test:latest
+    working_dir: /app
+    volumes:
+      - ../../apps/web:/app
+      - web_test_node_modules:/app/node_modules
+
+volumes:
+  web_test_node_modules:

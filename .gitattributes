@@ -1,0 +1,6 @@
+# Linux containers execute these files directly; CRLF turns the shebang and
+# shell options into invalid commands when the repository is checked out on
+# Windows with core.autocrlf=true.
+*.sh text eol=lf
+Caddyfile text eol=lf
+Dockerfile text eol=lf

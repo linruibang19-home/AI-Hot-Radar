@@ -72,12 +72,35 @@ def test_configuration_is_read_from_the_environment(monkeypatch: pytest.MonkeyPa
     monkeypatch.setenv("EMBEDDING_API_KEY", "secret")
     monkeypatch.setenv("EMBEDDING_MODEL", "BAAI/bge-m3")
     monkeypatch.setenv("EMBEDDING_DIMENSIONS", "1024")
+    monkeypatch.setenv("EMBEDDING_TIMEOUT_SECONDS", "25")
+    monkeypatch.setenv("EMBEDDING_MAX_ATTEMPTS", "2")
 
     config = build_config_from_env()
 
     # The trailing slash would double up against the "/embeddings" path.
     assert config.base_url == "https://api.siliconflow.cn/v1"
     assert config.dimensions == 1024
+    assert config.timeout_seconds == 25
+    assert config.max_attempts == 2
+
+
+@pytest.mark.parametrize(
+    ("name", "value", "message"),
+    [
+        ("EMBEDDING_TIMEOUT_SECONDS", "0", "between 1 and 120"),
+        ("EMBEDDING_MAX_ATTEMPTS", "2.5", "integer"),
+        ("EMBEDDING_MAX_ATTEMPTS", "6", "between 1 and 5"),
+    ],
+)
+def test_invalid_runtime_bounds_fail_configuration(
+    monkeypatch: pytest.MonkeyPatch, name: str, value: str, message: str
+) -> None:
+    monkeypatch.setenv("EMBEDDING_BASE_URL", "https://provider.test/v1")
+    monkeypatch.setenv("EMBEDDING_API_KEY", "secret")
+    monkeypatch.setenv("EMBEDDING_MODEL", "BAAI/bge-m3")
+    monkeypatch.setenv(name, value)
+    with pytest.raises(EmbeddingUnavailableError, match=message):
+        build_config_from_env()
 
 
 # --- ordering -------------------------------------------------------------
