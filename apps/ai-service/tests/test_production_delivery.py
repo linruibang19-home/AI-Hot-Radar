@@ -5,8 +5,10 @@ from __future__ import annotations
 import importlib.util
 import os
 import shutil
+import smtplib
 import subprocess
 import sys
+from email.message import EmailMessage
 from pathlib import Path
 
 import pytest
@@ -119,3 +121,45 @@ def test_backup_script_catalog_checks_before_publishing_dump() -> None:
     assert 'pg_restore --list "$target.partial"' in script
     assert 'sha256sum "$target"' in script
     assert "BACKUP_RUN_ONCE" in script
+
+
+def test_monitor_email_alert_uses_starttls_and_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+    monitor = load_monitor()
+    calls: list[object] = []
+
+    class FakeSmtp:
+        def __init__(self, host: str, port: int, timeout: int) -> None:
+            calls.append(("connect", host, port, timeout))
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def ehlo(self) -> None:
+            calls.append("ehlo")
+
+        def starttls(self, *, context: object) -> None:
+            calls.append(("starttls", context is not None))
+
+        def login(self, username: str, password: str) -> None:
+            calls.append(("login", username, password))
+
+        def send_message(self, message: EmailMessage) -> None:
+            calls.append(("send", message["To"], message.get_content().strip()))
+
+    monkeypatch.setattr(smtplib, "SMTP", FakeSmtp)
+    monkeypatch.setenv("ALERT_EMAIL_TO", "operator@example.com")
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+    monkeypatch.setenv("SMTP_PORT", "587")
+    monkeypatch.setenv("SMTP_USERNAME", "mailer")
+    monkeypatch.setenv("SMTP_PASSWORD", "secret")
+    monkeypatch.setenv("EMAIL_FROM", "reports@example.com")
+    monkeypatch.setenv("SMTP_AUTH", "true")
+    monkeypatch.setenv("SMTP_STARTTLS", "true")
+
+    assert monitor.notify_email("AI Hot Radar recovered: web") is True
+    assert calls[0] == ("connect", "smtp.example.com", 587, 10)
+    assert ("login", "mailer", "secret") in calls
+    assert ("send", "operator@example.com", "AI Hot Radar recovered: web") in calls
