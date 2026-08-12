@@ -9,10 +9,10 @@
 
 本仓库已经不是“等待 TASK-M0 创建源码”的规格包，而是可由 Docker Compose 启动的完整
 实现。M0–M5 首次生产闭环已经完成；香港目标机、系统加固、Docker、DNS、Caddy HTTPS、
-生产 SMTP、真实告警与异机备份均已投入运行。`v0.1.6` 在同提交全量 CI 后发布三张不可变
-镜像，GitHub `main`、服务器 checkout、`IMAGE_TAG` 与运行镜像均对齐该提交。
-
-当前运行基线为 `c1c6918` / `v0.1.7`。权威入口按用途分为：
+生产 SMTP、真实告警与异机备份均已投入运行。当前生产运行基线为
+`v0.1.7@c1c6918`；服务器 checkout、`IMAGE_TAG` 与运行镜像对齐该提交。GitHub `main`
+允许包含尚未发布的运维与文档提交，因此不能用 `main` 代替运行镜像 revision 判断线上版本。
+权威入口按用途分为：
 
 | 需要了解什么 | 首选文档 |
 |---|---|
@@ -23,6 +23,9 @@
 | 当前提交、容器、数据快照和下一步 | `docs/status/handoff-20260812.md` |
 | 导航性能根因与回归 | `docs/status/navigation-performance-20260812.md` |
 | 完整历史、根因和逐轮实验 | `docs/status/project-status.md` |
+| 全部代码的业务链路与学习顺序 | `docs/code-map.md` |
+| 状态、历史快照与实验证据分类 | `docs/status/README.md` |
+| 仓库清理和可恢复归档证据 | `docs/status/repository-hygiene-20260812.md` |
 | RAG 当前发布门禁 | `docs/status/rag-specialist-audit-20260811.md` |
 | RAG 安全、超时和 SLO | `docs/status/rag-security-performance-20260811.md` |
 | RAG 问答 UI 精修 | `docs/status/rag-ui-polish-20260811.md` |
@@ -83,6 +86,7 @@ DeepSeek 生成模型白名单切换已完成；生产 SMTP 已实投。ChromeCo
 | `docs/spec/10-source-adapter-implementation.md` | Adapter 实现边界 | 锁定 |
 | `docs/spec/11-end-to-end-runbook.md` | 全链路运行与恢复 | 当前 |
 | `docs/design/` | RAG 评测、实现和部署设计 | 当前 |
+| `docs/code-map.md` | 全部源码、迁移、配置、基础设施与测试的学习地图 | 当前 |
 | `docs/adr/` | 已锁定架构决策与回滚条件 | 当前至 ADR-0027 |
 | `docs/interview/` | 00–10 十一份面试学习、题库、STAR、白板与演示材料 | 当前 |
 | `docs/assets/screenshots/` | README 使用的脱敏本地页面截图 | 2026-08-12 封版 |

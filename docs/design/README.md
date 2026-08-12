@@ -30,3 +30,5 @@
 |---|---|---|
 | [m4-rag-implementation.md](m4-rag-implementation.md) | M4 RAG 全流程实现方案 | 进行中 |
 | [m4-rag-evaluation.md](m4-rag-evaluation.md) | 黄金集、指标与发布门禁 | 进行中 |
+| [m5-deployment.md](m5-deployment.md) | 生产部署、安全、备份与回滚方案 | 已按首次生产验收修订 |
+| [m5-first-deploy-checklist.md](m5-first-deploy-checklist.md) | 首次部署步骤、危险边界与迁移检查表 | 当前维护入口 |
