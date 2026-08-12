@@ -38,9 +38,9 @@ AI Hot Radar 自动发现、核验和压缩 AI 行业信息，回答三个层级
 | ADR-004 | PostgreSQL 为唯一事实源，pgvector 同库起步 | 保持事务、过滤和向量检索一致；降低 MVP 运维复杂度 |
 | ADR-005 | Redis 仅负责缓存、限流、短锁和短期状态 | 不作为事实数据库，不保存不可恢复业务状态 |
 | ADR-006 | MVP 使用模块化单体 + 独立 AI Worker | 避免过早微服务化，同时保留 Java/Python真实跨语言边界 |
-| ADR-007 | 采用数据库 Outbox 保证业务写入与任务发布一致 | 避免双写丢消息；RabbitMQ 在 M3 后按压测结果引入 |
+| ADR-007/0028 | PostgreSQL 轮询是当前任务编排；Outbox 是同事务事件日志和未来传输预留 | 不把只写未消费的表包装成消息队列；按容量证据再引入 Broker |
 | ADR-008 | RAG 采用时间/事件感知的多粒度混合检索 | 普通向量检索无法可靠回答“最近七天发生了什么” |
-| ADR-009 | 引用绑定到 `evidence_passage`，最终跳转原文 | 回答可核验，不以 AI 摘要作为最终证据 |
+| ADR-009/0029 | 引用绑定逻辑 evidence passage；当前物理行是 `content_chunk` | 回答可核验，不以 AI 摘要作为最终证据 |
 | ADR-010 | Graph-lite 先用 PostgreSQL 关系表实现 | 需要实体—事件关系，但 MVP 不需要图数据库和完整 GraphRAG |
 | ADR-011 | 信源发现与正文获取分离，公开默认仅展示节选和原文链接 | RSS 摘要不是 RAG 最终语料；读取全文能力不等于公开转载权 |
 
@@ -109,7 +109,7 @@ flowchart TD
 
 1. `raw_document`：采集到的原始响应，限内部审计；
 2. `content_item`：单篇标准化内容；
-3. `evidence_passage`：可定位的证据段；
+3. evidence passage：可定位的证据段；当前由 `content_chunk` 物理行承载；
 4. `story`：多个来源共同描述的事件；
 5. `report`：事件的编辑型汇总；
 6. `rag_answer`：基于证据的临时生成结果。

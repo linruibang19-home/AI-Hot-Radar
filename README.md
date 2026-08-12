@@ -7,7 +7,8 @@
 - 当前生产：`v0.1.7@c1c6918`，香港 2C4G 单机 Docker Compose，Caddy HTTPS
 - 2026-08-12 生产快照：140 个登记信源、2040 条内容、8089 个分块（100% 向量化）、
   1622 个事件；数据持续增长，本行不是固定业务承诺
-- 质量基线：Python 878、Java 74、Web 73 个测试；RAG 使用固定 90 题发布集与逐题证据
+- 质量基线：Python 884 通过、2 跳过，Java 74、Web 73 个测试（2026-08-12 CI）；RAG 使用
+  固定 90 题发布集与逐题证据
 
 ![精选与实时情报流](docs/assets/screenshots/home.png)
 
@@ -86,8 +87,8 @@ flowchart TB
     Caddy --> Web["Next.js 15 / React 19"]
     Web --> Core["Spring Boot 3.4 / Java 21"]
     Web --> AI["FastAPI / Python 3.12"]
-    Scheduler["Scheduler"] --> AI
-    Pipeline["Pipeline Worker"] --> AI
+    Scheduler["Python Scheduler"] --> PG
+    Pipeline["Python Pipeline"] --> PG
     Core --> PG[("PostgreSQL 16 + pgvector")]
     AI --> PG
     Core --> Redis[("Redis 7")]
@@ -289,14 +290,15 @@ diff、Flyway 空库/升级、依赖审计、秘密扫描、Compose smoke 与受
 
 | 想了解什么 | 从这里开始 |
 |---|---|
+| 从业务到代码完整吃透项目 | [`docs/handbook/README.md`](docs/handbook/README.md) |
 | 面试复习全套材料 | [`docs/interview/README.md`](docs/interview/README.md) |
 | 按业务链路阅读全部代码 | [`docs/code-map.md`](docs/code-map.md) |
-| 30 秒 / 2 分钟 / 5 分钟介绍 | [`00-project-one-pager.md`](docs/interview/00-project-one-pager.md) |
+| 30 秒 / 3 分钟 / 10 分钟介绍 | [`00-project-one-pager.md`](docs/interview/00-project-one-pager.md) |
 | 业务与系统架构 | [`01-business-and-architecture.md`](docs/interview/01-business-and-architecture.md) |
 | 采集、全文门与数据模型 | [`02-ingestion-and-data-model.md`](docs/interview/02-ingestion-and-data-model.md) |
 | RAG 全链路、指标和失败实验 | [`03-rag-deep-dive.md`](docs/interview/03-rag-deep-dive.md) |
 | 后端、一致性、前端与运维 | [`04`](docs/interview/04-backend-and-consistency.md) · [`05`](docs/interview/05-frontend-product.md) · [`06`](docs/interview/06-deployment-security-ops.md) |
-| 题库、STAR、白板与演示 | [`07`](docs/interview/07-interview-question-bank.md) · [`08`](docs/interview/08-resume-and-star-stories.md) · [`09`](docs/interview/09-system-design-whiteboard.md) · [`10`](docs/interview/10-demo-script.md) |
+| 120 题、10 个 STAR、白板与演示 | [`07`](docs/interview/07-interview-question-bank.md) · [`08`](docs/interview/08-resume-and-star-stories.md) · [`09`](docs/interview/09-system-design-whiteboard.md) · [`10`](docs/interview/10-demo-script.md) |
 | 锁定规格与架构决策 | [`docs/spec/00-master-spec.md`](docs/spec/00-master-spec.md) · [`docs/adr/`](docs/adr/) |
 | 完整实现状态与逐轮证据 | [`docs/spec/12-delivery-index.md`](docs/spec/12-delivery-index.md) · [`docs/status/project-status.md`](docs/status/project-status.md) |
 | 当前/历史状态与验收证据分类 | [`docs/status/README.md`](docs/status/README.md) |

@@ -55,11 +55,12 @@ API 破坏性变化先写 ADR；错误使用 Problem JSON/稳定错误码，不�
 - 报告只在引用和确定性门通过后转 PUBLISHED；
 - 邮件领取用行锁并跳过已锁记录，发送结果写回独立 delivery 状态。
 
-## `outbox_event` 的真实状态
+## 后台编排与 `outbox_event` 的真实状态
 
-规格预留了数据库 Outbox，但当前表**只写不读**，`published_at` 没有工作的消费者。一致性与异步
-任务由 PostgreSQL 轮询、租约和幂等保证。面试时应主动说清；若出现需要独立扩缩容、稳定重放和
-持续 backlog 的消费者，再写 ADR 引入 publisher/queue，而不是把预留结构包装成已完成能力。
+规格预留了数据库 Outbox，但当前表**只写不读**，`published_at` 没有工作的消费者。采集由 Python
+Scheduler 的 `next_poll_at + FOR UPDATE SKIP LOCKED` 编排，处理由 Python Pipeline 的状态扫描、
+advisory lock 和幂等保证。Java 的 `@Scheduled` 只负责邮件投递。面试时应主动说清；若出现需要
+独立扩缩容、稳定重放和持续 backlog 的消费者，再写 ADR 引入 publisher/queue。
 
 ## 缓存一致性
 
