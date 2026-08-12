@@ -5,6 +5,7 @@ import {
   dayKey,
   formatDate,
   formatDateTime,
+  formatPublicationTime,
   formatShortDateTime,
   formatTime,
   formatWeekday,
@@ -36,6 +37,16 @@ describe("formatTime", () => {
     expect(formatTime(undefined)).toBe("--:--");
     expect(formatTime(null)).toBe("--:--");
     expect(formatTime("not a date")).toBe("--:--");
+  });
+});
+
+describe("formatPublicationTime", () => {
+  it("does not invent minute precision for arXiv daily batches", () => {
+    expect(formatPublicationTime("arxiv-cs-lg", "2026-08-12T04:00:00Z")).toBe("当日发布");
+  });
+
+  it("keeps precise publisher timestamps for regular sources", () => {
+    expect(formatPublicationTime("nvidia-blog", "2026-08-12T04:29:00Z")).toBe("12:29");
   });
 });
 
