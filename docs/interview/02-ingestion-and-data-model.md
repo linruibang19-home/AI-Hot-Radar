@@ -62,7 +62,7 @@ claims、事件动作/对象/时间和质量因子。解析失败最多修复一
 | `source` / `source_cursor` / `crawl_run` | 配置、游标、一次运行 | 状态来自调度事实，不靠前端手填 |
 | `raw_document` | 原始响应元数据与输入 hash | 内部审计，不直接公开 |
 | `content_item` / `content_revision` | 稳定身份与版本化正文 | 更新不覆盖旧处理版本 |
-| `content_chunk` | 检索与引用最小单元 | 保存定位、向量、全文字段和模型版本 |
+| `content_chunk` | 逻辑 evidence passage 的物理行 | 保存定位、向量、全文字段和模型版本 |
 | `entity` / `content_entity` / `topic` | 公司、模型、技术与关系 | 别名先归一，低置信度不盲建实体 |
 | `story` / `story_item` | 跨来源事件聚合 | 人工锁定后自动聚类不能覆盖 |
 | `selection_record` / `report` | 精选决定与发布快照 | 发布与投递读取已保存事实 |
@@ -90,3 +90,9 @@ DISCOVERED → FETCHED → PARSED → NORMALIZED → ENRICHED → READY
 
 付费墙、登录内容和禁止存储的页面只保存元数据、短摘要与原文链接；公共页面默认不镜像全文。
 RAG 只检索已发布且可引用的原始 passage。下架时公共正文、向量与缓存一并移除，只保留最小审计事实。
+
+## 面试官要求看 SQL 时
+
+先打开 `database/migrations/V001__baseline.sql` 讲 source/raw/item/revision/chunk，再按功能迁移讲
+Story、RAG、报告订阅和模型配置。明确 `evidence_passage`、`embedding_record` 是早期领域名，
+当前没有这两张物理表；引用和向量都在 `content_chunk`，见 ADR-0029。

@@ -20,6 +20,7 @@ jobs:
           python-version: "3.12"
       - run: pip install pyyaml jsonschema
       - run: python scripts/validate_spec.py
+      - run: python scripts/validate_docs.py
 
   ai-service:
     name: AI service

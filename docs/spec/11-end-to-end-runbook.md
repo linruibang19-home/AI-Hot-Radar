@@ -17,7 +17,7 @@ flowchart TD
     S --> O["网站、报告、邮件、RAG"]
 ```
 
-1. Java Scheduler 查询 `next_poll_at <= now()` 的 ACTIVE 来源；
+1. Python Scheduler 查询 `next_poll_at <= now()` 的有效来源；
 2. 以 `source_id` 获取有期限租约，避免多实例重复轮询；
 3. 创建 `crawl_run` 和 `ingestion_task`；
 4. Worker 加载 `sources.yaml + ingestion-profiles.yaml + site-overrides.yaml`；
@@ -25,7 +25,8 @@ flowchart TD
 6. 原始响应先写 `raw_document`，然后解析；
 7. 需要回源的候选创建 Fetch 子任务；
 8. 正文门禁通过后写 `content_item/content_revision/content_chunk`；
-9. outbox 驱动 enrichment、embedding 和 story clustering；
+9. Python Pipeline 从 PostgreSQL 内容状态推进 enrichment、embedding、story clustering、
+   精选与报告；Outbox 当前不驱动该链路；
 10. 首页、邮件、RAG 只读取 READY/PUBLISHED 数据。
 
 ## 2. 状态推进
@@ -44,8 +45,8 @@ DISCOVERED → FETCHED → PARSED → NORMALIZED → ENRICHED → READY
 1. PostgreSQL + pgvector
 2. Redis
 3. Flyway migration
-4. Spring Boot API/Scheduler
-5. FastAPI Worker
+4. Spring Boot Core API（公开读、管理、订阅邮件）
+5. FastAPI AI Service + Python Scheduler + Python Pipeline
 6. Next.js Web
 7. probe 指定的 3 个 fixture 来源
 8. 开启 Wave A 的低频真实轮询
@@ -133,7 +134,8 @@ M1 不强制 RabbitMQ。任务表达到以下任一条件再写 ADR 引入：持
 - Source 报错：隔离单源，不停止全局；
 - Worker 宕机：租约过期后重领，任务幂等重放；
 - LLM 不可用：保留 READY 前状态，稍后重试；网站继续读旧内容；
-- 数据库恢复：先停调度，再恢复备份与 WAL，最后从 outbox/checkpoint 重放；
+- 数据库恢复：先停 Python scheduler/pipeline，再恢复备份与 WAL，最后按 source cursor、
+  `next_poll_at` 和内容处理状态安全重放；当前不能依赖不存在的 Outbox 消费者；
 - Selector 失效：保存失败样本，更新 override 与 fixture 后解除隔离；
 - 错误合并 Story：人工 split 并锁定，聚类器不得再次自动合并。
 

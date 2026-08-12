@@ -143,6 +143,128 @@ PR/CI → main → release 全量门 → GHCR SHA 镜像 → 服务器 preflight
 
 命中率下降、请求变慢、限流窗口重置，但已发布内容、报告、订阅、投递和 RAG 历史仍在 PostgreSQL，不应丢业务事实。
 
+## 压力追问题库（33–120）
+
+下面每题先用“一句结论”回答，再沿证据入口展开。`边界` 是主动承认何时当前结论会失效。
+
+### 产品、业务与指标
+
+| # | 问题 | 回答主线 | 证据与边界 |
+|---:|---|---|---|
+| 33 | 谁是第一目标用户？ | 需要低成本跟踪 AI 行业的开发者/求职者/研究者，而非企业私有知识库 | 公开语料、匿名阅读；私有语料需账号/ACL |
+| 34 | 为什么要 Story？ | 把同一事件多篇文章组织为一个判断单元，又保留独立来源 | `story/story_item`；聚类纯度需持续抽检 |
+| 35 | 精选和热榜有何不同？ | 精选重质量/多样性，热榜重窗口热度/衰减 | selection/heat 代码；都不是事实正确性 |
+| 36 | 报告为什么需要状态机？ | 生成是候选，发布是业务承诺 | report publication + audit；不是多人工作流系统 |
+| 37 | 用户为什么相信摘要？ | 不要求盲信，保留主来源、补充来源和原文跳转 | item/story/report DTO；摘要仍可能需纠错 |
+| 38 | 如何衡量信源价值？ | 时效、全文率、一手性、独立增量、失败成本 | source health/crawl；不能只看内容数 |
+| 39 | 如何衡量邮件价值？ | 确认率、送达、打开/点击、退订、投诉 | 当前先有 delivery 事实；用户行为分析未完整建设 |
+| 40 | 为什么不做逐条推送？ | 高频噪声和成本高，当前承诺周期性已发布报告 | subscription period；未来需用户偏好/频控 |
+| 41 | 内容数量越多越好吗？ | 否，重复、低质和单源集中会恶化检索与阅读 | fulltext/selection/RAG eval；数量只是快照 |
+| 42 | 你的护城河是什么？ | 数据治理、可追溯证据、评测和运行闭环，不是模型 API | 代码/ADR/eval；个人项目没有商业网络效应 |
+
+### 采集、正文与数据质量
+
+| # | 问题 | 回答主线 | 证据与边界 |
+|---:|---|---|---|
+| 43 | 140 个源是否都实时正常？ | 140 是登记配置，ACTIVE/PROBING/隔离是动态运行状态 | `/admin/sources`；必须带时间 |
+| 44 | 如何新增一个信源？ | 注册 profile/源，准备 fixture，probe，全文门通过后 ACTIVE | spec09/10；不能仅加 URL |
+| 45 | 为什么保存 raw response？ | 解析回归、审计、重新处理，不依赖第三方页面仍存在 | raw_document；受版权/保留期约束 |
+| 46 | ETag 有什么价值？ | 304 降带宽且避免重复解析 | cursor/HTTP tests；站点不支持则 hash/cursor |
+| 47 | canonical 错了会怎样？ | 错合并或重复，需要站点规则、页面声明和最终 URL 共同判断 | URL tests；业务 query 不可随意删 |
+| 48 | 如何防 SSRF？ | scheme/host/DNS/IP/每跳重定向检查，限制大小和超时 | ingestion HTTP；DNS rebinding 仍需谨慎 |
+| 49 | 为什么不默认 Playwright？ | 资源重、失败面大、可能触碰访问政策 | 当前无生产 browser 容器；allowlist 才评估 |
+| 50 | PDF 怎么处理？ | 论文 HTML 优先，PDF 降级并保存页/段定位 | arXiv adapter；复杂表格/OCR 非当前范围 |
+| 51 | 发布时间缺失怎么办？ | 保持空并记录 observed/fetched，UI 不伪造精确时间 | ADR/精选时间修复；会降低时间查询确定性 |
+| 52 | Source 隔离如何恢复？ | 修 fixture/adapter 后 probe，满足阶梯再转状态 | source state audit；不手工掩盖失败 |
+| 53 | 同一批重放如何不重复？ | external id/canonical/hash/唯一键/upsert | migrations/repository tests；第三方 ID 变化仍需近重 |
+| 54 | Cursor 与内容怎么保证一致？ | batch 入库提交后才推进 cursor | ingestion transaction；不是跨源全局事务 |
+| 55 | 页面变更如何发现？ | 解析失败率/全文门/fixture/canary | monitor + source backend；不是自动修 selector |
+| 56 | 采集是否合法？ | 只读公开/授权入口，尊重限制，受限源元数据化 | policy/profile；不是法律意见替代 |
+
+### 数据库、状态与一致性
+
+| # | 问题 | 回答主线 | 证据与边界 |
+|---:|---|---|---|
+| 57 | item 和 revision 为什么分开？ | 稳定身份与变化正文分离，引用可追溯旧输入 | V001；revision 增长需保留策略 |
+| 58 | `evidence_passage` 表在哪？ | 是领域术语，物理实现是 `content_chunk` | ADR-0029/Flyway；不能按旧文档找表 |
+| 59 | embedding 为什么与 chunk 同行？ | 当前单模型减少 join/同步 | ADR-0029；多模型需拆表/双索引 |
+| 60 | PostgreSQL 同时搜索会不会慢？ | 当前规模/SLO 可接受，先索引/查询优化 | explain/eval；量级增长触发拆分 |
+| 61 | HNSW 为什么而非 IVFFlat？ | 当前在线召回和较小规模偏向免训练、高 recall | migration/config；需用实际压测验证参数 |
+| 62 | advisory lock 崩溃会死锁吗？ | session 结束自动释放 | processing worker；长任务需监控连接 |
+| 63 | `SKIP LOCKED` 会饿死任务吗？ | 排序/next attempt + 短领取降低风险 | SQL；持续失败靠 backoff/dead state |
+| 64 | CAS 如何防旧结果？ | 输出绑定 input hash/revision/version，提交时比较 | processing tests；外部副作用另处理 |
+| 65 | Outbox 为什么存在却没消费？ | 早期预留和事件审计，当前轮询更简单 | ADR-0028；需要有界清理 |
+| 66 | `processed_event` 有何用？ | 未来消费者幂等预留，不证明消费已实现 | Flyway/无 reader；不要包装 |
+| 67 | 数据删除如何传播？ | tombstone/status、公共查询过滤、向量/缓存清理 | spec；完整权利人流程仍需产品化 |
+| 68 | 如何迁移大表？ | expand/dual read-write/backfill/contract | Flyway 规则；当前尚未经历超大表在线迁移 |
+| 69 | 数据库挂了会怎样？ | read/processing ready 失败，Caddy/Web 可给受控错误 | health/runbook；单机无自动 DB HA |
+| 70 | 连接池怎么定？ | 所有容器池总和小于 DB 上限并留迁移/运维余量 | Compose/config；按真实并发调 |
+
+### RAG 检索、生成与评测
+
+| # | 问题 | 回答主线 | 证据与边界 |
+|---:|---|---|---|
+| 71 | 为什么 embedding 固定？ | 不同向量空间不可混查，切换需全量回填与回归 | ADR-0027；生成模型可独立切 |
+| 72 | Dense 漏型号怎么办？ | sparse/CJK/identifier 通道补精确词，再统一重排 | NVFP4 示例；不能保证所有新词 |
+| 73 | Sparse 中文为什么难？ | simple tokenizer 缺中文词边界，用 CJK bigram 改通道 | ADR-0018；不是通用分词器 |
+| 74 | 时间过滤放哪？ | 计划解析为绝对范围，SQL 前置过滤，重排再用 freshness | temporal trace；元数据缺失会影响 |
+| 75 | RRF 常数 60 怎么定？ | 稳定常用基线，重点由端到端评测验证而非神化常数 | fusion/eval；规模变化可重评 |
+| 76 | Reranker 挂了怎么办？ | 降级到融合排序并标 trace，不返回部分 provider 垃圾 | timeout/degrade tests；质量会下降 |
+| 77 | 为什么不把 top100 都给模型？ | token/延迟、冗余和噪声，选证需多样性 | context budget；太少也会漏召回 |
+| 78 | 如何处理比较题？ | planner 拆对象，证据预算平衡，避免一方占满 | query types/eval；实体解析要准确 |
+| 79 | 如何处理“最近”？ | asked_at + timezone → 绝对时间窗 | temporal tests；用户未给时区用产品默认 |
+| 80 | 多轮会不会传播幻觉？ | 改写只读用户问题，不读旧答案作事实 | conversation tests；错误实体仍可能需澄清 |
+| 81 | 模型直接写 URL 怎么办？ | 忽略，URL 从绑定 chunk 反查 | answer/citation tests |
+| 82 | 支持度阈值如何定？ | 黄金集/人工抽检校准，按高风险关系加审计 | ADR-0021/23；不是绝对真值 |
+| 83 | 缓存怎样知道语料变了？ | corpus fingerprint + query type freshness 粒度 | ADR-0017/tests；指纹设计需随业务复核 |
+| 84 | 为什么拒答不缓存？ | 新语料到来后可能可答，且拒答价值低 | cache tests；可做很短负缓存防攻击 |
+| 85 | 黄金集会不会过拟合？ | 分类/专项/负样本/人工审计和新题保留集 | 90 题仍偏小，需持续扩展 |
+| 86 | Recall 89.9% 是否够？ | 达当前门但仍有约 10% 相关项漏召回，需按风险看失败题 | `/eval`；不能称行业 SOTA |
+| 87 | 引用覆盖 98.8% 等于正确吗？ | 否，只说明有引用；支持率/人工 entailment 另测 | ADR-0021 |
+| 88 | 自动评测何时刷新？ | 模型/语料/策略变化后主动重跑并版本化 | eval docs；不是页面定时更新 |
+| 89 | 在线反馈如何闭环？ | 应记录有用/无用、引用点击和失败类型进入标注队列 | 当前尚不完整，是后续 P2 |
+| 90 | Prompt injection 怎么测？ | 原文不可信边界、恶意 fixture、禁止泄密/指令覆盖 | safety tests；持续增加攻击集 |
+
+### Java、Python、前端与跨服务
+
+| # | 问题 | 回答主线 | 证据与边界 |
+|---:|---|---|---|
+| 91 | 为什么 Java 用 JDBC 不用 JPA？ | PostgreSQL 特性、显式 SQL、DTO 查询更透明 | code；普通 CRUD 可局部 JPA |
+| 92 | FastAPI 负责哪些 HTTP？ | RAG/health，不拥有订阅和管理事实 | routes/Compose |
+| 93 | Python 三角色如何发布一致？ | 同 SHA 镜像不同 command | Compose；故障域仍独立容器 |
+| 94 | 跨语言契约如何防漂移？ | OpenAPI/schema、类型、CI 与接缝测试 | contracts/tests；手写 SQL 仍需审查 |
+| 95 | 为什么 Next 不直连数据库？ | 安全、边界、缓存、DTO 和演进 | architecture；避免浏览器凭据 |
+| 96 | SSR 与 CSR 怎么选？ | 内容首屏/SEO SSR，交互和流式 Client | web code；重页面需测 hydration |
+| 97 | 如何隐藏内部 token？ | server-only env/BFF，同源代理 | Compose/Web；浏览器不持 OPERATOR |
+| 98 | SSE 断开怎么处理？ | 取消后台、未提交不缓存、持久化完整结果才可复用 | incremental/API tests |
+| 99 | 前端怎样展示 stale？ | last-known-good/更新时间/错误状态分离 | UI；不是所有页都自动轮询 |
+| 100 | 导航慢是前端问题吗？ | 分层计时，可能是 SSR/API/DB/外部模型 | navigation evidence；动画不算修复 |
+| 101 | 邮件 HTML 如何防注入？ | 转义第三方标题、受控 Markdown、内联样式 | mailer tests |
+| 102 | 时区在哪转换？ | DB/服务保存 IANA，查询/展示按边界转换 | subscription/temporal tests |
+
+### 安全、部署、运维与扩展
+
+| # | 问题 | 回答主线 | 证据与边界 |
+|---:|---|---|---|
+| 103 | main 合并会自动更新生产吗？ | 不会；需构建 SHA 镜像并显式部署/验收 | release workflow/runbook |
+| 104 | 怎么证明服务器跑哪个版本？ | IMAGE_TAG/OCI revision + Compose，而非目录 HEAD | deployment evidence |
+| 105 | 为什么只有 Caddy 暴露？ | 缩小攻击面、统一 TLS/代理 | prod Compose static tests |
+| 106 | Bearer Token 足够安全吗？ | 单运营者最小实现，高熵/角色/审计；非多租户认证 | ADR-0019 |
+| 107 | 密钥泄露怎么办？ | 立即撤销轮换、查日志/历史、更新服务器 secret、验证 | 运维流程；“忘记”不能撤销泄露 |
+| 108 | 备份如何证明可用？ | checksum + 异机 + 隔离 restore + smoke | status evidence；每日 dump RPO 24h |
+| 109 | 迁移新服务器会换网站名吗？ | 不会，域名/DNS 与主机解耦 | migration runbook |
+| 110 | Ubuntu 24.04 兼容吗？ | 应用容器化，宿主只需受支持 Docker/Compose/内核 | preflight；仍要实际 smoke |
+| 111 | 2C4G OOM 怎么办？ | 先看容器/DB/pool，限并发/内存/swap，再升级 | ops；不能承诺高并发 |
+| 112 | 磁盘增长在哪里？ | DB正文/索引/备份、镜像/build cache、日志 | bounded logs/maintenance；不自动删卷 |
+| 113 | 如何做零停机？ | 当前不承诺；可双机/兼容迁移/Caddy 切换 | 单机边界；业务允许短窗口 |
+| 114 | 何时上消息队列？ | backlog/SLO/独立消费者/轮询成本证据 | ADR-0028 trigger |
+| 115 | 何时上 Elasticsearch？ | FTS 质量/吞吐经优化仍不达标 | ADR-0015；不是简历装饰 |
+| 116 | 何时上 Kubernetes？ | 多节点、故障域、滚动/扩缩和团队收益超过成本 | 当前不需要 |
+| 117 | 如何支持百万文档？ | 分区/归档、异步索引、专用检索评测、对象存储、容量规划 | 这是设计演进，未实测百万 |
+| 118 | 如何支持企业私有语料？ | 账号/租户/ACL 前置过滤、审计和独立索引/密钥 | 当前公开单租户，不可声称已支持 |
+| 119 | 最大技术债是什么？ | 信源持续维护、自动支持度校准、Outbox 预留、单机恢复窗口 | roadmap；按风险排序 |
+| 120 | 如果重做会先改什么？ | 更早建立实现事实/规格校验、原始模型响应观测和用户反馈标注 | 本轮 ADR/GEN-FIX 经验 |
+
 ## 反问练习
 
 - 一手源与媒体冲突时，产品应如何展示，而不是让模型偷偷裁决？

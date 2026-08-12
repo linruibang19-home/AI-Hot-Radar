@@ -143,7 +143,8 @@ subject to: token_budget, time_range, citation_eligibility
 }
 ```
 
-服务端解析 `[E1]` 并绑定真实 `evidence_passage.id`，前端不信任模型生成的 URL。显示格式为 `[1]`，点击打开来源卡片和原文定位。
+服务端解析 `[E1]` 并绑定真实 `content_chunk.id`（领域语义为 evidence passage，见
+ADR-0029），前端不信任模型生成的 URL。显示格式为 `[1]`，点击打开来源卡片和原文定位。
 
 ## 10. 生成后校验
 

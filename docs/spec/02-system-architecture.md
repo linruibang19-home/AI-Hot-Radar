@@ -9,13 +9,17 @@ flowchart TD
     WEB["Next.js Web"] --> API["Spring Boot Core API"]
     API --> PG["PostgreSQL + pgvector"]
     API --> REDIS["Redis"]
-    API --> OUTBOX["Outbox Publisher"]
-    OUTBOX --> AI["FastAPI AI Worker"]
+    SCHED["Python Scheduler"] --> PG
+    PIPE["Python Pipeline"] --> PG
+    API --> AI["FastAPI AI Service"]
     AI --> EXT["Feeds / Web / LLM / Embedding"]
     AI --> PG
 ```
 
-MVP 可以由 Core API 通过受控内部 HTTP 拉取 outbox 任务；M3 在压力和可靠性测试证明有需要后切换 RabbitMQ。任务负载只传 `task_id`/`document_id`，不把正文塞进消息。
+当前生产没有 Outbox Publisher/Consumer。Python Scheduler 以 `FOR UPDATE SKIP LOCKED`
+领取到期信源，Python Pipeline 以 advisory lock、输入版本和幂等写推进处理。`outbox_event`
+是同事务事件日志与未来传输预留点，不是当前任务总线，见 ADR-0028。只有持续积压、查询
+干扰或消费者独立扩缩容等证据出现后，才评估 RabbitMQ。
 
 ## 2. 推荐仓库结构
 
@@ -49,7 +53,7 @@ ai-hot-radar/
 | 模块 | 必须负责 | 禁止负责 |
 |---|---|---|
 | `web` | SSR 页面、交互、展示、流式 RAG UI | 直接访问数据库、保管模型密钥 |
-| `core-api` | 内容查询、Story、报告、用户、订阅、权限、审计、任务状态 | 网页正文解析、Embedding 计算 |
+| `core-api` | 内容查询、Story、报告发布、订阅/邮件、权限、审计、管理状态 | 采集调度、网页正文解析、Embedding 计算 |
 | `ai-service` | 采集适配、正文抽取、AI 结构化、聚类、Embedding、Rerank、回答生成 | 用户权限、收藏和邮件业务事实 |
 | PostgreSQL | 业务事实、索引元数据、向量、outbox | 临时缓存语义 |
 | Redis | 热列表、读缓存、限流、短锁、SSE 临时状态 | 不可恢复任务或唯一业务记录 |
@@ -87,8 +91,8 @@ DISCOVERED -> FETCHED -> PARSED -> ENRICHED -> DEDUPED
 
 ## 6. 数据一致性
 
-- Core API 的业务写入与 `outbox_event` 同事务；
-- Worker 以 `event_id` 写 `processed_event`，重复事件直接确认；
+- 采集与处理以 PostgreSQL 状态、行锁/advisory lock、输入版本和唯一键实现安全重入；
+- `outbox_event` 当前只记录同事务事件；`processed_event` 是预留表，不能当作已消费证据；
 - AI 结果采用 compare-and-set：只有输入 hash 与任务创建时一致才能落库；
 - 索引重建写新 `index_version`，验证后切换，不原地破坏有效索引；
 - Story 人工锁定后，自动聚类只能提出建议，不能覆盖人工决策。
@@ -107,6 +111,8 @@ DISCOVERED -> FETCHED -> PARSED -> ENRICHED -> DEDUPED
 
 ## 8. 部署拓扑
 
-MVP 单机：Nginx/HTTPS + web + core-api + ai-service + PostgreSQL + Redis。生产数据卷必须有每日备份和恢复演练。浏览器渲染 Worker 与主 API 使用独立资源限制。
+当前单机：Caddy/HTTPS + web + core-api + ai-service + Python scheduler + Python pipeline +
+PostgreSQL + Redis，并有备份/监控容器。只有 Caddy 暴露 80/443。浏览器渲染适配器当前
+默认禁用，也没有独立生产容器；若按 allowlist 启用，必须设置独立资源限制。
 
 扩展顺序：增加 Worker 副本 → RabbitMQ → PostgreSQL 读优化/连接池 → OpenSearch；不是直接迁移 Kubernetes。

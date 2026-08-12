@@ -1,8 +1,14 @@
 # 文档导航
 
-本目录按用途分为五类：`spec/` 是锁定契约，`adr/` 记录偏离契约的决策，
+本目录按用途分为六类：`spec/` 是锁定契约，`adr/` 记录偏离契约的决策，
 `design/` 是随开发修订的实现方案，`status/` 是实际运行产生的事实，
-`interview/` 只把已经实现的事实重排成复习与答辩材料。
+`handbook/` 是完整工程教材，`interview/` 把已经实现的事实训练成复习与答辩表达。
+
+## `handbook/` — 完整工程教材
+
+[工程手册入口](handbook/README.md) 从产品问题、四条业务链路、运行服务、数据状态、信源、
+内容、报告邮件一路讲到 RAG、Java/Python/Next、部署和工程权衡。它回答“系统怎样工作、代码
+在哪里、为什么这样做、失败如何恢复”，是吃透项目的第一入口。
 
 ## `spec/` — 工程规格（唯一事实源）
 
@@ -41,6 +47,9 @@
 | [0014](adr/0014-entity-types-align-to-taxonomy.md) | 实体类型以 `config/taxonomy.yaml` 的 8 类为准 |
 | [0015](adr/0015-rag-sparse-channel-uses-postgres.md) | 稀疏检索复用 Postgres 既有索引，不引入 ES / Neo4j |
 | [0016](adr/0016-rag-adaptive-parent-block.md) | 父块自适应阶梯，由查询派生而非物化落表 |
+| [0017–0027](adr/) | 缓存、CJK、鉴权、拒答、引用、迁移、数字审计、发布、订阅与模型配置 |
+| [0028](adr/0028-current-task-orchestration-is-database-polling.md) | 当前后台编排是 PostgreSQL 轮询，Outbox 未消费 |
+| [0029](adr/0029-evidence-passage-is-the-content-chunk-physical-row.md) | evidence passage 的当前物理行是 `content_chunk` |
 
 ## `design/` — 开发方案（活文档）
 
@@ -76,4 +85,5 @@
 - [../README.md](../README.md) — 项目总入口与规范优先级
 - [../DEVELOPMENT.md](../DEVELOPMENT.md) — 本地开发、启动、常见问题
 - [interview/README.md](interview/README.md) — 面试准备导航、系统地图、题库与演示脚本
-- [interview-guide.md](interview-guide.md) — 真实排查案例的深度讲解稿
+- [interview-guide.md](interview-guide.md) — 2026-08-12 冻结的早期深挖稿；新材料已迁入 handbook/interview
+- [archive-policy.md](archive-policy.md) — 文档状态、冻结与归档规则

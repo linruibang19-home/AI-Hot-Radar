@@ -17,6 +17,7 @@
 | 需要了解什么 | 首选文档 |
 |---|---|
 | 五分钟了解项目、运行与核心指标 | `README.md` |
+| 从业务到代码系统学习 | `docs/handbook/README.md` |
 | 面试复习、题库、简历与演示 | `docs/interview/README.md` |
 | 腾讯云 Ubuntu 24.04 迁移与购买基线 | `docs/status/tencent-cloud-migration-readiness-20260812.md` |
 | 作品集页面语义、截图与验证 | `docs/status/portfolio-closeout-20260812.md` |
@@ -87,13 +88,14 @@ DeepSeek 生成模型白名单切换已完成；生产 SMTP 已实投。ChromeCo
 | `docs/spec/11-end-to-end-runbook.md` | 全链路运行与恢复 | 当前 |
 | `docs/design/` | RAG 评测、实现和部署设计 | 当前 |
 | `docs/code-map.md` | 全部源码、迁移、配置、基础设施与测试的学习地图 | 当前 |
-| `docs/adr/` | 已锁定架构决策与回滚条件 | 当前至 ADR-0027 |
-| `docs/interview/` | 00–10 十一份面试学习、题库、STAR、白板与演示材料 | 当前 |
+| `docs/adr/` | 已锁定架构决策与回滚条件 | 当前至 ADR-0029 |
+| `docs/handbook/` | 业务、数据、三端、RAG、部署与测试的 15 章工程教材 | 当前 |
+| `docs/interview/` | 00–12 面试表达、120 题、10 个 STAR、代码走读和学习计划 | 当前 |
 | `docs/assets/screenshots/` | README 使用的脱敏本地页面截图 | 2026-08-12 封版 |
 
 ## 4. 当前交付证据
 
-- Python：Ruff、mypy 86 个源码文件、pytest 878/878；
+- Python：Ruff、mypy 86 个源码文件、pytest 884 passed / 2 skipped；
 - Java：Maven verify 74/74；
 - Web：npm audit 0、typecheck、lint、Vitest 73/73、Next.js 15.5.23 production build；
 - 数据库：140 个信源、2040 条内容、8089 个分块且 100% 向量化、1622 个 Story；

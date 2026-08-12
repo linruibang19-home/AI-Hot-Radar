@@ -12,7 +12,7 @@
 | `raw_document` | UUID | 原始响应元数据、对象引用、输入 hash |
 | `content_item` | UUID | 单篇标准化资讯 |
 | `content_revision` | UUID | 标题、正文和结构化字段版本 |
-| `evidence_passage` | UUID | 可引用证据段及定位信息 |
+| evidence passage → `content_chunk` | UUID | 可引用证据段、定位、FTS 与 1024 维向量 |
 | `entity` | UUID | 公司、产品、模型、技术、人物 |
 | `item_entity` | item_id+entity_id | 提及、主语/宾语、置信度 |
 | `topic` | UUID | 稳定主题体系 |
@@ -20,7 +20,7 @@
 | `story` | UUID | 真实事件聚合单元 |
 | `story_item` | story_id+item_id | 支持、主来源、纠正或观点关系 |
 | `story_relation` | from+to+type | 前因、后续、竞争、纠正等 Graph-lite 边 |
-| `embedding_record` | UUID | item/story/passage 向量和模型版本 |
+| embedding → `content_chunk.embedding` | chunk_id | 当前单模型向量；没有独立 `embedding_record` 表 |
 | `selection_record` | UUID | 精选决定、分数和理由 |
 | `report` | UUID | 日/周/月报及版本 |
 | `report_story` | report_id+story_id | 报告章节、顺序和角色 |
@@ -42,14 +42,13 @@ content_type, source_tier, quality_score,
 status, processor_version, created_at
 ```
 
-`evidence_passage` 至少包含：
+逻辑 evidence passage 当前由 `content_chunk` 承载，至少包含：
 
 ```text
-id, item_id, revision_id, passage_index,
-heading_path, text, text_hash,
-char_start, char_end, source_locator,
-published_at, language, token_count,
-is_quote_eligible, created_at
+id, content_revision_id, ordinal,
+heading_path, body_text, content_hash,
+token_count, search_vector, embedding,
+embedding_model, processor_version, created_at
 ```
 
 `story` 至少包含：
@@ -69,7 +68,7 @@ human_locked, created_at, updated_at
 - `content_item(published_at desc, status, content_type)`；
 - `item_entity(entity_id, item_id)`；
 - `story(latest_report_at desc, status)`；
-- `evidence_passage(item_id, passage_index)`；
+- `content_chunk(content_revision_id, ordinal)`；
 - `tsvector`：标题 A、实体别名 A、摘要 B、正文 C；
 - pgvector HNSW 索引按实际维度创建；小于 50k 向量时先评估顺序扫描；
 - 向量查询必须先尽可能执行时间、语言、状态等过滤。
