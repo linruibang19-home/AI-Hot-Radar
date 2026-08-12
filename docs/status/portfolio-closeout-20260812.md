@@ -21,7 +21,9 @@
 ### 公开作品集
 
 - README 增加产品一览、系统架构 Mermaid 与五张脱敏页面截图。
-- 新增 `docs/interview/`：系统地图、数据/RAG、生产运维、题库、简历与演示脚本。
+- `TASK-M5-011` 将 `docs/interview/` 补齐为 00–10 十一份分层材料：一页纸、业务架构、
+  采集与数据、RAG、后端一致性、前端、部署安全、题库、简历 STAR、白板和演示脚本；
+  旧的五份合并稿已删除，避免两套叙事继续漂移。
 - 截图由本机无头 Chrome 在 `1440x1000` 生成，未包含浏览器扩展、邮箱、令牌或密钥。
 - Chrome Codex/Computer Use 因本机 kernel assets 路径错误不可用，按前端调试规范降级到同机
   headless Chrome；这不是应用错误。
@@ -68,5 +70,6 @@ PASS: 200; contains 刷新状态, 不会主动轮询 and 本次读取
 
 ## 下一张任务卡
 
-首次作品集封版后进入维护，不再扩大 M5：优先执行生产 smoke 与文档/镜像 SHA 对齐；
-之后按 `docs/status/handoff-20260812.md` 的 P1 顺序扩大噪声集与用户反馈闭环。
+作品集材料由 `TASK-M5-011` 做最终分层收口。此后进入维护：按
+`docs/status/tencent-cloud-migration-readiness-20260812.md` 做新机平行恢复与备案后 DNS 切换，
+再按 `docs/status/handoff-20260812.md` 的 P1 顺序扩大噪声集与用户反馈闭环。
