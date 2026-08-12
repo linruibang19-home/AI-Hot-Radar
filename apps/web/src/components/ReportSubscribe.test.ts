@@ -17,6 +17,9 @@ describe("report email subscription UI", () => {
     expect(SUBSCRIBE_SOURCE).toContain('type="email"');
     expect(SUBSCRIBE_SOURCE).toContain("periods.length === 0");
     expect(SUBSCRIBE_SOURCE).toContain("未经确认不会投递");
+    expect(SUBSCRIBE_SOURCE).toContain("不会逐条发送动态");
+    expect(SUBSCRIBE_SOURCE).toContain("不会补发确认前的历史期刊");
+    expect(SUBSCRIBE_SOURCE).toContain("在线原文与退订链接");
     expect(SUBSCRIBE_SOURCE).toContain('fetch("/api/subscriptions"');
   });
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import inspect
+import uuid
+from datetime import date
 from typing import get_args
 
 import pytest
@@ -11,8 +13,14 @@ from ahr.processing.schemas import ContentType
 from ahr.processing.selection import (
     CONTENT_TYPE_WEIGHT,
     DAILY_QUOTA,
+    MAX_PER_CONTENT_TYPE_PER_DAY,
+    MAX_PER_SOURCE_FAMILY_PER_DAY,
     MAX_PER_SOURCE_PER_DAY,
+    Candidate,
+    SelectionFactors,
+    choose_daily,
     score_item,
+    source_family,
 )
 from ahr.processing.topics import known_slugs, normalize_slug, resolve
 
@@ -234,6 +242,61 @@ def test_top_reasons_names_three_factors() -> None:
 def test_quota_constants_prevent_single_source_domination() -> None:
     """53 of the sources are GitHub release feeds; one must not fill a day."""
     assert MAX_PER_SOURCE_PER_DAY < DAILY_QUOTA
+
+
+def test_arxiv_subject_feeds_share_one_editorial_family() -> None:
+    assert source_family("arxiv-cs-ai", "arxiv_feed_paper") == "arxiv"
+    assert source_family("arxiv-cs-lg", "arxiv_feed_paper") == "arxiv"
+    assert source_family("nvidia-blog", "rss_to_article") == "nvidia-blog"
+
+
+def test_daily_portfolio_caps_papers_without_removing_them() -> None:
+    assert 0 < MAX_PER_SOURCE_FAMILY_PER_DAY < DAILY_QUOTA
+    assert 0 < MAX_PER_CONTENT_TYPE_PER_DAY["research"] < DAILY_QUOTA
+
+
+def test_daily_portfolio_does_not_treat_arxiv_subjects_as_independent_publishers() -> None:
+    factors = SelectionFactors(90, 100, 80, 100, 100, 0)
+    papers = [
+        Candidate(
+            uuid.uuid4(),
+            f"arxiv-cs-{index}",
+            "arxiv",
+            "research",
+            date.today(),
+            factors,
+            99 - index,
+        )
+        for index in range(8)
+    ]
+    releases = [
+        Candidate(
+            uuid.uuid4(),
+            f"vendor-{index}",
+            f"vendor-{index}",
+            "product_release",
+            date.today(),
+            factors,
+            80 - index,
+        )
+        for index in range(12)
+    ]
+
+    chosen = choose_daily(papers + releases)
+
+    assert len(chosen) == DAILY_QUOTA
+    assert (
+        sum(candidate.source_family == "arxiv" for candidate in chosen)
+        == MAX_PER_SOURCE_FAMILY_PER_DAY
+    )
+    assert any(candidate.content_type == "product_release" for candidate in chosen)
+
+
+def test_selection_uses_shanghai_editorial_day() -> None:
+    from ahr.processing import selection
+
+    source = inspect.getsource(selection.select_for_days)
+    assert "AT TIME ZONE 'Asia/Shanghai' AS editorial_stamp" in source
 
 
 def test_reselecting_preserves_an_llm_written_reason() -> None:

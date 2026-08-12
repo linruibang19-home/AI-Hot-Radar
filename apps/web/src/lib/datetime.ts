@@ -58,6 +58,23 @@ export function formatTime(value?: string | null): string {
   return `${hour}:${parts.minute}`;
 }
 
+/**
+ * Timeline label that respects the precision provided by the publisher.
+ *
+ * arXiv RSS publishes a daily batch timestamp, not a paper-level minute.  The
+ * stored instant remains useful for ordering, but rendering its Shanghai
+ * conversion as "12:00" falsely implies all papers were individually released
+ * at noon.
+ */
+export function formatPublicationTime(
+  sourceId: string,
+  publishedAt?: string | null,
+  observedAt?: string | null,
+): string {
+  if (sourceId.startsWith("arxiv-")) return "当日发布";
+  return formatTime(publishedAt ?? observedAt);
+}
+
 /** "YYYY-MM-DD" in the display timezone — the key the feed groups by. */
 export function dayKey(value?: string | null): string | null {
   const date = parse(value);
