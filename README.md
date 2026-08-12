@@ -290,6 +290,7 @@ diff、Flyway 空库/升级、依赖审计、秘密扫描、Compose smoke 与受
 | 想了解什么 | 从这里开始 |
 |---|---|
 | 面试复习全套材料 | [`docs/interview/README.md`](docs/interview/README.md) |
+| 按业务链路阅读全部代码 | [`docs/code-map.md`](docs/code-map.md) |
 | 30 秒 / 2 分钟 / 5 分钟介绍 | [`00-project-one-pager.md`](docs/interview/00-project-one-pager.md) |
 | 业务与系统架构 | [`01-business-and-architecture.md`](docs/interview/01-business-and-architecture.md) |
 | 采集、全文门与数据模型 | [`02-ingestion-and-data-model.md`](docs/interview/02-ingestion-and-data-model.md) |
@@ -298,5 +299,6 @@ diff、Flyway 空库/升级、依赖审计、秘密扫描、Compose smoke 与受
 | 题库、STAR、白板与演示 | [`07`](docs/interview/07-interview-question-bank.md) · [`08`](docs/interview/08-resume-and-star-stories.md) · [`09`](docs/interview/09-system-design-whiteboard.md) · [`10`](docs/interview/10-demo-script.md) |
 | 锁定规格与架构决策 | [`docs/spec/00-master-spec.md`](docs/spec/00-master-spec.md) · [`docs/adr/`](docs/adr/) |
 | 完整实现状态与逐轮证据 | [`docs/spec/12-delivery-index.md`](docs/spec/12-delivery-index.md) · [`docs/status/project-status.md`](docs/status/project-status.md) |
+| 当前/历史状态与验收证据分类 | [`docs/status/README.md`](docs/status/README.md) |
 
 面试与简历中的每个指标都应带上**日期、样本量、模型和测量环境**；线上动态计数在展示前重新读取。
