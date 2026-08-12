@@ -112,6 +112,23 @@ export default function EvalPage() {
           这不是主观评分：主检索、90 题生成与中文厂商噪声专项分别绑定到可追溯 run。
           自动引用精度受稀疏标注影响，只作诊断；发布正确性采用段落支持门与人工 P0 审计。
         </p>
+        <div className="quality-snapshot" aria-label="当前发布评测快照">
+          <div>
+            <strong>静态发布评测</strong>
+            <span>
+              语料截止 {release.snapshot.cutoff.slice(0, 10)} · {release.snapshot.items} 条内容
+            </span>
+          </div>
+          <div>
+            <span>{release.snapshot.embeddingModel}</span>
+            <span>{release.snapshot.rerankerModel}</span>
+            <span>{release.snapshot.generationModel}</span>
+          </div>
+        </div>
+        <p className="quality-refresh-note">
+          本页不会随线上提问自动变化。切换模型、提示词、切块或检索策略后，必须重跑固定黄金集并发布新快照；
+          实时请求的成本、延迟与错误请查看 <a href="/ops">运行状态</a>。
+        </p>
         <div className="quality-run-ids">
           <code>{release.retrievalRunId}</code>
           <code>{release.generationRunId}</code>

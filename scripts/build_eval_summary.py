@@ -424,6 +424,9 @@ def build() -> dict[str, Any]:
     retrieval_overall = release_retrieval["summary"]["overall"]
     generation_overall = release_generation["summary"]["overall"]
     specialist_summaries = release_specialist["summaries"]
+    retrieval_config = release_retrieval["config"]
+    generation_config = release_generation["config"]
+    corpus_snapshot = retrieval_config["corpus_snapshot"]
 
     return {
         "generatedFrom": "docs/status/eval/m4-rag-eval-*.json",
@@ -431,6 +434,13 @@ def build() -> dict[str, Any]:
             "retrievalRunId": release_retrieval["run_id"],
             "generationRunId": release_generation["run_id"],
             "specialistRunId": release_specialist["run_id"],
+            "snapshot": {
+                "cutoff": corpus_snapshot["snapshot_cutoff"],
+                "items": corpus_snapshot["items_in_snapshot"],
+                "embeddingModel": retrieval_config["embedding_model"],
+                "rerankerModel": retrieval_config["reranker_model"],
+                "generationModel": generation_config["llm"],
+            },
             "retrieval": retrieval_overall,
             "generation": generation_overall,
             "specialist": {

@@ -1,7 +1,8 @@
 # 文档导航
 
-本目录按用途分为四类：`spec/` 是锁定契约，`adr/` 记录偏离契约的决策，
-`design/` 是随开发修订的实现方案，`status/` 是实际运行产生的事实。
+本目录按用途分为五类：`spec/` 是锁定契约，`adr/` 记录偏离契约的决策，
+`design/` 是随开发修订的实现方案，`status/` 是实际运行产生的事实，
+`interview/` 只把已经实现的事实重排成复习与答辩材料。
 
 ## `spec/` — 工程规格（唯一事实源）
 
@@ -63,3 +64,5 @@
 
 - [../README.md](../README.md) — 项目总入口与规范优先级
 - [../DEVELOPMENT.md](../DEVELOPMENT.md) — 本地开发、启动、常见问题
+- [interview/README.md](interview/README.md) — 面试准备导航、系统地图、题库与演示脚本
+- [interview-guide.md](interview-guide.md) — 真实排查案例的深度讲解稿
