@@ -2,7 +2,8 @@
 
 ## 1. 简历项目标题
 
-**AI Hot Radar｜可追溯 AI 行业情报与时效 RAG 平台**  
+**AI Hot Radar｜可追溯 AI 行业情报与时效 RAG 平台**
+
 Next.js · Spring Boot · FastAPI · PostgreSQL/pgvector · Redis · Docker Compose
 
 ## 2. 三条简历 bullet（事实版）
