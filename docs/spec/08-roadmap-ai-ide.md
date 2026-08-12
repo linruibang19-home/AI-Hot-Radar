@@ -350,7 +350,7 @@ Docker 页面 smoke 与 Chrome 桌面/移动端视觉验收通过。
 
 ### TASK-M5-011｜作品集叙事补全与腾讯云迁移基线
 
-**状态**：🚧 2026-08-12 实现完成，等待 PR/CI 关闭；不改变运行架构。
+**状态**：✅ 2026-08-12 完成；纯文档与迁移基线经 PR #12 / GitHub CI 验证。
 **读取**：`00-master-spec.md`、`02-system-architecture.md`、`03-data-ingestion.md`、
 `04-rag-agent-design.md`、`06-frontend-spec.md`、`07-quality-security-ops.md`、
 `11-end-to-end-runbook.md`、TASK-M5-010 与 `docs/status/handoff-20260812.md`。
