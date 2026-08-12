@@ -387,7 +387,7 @@ Docker 运行和未运行时均安全；重建本地容器后实际日志驱动�
 
 ### TASK-M5-013｜仓库卫生、证据归档与代码学习地图
 
-**状态**：🚧 2026-08-12 执行中；只整理可再生产物和知识入口，不改变业务行为。
+**状态**：✅ 2026-08-12 完成；只整理可再生产物和知识入口，不改变业务行为。
 **读取**：`00-master-spec.md`、`07-quality-security-ops.md`、`12-delivery-index.md`、
 TASK-M5-011、TASK-M5-012 与当前全部受 Git 管理文件。
 **输入**：482 个受 Git 管理文件、83 份 `docs/status/` 文件、两个历史工具 worktree、
@@ -402,8 +402,8 @@ TASK-M5-011、TASK-M5-012 与当前全部受 Git 管理文件。
 重复内容或敏感串；Markdown 相对链接、规格、Python、Java、Web、Compose 与 Flyway 门禁通过；
 整理 PR 经 CI 合入 `main`，生产版本差异被明确记录。
 **当前证据**：`docs/status/repository-hygiene-20260812.md`、`docs/code-map.md` 与
-`docs/status/README.md`；本地 Python/Compose/文档门禁已通过，Java/Web/Flyway 由 PR 的干净
-JDK 21/Node/PostgreSQL 环境完成最终判定。
+`docs/status/README.md`；PR #14 的 GitHub Actions run `31610415603` 已在干净的
+JDK 21/Node/Python/PostgreSQL 环境通过 Spec、AI service、Core API、Web 与 Flyway 五组门禁。
 
 ## 4. AI IDE 统一提示词
 
