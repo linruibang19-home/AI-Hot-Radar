@@ -348,6 +348,27 @@ Docker 页面 smoke 与 Chrome 桌面/移动端视觉验收通过。
 **当前证据**：`docs/status/portfolio-closeout-20260812.md`、`docs/interview/README.md`、
 `docs/assets/screenshots/`；Web 73/73、typecheck、lint、production build 与 Docker HTTP smoke 通过。
 
+### TASK-M5-011｜作品集叙事补全与腾讯云迁移基线
+
+**状态**：✅ 2026-08-12 完成；纯文档与迁移基线经 PR #12 / GitHub CI 验证。
+**读取**：`00-master-spec.md`、`02-system-architecture.md`、`03-data-ingestion.md`、
+`04-rag-agent-design.md`、`06-frontend-spec.md`、`07-quality-security-ops.md`、
+`11-end-to-end-runbook.md`、TASK-M5-010 与 `docs/status/handoff-20260812.md`。
+**输入**：已上线的 M0–M5 产品、五张脱敏截图、固定 RAG 发布评测、生产运行证据，
+以及待购买的广州 2C4G5M / 60GB Ubuntu 24.04 Docker 轻量应用服务器。
+**产出**：把根 README 重排为 30 秒、3 分钟、30 分钟三层阅读入口；按业务架构、采集与
+数据模型、RAG、后端一致性、前端、部署安全、题库、简历 STAR、白板与演示拆成
+`docs/interview/00`–`10` 十一份独立材料；记录新服务器兼容性、备案前平行迁移、DNS 回切
+与容量边界。
+**边界**：不修改 RAG 策略、服务边界、数据库、API 或生产运行提交；不把静态评测写成
+实时监控；不把动态生产计数写成无日期的长期承诺；不在截图、README 或迁移文档中记录
+邮箱、令牌、口令与服务器管理凭据；本卡不代替主人购买实例或提交 ICP 备案。
+**完成标准**：README 能分别支持 30 秒扫读、3 分钟架构理解与 30 分钟技术深挖；11 份
+面试材料各自回答一个稳定主题且没有并行重复版本；所有相对链接、图片、敏感串扫描与
+仓库文档门禁通过；分支经 PR/CI 合入 `main`，并明确本次纯文档变更不触发生产部署。
+**当前证据**：`docs/status/portfolio-interview-completion-20260812.md`、
+`docs/status/tencent-cloud-migration-readiness-20260812.md`、`docs/interview/README.md`。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：
