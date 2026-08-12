@@ -315,7 +315,7 @@ Web 类型、Lint、测试、构建与 Docker 运行态通过，Chrome 视觉验
 
 ### TASK-M5-009｜生产精选时间语义与邮件订阅体验收口
 
-**状态**：🚧 2026-08-12 执行中。
+**状态**：✅ 2026-08-12 完成并随 `v0.1.6@6f03e75` 上线。
 **读取**：`03-data-ingestion.md`、`06-frontend-spec.md`、`09-source-registry-fulltext.md`、
 `10-source-adapter-implementation.md`、TASK-M5-004。
 **输入**：生产首页当天 12 条精选均来自 arXiv 且显示 12:00 的实测、现有双重确认邮件订阅、
@@ -328,6 +328,8 @@ Web 类型、Lint、测试、构建与 Docker 运行态通过，Chrome 视觉验
 **完成标准**：当天非 arXiv 候选可进入当天精选，arXiv 不再占满整日；精确时间来源仍显示
 时分、arXiv 显示批次语义；邮件 UI 在提交前后均能回答“会收到什么/何时收到”；Python、
 Java、Web、Compose 与公网桌面/移动端验收通过，发布后数据库和页面证据写入状态文档。
+**当前证据**：`docs/status/v016-selection-email-20260812.md`；生产当天 12 条精选已分布到
+8 个来源族，arXiv 仅 2 条；1 个日报订阅已显式确认，下一期开始投递。
 
 ## 4. AI IDE 统一提示词
 
