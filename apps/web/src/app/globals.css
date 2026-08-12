@@ -2625,6 +2625,50 @@ summary:focus-visible {
   line-height: 1.65;
 }
 
+.report-subscribe-flow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.report-subscribe-flow li {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px;
+}
+
+.report-subscribe-flow li > strong {
+  display: grid;
+  flex: 0 0 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 11px;
+}
+
+.report-subscribe-flow span {
+  display: grid;
+  gap: 3px;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.report-subscribe-flow small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
 .report-subscribe-email {
   display: grid;
   gap: 6px;
@@ -2724,6 +2768,13 @@ summary:focus-visible {
 .report-subscribe-submit {
   width: 100%;
   padding: 10px 14px;
+}
+
+.report-subscribe-form .report-subscribe-hint {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: center;
 }
 
 .subscription-action-page {
@@ -3143,6 +3194,12 @@ summary:focus-visible {
 
   .report-paper {
     max-width: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .report-subscribe-flow {
+    grid-template-columns: 1fr;
   }
 }
 

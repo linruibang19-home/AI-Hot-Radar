@@ -1,4 +1,4 @@
-import { dayKey, formatTime, formatWeekday } from "@/lib/datetime";
+import { dayKey, formatPublicationTime, formatWeekday } from "@/lib/datetime";
 import { CategoryTabs, SearchBox } from "@/components/CategoryTabs";
 import { HotList } from "@/components/HotList";
 import { ItemCard } from "@/components/ItemCard";
@@ -139,7 +139,11 @@ export default async function Home({
             {entries.map((entry) => (
               <TimelineRow
                 key={entry.item.id}
-                time={formatTime(entry.item.publishedAt ?? entry.item.observedAt)}
+                time={formatPublicationTime(
+                  entry.item.source.id,
+                  entry.item.publishedAt,
+                  entry.item.observedAt,
+                )}
               >
                 <ItemCard item={entry.item} selectionReason={entry.reason} curated />
               </TimelineRow>

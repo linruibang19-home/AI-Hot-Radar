@@ -18,9 +18,10 @@ from dataclasses import asdict, dataclass
 from datetime import date
 from typing import Any
 
-# v2 adds the corroboration factor; the version is recorded per selection so a
-# re-ranked shortlist can be told apart from one scored by the old weights.
-ALGORITHM_VERSION = "select-v2"
+# v3 keeps the scoring formula and adds portfolio constraints.  The version is
+# recorded per selection so a shortlist produced before source-family/content-
+# type diversity can be distinguished from the current one.
+ALGORITHM_VERSION = "select-v3"
 
 # How many items may be selected per day. Small enough to stay curated, large
 # enough that a busy release day is not truncated to a single vendor.
@@ -29,6 +30,19 @@ DAILY_QUOTA = 12
 # One source should not occupy the whole day: 53 of the sources are GitHub
 # release feeds and would otherwise dominate every date group.
 MAX_PER_SOURCE_PER_DAY = 3
+
+# A configured source is not always an independent editorial voice.  arXiv has
+# seven subject feeds in the registry; counting each subject as a separate
+# source let one daily batch occupy all twelve homepage slots.  Keep papers in
+# the shortlist, but treat the feeds as one publisher family.
+MAX_PER_SOURCE_FAMILY_PER_DAY = 3
+
+# Research is important, but the curated homepage is a cross-section of the AI
+# industry rather than a paper-only feed.  Four of twelve leaves room for model,
+# product, security, policy and business changes while still surfacing the top
+# papers.  The uncurated content library remains available for readers who want
+# every research item; this cap applies only to the twelve-item shortlist.
+MAX_PER_CONTENT_TYPE_PER_DAY = {"research": 4}
 
 TIER_WEIGHT = {"primary": 1.0, "expert": 0.85, "secondary": 0.7, "community": 0.5}
 
@@ -132,9 +146,46 @@ def score_item(
 class Candidate:
     item_id: uuid.UUID
     source_id: str
+    source_family: str
+    content_type: str | None
     day: date
     factors: SelectionFactors
     score: float
+
+
+def source_family(source_id: str, profile: str) -> str:
+    """Return the editorial publisher family used by diversity constraints."""
+    if profile == "arxiv_feed_paper" or source_id.startswith("arxiv-"):
+        return "arxiv"
+    return source_id
+
+
+def choose_daily(group: list[Candidate]) -> list[Candidate]:
+    """Choose one scored daily portfolio with publisher and type diversity."""
+    group.sort(key=lambda candidate: candidate.score, reverse=True)
+    per_source: dict[str, int] = {}
+    per_family: dict[str, int] = {}
+    per_content_type: dict[str, int] = {}
+    chosen: list[Candidate] = []
+    for candidate in group:
+        if len(chosen) >= DAILY_QUOTA:
+            break
+        used = per_source.get(candidate.source_id, 0)
+        if used >= MAX_PER_SOURCE_PER_DAY:
+            continue
+        family_used = per_family.get(candidate.source_family, 0)
+        if family_used >= MAX_PER_SOURCE_FAMILY_PER_DAY:
+            continue
+        content_type = candidate.content_type or "unknown"
+        type_used = per_content_type.get(content_type, 0)
+        type_limit = MAX_PER_CONTENT_TYPE_PER_DAY.get(content_type, DAILY_QUOTA)
+        if type_used >= type_limit:
+            continue
+        per_source[candidate.source_id] = used + 1
+        per_family[candidate.source_family] = family_used + 1
+        per_content_type[content_type] = type_used + 1
+        chosen.append(candidate)
+    return chosen
 
 
 def select_for_days(connection: Any, *, days: int = 7) -> dict[str, int]:
@@ -142,9 +193,10 @@ def select_for_days(connection: Any, *, days: int = 7) -> dict[str, int]:
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT ci.id, ci.source_id, s.source_tier, ci.content_type,
+            SELECT ci.id, ci.source_id, s.profile, s.source_tier, ci.content_type,
                    ci.quality_score,
-                   COALESCE(ci.published_at, ci.observed_at) AS stamp,
+                   COALESCE(ci.published_at, ci.observed_at)
+                       AT TIME ZONE 'Asia/Shanghai' AS editorial_stamp,
                    EXTRACT(EPOCH FROM (now() - COALESCE(ci.published_at, ci.observed_at))) / 3600.0,
                    COALESCE(length(cr.body_text), 0),
                    COALESCE(st.independent_source_count, 1)
@@ -165,6 +217,7 @@ def select_for_days(connection: Any, *, days: int = 7) -> dict[str, int]:
         (
             item_id,
             source_id,
+            profile,
             tier,
             content_type,
             quality,
@@ -185,6 +238,11 @@ def select_for_days(connection: Any, *, days: int = 7) -> dict[str, int]:
             Candidate(
                 item_id=uuid.UUID(str(item_id)),
                 source_id=source_id,
+                source_family=source_family(source_id, profile),
+                content_type=content_type,
+                # The SQL expression already converted the timestamp to the
+                # product's editorial timezone.  A 00:30 CST release therefore
+                # cannot be selected under the previous UTC day.
                 day=stamp.date(),
                 factors=factors,
                 score=factors.total(),
@@ -197,18 +255,7 @@ def select_for_days(connection: Any, *, days: int = 7) -> dict[str, int]:
 
     written = 0
     for day, group in by_day.items():
-        group.sort(key=lambda c: c.score, reverse=True)
-
-        per_source: dict[str, int] = {}
-        chosen: list[Candidate] = []
-        for candidate in group:
-            if len(chosen) >= DAILY_QUOTA:
-                break
-            used = per_source.get(candidate.source_id, 0)
-            if used >= MAX_PER_SOURCE_PER_DAY:
-                continue
-            per_source[candidate.source_id] = used + 1
-            chosen.append(candidate)
+        chosen = choose_daily(group)
 
         with connection.cursor() as cursor:
             # Withdraw the previous automatic shortlist for this day so a rerun
