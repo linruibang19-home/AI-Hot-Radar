@@ -37,8 +37,16 @@ name: ai-hot-radar
 
 x-image-repo: &image-repo ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}
 
+x-logging: &default-logging
+  logging:
+    driver: local
+    options:
+      max-size: "10m"
+      max-file: "3"
+
 services:
   postgres:
+    <<: *default-logging
     image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ai_hot_radar}
@@ -60,6 +68,7 @@ services:
     restart: unless-stopped
 
   redis:
+    <<: *default-logging
     image: redis:7-alpine
     # ADR-005 scopes Redis to cache, rate limiting and short locks — nothing
     # here is a source of truth, so evicting under pressure is correct
@@ -86,6 +95,7 @@ services:
     restart: unless-stopped
 
   core-api:
+    <<: *default-logging
     image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/core-api:${IMAGE_TAG:-latest}
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ai_hot_radar}
@@ -111,6 +121,7 @@ services:
     restart: unless-stopped
 
   ai-service:
+    <<: *default-logging
     image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/ai-service:${IMAGE_TAG:-latest}
     environment:
       APP_ENV: production
@@ -147,6 +158,7 @@ services:
     restart: unless-stopped
 
   scheduler:
+    <<: *default-logging
     image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/ai-service:${IMAGE_TAG:-latest}
     command:
       ["python", "-m", "ahr.cli", "schedule", "--interval", "120", "--batch-size", "10"]
@@ -173,6 +185,7 @@ services:
       disable: true
 
   pipeline:
+    <<: *default-logging
     image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/ai-service:${IMAGE_TAG:-latest}
     command:
       [
@@ -202,6 +215,7 @@ services:
       disable: true
 
   web:
+    <<: *default-logging
     image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/web:${IMAGE_TAG:-latest}
     environment:
       API_BASE_URL: http://core-api:8080
@@ -223,6 +237,7 @@ services:
 
   # The only container with a published port.
   caddy:
+    <<: *default-logging
     image: caddy:2-alpine
     ports:
       - "80:80"
@@ -245,6 +260,7 @@ services:
   # that lives outside the deployment is one more thing to remember when the
   # server is rebuilt, and this one comes up with the stack.
   backup:
+    <<: *default-logging
     image: pgvector/pgvector:pg16
     entrypoint: ["/bin/sh", "/backup.sh"]
     environment:
@@ -269,6 +285,7 @@ services:
   # mutate the stack; after a bounded number of failures it posts a redacted
   # event to the operator-provided HTTPS webhook.
   monitor:
+    <<: *default-logging
     image: ${IMAGE_REPO:-ghcr.io/linruibang19-home/ai-hot-radar}/ai-service:${IMAGE_TAG:-latest}
     command: ["python", "/monitor.py"]
     environment:
@@ -305,6 +322,7 @@ services:
   # On-demand, isolated restore rehearsal. It only accepts a database whose
   # name starts with ai_hot_radar_restore_verify and removes it on success.
   restore-verify:
+    <<: *default-logging
     profiles: ["tools"]
     image: pgvector/pgvector:pg16
     entrypoint: ["/bin/sh", "/restore-verify.sh"]

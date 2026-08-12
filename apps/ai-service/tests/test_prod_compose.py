@@ -31,6 +31,14 @@ def test_it_parses_at_all(compose: dict) -> None:
     assert compose["services"], "no services parsed"
 
 
+def test_every_service_has_bounded_local_logs(compose: dict) -> None:
+    for name, service in compose["services"].items():
+        assert service.get("logging") == {
+            "driver": "local",
+            "options": {"max-size": "10m", "max-file": "3"},
+        }, f"{name} can grow unbounded container logs"
+
+
 def test_only_the_proxy_is_exposed(compose: dict) -> None:
     """Everything else reaches the internet through Caddy. A stray mapping here
     is an unauthenticated service on a public IP — `ai-service` in particular
