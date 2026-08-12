@@ -12,6 +12,7 @@
 | 完整交付导航 | [../spec/12-delivery-index.md](../spec/12-delivery-index.md) |
 | 腾讯云迁移 | [tencent-cloud-migration-readiness-20260812.md](tencent-cloud-migration-readiness-20260812.md) |
 | 仓库清理与归档 | [repository-hygiene-20260812.md](repository-hygiene-20260812.md) |
+| 实现事实与文档教材审计 | [documentation-audit-20260813.md](documentation-audit-20260813.md) |
 
 ## RAG 证据
 

@@ -1,7 +1,8 @@
 # AI Hot Radar 面试准备总入口
 
 本目录不是第二套规格；事实和边界仍以 [`../spec/00-master-spec.md`](../spec/00-master-spec.md)、
-领域规格、ADR 和状态证据为准。这里把已实现内容拆成十一份可独立复习的材料，避免“一篇大杂烩”。
+领域规格、ADR 和状态证据为准。先读完整的 [`../handbook/`](../handbook/README.md) 建立知识，
+再用这里训练不同面试场景。这里不是摘要，而是“怎么讲、从哪里看代码、被追问如何证明”。
 
 ## 推荐阅读顺序
 
@@ -18,9 +19,19 @@
 | 08 | [`08-resume-and-star-stories.md`](08-resume-and-star-stories.md) | 简历怎么写，真实 STAR 故事怎么讲？ |
 | 09 | [`09-system-design-whiteboard.md`](09-system-design-whiteboard.md) | 5/15/30 分钟白板如何展开和扩容？ |
 | 10 | [`10-demo-script.md`](10-demo-script.md) | 现场演示如何在网络正常或异常时完成？ |
+| 11 | [`11-code-walkthrough.md`](11-code-walkthrough.md) | 面试官点开仓库后怎样沿四条链路讲代码？ |
+| 12 | [`12-fourteen-day-study-plan.md`](12-fourteen-day-study-plan.md) | 如何在 14 天内从会用变成能解释和推导？ |
 
-补充材料：[`../interview-guide.md`](../interview-guide.md) 深挖逐轮实验与故障排查，
-[`../status/project-status.md`](../status/project-status.md) 保存完整实现历史。
+补充材料：[`../interview-guide.md`](../interview-guide.md) 是已冻结的早期深挖稿，内容已迁入
+工程手册和本目录；[`../status/project-status.md`](../status/project-status.md) 是累计历史，不用于
+判断当前生产事实。
+
+## 四阶段训练法
+
+1. **理解**：不看答案画业务图、运行图、ER 图和 RAG 图；
+2. **定位**：任意说一个步骤，30 秒内找到代码、迁移、测试和 ADR；
+3. **表达**：同一项目练 30 秒、3 分钟、10 分钟和白板版本；
+4. **压力测试**：让对方质疑数字、扩容、失败、没用 Kafka/K8s、Outbox 未消费等边界。
 
 ## 三条讲解纪律
 

@@ -402,8 +402,26 @@ TASK-M5-011、TASK-M5-012 与当前全部受 Git 管理文件。
 重复内容或敏感串；Markdown 相对链接、规格、Python、Java、Web、Compose 与 Flyway 门禁通过；
 整理 PR 经 CI 合入 `main`，生产版本差异被明确记录。
 **当前证据**：`docs/status/repository-hygiene-20260812.md`、`docs/code-map.md` 与
-`docs/status/README.md`；PR #14 的 GitHub Actions run `31610415603` 已在干净的
+`docs/status/README.md`；PR #14 的最终 GitHub Actions run `31610709745` 已在干净的
 JDK 21/Node/Python/PostgreSQL 环境通过 Spec、AI service、Core API、Web 与 Flyway 五组门禁。
+
+### TASK-M5-014｜实现事实校准、工程手册与面试教材重构
+
+**状态**：✅ 2026-08-13 完成；只校准实现事实、重构知识入口并增加文档门禁，不改变运行行为。
+**读取**：`00-master-spec.md`、`02-system-architecture.md`、`03-data-ingestion.md`、
+`04-rag-agent-design.md`、`10-source-adapter-implementation.md`、`11-end-to-end-runbook.md`、
+全部 ADR、核心代码入口与现有 `docs/interview/`。
+**输入**：当前代码/Compose/Flyway 实现、M0–M5 历史证据，以及现有面试材料过度压缩、
+Outbox/调度/证据物理表表述漂移的审计结果。
+**产出**：先以 ADR-0028/0029 固定当前任务编排和证据物理模型，再建立按业务链路、运行
+架构、数据状态、采集、内容、报告邮件、RAG、三端实现、部署运维和工程权衡组织的工程手册；
+面试材料扩展为分层口述、代码走读、100+ 题库、STAR、白板、演示和学习计划；建立文档
+分级、历史冻结和自动链接/事实校验。
+**边界**：不改变业务代码、数据库、API、RAG 策略或生产运行版本；不删除历史负结果；
+不把目标架构、预留表、动态生产计数或历史评测写成当前实时事实。
+**完成标准**：规格与当前实现不再冲突；工程手册可独立完成全链路学习；面试材料支持
+30 秒到 30 分钟分层表达及代码证据追问；Markdown 链接、规格、敏感串与相关代码测试通过；
+PR/CI 合入 `main`，纯文档变更不触发生产部署。
 
 ## 4. AI IDE 统一提示词
 

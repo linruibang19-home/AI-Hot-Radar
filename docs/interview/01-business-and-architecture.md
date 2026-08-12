@@ -38,8 +38,8 @@ flowchart TB
     Caddy --> Web["Next.js Web"]
     Web --> Core["Spring Boot Core API"]
     Web --> AI["FastAPI AI Service"]
-    Scheduler --> AI
-    Pipeline --> AI
+    Scheduler["Python Scheduler"] --> PG
+    Pipeline["Python Pipeline"] --> PG
     Core --> PG[("PostgreSQL + pgvector")]
     AI --> PG
     Core --> Redis[("Redis")]
@@ -55,8 +55,9 @@ flowchart TB
 - AI Service 承担变化快且依赖 Python 生态的采集、抽取、NLP、向量、重排和生成。
 - PostgreSQL 保存所有业务事实；Redis 随时可以清空重建。
 
-这种拆分不是为了“微服务数量”，而是把稳定业务边界与模型/采集生态的变化隔开。当前仍是
-模块化单体 + 独立 AI Worker，不应把它描述成大规模微服务平台。
+这种拆分不是为了“微服务数量”，而是把稳定业务边界与模型/采集生态的变化隔开。当前是
+单机 Compose 下的跨语言模块化系统，不应把它描述成大规模微服务平台。Scheduler/Pipeline
+通过 PostgreSQL 状态协作，不是 Outbox 消费者，详见 ADR-0028。
 
 ## 一条业务事实如何服务多个出口
 

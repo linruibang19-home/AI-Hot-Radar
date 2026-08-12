@@ -1,5 +1,8 @@
 # 仓库卫生与知识归档（2026-08-12）
 
+> **日期快照。** 下列文件数、工具环境和 CI run 只描述 TASK-M5-013 当时的验收，不是当前
+> 仓库动态统计；当前知识结构见 `../handbook/README.md` 与 `../README.md`。
+
 任务卡：`TASK-M5-013`。
 
 ## 盘点范围
@@ -56,7 +59,8 @@
   `no-untyped-call`；PR #14 的固定 CI 环境未复现。项目现有 `mypy>=1.13,<2.0` 仍偏宽，后续
   独立任务应固定可复现的开发工具/Redis 类型组合，不能在归档任务中静默放宽类型规则。
 
-GitHub Actions run `31610415603` 最终通过 Spec validation、AI service、Core API、Web 与
+GitHub Actions 最终通过 run `31610709745`（前序重跑 `31610415603` 不作为最终判定），覆盖
+Spec validation、AI service、Core API、Web 与
 Flyway from empty database 五组检查；这是本轮跨语言门禁的最终判定。
 
 这些环境差异不改变生产运行；它们说明“缓存可删”与“依赖必须由锁定环境重建”是两件事。

@@ -41,7 +41,11 @@ class FulltextGate(Protocol):
     def evaluate(self, document: ExtractedDocument) -> QualityDecision: ...
 ```
 
-Java 服务负责：Source 配置、调度、任务租约、状态机、管理 API、业务入库和 outbox。Python Worker 负责：网络采集、HTML/PDF/Markdown 解析、正文质量、内容加工、Embedding 和 RAG。RabbitMQ 在 M3 以后按压测引入；M1 可用 PostgreSQL task table + `FOR UPDATE SKIP LOCKED`。
+当前实现中，Python Scheduler 负责 Source 轮询和租约，Python Pipeline 负责网络采集、
+HTML/PDF/Markdown 解析、正文质量、内容加工、Embedding、聚类、精选、报告和 RAG。
+Java Core API 负责公开内容/报告读取、订阅邮件、管理状态与审计。两者共享 PostgreSQL
+事实源；当前使用 task/state 表、`FOR UPDATE SKIP LOCKED` 和 advisory lock，不存在 Outbox
+消费者。RabbitMQ 只在压测证明需要时评估，见 ADR-0028。
 
 ## 3. RSS/Atom：Feed 只发现，文章页才是正文
 
@@ -210,7 +214,9 @@ URL 规范化仅删除已知追踪参数（如 `utm_*`），不能任意删除�
 - SimHash/Embedding：近似文章候选，不直接自动覆盖；
 - Story 聚类：不同报道描述同一事件，与文章去重是不同问题。
 
-游标只能在整个 batch 入库与 outbox 同事务提交后推进。进程崩溃时允许重放，依靠唯一键实现 exactly-once effect，而不是假设 exactly-once delivery。
+游标只能在整个 batch 入库事务提交后推进；同事务可记录 `outbox_event` 作为事件审计，
+但当前没有事件消费者。进程崩溃时允许重放，依靠唯一键、状态版本和锁实现
+exactly-once effect，而不是假设 exactly-once delivery。
 
 ## 12. 错误分类
 
