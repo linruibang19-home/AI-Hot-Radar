@@ -18,6 +18,7 @@
 |---|---|
 | 五分钟了解项目、运行与核心指标 | `README.md` |
 | 面试复习、题库、简历与演示 | `docs/interview/README.md` |
+| 腾讯云 Ubuntu 24.04 迁移与购买基线 | `docs/status/tencent-cloud-migration-readiness-20260812.md` |
 | 作品集页面语义、截图与验证 | `docs/status/portfolio-closeout-20260812.md` |
 | 当前提交、容器、数据快照和下一步 | `docs/status/handoff-20260812.md` |
 | 导航性能根因与回归 | `docs/status/navigation-performance-20260812.md` |
@@ -83,7 +84,7 @@ DeepSeek 生成模型白名单切换已完成；生产 SMTP 已实投。ChromeCo
 | `docs/spec/11-end-to-end-runbook.md` | 全链路运行与恢复 | 当前 |
 | `docs/design/` | RAG 评测、实现和部署设计 | 当前 |
 | `docs/adr/` | 已锁定架构决策与回滚条件 | 当前至 ADR-0027 |
-| `docs/interview/` | 已实现事实的面试学习、题库与演示材料 | 当前 |
+| `docs/interview/` | 00–10 十一份面试学习、题库、STAR、白板与演示材料 | 当前 |
 | `docs/assets/screenshots/` | README 使用的脱敏本地页面截图 | 2026-08-12 封版 |
 
 ## 4. 当前交付证据
@@ -91,7 +92,7 @@ DeepSeek 生成模型白名单切换已完成；生产 SMTP 已实投。ChromeCo
 - Python：Ruff、mypy 86 个源码文件、pytest 878/878；
 - Java：Maven verify 74/74；
 - Web：npm audit 0、typecheck、lint、Vitest 73/73、Next.js 15.5.23 production build；
-- 数据库：140 个信源、1927 条内容、7269 个分块且 100% 向量化、1511 个 Story；
+- 数据库：140 个信源、2040 条内容、8089 个分块且 100% 向量化、1622 个 Story；
 - RAG：主集 Recall@20 0.8994、专项集 0.9333、引用完整性 0.9881、段落支持度
   0.9344、拒答准确率 1.0000、关键问题 P0 为 0；
 - 运行态：PostgreSQL、Redis、Core API、AI Service、Web 健康，`/ask` 返回 200；
@@ -105,11 +106,11 @@ DeepSeek 生成模型白名单切换已完成；生产 SMTP 已实投。ChromeCo
 
 ## 5. 后续交付顺序
 
-1. 生产维护 P0：发布导航即时反馈与定向预取修复，按同一提交 SHA 复验公网；
+1. 迁移 P0：新广州机平行部署、备份恢复、临时地址 smoke、备案完成后 DNS 切换与回切演练；
 2. 运维 P1：迁移自有域名发件服务，配置 SPF/DKIM/DMARC、退信/投诉处理；每月恢复演练；
 3. 产品 P1：补管理写操作 UI、加工任务重跑入口和用户反馈闭环；
 4. RAG P1：扩大实体/时间人工标注与噪声集，解决 SLA 类目标原文稳定排第 27 的缺口；
-5. 产品化 P2：反馈闭环、版本化知识快照、账号/租户/ACL（只在私有语料进入范围后）。
+5. 产品化 P2：版本化知识快照、账号/租户/ACL（只在私有语料进入范围后）。
 
 执行时仍必须一次只领取 `08-roadmap-ai-ide.md` 中的一张任务卡；不得因为本索引列出后续
 事项而并行扩大里程碑范围。
