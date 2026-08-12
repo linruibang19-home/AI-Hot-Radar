@@ -9,10 +9,10 @@
 
 本仓库已经不是“等待 TASK-M0 创建源码”的规格包，而是可由 Docker Compose 启动的完整
 实现。M0–M5 首次生产闭环已经完成；香港目标机、系统加固、Docker、DNS、Caddy HTTPS、
-生产 SMTP、真实告警与异机备份均已投入运行。`v0.1.5` 在同提交全量 CI 后发布三张不可变
+生产 SMTP、真实告警与异机备份均已投入运行。`v0.1.6` 在同提交全量 CI 后发布三张不可变
 镜像，GitHub `main`、服务器 checkout、`IMAGE_TAG` 与运行镜像均对齐该提交。
 
-当前运行基线为 `d58e639` / `v0.1.5`。权威入口按用途分为：
+当前运行基线为 `6f03e75` / `v0.1.6`。权威入口按用途分为：
 
 | 需要了解什么 | 首选文档 |
 |---|---|
@@ -24,6 +24,7 @@
 | RAG 安全、超时和 SLO | `docs/status/rag-security-performance-20260811.md` |
 | RAG 问答 UI 精修 | `docs/status/rag-ui-polish-20260811.md` |
 | 邮箱订阅与定时投递 | `docs/status/report-subscriptions-20260811.md` |
+| v0.1.6 精选与订阅生产验收 | `docs/status/v016-selection-email-20260812.md` |
 | DeepSeek 生成模型配置 | `docs/status/generation-model-selection-20260811.md` |
 | RAG 质量/运行页面 | `docs/status/rag-operations-ui-20260811.md` |
 | 上线前最终本地门禁 | `docs/status/prelaunch-release-gate-20260811.md` |
@@ -46,9 +47,9 @@
 | `infra/compose/docker-compose.yml` | 本地唯一启动入口 | 已验证 |
 | `infra/compose/docker-compose.prod.yml` | 生产 Compose | 目标机运行；真实配置缺危险值时仍 fail-closed |
 | `infra/caddy/Caddyfile` | HTTPS 反向代理 | `aihotradar.online` 证书已签发并自动续期 |
-| `.github/workflows/release.yml` | GHCR 构建发布 | `v0.1.5` 完整 CI 与三镜像发布成功 |
+| `.github/workflows/release.yml` | GHCR 构建发布 | `v0.1.6` 完整 CI 与三镜像发布成功 |
 | `infra/scripts/backup.sh` | PostgreSQL 定时备份 | 已实现目录校验与 SHA-256；本地真实恢复通过 |
-| `infra/scripts/preflight.sh` / `deploy-production.sh` | 生产配置与不可变提交部署门禁 | 目标机 preflight 与 `v0.1.5` 不可变 SHA 部署均已验证 |
+| `infra/scripts/preflight.sh` / `deploy-production.sh` | 生产配置与不可变提交部署门禁 | 目标机 preflight 与 `v0.1.6` 不可变 SHA 部署均已验证 |
 | `infra/scripts/monitor.py` / `smoke-production.sh` | 健康、备份年龄告警与公网验收 | Gmail SMTP 故障/恢复实收与公网 smoke 通过 |
 | `infra/scripts/restore-verify.sh` | 受保护隔离恢复核验 | 本地真实 100 MB dump 恢复通过 |
 | `api/openapi.yaml` / `schemas/` | 服务契约与生成类型来源 | 生成无 diff |
@@ -92,7 +93,7 @@ DeepSeek 生成模型白名单切换已完成；生产 SMTP 已实投。ChromeCo
 - 运行态：PostgreSQL、Redis、Core API、AI Service、Web 健康，`/ask` 返回 200；
 - 报告：日报 11、周报 3、月报 1，均为 PUBLISHED；邮箱订阅闭环已用 Mailpit 验收。
 - 数据恢复：102 MiB V024 dump 目录/SHA 校验与隔离恢复通过。
-- 部署：Ubuntu 22.04 目标机已加固并运行 `v0.1.5@d58e639`；10 个容器运行，HTTPS、
+- 部署：Ubuntu 22.04 目标机已加固并运行 `v0.1.6@6f03e75`；10 个容器运行，HTTPS、
   真实模型/SMTP/告警、异机备份与隔离恢复通过。
 
 证据与限制分别见本页 §1 指向的四份 08-11 状态文档；不要脱离 run、样本量和口径引用
