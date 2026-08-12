@@ -51,6 +51,12 @@ apps/web/test-results/
 
 # Agent worktrees created by the coding tool.
 .claude/worktrees/
+.codex-tmp/
+
+# Stray service-local mount targets created by ad-hoc Compose runs. Canonical
+# configuration and golden data live at repository-root config/ and data/.
+apps/ai-service/config/
+apps/ai-service/data/
 
 # Git Bash rewrites `-v "$PWD/x:/y"` into a Windows path and leaves a literal
 # `x;D` directory behind. Ignored so one stray run cannot be committed; the fix

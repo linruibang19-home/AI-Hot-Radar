@@ -385,6 +385,26 @@ Docker 运行和未运行时均安全；重建本地容器后实际日志驱动�
 项目健康检查通过。
 **当前证据**：`docs/status/docker-storage-controls-20260812.md`。
 
+### TASK-M5-013｜仓库卫生、证据归档与代码学习地图
+
+**状态**：🚧 2026-08-12 执行中；只整理可再生产物和知识入口，不改变业务行为。
+**读取**：`00-master-spec.md`、`07-quality-security-ops.md`、`12-delivery-index.md`、
+TASK-M5-011、TASK-M5-012 与当前全部受 Git 管理文件。
+**输入**：482 个受 Git 管理文件、83 份 `docs/status/` 文件、两个历史工具 worktree、
+本地构建缓存、工作区恢复备份及已验证的 Windows 异机备份任务。
+**产出**：清理明确可再生的缓存和已合并 worktree；保留未提交用户改动为可恢复 stash；
+工作区备份仅在同名、同大小、同 SHA-256 异机副本存在后删除；补齐代码全景图、状态证据索引、
+仓库卫生验收和文档导航；防止临时挂载目录再次进入工作区。
+**边界**：不执行 `git clean -xdf`，不删除 `.env`、依赖目录、PostgreSQL/Redis 卷、黄金集、
+评测 JSON 或唯一备份；不移动已有证据文件，不修改服务边界、RAG 策略、数据库/API 和生产机；
+不把历史快照改写成当前状态。
+**完成标准**：所有源码、迁移、配置、基础设施和文档都有可追踪入口；Git 跟踪文件无临时名、
+重复内容或敏感串；Markdown 相对链接、规格、Python、Java、Web、Compose 与 Flyway 门禁通过；
+整理 PR 经 CI 合入 `main`，生产版本差异被明确记录。
+**当前证据**：`docs/status/repository-hygiene-20260812.md`、`docs/code-map.md` 与
+`docs/status/README.md`；本地 Python/Compose/文档门禁已通过，Java/Web/Flyway 由 PR 的干净
+JDK 21/Node/PostgreSQL 环境完成最终判定。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

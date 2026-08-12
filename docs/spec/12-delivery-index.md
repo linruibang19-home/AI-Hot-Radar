@@ -23,6 +23,9 @@
 | 当前提交、容器、数据快照和下一步 | `docs/status/handoff-20260812.md` |
 | 导航性能根因与回归 | `docs/status/navigation-performance-20260812.md` |
 | 完整历史、根因和逐轮实验 | `docs/status/project-status.md` |
+| 全部代码的业务链路与学习顺序 | `docs/code-map.md` |
+| 状态、历史快照与实验证据分类 | `docs/status/README.md` |
+| 仓库清理和可恢复归档证据 | `docs/status/repository-hygiene-20260812.md` |
 | RAG 当前发布门禁 | `docs/status/rag-specialist-audit-20260811.md` |
 | RAG 安全、超时和 SLO | `docs/status/rag-security-performance-20260811.md` |
 | RAG 问答 UI 精修 | `docs/status/rag-ui-polish-20260811.md` |
@@ -83,6 +86,7 @@ DeepSeek 生成模型白名单切换已完成；生产 SMTP 已实投。ChromeCo
 | `docs/spec/10-source-adapter-implementation.md` | Adapter 实现边界 | 锁定 |
 | `docs/spec/11-end-to-end-runbook.md` | 全链路运行与恢复 | 当前 |
 | `docs/design/` | RAG 评测、实现和部署设计 | 当前 |
+| `docs/code-map.md` | 全部源码、迁移、配置、基础设施与测试的学习地图 | 当前 |
 | `docs/adr/` | 已锁定架构决策与回滚条件 | 当前至 ADR-0027 |
 | `docs/interview/` | 00–10 十一份面试学习、题库、STAR、白板与演示材料 | 当前 |
 | `docs/assets/screenshots/` | README 使用的脱敏本地页面截图 | 2026-08-12 封版 |

@@ -25,6 +25,11 @@
 | [11-end-to-end-runbook.md](spec/11-end-to-end-runbook.md) | 联调与恢复流程 |
 | [12-delivery-index.md](spec/12-delivery-index.md) | 交付索引 |
 
+## `code-map.md` — 代码学习入口
+
+[代码全景与学习地图](code-map.md) 按“采集到页面、报告与邮件、RAG、管理权限、发布与测试”
+组织全部实现文件。它用于回答代码在哪里，不替代规格和 ADR。
+
 ## `adr/` — 架构决策记录
 
 偏离或补充规格的决策都必须先有 ADR。格式：背景、决策、备选、后果、回滚。
@@ -47,6 +52,8 @@
 | [design/README.md](design/README.md) | 四层文档的分工与写入规则 |
 | [m4-rag-implementation.md](design/m4-rag-implementation.md) | M4 RAG 全流程实现方案与外部方案取舍 |
 | [m4-rag-evaluation.md](design/m4-rag-evaluation.md) | 90 题黄金集、指标含义与发布门禁 |
+| [m5-deployment.md](design/m5-deployment.md) | 单机生产部署、安全与恢复设计 |
+| [m5-first-deploy-checklist.md](design/m5-first-deploy-checklist.md) | 首次部署逐步检查表与危险操作边界 |
 
 ## `status/` — 运行状态与验收证据
 
@@ -54,11 +61,15 @@
 
 | 文件 | 内容 |
 |---|---|
+| [status/README.md](status/README.md) | **状态总索引**：当前入口、历史快照、RAG 与发布证据 |
 | [project-status.md](status/project-status.md) | **项目总进度**：里程碑、数据、信源、服务、待办 |
 | [m1-canary-evidence.md](status/m1-canary-evidence.md) | M1 信源探测验收证据 |
 | [m1-canary-evidence.json](status/m1-canary-evidence.json) | 逐源原始数据 |
 | [rag-product-readiness-20260810.md](status/rag-product-readiness-20260810.md) | **当前 RAG 全链路、成熟产品对标与优化顺序** |
-| [handoff-20260810.md](status/handoff-20260810.md) | 当前 checkout 的完整交接与复测入口 |
+| [handoff-20260812.md](status/handoff-20260812.md) | 当前生产、提交、数据与下一步入口 |
+| [repository-hygiene-20260812.md](status/repository-hygiene-20260812.md) | 本轮全仓盘点、清理与可恢复归档证据 |
+
+`handoff-20260810.md` 与 `handoff-20260811.md` 是历史快照，不用来判断当前运行版本。
 
 ## 其他入口
 
