@@ -369,6 +369,22 @@ Docker 页面 smoke 与 Chrome 桌面/移动端视觉验收通过。
 **当前证据**：`docs/status/portfolio-interview-completion-20260812.md`、
 `docs/status/tencent-cloud-migration-readiness-20260812.md`、`docs/interview/README.md`。
 
+### TASK-M5-012｜Docker 磁盘增长边界
+
+**状态**：✅ 2026-08-12 完成；本卡只约束本地与生产 Docker 存储增长，不改变业务行为。
+**读取**：`07-quality-security-ops.md`、TASK-M5-005、TASK-M5-011 与当前 Compose。
+**输入**：本地 Docker Desktop 曾累计 45.02GB 镜像、24.74GB BuildKit 缓存和 7.66GB 卷；
+运行容器可写层不足 1MB，确认增长来自历史构建产物而非业务数据库。
+**产出**：所有 Compose 服务使用压缩轮转的 `local` 日志驱动，每容器最多 3 个 10MB 日志；
+Windows 维护脚本把 BuildKit 缓存限制在 5GB，并删除七天以上且未被容器引用的镜像；计划任务
+每日执行，明确永不自动 prune volume。
+**边界**：不删除 PostgreSQL/Redis 挂载卷，不停止当前生产，不让生产主机本地构建业务镜像；
+宿主 VHDX 收缩仍是需要停 Docker Desktop 的独立维护窗口。
+**完成标准**：本地/生产 Compose 可渲染；生产所有服务具有相同的有界日志配置；维护脚本在
+Docker 运行和未运行时均安全；重建本地容器后实际日志驱动为 `local`；PostgreSQL/Redis 及
+项目健康检查通过。
+**当前证据**：`docs/status/docker-storage-controls-20260812.md`。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：
