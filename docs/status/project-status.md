@@ -1,7 +1,7 @@
 # 项目进度总览
 
 > 更新时间：2026-08-12
-> 当前阶段：**M5 首次生产闭环完成；v0.1.5 正在 aihotradar.online 运行**
+> 当前阶段：**M5 首次生产闭环完成；v0.1.6 正在 aihotradar.online 运行**
 > 所有数据均来自实际运行，非估算
 
 > 本文是按时间累积的工程日志，后文保留了当时的失败、旧快照和已关闭待办。判断当前
@@ -10,7 +10,7 @@
 
 ## 0A. 2026-08-12 当前生产摘要
 
-当前运行基线为 `d58e639` / `v0.1.5`，在线地址为 `https://aihotradar.online`。
+当前运行基线为 `6f03e75` / `v0.1.6`，在线地址为 `https://aihotradar.online`。
 服务器 `production`、`IMAGE_TAG` 与 web/core-api/ai-service 镜像均对齐同一 40 位提交，
 10 个容器运行且核心健康检查通过。Caddy HTTPS、公网 smoke、真实 RAG、Gmail SMTP、
 故障/恢复告警、生产备份异机副本与隔离恢复均已有证据。目标机执行证据见
@@ -26,7 +26,7 @@
 | rag_query / rag_citation | 216 / 913 |
 | report | 15（daily 11 / weekly 3 / monthly 1，全部 PUBLISHED）|
 | Flyway / 生成模型 | V024 / deepseek-v4-flash v3 |
-| 正式订阅 / 投递 | 0 / 0（Mailpit 验收数据已清理） |
+| 正式订阅 / 投递 | 1 / 0（已确认日报；从确认后的下一期开始投递） |
 
 当前质量证据：Python 878、Java 74、Web 71 个测试通过；RAG 主集 Recall@20 0.8994、
 专项 0.9333，近邻噪声加入后无退化，引用完整性 0.9881、段落支持度 0.9344、拒答准确率
