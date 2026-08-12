@@ -10,6 +10,64 @@
 
 ---
 
+## 产品一览
+
+| 面向读者 | 面向工程质量 |
+|---|---|
+| 精选、全部动态、热点、事件、主题地图 | RAG 发布门禁、运行状态、生成模型配置、信源后台 |
+| 日报 / 周报 / 月报、双重确认邮件订阅 | 90 题黄金集、逐轮实验、引用支持度与端到端延迟 |
+| 多轮 RAG、句级引用、原文回跳、证据选择解释 | 管理 RBAC、审计、备份恢复、告警与不可变镜像发布 |
+
+![精选与实时情报流](docs/assets/screenshots/home.png)
+
+<details>
+<summary>查看更多产品截图</summary>
+
+**日报 / 周报 / 月报**
+
+![日报](docs/assets/screenshots/reports.png)
+
+**可验证引用的 RAG 回答**
+
+![RAG 回答](docs/assets/screenshots/rag-answer.png)
+
+**固定数据集上的 RAG 发布门禁**
+
+![RAG 质量](docs/assets/screenshots/rag-quality.png)
+
+**随调度结果更新的信源后台**
+
+![信源后台](docs/assets/screenshots/source-operations.png)
+
+</details>
+
+## 业务与系统架构
+
+```mermaid
+flowchart LR
+    A["140 个公开信源"] --> B["scheduler / adapter"]
+    B --> C["全文回源与质量门"]
+    C --> D[("PostgreSQL 16 + pgvector")]
+    D --> E["结构化 / 去重 / 评分 / 聚类"]
+    E --> F["日报周报月报"]
+    E --> G["混合检索 RAG"]
+    D --> H["Spring Boot Core API"]
+    H --> I["Next.js 15 网站"]
+    F --> I
+    F --> J["双重确认邮件订阅"]
+    G --> I
+    K[("Redis")] -. "缓存 / 限流 / 短状态" .-> G
+    L["DeepSeek"] -. "结构化与生成" .-> E
+    L -. "回答生成" .-> G
+    M["bge-m3 / reranker"] -. "向量与重排" .-> G
+```
+
+关键边界：PostgreSQL 是唯一事实源；Redis 只做可丢失的缓存、限流和短状态；
+RSS/列表摘要只能用于发现，最终证据必须回到原始正文；浏览器只访问 Next.js，
+由服务端代理 Core API 与 AI Service。
+
+---
+
 ## 这个项目想证明的一件事
 
 RAG 很容易做成一个「看起来会答」的黑盒。这里的取向相反：
@@ -108,7 +166,7 @@ Flyway 在 core-api 启动时自动迁移（V001–V024，含 V017.1 补序迁�
 
 ## 测试
 
-当前三套单元/集成测试共 **1023 个**：Python 878 · Java 74 · Web 71；
+当前三套单元/集成测试共 **1025 个**：Python 878 · Java 74 · Web 73；
 另有 33 个浏览器 E2E 用例。Python 与 Java 大部分可断网通过。
 
 ```bash
@@ -147,6 +205,8 @@ docker run --rm -v "$PWD/apps/core-api:/build" -v "$PWD/database/migrations:/bui
 
 ## 文档
 
+- **[`docs/interview/README.md`](docs/interview/README.md)** —— 面试准备总入口：系统地图、数据与 RAG、生产运维、题库、简历与演示
+- **[`docs/interview-guide.md`](docs/interview-guide.md)** —— 具体追问讲解稿，包含负结果、故障排查与技术取舍
 - **`docs/status/project-status.md`** —— 全量进展、每一次排查的根因与实测数字（最值得读的一份）
 - **`docs/status/handoff-20260812.md`** —— 当前生产提交、运行快照、已完成门禁和下一步顺序
 - **`docs/status/rag-product-readiness-20260810.md`** —— 当前 RAG 全链路、成熟产品对标、评分与优化顺序
