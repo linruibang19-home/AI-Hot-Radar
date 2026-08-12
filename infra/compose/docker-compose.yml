@@ -8,8 +8,16 @@
 
 name: ai-hot-radar
 
+x-logging: &default-logging
+  logging:
+    driver: local
+    options:
+      max-size: "10m"
+      max-file: "3"
+
 services:
   postgres:
+    <<: *default-logging
     image: pgvector/pgvector:pg16
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ai_hot_radar}
@@ -38,6 +46,7 @@ services:
       start_period: 10s
 
   redis:
+    <<: *default-logging
     image: redis:7-alpine
     # ADR-005: cache, rate limiting and short locks only. No persistence of
     # business facts, so an empty volume on restart is acceptable by design.
@@ -53,12 +62,14 @@ services:
   # Local email sandbox for TASK-M5-004. Messages stay on the developer
   # machine and can be inspected at http://localhost:8025.
   mailpit:
+    <<: *default-logging
     image: axllent/mailpit:v1.21
     ports:
       - "1025:1025"
       - "8025:8025"
 
   core-api:
+    <<: *default-logging
     build:
       # Root context: the image needs database/migrations for Flyway.
       context: ../..
@@ -99,6 +110,7 @@ services:
         condition: service_started
 
   ai-service:
+    <<: *default-logging
     build:
       context: ../../apps/ai-service
       dockerfile: Dockerfile
@@ -144,6 +156,7 @@ services:
   # `restart: unless-stopped` means a crash resumes the clock rather than
   # silently ending the run.
   scheduler:
+    <<: *default-logging
     build:
       context: ../../apps/ai-service
       dockerfile: Dockerfile
@@ -181,6 +194,7 @@ services:
   # none of it — 精选, 热点, 事件聚合 and 日报 were all frozen at the last manual
   # CLI run while 141 items sat unprocessed.
   pipeline:
+    <<: *default-logging
     build:
       context: ../../apps/ai-service
       dockerfile: Dockerfile
@@ -217,6 +231,7 @@ services:
   # ai-service to http://jaeger:4317 and rebuild with the `tracing` extra to
   # turn them on.
   jaeger:
+    <<: *default-logging
     image: jaegertracing/all-in-one:1.62
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
@@ -226,6 +241,7 @@ services:
       disable: true
 
   web:
+    <<: *default-logging
     build:
       context: ../../apps/web
       dockerfile: Dockerfile
