@@ -331,6 +331,23 @@ Java、Web、Compose 与公网桌面/移动端验收通过，发布后数据库�
 **当前证据**：`docs/status/v016-selection-email-20260812.md`；生产当天 12 条精选已分布到
 8 个来源族，arXiv 仅 2 条；1 个日报订阅已显式确认，下一期开始投递。
 
+### TASK-M5-010｜工程数据时效语义与作品集封版
+
+**状态**：✅ 2026-08-12 完成；代码、脱敏截图与面试材料已通过本地门禁，等待发布验收。
+**读取**：`06-frontend-spec.md`、`07-quality-security-ops.md`、TASK-M5-008、
+TASK-M5-009、`docs/status/handoff-20260812.md`。
+**输入**：现有 `/eval` 版本化评测摘要、动态信源健康数据、生产页面与发布证据。
+**产出**：明确区分静态发布评测与动态运行状态；为信源后台提供可理解的刷新时间语义；
+用脱敏生产截图、分层 README 与面试学习材料完成公开作品集封版。
+**边界**：不改变 RAG 策略、评测结果、信源状态机或服务边界；不把历史实验写成实时监控；
+不为了简历引入新中间件；公开截图不得包含邮箱、令牌、密钥或浏览器隐私信息。
+**完成标准**：`/eval` 首屏能说明快照日期、模型/语料变化后的重评流程与实时运行入口；
+信源后台能说明数据读取与页面刷新语义；README 30 秒内可理解项目价值与架构；面试材料覆盖
+业务、采集、数据、RAG、后端、前端、部署、安全、权衡与追问；Web typecheck/lint/unit/build、
+Docker 页面 smoke 与 Chrome 桌面/移动端视觉验收通过。
+**当前证据**：`docs/status/portfolio-closeout-20260812.md`、`docs/interview/README.md`、
+`docs/assets/screenshots/`；Web 73/73、typecheck、lint、production build 与 Docker HTTP smoke 通过。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

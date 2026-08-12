@@ -17,6 +17,8 @@
 | 需要了解什么 | 首选文档 |
 |---|---|
 | 五分钟了解项目、运行与核心指标 | `README.md` |
+| 面试复习、题库、简历与演示 | `docs/interview/README.md` |
+| 作品集页面语义、截图与验证 | `docs/status/portfolio-closeout-20260812.md` |
 | 当前提交、容器、数据快照和下一步 | `docs/status/handoff-20260812.md` |
 | 导航性能根因与回归 | `docs/status/navigation-performance-20260812.md` |
 | 完整历史、根因和逐轮实验 | `docs/status/project-status.md` |
@@ -81,12 +83,14 @@ DeepSeek 生成模型白名单切换已完成；生产 SMTP 已实投。ChromeCo
 | `docs/spec/11-end-to-end-runbook.md` | 全链路运行与恢复 | 当前 |
 | `docs/design/` | RAG 评测、实现和部署设计 | 当前 |
 | `docs/adr/` | 已锁定架构决策与回滚条件 | 当前至 ADR-0027 |
+| `docs/interview/` | 已实现事实的面试学习、题库与演示材料 | 当前 |
+| `docs/assets/screenshots/` | README 使用的脱敏本地页面截图 | 2026-08-12 封版 |
 
 ## 4. 当前交付证据
 
 - Python：Ruff、mypy 86 个源码文件、pytest 878/878；
 - Java：Maven verify 74/74；
-- Web：npm audit 0、typecheck、lint、Vitest 71/71、Next.js 15.5.23 production build；
+- Web：npm audit 0、typecheck、lint、Vitest 73/73、Next.js 15.5.23 production build；
 - 数据库：140 个信源、1927 条内容、7269 个分块且 100% 向量化、1511 个 Story；
 - RAG：主集 Recall@20 0.8994、专项集 0.9333、引用完整性 0.9881、段落支持度
   0.9344、拒答准确率 1.0000、关键问题 P0 为 0；

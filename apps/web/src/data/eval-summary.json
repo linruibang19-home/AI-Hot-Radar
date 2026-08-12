@@ -4,6 +4,13 @@
     "retrievalRunId": "B9-20260810T195839Z",
     "generationRunId": "GEN-20260810T201738Z",
     "specialistRunId": "SPECIALIST-20260810T183222Z",
+    "snapshot": {
+      "cutoff": "2026-08-03T23:59:00+08:00",
+      "items": 915,
+      "embeddingModel": "BAAI/bge-m3",
+      "rerankerModel": "BAAI/bge-reranker-v2-m3",
+      "generationModel": "deepseek-chat"
+    },
     "retrieval": {
       "questions": 90,
       "scored": 78,
