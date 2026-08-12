@@ -48,7 +48,12 @@ PASS: fenced code blocks 成对
 PASS: 变更文件无 API key、GitHub token 或私钥模式
 ```
 
-GitHub PR/CI 证据在合入前补写。纯文档变更不触发生产镜像发布，避免让运行代码与文档提交混淆。
+```text
+GitHub PR #12 / Actions run 31591523095
+PASS: Spec validation, AI service, Core API, Flyway from empty database, Web
+```
+
+纯文档变更不触发生产镜像发布，避免让运行代码与文档提交混淆。
 
 ## 剩余风险与下一任务
 
