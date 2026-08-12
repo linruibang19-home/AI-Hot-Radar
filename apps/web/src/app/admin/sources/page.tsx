@@ -30,13 +30,26 @@ function summarise(sources: SourceHealth[]) {
 export default async function AdminSourcesPage() {
   const sources = await fetchSourceHealth();
   const states = summarise(sources);
+  const renderedAt = new Date().toISOString();
 
   return (
     <>
-      <h1 className="page-title">信源后台</h1>
-      <p className="page-subtitle">
-        排序把失败的信源放在最前 · 本页用<strong>只读凭据</strong>渲染，
-        启停与重跑走 <code>/api/v1/admin</code>，需要 OPERATOR 凭据、二次确认，并逐条留痕
+      <header className="source-page-head">
+        <div>
+          <h1 className="page-title">信源后台</h1>
+          <p className="page-subtitle">
+            排序把失败的信源放在最前 · 本页用<strong>只读凭据</strong>渲染，
+            启停与重跑走 <code>/api/v1/admin</code>，需要 OPERATOR 凭据、二次确认，并逐条留痕
+          </p>
+        </div>
+        <a className="button source-refresh" href="/admin/sources">
+          刷新状态
+        </a>
+      </header>
+
+      <p className="source-freshness">
+        调度器持续把采集结果写入 PostgreSQL；本页不会主动轮询，刷新或重新进入时读取最新状态。
+        本次读取于 <time dateTime={renderedAt}>{formatTime(renderedAt)}</time>。
       </p>
 
       <div className="stat-row">

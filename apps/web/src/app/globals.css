@@ -1196,9 +1196,65 @@ summary:focus-visible {
     position: static;
     width: 100%;
     height: auto;
+    overflow: hidden;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    padding: 16px;
+    padding: 12px 12px 10px;
+  }
+
+  .brand {
+    margin-bottom: 9px;
+    padding: 0 4px;
+  }
+
+  .nav-section + .nav-section {
+    margin-top: 6px;
+  }
+
+  .nav-label {
+    display: none;
+  }
+
+  .nav-list {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .nav-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-list li {
+    flex: 0 0 auto;
+  }
+
+  .nav-link {
+    gap: 6px;
+    margin: 0;
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .nav-link:hover {
+    transform: none;
+  }
+
+  .nav-link-active {
+    border-color: color-mix(in srgb, var(--accent) 20%, var(--border));
+  }
+
+  .nav-link-active::before {
+    display: none;
+  }
+
+  .nav-icon {
+    width: 14px;
+    height: 14px;
   }
 
   /* The sidebar is a full-width bar here, so there is no column to drag — and
@@ -1211,6 +1267,29 @@ summary:focus-visible {
   .main {
     margin-left: 0;
     padding: 20px 16px 48px;
+    overflow-x: hidden;
+  }
+
+  .main-inner {
+    min-width: 0;
+  }
+
+  .page-title {
+    font-size: 28px;
+  }
+
+  .page-subtitle {
+    overflow-wrap: anywhere;
+  }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stat {
+    min-width: 0;
+    padding: 10px 12px;
   }
 
   .route-loading-cards {
@@ -2464,6 +2543,69 @@ summary:focus-visible {
   font-size: 0.7rem;
 }
 
+.quality-snapshot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 84%, var(--bg));
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.quality-snapshot > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+
+.quality-snapshot strong {
+  color: var(--text);
+}
+
+.quality-snapshot span + span::before {
+  content: "·";
+  margin-right: 10px;
+  color: var(--border-strong);
+}
+
+.quality-refresh-note {
+  margin-top: 10px !important;
+  font-size: 0.75rem;
+}
+
+.quality-refresh-note a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.source-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.source-refresh {
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+
+.source-freshness {
+  margin: -8px 0 18px;
+  padding: 9px 12px;
+  border-left: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.65;
+}
+
 .quality-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2522,6 +2664,17 @@ summary:focus-visible {
 
   .quality-hero-head {
     align-items: center;
+  }
+
+  .quality-snapshot,
+  .source-page-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .source-refresh {
+    align-self: flex-start;
+    margin-top: -8px;
   }
 }
 
