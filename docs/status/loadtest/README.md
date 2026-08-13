@@ -5,6 +5,7 @@
 同规格隔离副本上阶梯寻顶和 soak。
 
 - [`2026-08-13-local-baseline.md`](2026-08-13-local-baseline.md)：本地分层基线、RAG 统计瓶颈与修复前数据；
-- `2026-08-14-m5-020-production.md`：TASK-M5-020 发布后补充的本地复测和香港 2C4G 低风险实测。
+- [`2026-08-14-m5-020-production.md`](2026-08-14-m5-020-production.md)：TASK-M5-020
+  修复、本地复测和香港 2C4G 低风险生产实测；它不是容量寻顶报告。
 
 脚本入口：[`../../../infra/loadtest/README.md`](../../../infra/loadtest/README.md)。
