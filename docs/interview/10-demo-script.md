@@ -74,7 +74,7 @@ pgvector 的当前边界，以及按什么证据引入队列、独立搜索或�
 | API/订阅 | `apps/core-api/src/main/`、Flyway V023 |
 | 前端 | `apps/web/app/`、`apps/web/lib/` |
 | 部署 | `infra/compose/`、`infra/scripts/`、`.github/workflows/release.yml` |
-| 决策与反例 | `docs/adr/`、`docs/status/project-status.md` |
+| 决策与反例 | `docs/adr/`、`docs/status/current/project-status.md` |
 
 先指出文件职责，再选一个函数/测试讲输入、状态、失败和验证；不要一次打开几十个文件。
 

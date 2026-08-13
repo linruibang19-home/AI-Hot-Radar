@@ -7,7 +7,8 @@
 90 秒的第一版完成 12,407 请求，约 123.9 req/s，错误率 0、总体 P95 209 ms；Core P95 41.6 ms，Web
 P95 510 ms。把 Python health 换成真正的 `/rag/stats` 后，复跑降到 66.3 req/s，AI 控制路径 P95 919 ms
 并触发 750 ms 失败门；第二次完整复跑 AI P95/P99 为 838/4046 ms，再次红灯。这是能发现瓶颈的回归
-基线，不是 2C4G 生产容量。
+基线。修复同步 psycopg 阻塞、增加 single-flight 与 30 秒 Redis 读模型后，同配置 AI P95/P99
+降到 11.21/18.77 ms、整轮 154.9 req/s、0 错误；仍不是 2C4G 生产容量。
 
 ## 3 分钟版本
 
@@ -46,7 +47,21 @@ VU 是并发执行者，不等于 QPS。闭环模型中每个 VU 完成一次迭
 ### Q5：Redis 70k req/s 有什么意义？
 
 只说明本机 PING/网络/单实例原语没有明显异常。业务性能还取决于序列化、key 大小、TTL、命中率和击穿。
-当前 Redis 没有内存上限，因此迁移到 2C4G 前要设置预算和 eviction/oom 告警。
+本地 Redis 没有内存上限；生产已经设置 128 MiB allkeys-lru 和 192 MiB 容器上限，并需要
+eviction/oom 告警。
+
+### Q5.1：Redis 在项目里有哪些真实业务用途？
+
+Spring Cache 保存精选/主题/统计/报告热读；Python 保存 embedding、答案、会话热副本、语义近似索引、
+suggestion、30 秒 ops 快照和 hit/miss；另有匿名问答限流。内容、chunk、答案、引用、会话和用量都在
+PostgreSQL，Redis 清空只影响延迟，不丢事实。分钟/天限流会 fail-open，但 PostgreSQL 每日 token ceiling
+仍限制总支出，这是可用性与费用安全的分层。
+
+### Q5.2：如何测试“业务缓存”而不只测 PING？
+
+先记录 keyspace hit/miss、eviction、内存和目标 key TTL；删除一个明确可再生的 ops key，测一次冷回源和
+紧接的一次热读，再取 Redis 指标差值。不能 `FLUSHALL`，因为它会同时冲掉限流和所有热缓存；也不能把
+进程启动以来累计 hit/miss 当成这轮命中率。
 
 ### Q6：Java 侧重点看什么？
 

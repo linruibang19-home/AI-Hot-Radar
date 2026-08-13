@@ -85,6 +85,29 @@ P95/P99 为 571.18/802.79 ms；Core 为 42.86/56.04 ms；Web 为 511.23/596.27 m
 AI `/rag/stats` 为 **837.99/4046.49 ms**。AI P95 连续两轮分别为 918.94 和 837.99 ms，
 说明超门可重复；P99 约 4 秒说明少量聚合请求存在明显长尾，TASK-M5-020 必须先 profile 再优化。
 
+### TASK-M5-020 修复后同场景复测
+
+根因不是单条 SQL 本身慢：`EXPLAIN ANALYZE` 中 retrieval trace 聚合约 1.6 ms，而是 FastAPI async
+路由在 event loop 内同步执行多条 psycopg 查询；20 个 VU 会把同步聚合串行堆在一个 worker 上。
+修复将聚合移入 `asyncio.to_thread()`，给相同 `days` 窗口增加进程内 single-flight，并把完整统计
+快照放入 Redis 30 秒。Redis 失败仍回源 PostgreSQL，所以缓存只影响延迟、不影响事实。
+
+相同 5 → 10 → 20 VU、90 秒复测：
+
+| 指标 | 修复后 |
+|---|---:|
+| HTTP 请求 / 完整迭代 | 15,536 / 2,219 |
+| HTTP / 完整迭代吞吐 | 154.91 req/s / 22.13 iteration/s |
+| 失败率 / 业务检查 | 0.000% / 100% |
+| 总体 P95 / P99 | 169.81 / 450.97 ms |
+| Core P95 / P99 | 19.55 / 37.17 ms |
+| Web P95 / P99 | 482.27 / 756.98 ms |
+| AI `/rag/stats` P95 / P99 | **11.21 / 18.77 ms** |
+
+手工失效 key 后，冷读约 57.7 ms、紧接热读约 17.4 ms；另一轮为 75.5/5.0 ms，差异来自本地
+Docker 调度和采样方式，但都远低于修复前的秒级长尾。30 秒 TTL 是“可观测足够新”与“刷新不击穿”
+之间的读模型取舍，不用于缓存问答事实。
+
 ## PostgreSQL 结果
 
 `infra/loadtest/postgres-feed.sql` 模拟公开 feed 的只读分页：过滤 duplicate、按发布时间与 id
@@ -99,7 +122,11 @@ AI `/rag/stats` 为 **837.99/4046.49 ms**。AI P95 连续两轮分别为 918.94 
 
 这是**单条热数据 SQL 的数据库 TPS**。数据和索引都能进页缓存，没有 JSON 组装、网络代理、Java
 DTO、SSR，也没有 RAG 向量查询；绝不能把它写成网站 QPS。`pgbench` 因数据库没有标准
-`pgbench_*` 表会打印 vacuum warning，但自定义查询照常运行，不影响这组统计。
+命令应使用 `pgbench -n` 跳过标准 `pgbench_*` 表的初始化检查；脚本只执行版本化的只读 SQL。
+
+另用 `postgres-rag-stats.sql` 把 retrieval summary 的 4 条聚合作为一个只读事务，在 10 clients、
+2 threads、30 秒下完成 32,409 个事务，失败 0，平均 9.256 ms，约 1,080.37 TPS。它证明数据库
+聚合本身有余量，也解释了为什么正确修复点是 async 阻塞与重复计算，而不是新增索引或独立 OLAP。
 
 ## Redis 结果
 
@@ -107,12 +134,13 @@ DTO、SSR，也没有 RAG 向量查询；绝不能把它写成网站 QPS。`pgbe
 
 | 协议 | ops/s | p50 |
 |---|---:|---:|
-| inline | 78,802 | 0.103 ms |
-| multibulk | 63,980 | 0.119 ms |
+| inline | 84,890 | 0.103 ms |
+| multibulk | 75,758 | 0.095 ms |
 
 这只是本机网络与 Redis event loop 上限，不包含序列化、Spring Cache key、RAG 语料指纹或
-回源数据库成本。当前本地 Redis 为无持久化、`maxmemory=0/noeviction`；业务正确性不依赖它，
-但生产需要通过容器 memory limit 与告警防止缓存无限增长。
+回源数据库成本。采样时累计 keyspace hit/miss 为 49,864/202、eviction 为 0、使用内存 1.47 MiB；
+这些是 Redis 进程启动以来的累计值，不等于单轮命中率。当前本地 Redis 为无持久化、
+`maxmemory=0/noeviction`；生产 Compose 已设置 128 MiB `allkeys-lru` 与 192 MiB 容器上限。
 
 ## 容器观察
 

@@ -25,8 +25,8 @@
 | 14 | [`14-agent-rag-interview-drill.md`](14-agent-rag-interview-drill.md) | Agent、记忆、Prompt、工具调用和 RAG 如何被深挖？ |
 | 15 | [`15-performance-load-testing-interview.md`](15-performance-load-testing-interview.md) | QPS、P95、数据库、Redis、Java 与 Python 怎样实测？ |
 
-补充材料：[`../interview-guide.md`](../interview-guide.md) 是已冻结的早期深挖稿，内容已迁入
-工程手册和本目录；[`../status/project-status.md`](../status/project-status.md) 是累计历史，不用于
+补充材料：[`../interview-guide.md`](../archive/interview/interview-guide-20260812.md) 是已冻结的早期深挖稿，内容已迁入
+工程手册和本目录；[`../status/project-status.md`](../status/current/project-status.md) 是累计历史，不用于
 判断当前生产事实。
 
 ## 四阶段训练法

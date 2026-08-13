@@ -55,11 +55,20 @@ flowchart TB
 活动连接、慢查询、buffer hit 和锁等待。当前 Hikari 最大池 10，所以端到端并发超过 10 不等于数据库会
 建立同样数量连接；请求会排队，P95 会先上升。
 
-### 3.3 Redis
+### 3.3 Redis：它在项目里到底做什么
 
-原语基准只回答 Redis 本身是否异常。业务缓存还要观察 key 数、内存、eviction、hit/miss 和缓存击穿。
-当前 `maxmemory=0/noeviction` 适合小规模单机但不是无限安全：迁移到固定内存目标机时要给 Redis 预算、
-TTL 和告警，不能让缓存挤占 PostgreSQL/Java/Python。
+Redis 有四类职责，但都不是业务事实源：
+
+1. Spring Cache 缓存精选、主题、统计和报告，TTL 为 2–10 分钟，miss 回 PostgreSQL；
+2. RAG 缓存问题 embedding 7 天、可验证答案 1 小时、会话热副本 2 小时和 suggestion 1 天；
+3. 以严格 0.97 阈值保存最多 200 条语义近似问句索引，并以语料 fingerprint 防止跨版本复用；
+4. 匿名问答分钟/天限流、RAG hit/miss 计数，以及本轮新增的 30 秒运行统计读模型。
+
+PostgreSQL 仍保存内容、chunk、答案、引用、会话和用量；Redis 清空只造成慢一次或限流短暂 fail-open，
+不会丢业务数据。生产使用 128 MiB `allkeys-lru` 与 192 MiB 容器上限；本地保持无上限便于调试。
+
+原语基准只回答 Redis 本身是否异常。真实缓存还要分冷/热请求比较，并观察 key 数、内存、
+`keyspace_hits/misses`、eviction 和 TTL。累计 hit/miss 不是某次压测命中率，必须在测试前后取差值。
 
 ### 3.4 Python 与外部模型
 
@@ -80,6 +89,11 @@ generate，随后再用极小真实 canary 验证供应商延迟，不能把付�
 | Web SSR 标签 | 同一 baseline | P95 510.15 ms |
 | pgbench | 10 clients、2 threads、30 秒 | 12,220 TPS，平均 0.818 ms，0 失败 |
 | Redis PING | 100,000、20 clients | 约 63.9k–78.8k req/s，P50 0.10–0.12 ms |
+
+TASK-M5-020 复测中，RAG 统计四条 SQL 的组合事务约 1,080 TPS/9.26 ms；`/rag/stats` 加
+`to_thread + single-flight + Redis 30 秒 TTL` 后，20 VU 的 AI P95/P99 从 838/4046 ms 降为
+11.21/18.77 ms，整轮从 69.0 升到 154.9 HTTP req/s。这里的收益来自避免 event loop 阻塞与重复
+聚合，不是 Redis PING 有多快。
 
 第一版 Python 腿只是 readiness。改为真正读取 `/rag/stats` 后，20 VU 复跑 6,849 请求、0 HTTP/业务
 错误、66.34 req/s；Core P95 46.59 ms、Web P95 528.41 ms，AI 控制路径 P95 **918.94 ms**，越过
@@ -137,3 +151,9 @@ A：代表 SQL 的热缓存 TPS 只说明该查询不是首要瓶颈。端到端
 
 A：拆成检索-only、rerank、生成三层。检索用固定查询集量吞吐和质量；rerank/生成先对 mock/replay 测系统
 并发，再少量真实 provider 测外部延迟和限流。性能测试必须同时守住引用质量，不能只追求 QPS。
+
+**Q：Redis 挂了会怎样，为什么不用它存会话真相？**
+
+A：公共读缓存和 RAG 缓存 miss 后都回 PostgreSQL，答案、引用和会话物理行仍在数据库。限流为了可用性
+会短暂 fail-open，因此另外用 PostgreSQL `llm_usage` 的每日 token ceiling 控制总预算。若把 Redis 当会话
+事实源，重启和 LRU eviction 会直接丢用户历史，也无法与引用事务一致，这违反 ADR-0005。

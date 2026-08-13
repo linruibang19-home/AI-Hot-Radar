@@ -23,6 +23,15 @@ const profiles = {
     { duration: "30s", target: 20 },
     { duration: "15s", target: 0 },
   ],
+  // Low-risk verification for the live 2C4G host. It runs inside the Compose
+  // network, never through the public domain, and only exercises GET routes.
+  // This is intentionally not a capacity-seeking profile.
+  "production-safe": [
+    { duration: "10s", target: 1 },
+    { duration: "20s", target: 2 },
+    { duration: "20s", target: 5 },
+    { duration: "10s", target: 0 },
+  ],
 };
 
 export const options = {
@@ -30,8 +39,12 @@ export const options = {
   discardResponseBodies: true,
   summaryTrendStats: ["avg", "med", "p(90)", "p(95)", "p(99)", "max"],
   thresholds: {
-    http_req_failed: ["rate<0.01"],
-    business_failure: ["rate<0.01"],
+    http_req_failed: [
+      { threshold: "rate<0.01", abortOnFail: true, delayAbortEval: "15s" },
+    ],
+    business_failure: [
+      { threshold: "rate<0.01", abortOnFail: true, delayAbortEval: "15s" },
+    ],
     http_req_duration: ["p(95)<1500"],
     web_latency: ["p(95)<1500"],
     core_latency: ["p(95)<750"],

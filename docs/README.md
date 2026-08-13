@@ -1,8 +1,9 @@
 # 文档导航
 
-本目录按用途分为六类：`spec/` 是锁定契约，`adr/` 记录偏离契约的决策，
-`design/` 是随开发修订的实现方案，`status/` 是实际运行产生的事实，
-`handbook/` 是完整工程教材，`interview/` 把已经实现的事实训练成复习与答辩表达。
+本目录按用途分为七类：`spec/` 是锁定契约，`adr/` 记录偏离契约的决策，
+`design/current/` 是随开发修订的当前方案，`status/` 是实际运行产生的事实，
+`handbook/` 是完整工程教材，`interview/` 把事实训练成答辩表达，`archive/` 保存已取代但仍可审计的
+开发方案和早期讲稿。
 
 ## `handbook/` — 完整工程教材
 
@@ -59,10 +60,10 @@
 | 文件 | 范围 |
 |---|---|
 | [design/README.md](design/README.md) | 四层文档的分工与写入规则 |
-| [m4-rag-implementation.md](design/m4-rag-implementation.md) | M4 RAG 全流程实现方案与外部方案取舍 |
-| [m4-rag-evaluation.md](design/m4-rag-evaluation.md) | 90 题黄金集、指标含义与发布门禁 |
-| [m5-deployment.md](design/m5-deployment.md) | 单机生产部署、安全与恢复设计 |
-| [m5-first-deploy-checklist.md](design/m5-first-deploy-checklist.md) | 首次部署逐步检查表与危险操作边界 |
+| [m4-rag-implementation.md](archive/development/m4-rag-implementation.md) | M4 RAG 全流程实现方案与外部方案取舍 |
+| [m4-rag-evaluation.md](archive/development/m4-rag-evaluation.md) | 90 题黄金集、指标含义与发布门禁 |
+| [m5-deployment.md](design/current/m5-deployment.md) | 单机生产部署、安全与恢复设计 |
+| [m5-first-deploy-checklist.md](design/current/m5-first-deploy-checklist.md) | 首次部署逐步检查表与危险操作边界 |
 
 ## `status/` — 运行状态与验收证据
 
@@ -71,12 +72,12 @@
 | 文件 | 内容 |
 |---|---|
 | [status/README.md](status/README.md) | **状态总索引**：当前入口、历史快照、RAG 与发布证据 |
-| [project-status.md](status/project-status.md) | **项目总进度**：里程碑、数据、信源、服务、待办 |
-| [m1-canary-evidence.md](status/m1-canary-evidence.md) | M1 信源探测验收证据 |
-| [m1-canary-evidence.json](status/m1-canary-evidence.json) | 逐源原始数据 |
-| [rag-product-readiness-20260810.md](status/rag-product-readiness-20260810.md) | **当前 RAG 全链路、成熟产品对标与优化顺序** |
-| [handoff-20260812.md](status/handoff-20260812.md) | 当前生产、提交、数据与下一步入口 |
-| [repository-hygiene-20260812.md](status/repository-hygiene-20260812.md) | 本轮全仓盘点、清理与可恢复归档证据 |
+| [project-status.md](status/current/project-status.md) | **项目总进度**：里程碑、数据、信源、服务、待办 |
+| [m1-canary-evidence.md](status/history/m1-canary-evidence.md) | M1 信源探测验收证据 |
+| [m1-canary-evidence.json](status/history/m1-canary-evidence.json) | 逐源原始数据 |
+| [rag-product-readiness-20260810.md](status/product/rag-product-readiness-20260810.md) | **当前 RAG 全链路、成熟产品对标与优化顺序** |
+| [handoff-20260812.md](status/current/handoff-20260812.md) | 当前生产、提交、数据与下一步入口 |
+| [repository-hygiene-20260812.md](status/operations/repository-hygiene-20260812.md) | 本轮全仓盘点、清理与可恢复归档证据 |
 
 `handoff-20260810.md` 与 `handoff-20260811.md` 是历史快照，不用来判断当前运行版本。
 
@@ -85,5 +86,5 @@
 - [../README.md](../README.md) — 项目总入口与规范优先级
 - [../DEVELOPMENT.md](../DEVELOPMENT.md) — 本地开发、启动、常见问题
 - [interview/README.md](interview/README.md) — 面试准备导航、系统地图、题库与演示脚本
-- [interview-guide.md](interview-guide.md) — 2026-08-12 冻结的早期深挖稿；新材料已迁入 handbook/interview
+- [interview-guide.md](archive/interview/interview-guide-20260812.md) — 2026-08-12 冻结的早期深挖稿；新材料已迁入 handbook/interview
 - [archive-policy.md](archive-policy.md) — 文档状态、冻结与归档规则

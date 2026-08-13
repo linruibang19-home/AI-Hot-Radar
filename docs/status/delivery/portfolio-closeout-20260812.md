@@ -71,5 +71,5 @@ PASS: 200; contains 刷新状态, 不会主动轮询 and 本次读取
 ## 下一张任务卡
 
 作品集材料由 `TASK-M5-011` 做最终分层收口。此后进入维护：按
-`docs/status/tencent-cloud-migration-readiness-20260812.md` 做新机平行恢复与备案后 DNS 切换，
-再按 `docs/status/handoff-20260812.md` 的 P1 顺序扩大噪声集与用户反馈闭环。
+`docs/status/operations/tencent-cloud-migration-readiness-20260812.md` 做新机平行恢复与备案后 DNS 切换，
+再按 `docs/status/current/handoff-20260812.md` 的 P1 顺序扩大噪声集与用户反馈闭环。

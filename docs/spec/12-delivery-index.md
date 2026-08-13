@@ -19,28 +19,28 @@
 | 五分钟了解项目、运行与核心指标 | `README.md` |
 | 从业务到代码系统学习 | `docs/handbook/README.md` |
 | 面试复习、题库、简历与演示 | `docs/interview/README.md` |
-| 腾讯云 Ubuntu 24.04 迁移与购买基线 | `docs/status/tencent-cloud-migration-readiness-20260812.md` |
-| 作品集页面语义、截图与验证 | `docs/status/portfolio-closeout-20260812.md` |
-| 当前提交、容器、数据快照和下一步 | `docs/status/handoff-20260812.md` |
-| 导航性能根因与回归 | `docs/status/navigation-performance-20260812.md` |
-| 完整历史、根因和逐轮实验 | `docs/status/project-status.md` |
+| 腾讯云 Ubuntu 24.04 迁移与购买基线 | `docs/status/operations/tencent-cloud-migration-readiness-20260812.md` |
+| 作品集页面语义、截图与验证 | `docs/status/delivery/portfolio-closeout-20260812.md` |
+| 当前提交、容器、数据快照和下一步 | `docs/status/current/handoff-20260812.md` |
+| 导航性能根因与回归 | `docs/status/operations/navigation-performance-20260812.md` |
+| 完整历史、根因和逐轮实验 | `docs/status/current/project-status.md` |
 | 全部代码的业务链路与学习顺序 | `docs/code-map.md` |
 | 状态、历史快照与实验证据分类 | `docs/status/README.md` |
-| 仓库清理和可恢复归档证据 | `docs/status/repository-hygiene-20260812.md` |
-| RAG 当前发布门禁 | `docs/status/rag-specialist-audit-20260811.md` |
-| RAG 安全、超时和 SLO | `docs/status/rag-security-performance-20260811.md` |
-| RAG 问答 UI 精修 | `docs/status/rag-ui-polish-20260811.md` |
-| 邮箱订阅与定时投递 | `docs/status/report-subscriptions-20260811.md` |
-| v0.1.6 精选与订阅生产验收 | `docs/status/v016-selection-email-20260812.md` |
-| DeepSeek 生成模型配置 | `docs/status/generation-model-selection-20260811.md` |
-| RAG 质量/运行页面 | `docs/status/rag-operations-ui-20260811.md` |
-| 上线前最终本地门禁 | `docs/status/prelaunch-release-gate-20260811.md` |
-| 生产预检与恢复演练 | `docs/status/production-preflight-20260811.md` |
-| 首次生产部署与外部闸门 | `docs/status/production-deployment-20260811.md` |
+| 仓库清理和可恢复归档证据 | `docs/status/operations/repository-hygiene-20260812.md` |
+| RAG 当前发布门禁 | `docs/status/product/rag-specialist-audit-20260811.md` |
+| RAG 安全、超时和 SLO | `docs/status/product/rag-security-performance-20260811.md` |
+| RAG 问答 UI 精修 | `docs/status/product/rag-ui-polish-20260811.md` |
+| 邮箱订阅与定时投递 | `docs/status/product/report-subscriptions-20260811.md` |
+| v0.1.6 精选与订阅生产验收 | `docs/status/product/v016-selection-email-20260812.md` |
+| DeepSeek 生成模型配置 | `docs/status/product/generation-model-selection-20260811.md` |
+| RAG 质量/运行页面 | `docs/status/product/rag-operations-ui-20260811.md` |
+| 上线前最终本地门禁 | `docs/status/delivery/prelaunch-release-gate-20260811.md` |
+| 生产预检与恢复演练 | `docs/status/delivery/production-preflight-20260811.md` |
+| 首次生产部署与外部闸门 | `docs/status/delivery/production-deployment-20260811.md` |
 | 锁定产品与技术决策 | `docs/spec/00-master-spec.md` + `docs/adr/` |
 | 下一张任务卡 | `docs/spec/08-roadmap-ai-ide.md` |
 
-`docs/status/handoff-20260810.md` 是历史交接快照，已由 08-11 版本取代，不应再用其中的
+`docs/status/history/handoff-20260810.md` 是历史交接快照，已由 08-11 版本取代，不应再用其中的
 分支、提交、测试数和待办判断当前状态。
 
 ## 2. 可执行产品

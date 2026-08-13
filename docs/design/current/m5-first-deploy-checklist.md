@@ -1,6 +1,6 @@
 # M5 首次部署清单：会踩的坑，按会踩到的顺序
 
-上级：`docs/design/m5-deployment.md`（方案与选型）、`AHR-QSO-700` §4
+上级：`docs/design/current/m5-deployment.md`（方案与选型）、`AHR-QSO-700` §4
 状态：**本地上线门禁与恢复演练已通过；目标服务器部署待执行**
 
 `m5-deployment.md` 说的是「怎么选、为什么这么选」。这份说的是
