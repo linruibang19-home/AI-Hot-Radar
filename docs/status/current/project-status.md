@@ -1,35 +1,37 @@
 # 项目进度总览
 
-> **累计历史，冻结口径截至 2026-08-12。** 本文保留阶段性计数、失败假设和已关闭待办，
-> 不能当作实时生产大盘。当前生产入口见 [handoff-20260812.md](handoff-20260812.md)，当前
+> **累计历史，当前入口更新至 2026-08-14。** 本文保留阶段性计数、失败假设和已关闭待办，
+> 不能把中间段落当作实时生产大盘。当前生产入口见 [handoff-20260814.md](handoff-20260814.md)，当前
 > 任务见 [`../spec/08-roadmap-ai-ide.md`](../../spec/08-roadmap-ai-ide.md)，完整知识入口见
 > [`../handbook/README.md`](../../handbook/README.md)。
 
-> 更新时间：2026-08-12
-> 当前阶段：**M5 首次生产闭环完成；v0.1.6 正在 aihotradar.online 运行**
+> 更新时间：2026-08-14
+> 当前阶段：**M5 首次生产闭环完成；TASK-M5-020 已部署并通过香港 2C4G 低风险验证**
 > 所有数据均来自实际运行，非估算
 
 > 本文是按时间累积的工程日志，后文保留了当时的失败、旧快照和已关闭待办。判断当前
 > 状态时以本节、§1.1、§7 的“当前剩余任务”和
-> [08-12 交接](handoff-20260812.md) 为准，不要从历史段落截取旧数字。
+> [08-14 交接](handoff-20260814.md) 为准，不要从历史段落截取旧数字。
 
-## 0A. 2026-08-12 当前生产摘要
+## 0A. 2026-08-14 当前生产摘要
 
-当前运行基线为 `6f03e75` / `v0.1.6`，在线地址为 `https://aihotradar.online`。
+生产压测绑定 `ba5cfbeb1c1bd581cd95f4fa5c761fd1bb8bfc22` / `v0.1.12`；最终证据与静默
+压测输出以 `v0.1.13` 同步，在线地址为
+`https://aihotradar.online`。
 服务器 `production`、`IMAGE_TAG` 与 web/core-api/ai-service 镜像均对齐同一 40 位提交，
 10 个容器运行且核心健康检查通过。Caddy HTTPS、公网 smoke、真实 RAG、Gmail SMTP、
 故障/恢复告警、生产备份异机副本与隔离恢复均已有证据。目标机执行证据见
 [首次生产部署记录](../delivery/production-deployment-20260811.md)，当前 checkout 见
-[08-12 交接](handoff-20260812.md)。
+[08-14 交接](handoff-20260814.md)。
 
 | 当前实测 | 数值 |
 |---|---:|
-| source / ACTIVE | 140 / 105 |
-| content_item | 1927（采集仍在增长） |
-| content_chunk / 已向量化 | 7269 / 7269 |
-| story | 1511 |
-| rag_query / rag_citation | 216 / 913 |
-| report | 15（daily 11 / weekly 3 / monthly 1，全部 PUBLISHED）|
+| source / ACTIVE | 140 / 104 |
+| content_item | 2266（采集仍在增长） |
+| content_chunk / 已向量化 | 9261 / 9261 |
+| story | 1832 |
+| rag_query / rag_citation | 229 / 987 |
+| report | 17 |
 | Flyway / 生成模型 | V024 / deepseek-v4-flash v3 |
 | 正式订阅 / 投递 | 1 / 0（已确认日报；从确认后的下一期开始投递） |
 

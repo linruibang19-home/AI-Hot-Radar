@@ -76,7 +76,7 @@
 | [m1-canary-evidence.md](status/history/m1-canary-evidence.md) | M1 信源探测验收证据 |
 | [m1-canary-evidence.json](status/history/m1-canary-evidence.json) | 逐源原始数据 |
 | [rag-product-readiness-20260810.md](status/product/rag-product-readiness-20260810.md) | **当前 RAG 全链路、成熟产品对标与优化顺序** |
-| [handoff-20260812.md](status/current/handoff-20260812.md) | 当前生产、提交、数据与下一步入口 |
+| [handoff-20260814.md](status/current/handoff-20260814.md) | 当前生产、提交、数据与下一步入口 |
 | [repository-hygiene-20260812.md](status/operations/repository-hygiene-20260812.md) | 本轮全仓盘点、清理与可恢复归档证据 |
 
 `handoff-20260810.md` 与 `handoff-20260811.md` 是历史快照，不用来判断当前运行版本。
