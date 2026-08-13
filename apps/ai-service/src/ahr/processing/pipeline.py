@@ -68,26 +68,35 @@ class ProcessStats:
 
 
 def chunk_revision(connection: Any, revision_id: uuid.UUID, body: str) -> int:
-    """Replace a revision's chunks. Returns the number written."""
+    """Publish a new immutable chunk set. Returns the number written.
+
+    Cited physical rows cannot be deleted or rewritten: that would either fail
+    the FK or make an old answer point at different evidence. ADR-0031 therefore
+    retires the previous set and inserts a new active set in one transaction.
+    """
     chunks = chunk_document(body)
     if not chunks:
         return 0
 
+    chunk_set_id = uuid.uuid4()
     with connection.cursor() as cursor:
-        # Rebuild rather than merge: a revision's chunk set must match its body.
-        cursor.execute("DELETE FROM content_chunk WHERE content_revision_id = %s", (revision_id,))
+        cursor.execute(
+            "UPDATE content_chunk SET is_active = FALSE"
+            " WHERE content_revision_id = %s AND is_active",
+            (revision_id,),
+        )
         for chunk in chunks:
             cursor.execute(
                 """
                 INSERT INTO content_chunk (
-                    id, content_revision_id, ordinal, heading_path, body_text,
-                    token_count, char_start, char_end
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (content_revision_id, ordinal) DO NOTHING
+                    id, content_revision_id, chunk_set_id, is_active, ordinal,
+                    heading_path, body_text, token_count, char_start, char_end
+                ) VALUES (%s, %s, %s, TRUE, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     uuid.uuid4(),
                     revision_id,
+                    chunk_set_id,
                     chunk.ordinal,
                     chunk.heading_path,
                     chunk.text,
@@ -291,6 +300,7 @@ def _unchunked_revisions(connection: Any, limit: int) -> list[tuple[Any, ...]]:
                AND NOT EXISTS (
                    SELECT 1 FROM content_chunk cc
                     WHERE cc.content_revision_id = ci.current_revision_id
+                      AND cc.is_active
                )
              ORDER BY ci.published_at DESC NULLS LAST
              LIMIT %s

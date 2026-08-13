@@ -35,9 +35,10 @@ def _pending(connection: Any, limit: int, model: str) -> list[tuple[Any, str]]:
               FROM content_chunk ch
               JOIN content_revision cr ON cr.id = ch.content_revision_id
               JOIN content_item ci ON ci.id = cr.content_item_id
-              JOIN source s ON s.id = ci.source_id
-             WHERE ch.embedding IS NULL
-                OR ch.embedding_model IS DISTINCT FROM %s
+             JOIN source s ON s.id = ci.source_id
+             WHERE ch.is_active
+               AND (ch.embedding IS NULL
+                OR ch.embedding_model IS DISTINCT FROM %s)
              ORDER BY ch.created_at
              LIMIT %s
             """,
@@ -96,7 +97,7 @@ async def backfill_embeddings(
         written += len(batch)
 
     with connection.cursor() as cursor:
-        cursor.execute("SELECT count(*) FROM content_chunk WHERE embedding IS NULL")
+        cursor.execute("SELECT count(*) FROM content_chunk WHERE is_active AND embedding IS NULL")
         remaining = cursor.fetchone()[0]
 
     return {

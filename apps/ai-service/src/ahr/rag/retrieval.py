@@ -99,7 +99,8 @@ def dense_search(
               JOIN content_item ci ON ci.id = cr.content_item_id
                                   AND ci.current_revision_id = cr.id
               JOIN source s ON s.id = ci.source_id
-             WHERE ch.embedding IS NOT NULL
+             WHERE ch.is_active
+               AND ch.embedding IS NOT NULL
                AND ci.duplicate_of_id IS NULL
                AND (%s::timestamptz IS NULL
                     OR COALESCE(ci.published_at, ci.observed_at) >= %s)
@@ -167,7 +168,8 @@ def temporal_search(
               JOIN content_revision cr ON cr.id = ci.current_revision_id
               JOIN content_chunk ch ON ch.content_revision_id = cr.id
               JOIN source s ON s.id = ci.source_id
-             WHERE ci.duplicate_of_id IS NULL
+             WHERE ch.is_active
+               AND ci.duplicate_of_id IS NULL
                AND COALESCE(ci.published_at, ci.observed_at) >= %s
                AND COALESCE(ci.published_at, ci.observed_at) < %s
                AND (%s::text IS NULL OR ci.content_type = %s)
@@ -429,7 +431,9 @@ def select_query_terms(
     stop-word list; it turns out to serve this too.
     """
     with connection.cursor() as cursor:
-        cursor.execute("SELECT count(*) FROM content_chunk WHERE search_vector IS NOT NULL")
+        cursor.execute(
+            "SELECT count(*) FROM content_chunk WHERE is_active AND search_vector IS NOT NULL"
+        )
         total = cursor.fetchone()[0] or 0
         if total == 0:
             return []
@@ -446,7 +450,8 @@ def select_query_terms(
             SELECT t.lexeme,
                    (SELECT count(*)
                       FROM content_chunk c
-                     WHERE c.search_vector @@ plainto_tsquery('simple', t.lexeme)) AS df
+                     WHERE c.is_active
+                       AND c.search_vector @@ plainto_tsquery('simple', t.lexeme)) AS df
               FROM terms t
             """,
             (split_scripts(question), question),
@@ -586,7 +591,9 @@ def sparse_search(
     # ln(N/df), the standard IDF. `select_query_terms` already dropped df == 0
     # and anything above the ceiling, so every value here is finite and positive.
     with connection.cursor() as cursor:
-        cursor.execute("SELECT count(*) FROM content_chunk WHERE search_vector IS NOT NULL")
+        cursor.execute(
+            "SELECT count(*) FROM content_chunk WHERE is_active AND search_vector IS NOT NULL"
+        )
         total = cursor.fetchone()[0] or 1
     lexemes = [lexeme for lexeme, _ in terms]
     # Lexemes contributed by a resolved entity or one of its vendor aliases.
@@ -638,7 +645,8 @@ def sparse_search(
               JOIN content_item ci ON ci.id = cr.content_item_id
                                   AND ci.current_revision_id = cr.id
               JOIN source s ON s.id = ci.source_id
-             WHERE ci.duplicate_of_id IS NULL
+             WHERE ch.is_active
+               AND ci.duplicate_of_id IS NULL
                AND (%s::timestamptz IS NULL
                     OR COALESCE(ci.published_at, ci.observed_at) >= %s)
                AND (%s::timestamptz IS NULL

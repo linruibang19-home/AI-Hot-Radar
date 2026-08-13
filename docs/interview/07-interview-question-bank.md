@@ -131,6 +131,25 @@ embedding backfill 读 chunk body，上下文前缀只用于向量输入；在�
 14 个超限块后，补了单行预算切分和回归测试，再用 `rechunk --oversized-only` 只重建受影响 revision，
 随后只补这些新块的 embedding。这个案例展示了数据门禁比静态代码审查更重要。
 
+### 24E. 已经被答案引用的 chunk 需要重切，怎么处理？
+
+不能删除或原地改写。`rag_citation` 绑定的是回答当时看到的物理 passage；删除会破坏审计，原地
+改写会让旧答案悄悄指向新证据。系统用 `chunk_set_id + is_active`：旧 set 退役但保留，新规则插入
+新的 active set；在线检索和 embedding 只看 active，历史答案仍按主键读旧块，父块只能在同 set
+扩展。这个约束由生产外键故障真实暴露，失败事务完整回滚。
+
+### 24F. 为什么不复制一个 content revision 来承载新切块？
+
+revision 表达“来源正文发生了变化”，chunk set 表达“同一正文被哪版处理规则切分”。正文没变却
+复制 revision 会混淆来源历史和算法历史，也让 canonical hash 的含义失真。两个生命周期拆开后，
+既能回答来源何时变化，也能回答哪版切块生成了当前索引。
+
+### 24G. 没有执行真实人工审核，作品集还能怎么讲？
+
+如实分三层：已经运行的是确定性关系规则、公共置信门和 90 题 RAG 自动回归；已经实现但未执行
+的是分层抽样、隐藏预测、revision/hash 固定、双人标签结构、第三人裁决、严格校验和加权评估；
+没有的结果就是人工 precision/recall。面试亮点是 fail-closed 和证据边界，不是假装多了两位审核员。
+
 ## 前端
 
 ### 25. 为什么使用 Next.js SSR？

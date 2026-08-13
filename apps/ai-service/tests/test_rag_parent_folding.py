@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import inspect
+
+from ahr.rag import parent
 from ahr.rag.folding import ChunkFacts, fold_by_story, main_source_first
 from ahr.rag.parent import PARENT_BUDGET_TOKENS, choose_tier
 
@@ -40,6 +43,13 @@ def test_the_budget_is_the_boundary_not_a_suggestion() -> None:
     assert choose_tier(document_tokens=budget, section_tokens=None) == "document"
     assert choose_tier(document_tokens=budget + 1, section_tokens=budget) == "section"
     assert choose_tier(document_tokens=budget + 1, section_tokens=budget + 1) == "neighbours"
+
+
+def test_parent_expansion_never_mixes_chunk_generations() -> None:
+    """A retired passage may still be expanded for a historical citation, but
+    its neighbours must come from the same immutable chunk set."""
+    source = inspect.getsource(parent._rows_for)
+    assert "hit.chunk_set_id = ch.chunk_set_id" in source
 
 
 # --------------------------------------------------------------------------

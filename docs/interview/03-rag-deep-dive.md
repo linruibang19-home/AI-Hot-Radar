@@ -28,6 +28,12 @@ Embedding 记录模型与版本；重建索引先写新版本、验证后切换�
 6. bge-m3 的输入是“标题/来源/日期/heading + 原文 passage”，数据库引用仍只保存原文 passage；
 7. 新 revision 会重新切块；Dense、Sparse、重排和引用都只 join `current_revision_id`。
 
+正文版本和切块版本是两个生命周期。`content_revision` 只在来源正文改变时新增；切块算法升级
+不会伪造一版正文，而是在同一 revision 下生成新的不可变 `chunk_set_id`。线上检索、向量回填和
+健康统计只读 active set；历史 citation 继续指向 retired set 的物理 chunk，parent expansion 也
+限定在同一 set。这个设计来自一次真实生产发现：定向重切试图删除已引用块，PostgreSQL 外键
+拒绝删除并回滚事务。正确修复不是级联删除证据，而是版本化派生物。
+
 这不是设计稿：2026-08-13 生产审计在修复前看到 2,098 篇当前非空正文、2,095 篇已有当前块、
 7,912 个当前块全部有 bge-m3 向量，0 个块等于中文摘要；同时发现 14 个历史单行块超过硬上限，
 由本轮修复和定向重建收口。动态数字不写成永久事实，完整查询见
@@ -123,6 +129,11 @@ limitations。生成模型可以在 `deepseek-v4-flash` 与 `deepseek-v4-pro` �
 双人/三人标注结果，因此没有把待审核候选数包装成准确率”。RAG 的 90 题自动评测与主题关系人审
 是两套问题，不能混为一谈。
 
+作品集明确省略真实人工阶段后，线上不会把“未审核”伪装成“人工通过”：主题关系继续由可重放
+的确定性规则与公共置信门输出；`/eval` 继续展示自动回归；人审候选、隐藏预测、校验器和评估器
+仅作为团队化方案与工程能力证明。简历可以陈述“设计并实现人审基础设施”，不能陈述“完成双人
+盲审”或引用不存在的人工精度。
+
 ## 检索轨迹与可观测性
 
 每次问答写 `rag_query_id`，记录计划、语料 cutoff、Embedding/reranker/generation 版本、各通道
@@ -155,6 +166,9 @@ limitations。生成模型可以在 `deepseek-v4-flash` 与 `deepseek-v4-pro` �
 - **GEN-FIX**：误拒从 1.28% 升到 7.69%，原假设是语料增长造成证据竞争；抓原始响应后发现
   答案完整正确，只是 JSON/claims 偏离被解析失败分支清空。修复出口后误拒为 0%，原假设被证伪。
 - **数字关系审计**：引用支持度接近 1 仍可能把百分比分母与单次价格混淆，新增受控数字关系审计并 fail closed。
+- **引用阻止重切**：生产定向重切被 `rag_citation → content_chunk` 外键拒绝，证明物理 passage
+  是审计证据而非可随意覆盖的缓存。事务回滚避免数据损坏，随后用 immutable chunk set 把“正文
+  revision”和“处理规则版本”拆开，并让 current retrieval 与 historical audit 同时成立。
 
 ## 成熟度与剩余风险
 

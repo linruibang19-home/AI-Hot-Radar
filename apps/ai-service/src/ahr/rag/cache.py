@@ -148,7 +148,8 @@ def corpus_fingerprint(connection: Any, *, freshness_required: bool) -> str:
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT (SELECT count(*) FROM content_chunk WHERE embedding IS NOT NULL),
+            SELECT (SELECT count(*) FROM content_chunk
+                     WHERE is_active AND embedding IS NOT NULL),
                    (SELECT max(COALESCE(published_at, observed_at)) FROM content_item)
             """
         )

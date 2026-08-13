@@ -79,7 +79,7 @@ def load_corpus_facts(connection: Any) -> CorpusFacts:
             """
             SELECT (SELECT count(*) FROM content_item WHERE duplicate_of_id IS NULL),
                    (SELECT count(*) FROM source WHERE runtime_state = 'ACTIVE'),
-                   (SELECT count(*) FROM content_chunk),
+                   (SELECT count(*) FROM content_chunk WHERE is_active),
                    (SELECT count(*) FROM content_item WHERE enrichment_state = 'ENRICHED'),
                    (SELECT max(COALESCE(published_at, observed_at)) FROM content_item),
                    (SELECT min(COALESCE(published_at, observed_at)) FROM content_item)
