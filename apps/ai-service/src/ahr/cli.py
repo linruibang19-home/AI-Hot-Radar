@@ -294,6 +294,7 @@ def cmd_rechunk(args: argparse.Namespace) -> int:
     regenerates them — a vector left attached to replaced text points at content
     that no longer exists.
     """
+    from ahr.processing.chunking import HARD_MAX_TOKENS
     from ahr.processing.pipeline import chunk_revision
 
     before = 0
@@ -302,14 +303,28 @@ def cmd_rechunk(args: argparse.Namespace) -> int:
 
     with psycopg.connect(get_settings().database_url) as connection:
         with connection.cursor() as cursor:
-            cursor.execute(
+            oversized_filter = (
                 """
+                 AND EXISTS (
+                       SELECT 1 FROM content_chunk cc
+                        WHERE cc.content_revision_id = cr.id
+                          AND cc.token_count > %s
+                 )
+                """
+                if args.oversized_only
+                else ""
+            )
+            params = (HARD_MAX_TOKENS,) if args.oversized_only else ()
+            cursor.execute(
+                f"""
                 SELECT cr.id, cr.body_text
                   FROM content_revision cr
                   JOIN content_item ci ON ci.current_revision_id = cr.id
                  WHERE cr.body_text IS NOT NULL AND length(cr.body_text) > 0
+                   {oversized_filter}
                  ORDER BY cr.created_at
-                """
+                """,
+                params,
             )
             rows = cursor.fetchall()
 
@@ -330,7 +345,12 @@ def cmd_rechunk(args: argparse.Namespace) -> int:
 
     print(
         json.dumps(
-            {"revisions": revisions, "chunks_before": before, "chunks_after": after},
+            {
+                "revisions": revisions,
+                "chunks_before": before,
+                "chunks_after": after,
+                "oversized_only": args.oversized_only,
+            },
             indent=2,
         )
     )
@@ -1368,7 +1388,14 @@ def main(argv: list[str] | None = None) -> int:
     fix_titles.add_argument("--dry-run", action="store_true")
     fix_titles.set_defaults(func=cmd_fix_titles)
 
-    rechunk = sub.add_parser("rechunk", help="re-split every stored revision with current rules")
+    rechunk = sub.add_parser(
+        "rechunk", help="re-split current revisions with the current chunking rules"
+    )
+    rechunk.add_argument(
+        "--oversized-only",
+        action="store_true",
+        help="only rebuild current revisions containing a chunk above the hard token cap",
+    )
     rechunk.set_defaults(func=cmd_rechunk)
 
     embed = sub.add_parser("embed", help="generate embeddings for content chunks")

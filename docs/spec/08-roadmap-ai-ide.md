@@ -477,6 +477,29 @@ Story/报告/RAG 回归、生产构建与 Docker 页面冒烟通过。
 准确率；双人盲审不得暴露生产预测，分歧必须由独立第三人裁决；人工集完成后保存脱敏标签、
 加权基线与分层 bootstrap 95% 置信区间，再决定是否进入关系分类器 v2。
 
+**作品集收口**：⏸ 2026-08-13 明确省略真实双人盲审与第三人裁决。工程抽样、隐藏预测、
+revision/hash 绑定、严格校验和评估工具保留，但不输出人工 precision/recall，也不把 1,995 条
+待审核候选写成准确率。团队化执行流程与面试边界见 `docs/interview/03-rag-deep-dive.md`。
+
+### TASK-M5-017｜主题时间线正确性、感知性能与 RAG 语料实证收口
+
+**状态**：🟡 2026-08-13 实现与定向测试完成，等待 CI、生产定向重切/向量补齐和页面验收。
+**读取**：TASK-M5-015/016、`06-frontend-spec.md`、`04-rag-agent-design.md`、ADR-0029/0030、
+厂商 feed、Web 时间线、chunker/backfill 与生产只读快照。
+**输入**：厂商相关页按 relation score 优先导致 5/8 月日期交错；全屏加载 portal 放大约 0.2 秒
+导航等待；2,098 篇当前非空正文中 2,095 篇已切，7,912 个当前块全部向量化，但 14 个旧块因
+无换行超长正文超过 1,200-token 硬上限。
+**产出**：厂商 cursor 时间优先；Web 时间倒序不变量；metadata/page 请求去重；保留旧页面的
+轻量 pending 导航；单行超长安全切分与 `rechunk --oversized-only`；生产原文切块/向量审计；
+把人工复核未执行的边界和 RAG 原文证据写入面试材料。
+**边界**：不改 V025 关系分类规则，不改 RAG 检索策略/模型/核心实体，不引入新缓存或基础设施，
+不伪造人工标签；只重切超过当前硬上限的 current revision，随后幂等补其向量。
+**完成标准**：厂商 feed 日期单调倒序且 cursor 不重不漏；Web 打乱输入仍按时间展示；当前
+revision 无 >1200 token chunk、全部非空正文有块、全部 current chunk 有 bge-m3 向量；Java、
+Python、Web、CI、生产 smoke 与浏览器视觉回归通过。
+**证据**：`docs/status/topic-timeline-performance-20260813.md`、
+`docs/status/rag-corpus-audit-20260813.md`。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

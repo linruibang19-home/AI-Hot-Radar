@@ -91,7 +91,10 @@ test.describe("navigation", () => {
     await target.click();
 
     await expect(target).toHaveAttribute("aria-busy", "true");
-    await expect(page.locator(".route-loading")).toBeVisible();
+    // The already rendered article remains readable. Replacing it with a
+    // full-screen skeleton made a 150–200ms request feel like a page reload.
+    await expect(page.locator(".route-loading")).toHaveCount(0);
+    await expect(page.locator("main")).toContainText("精选");
     await expect(page).toHaveURL(/\/hot$/);
     await expect(target).not.toHaveAttribute("aria-busy", "true");
   });

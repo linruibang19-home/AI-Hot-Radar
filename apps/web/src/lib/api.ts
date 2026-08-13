@@ -631,7 +631,17 @@ export function appendItems(
 
 export function groupByDay(items: ContentItem[]): Map<string, ContentItem[]> {
   const groups = new Map<string, ContentItem[]>();
-  for (const item of items) {
+  // Timeline pages are time-ordered products.  The API normally guarantees
+  // that order, but one relation endpoint previously sorted by confidence
+  // first and produced May/August/May headings.  Sort a copy here as a final
+  // presentation invariant so a backend regression cannot scramble dates.
+  const ordered = [...items].sort((left, right) => {
+    const leftTime = Date.parse(left.publishedAt ?? left.observedAt);
+    const rightTime = Date.parse(right.publishedAt ?? right.observedAt);
+    if (leftTime !== rightTime) return rightTime - leftTime;
+    return right.id.localeCompare(left.id);
+  });
+  for (const item of ordered) {
     const stamp = item.publishedAt ?? item.observedAt;
     const day = dayKey(stamp) ?? "未知日期";
     const bucket = groups.get(day);

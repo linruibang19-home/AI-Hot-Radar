@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
 
 import { SidebarResizer } from "@/components/SidebarResizer";
-import { RouteLoading } from "@/components/RouteLoading";
 
 /**
  * Primary navigation.
@@ -139,12 +137,10 @@ export function Sidebar() {
   const pathname = usePathname() ?? "/";
   const router = useRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
-  const navigationPending =
-    pendingHref !== null && !isActive(pathname, pendingHref);
-
-  // A network failure must not leave the reading surface covered forever.
   // Successful navigation clears the visible state through `isActive`; this
-  // timer is only the failure escape hatch.
+  // timer is only the failure escape hatch. The old full-page skeleton was
+  // deliberately removed: keeping the existing reading surface visible while
+  // only the clicked link pulses feels substantially faster at the same TTFB.
   useEffect(() => {
     if (pendingHref === null) return undefined;
     const timeout = window.setTimeout(() => setPendingHref(null), 15_000);
@@ -225,9 +221,6 @@ export function Sidebar() {
       ))}
 
       <SidebarResizer />
-      {navigationPending && typeof document !== "undefined"
-        ? createPortal(<RouteLoading />, document.body)
-        : null}
     </aside>
   );
 }

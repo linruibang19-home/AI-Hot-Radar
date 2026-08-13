@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { FormEvent } from "react";
 import type { ReportPeriod } from "@/lib/api";
@@ -15,12 +15,17 @@ export function ReportSubscribe({ period }: { period: ReportPeriod }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [email, setEmail] = useState("");
   const [periods, setPeriods] = useState<ReportPeriod[]>([period]);
-  const [timezone] = useState(
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai",
-  );
+  // The first client render must match SSR. Detecting the browser zone in the
+  // state initializer rendered UTC on the Node host and Asia/Shanghai in the
+  // browser, producing a hydration error even while the dialog was closed.
+  const [timezone, setTimezone] = useState("Asia/Shanghai");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
   const [succeeded, setSucceeded] = useState(false);
+
+  useEffect(() => {
+    setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Shanghai");
+  }, []);
 
   function togglePeriod(value: ReportPeriod) {
     setPeriods((current) =>
