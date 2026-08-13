@@ -432,8 +432,8 @@ public class ContentRepository {
         if (cursor != null) {
             sql.append(
                     """
-                      AND (ivr.score, COALESCE(ci.published_at, ci.observed_at), ci.id)
-                          < (:score, :publishedAt, CAST(:id AS uuid))
+                      AND (COALESCE(ci.published_at, ci.observed_at), ivr.score, ci.id)
+                          < (:publishedAt, :score, CAST(:id AS uuid))
                     """);
             params.addValue("score", cursor.score());
             params.addValue("publishedAt", cursor.publishedAt());
@@ -441,8 +441,8 @@ public class ContentRepository {
         }
         sql.append(
                 """
-                 ORDER BY ivr.score DESC,
-                          COALESCE(ci.published_at, ci.observed_at) DESC,
+                 ORDER BY COALESCE(ci.published_at, ci.observed_at) DESC,
+                          ivr.score DESC,
                           ci.id DESC
                  LIMIT :limit
                 """);

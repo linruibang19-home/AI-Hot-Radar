@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cache } from "react";
 
 import { BackLink } from "@/components/BackLink";
 import { ItemCard } from "@/components/ItemCard";
@@ -12,14 +13,14 @@ export const dynamic = "force-dynamic";
 
 const OPEN_DAYS = 3;
 
-async function findTopic(slug: string) {
+const findTopic = cache(async (slug: string) => {
   const groups = await fetchTopicMap();
   for (const group of groups) {
     const match = group.children.find((child) => child.slug === slug);
     if (match) return { topic: match, group };
   }
   return null;
-}
+});
 
 export async function generateMetadata({
   params,

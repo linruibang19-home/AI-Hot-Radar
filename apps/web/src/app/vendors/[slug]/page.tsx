@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cache } from "react";
 
 import { BackLink } from "@/components/BackLink";
 import { ItemCard } from "@/components/ItemCard";
@@ -48,10 +49,10 @@ const REASONS: Record<string, string> = {
   passing_mention: "正文顺带提及",
 };
 
-async function findVendor(slug: string) {
+const findVendor = cache(async (slug: string) => {
   const vendors = await fetchVendorMap();
   return vendors.find((vendor) => vendor.slug === slug) ?? null;
-}
+});
 
 export async function generateMetadata({
   params,

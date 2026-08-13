@@ -66,9 +66,12 @@ Story、主题和报告优先 Server Component/SSR；筛选、订阅弹窗、多
 浏览器导航 → Next route/data → Core/AI API → PostgreSQL/Redis → 外部模型
 ```
 
-内容路由使用 Link 预取、路由级 loading 和服务端缓存；工程重聚合不应跟普通导航串行；RAG 首次请求
-主要受外部 embedding/rerank/generation 影响，重复请求由 freshness-aware 缓存加速。实际优化曾把
-导航即时反馈与定向预取发布为独立版本，而不是用动画掩盖等待。
+内容路由使用 Link 预取；同一次 SSR 中 metadata 与页面读取用 React request memoization 去重。
+普通导航保留旧阅读面，只让被点击的侧栏项显示 pending，不再用全屏骨架遮住已加载内容。时间线由
+API 按 effective publication time 排序，Web 再做不可变兜底排序，避免关联分数把五月内容插到八月
+前面。工程重聚合不应跟普通导航串行；RAG 首次请求主要受外部 embedding/rerank/generation 影响，
+重复请求由 freshness-aware 缓存加速。性能结论必须同时报告 TTFB、接口耗时和浏览器感知，不用
+loading 动画掩盖根因。
 
 ## 可访问性、SEO 与响应式
 

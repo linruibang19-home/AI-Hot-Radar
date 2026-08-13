@@ -285,6 +285,27 @@ def _split_oversized(block: _Block) -> list[_Block]:
         buffer_other = 0
 
     for line in block.text.splitlines():
+        # Some extracted pages collapse an entire article into one physical
+        # line.  Line-aligned splitting cannot help there: the previous loop
+        # emitted that one line as a 4k+ token chunk.  Split only that
+        # pathological line, preferring nearby whitespace/punctuation while
+        # retaining every source character and exact offsets.
+        if estimate_tokens(line) > HARD_MAX_TOKENS:
+            flush()
+            for fragment in _split_oversized_line(line):
+                pieces.append(
+                    _Block(
+                        text=fragment,
+                        heading_path=block.heading_path,
+                        char_start=offset,
+                        char_end=offset + len(fragment),
+                        is_code=block.is_code,
+                    )
+                )
+                offset += len(fragment)
+            offset += 1
+            continue
+
         cjk, other = measure(line)
         # +1 for the newline this line contributes once joined.
         projected = int((buffer_cjk + cjk) / 1.5 + (buffer_other + other + 1) / 4)
@@ -297,6 +318,41 @@ def _split_oversized(block: _Block) -> list[_Block]:
 
     flush()
     return pieces or [block]
+
+
+def _split_oversized_line(line: str) -> list[str]:
+    """Split one newline-free region without inventing or dropping text."""
+    pieces: list[str] = []
+    start = 0
+    length = len(line)
+    break_chars = " \t,.;:!?，。；：！？、"
+
+    while start < length:
+        low = start + 1
+        high = length
+        best = low
+        while low <= high:
+            middle = (low + high) // 2
+            if estimate_tokens(line[start:middle]) <= HARD_MAX_TOKENS:
+                best = middle
+                low = middle + 1
+            else:
+                high = middle - 1
+
+        end = best
+        if end < length:
+            # A readable boundary is preferred, but never shrink a piece below
+            # 75% of the available budget just to find distant punctuation.
+            floor = start + max(1, int((end - start) * 0.75))
+            candidates = [line.rfind(char, floor, end) for char in break_chars]
+            boundary = max(candidates, default=-1)
+            if boundary >= floor:
+                end = boundary + 1
+
+        pieces.append(line[start:end])
+        start = end
+
+    return pieces
 
 
 def _common_prefix(left: list[str], right: list[str]) -> list[str]:

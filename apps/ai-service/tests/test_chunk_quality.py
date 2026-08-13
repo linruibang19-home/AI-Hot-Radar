@@ -77,6 +77,19 @@ def test_an_oversized_block_is_split_rather_than_stored_whole() -> None:
     assert all(c.token_count <= HARD_MAX_TOKENS * 1.1 for c in chunks)
 
 
+def test_an_oversized_single_line_is_split_without_losing_source_text() -> None:
+    giant_line = "long-token-value " * 2400
+    document = f"## Payload\n\n{giant_line}"
+    chunks = chunk_document(document)
+
+    assert len(chunks) > 1
+    assert all(c.token_count <= HARD_MAX_TOKENS for c in chunks)
+    # Structural parsing intentionally trims document-edge whitespace; every
+    # meaningful source character must otherwise survive the emergency split.
+    assert "".join(chunk.text for chunk in chunks) == giant_line.rstrip()
+    assert [chunk.char_start for chunk in chunks] == sorted(chunk.char_start for chunk in chunks)
+
+
 def test_splitting_preserves_the_heading_path() -> None:
     giant = "## Reference\n\n" + "\n".join(f"- entry {i}" for i in range(3000))
     chunks = chunk_document(giant)

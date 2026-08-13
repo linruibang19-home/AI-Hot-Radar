@@ -18,6 +18,21 @@ canonical 正文 → revision → 结构/语义切块
 Embedding 记录模型与版本；重建索引先写新版本、验证后切换。Story 摘要可以帮助组织答案，
 但不能成为唯一最终证据。
 
+### 原文切块到底怎样发生
+
+1. RSS/API/列表只负责发现；适配器回到 canonical 页面取得正文，全文门通过后写 revision；
+2. 切块任务读取**当前 revision 的 `body_text`**，不是 `summary_zh` 或 discovery snippet；
+3. 解析 Markdown heading、段落、列表、代码块，目标 400 token、60 overlap、普通上限 700；
+4. 单个超长结构最多 1200 token；长表格按行切，异常无换行正文按预算和标点继续切；
+5. 保存原文 passage、heading path、ordinal 和字符定位；
+6. bge-m3 的输入是“标题/来源/日期/heading + 原文 passage”，数据库引用仍只保存原文 passage；
+7. 新 revision 会重新切块；Dense、Sparse、重排和引用都只 join `current_revision_id`。
+
+这不是设计稿：2026-08-13 生产审计在修复前看到 2,098 篇当前非空正文、2,095 篇已有当前块、
+7,912 个当前块全部有 bge-m3 向量，0 个块等于中文摘要；同时发现 14 个历史单行块超过硬上限，
+由本轮修复和定向重建收口。动态数字不写成永久事实，完整查询见
+[`../status/rag-corpus-audit-20260813.md`](../status/rag-corpus-audit-20260813.md)。
+
 ## 在线执行契约
 
 ### 1. Query Planner
@@ -91,6 +106,22 @@ limitations。生成模型可以在 `deepseek-v4-flash` 与 `deepseek-v4-pro` �
 
 同一个交叉编码器对 claim-passage 打支持度，结果用于逐句清理和诊断。自动支持度有模型偏差，
 尤其不擅长“整组证据都没有提到某事实”的否定结论，因此高风险数字、单位、主体和分母仍需人工 P0 审查。
+
+### 自动门禁与人工复核的真实边界
+
+本作品集保留自动发布门、原始 artifacts、候选抽样与人审校验工具，但**没有完成主题地图 1,995 条
+候选的双人盲审，也不声称关系分类 precision/recall 已由人工证明**。如果是团队产品，人审流程会是：
+
+1. 按厂商 `primary/related/mention/unmatched` 和主题 `public/suppressed/unmatched` 分层抽样；
+2. 样本绑定 revision id、正文 hash 和定位，审核界面隐藏生产预测；
+3. 两位审核者独立标注，分歧交第三位裁决者；
+4. 校验器拒绝空层、重复样本、revision 漂移和缺审核元数据；
+5. 按总体分层权重估计 precision/recall，并给 bootstrap 95% 置信区间；
+6. 指标达标后才校准阈值或训练 v2，旧规则与负结果继续版本化。
+
+简历面试的正确说法是“我把可复现的人审基础设施和 fail-closed 门禁做完了，但个人作品没有伪造
+双人/三人标注结果，因此没有把待审核候选数包装成准确率”。RAG 的 90 题自动评测与主题关系人审
+是两套问题，不能混为一谈。
 
 ## 检索轨迹与可观测性
 
