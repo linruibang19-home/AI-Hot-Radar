@@ -101,6 +101,7 @@ def _load_distractor_hits(
               JOIN content_chunk ch ON ch.content_revision_id = cr.id
               JOIN source s ON s.id = ci.source_id
              WHERE ci.id = ANY(%s::uuid[])
+               AND ch.is_active
                AND ci.duplicate_of_id IS NULL
                AND COALESCE(ci.published_at, ci.observed_at) <= %s
              ORDER BY ci.id, ch.ordinal
