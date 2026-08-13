@@ -286,7 +286,7 @@ diff、Flyway 空库/升级、依赖审计、秘密扫描、Compose smoke 与受
 - 个人 Gmail 适合上线验证，不适合长期产品投递，后续需自有域名发件与 SPF/DKIM/DMARC；
 - 进入私有知识库或多租户之前，不提前引入账号、ACL 和租户隔离。
 
-当前任务与生产交接以 [`docs/status/current/handoff-20260812.md`](docs/status/current/handoff-20260812.md)
+当前任务与生产交接以 [`docs/status/current/handoff-20260814.md`](docs/status/current/handoff-20260814.md)
 为准，不从 README 的历史数字推断实时状态。
 
 ## 文档导航

@@ -8,7 +8,9 @@
 P95 510 ms。把 Python health 换成真正的 `/rag/stats` 后，复跑降到 66.3 req/s，AI 控制路径 P95 919 ms
 并触发 750 ms 失败门；第二次完整复跑 AI P95/P99 为 838/4046 ms，再次红灯。这是能发现瓶颈的回归
 基线。修复同步 psycopg 阻塞、增加 single-flight 与 30 秒 Redis 读模型后，同配置 AI P95/P99
-降到 11.21/18.77 ms、整轮 154.9 req/s、0 错误；仍不是 2C4G 生产容量。
+降到 11.21/18.77 ms、整轮 154.9 req/s、0 错误。香港 2C4G 又用 1→2→5 VU 做了低风险
+生产验证：1536 请求零错误，AI/Core/Web P95 为 10.69/96.82/644.09 ms。它证明发布版本正常，
+仍不是容量寻顶。
 
 ## 3 分钟版本
 
@@ -19,8 +21,8 @@ P95 510 ms。把 Python health 换成真正的 `/rag/stats` 后，复跑降到 6
 5. 生成/Embedding/rerank 不直接打付费 provider，而是 mock/replay 测系统，再用小流量 canary 测供应商；
 6. 以满足 SLO 的最高稳定档为容量，保留至少 30% 余量，并做长时间 soak 找泄漏。
 
-脚本：`infra/loadtest/read-paths.js`、`infra/loadtest/postgres-feed.sql`；证据：
-`docs/status/loadtest/2026-08-13-local-baseline.md`。
+脚本：`infra/loadtest/read-paths.js`、两份 pgbench SQL 与 `run-production-readonly.sh`；证据：
+`docs/status/loadtest/2026-08-13-local-baseline.md` 和 `2026-08-14-m5-020-production.md`。
 
 ## 高频追问
 

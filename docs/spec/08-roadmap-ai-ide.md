@@ -260,7 +260,7 @@ Compose 与已通过的 M4/M5 质量门禁。
 
 **状态**：✅ 2026-08-12 完成；首次生产闭环见
 `docs/status/delivery/production-deployment-20260811.md`，当前交接见
-`docs/status/current/handoff-20260812.md`。
+`docs/status/current/handoff-20260814.md`。
 **读取**：`02-system-architecture.md`、`07-quality-security-ops.md`、
 `11-end-to-end-runbook.md`、`docs/design/current/m5-deployment.md`、
 `docs/design/current/m5-first-deploy-checklist.md`、TASK-M5-005 验收记录。
@@ -335,7 +335,7 @@ Java、Web、Compose 与公网桌面/移动端验收通过，发布后数据库�
 
 **状态**：✅ 2026-08-12 完成；代码、脱敏截图与面试材料已通过本地门禁，等待发布验收。
 **读取**：`06-frontend-spec.md`、`07-quality-security-ops.md`、TASK-M5-008、
-TASK-M5-009、`docs/status/current/handoff-20260812.md`。
+TASK-M5-009、`docs/status/current/handoff-20260814.md`。
 **输入**：现有 `/eval` 版本化评测摘要、动态信源健康数据、生产页面与发布证据。
 **产出**：明确区分静态发布评测与动态运行状态；为信源后台提供可理解的刷新时间语义；
 用脱敏生产截图、分层 README 与面试学习材料完成公开作品集封版。
@@ -353,7 +353,7 @@ Docker 页面 smoke 与 Chrome 桌面/移动端视觉验收通过。
 **状态**：✅ 2026-08-12 完成；纯文档与迁移基线经 PR #12 / GitHub CI 验证。
 **读取**：`00-master-spec.md`、`02-system-architecture.md`、`03-data-ingestion.md`、
 `04-rag-agent-design.md`、`06-frontend-spec.md`、`07-quality-security-ops.md`、
-`11-end-to-end-runbook.md`、TASK-M5-010 与 `docs/status/current/handoff-20260812.md`。
+`11-end-to-end-runbook.md`、TASK-M5-010 与 `docs/status/current/handoff-20260814.md`。
 **输入**：已上线的 M0–M5 产品、五张脱敏截图、固定 RAG 发布评测、生产运行证据，
 以及待购买的广州 2C4G5M / 60GB Ubuntu 24.04 Docker 轻量应用服务器。
 **产出**：把根 README 重排为 30 秒、3 分钟、30 分钟三层阅读入口；按业务架构、采集与
@@ -552,7 +552,7 @@ Python/Java/Web/Compose 相关门禁通过。
 
 ### TASK-M5-020｜RAG 统计聚合性能与 2C4G 容量验收
 
-**状态**：🟡 实现与本地复测完成；等待当前香港 2C4G 发布后低风险验证，隔离同规格寻顶/soak 仍后置。
+**状态**：✅ 2026-08-14 修复、CI、香港 2C4G 低风险生产验证完成；隔离同规格寻顶/soak 作为容量规划后续项。
 **输入**：TASK-M5-019 的真实 `/rag/stats` 基线在 20 VU 下 p95 918.94 ms，越过 750 ms 初始门；
 当前开发机结果不能外推生产容量。
 **目标**：profile `retrieval_summary` 聚合 SQL 与序列化，先以查询/索引或短 TTL 可失效缓存降低
@@ -565,6 +565,11 @@ psycopg 与并发重复聚合；改为 `asyncio.to_thread`、按窗口进程内 
 快照。相同本地 20 VU 复测 AI P95/P99 从 837.99/4046.49 ms 降至 11.21/18.77 ms，整轮
 15,536 请求、154.91 req/s、0 错误。生产脚本只跑 1→2→5 VU、只读内部路径、pgbench 和 Redis
 观察；真正容量结论仍必须等隔离 2C4G 阶梯与 soak。
+
+**生产证据（2026-08-14）**：同 SHA 的 10 个容器健康，1→2→5 VU 内部混合读完成 1536 请求、
+25.09 req/s、0 错误；AI/Core/Web P95 分别为 10.69/96.82/644.09 ms。pgbench 内容流/RAG
+统计为 741.02/79.43 TPS 且 0 失败；Redis PING 为 40.4k–45.4k req/s、0 eviction。该轮是
+低风险发布验证，不是容量寻顶，详见 `docs/status/loadtest/2026-08-14-m5-020-production.md`。
 
 ## 4. AI IDE 统一提示词
 
