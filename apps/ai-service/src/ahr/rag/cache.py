@@ -73,6 +73,13 @@ CACHE_VERSION = "v1"
 EMBEDDING_TTL = 7 * 86_400
 ANSWER_TTL = 3_600
 
+# The operations page aggregates several PostgreSQL queries over the same
+# immutable time window.  It is a read model, not a correctness boundary: a
+# short TTL removes a thundering herd when the dashboard is refreshed while
+# keeping the numbers observably current.  Redis loss only causes one database
+# recomputation because callers always fall back to PostgreSQL.
+OPS_STATS_TTL = 30
+
 # Deliberately high. See the module docstring: a loose threshold on this corpus
 # does not degrade an answer, it answers a different question.
 SEMANTIC_THRESHOLD = 0.97
@@ -86,6 +93,7 @@ _ANSWER_PREFIX = f"ahr:rag:{CACHE_VERSION}:answer"
 _EMBED_PREFIX = f"ahr:rag:{CACHE_VERSION}:embed"
 _SEMANTIC_INDEX = f"ahr:rag:{CACHE_VERSION}:semindex"
 _COUNTER = f"ahr:rag:{CACHE_VERSION}:hits"
+_OPS_STATS_PREFIX = f"ahr:rag:{CACHE_VERSION}:ops-stats"
 
 _WHITESPACE = re.compile(r"\s+")
 
@@ -119,6 +127,36 @@ def canonical(question: str) -> str:
 
 def _digest(*parts: str) -> str:
     return hashlib.sha256("\x1f".join(parts).encode("utf-8")).hexdigest()[:32]
+
+
+def ops_stats_key(days: int) -> str:
+    """Stable key for one clamped operations-window read model."""
+    return f"{_OPS_STATS_PREFIX}:{days}"
+
+
+async def get_ops_stats(client: redis.Redis, days: int) -> dict[str, Any] | None:
+    """Return a cached operations snapshot; Redis failure is a cache miss."""
+    try:
+        payload: bytes | str | None = await client.get(ops_stats_key(days))
+        if payload is None:
+            return None
+        decoded = json.loads(payload)
+        return decoded if isinstance(decoded, dict) else None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("operations stats cache read failed: %s", exc)
+        return None
+
+
+async def put_ops_stats(client: redis.Redis, days: int, payload: dict[str, Any]) -> None:
+    """Cache a disposable operations snapshot for a deliberately short TTL."""
+    try:
+        await client.set(
+            ops_stats_key(days),
+            json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+            ex=OPS_STATS_TTL,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("operations stats cache write failed: %s", exc)
 
 
 def corpus_fingerprint(connection: Any, *, freshness_required: bool) -> str:

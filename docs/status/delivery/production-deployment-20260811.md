@@ -13,7 +13,7 @@
   通过，0 unhealthy；11 个公开页面均为 200；
 - 生产 Chrome 的热点榜定向预取 434ms，随后点击到首屏 219ms，控制台 0 error；公网
   Playwright 导航回归 16/16。详细根因与被否决方案见
-  [导航点击性能记录](navigation-performance-20260812.md)。
+  [导航点击性能记录](../operations/navigation-performance-20260812.md)。
 
 ## 0B. 2026-08-12 首次生产闭环（当前）
 

@@ -3,11 +3,11 @@
 `eval_run_id`：`GEN-20260808T180053Z`
 逐题数据：[m4-rag-eval-GEN-20260809-gated.json](m4-rag-eval-GEN-20260809-gated.json)
 对照基线：[GEN-20260807-fixed](m4-rag-eval-GEN-20260807-fixed.json)
-方案：[design/m4-rag-evaluation.md](../../design/m4-rag-evaluation.md) §5.5
+方案：[design/m4-rag-evaluation.md](../../archive/development/m4-rag-evaluation.md) §5.5
 
 被测改动：规格 §10 第 ③ 层从「只观测」改为「参与决定」——
 低于支持度阈值（0.30）的引用在下发前被移除并重编号，**只移除，不升级为拒答**。
-设计与边界见 [m4-rag-implementation.md §8](../../design/m4-rag-implementation.md)。
+设计与边界见 [m4-rag-implementation.md §8](../../archive/development/m4-rag-implementation.md)。
 
 两轮语料快照相同（`2026-08-03T23:59`，915 条），所以检索语料逐条一致；
 唯一的混杂因素是**同一模型两轮之间的抖动**，下面凡是落在这个量级的都点名说了。

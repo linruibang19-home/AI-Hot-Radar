@@ -286,7 +286,7 @@ diff、Flyway 空库/升级、依赖审计、秘密扫描、Compose smoke 与受
 - 个人 Gmail 适合上线验证，不适合长期产品投递，后续需自有域名发件与 SPF/DKIM/DMARC；
 - 进入私有知识库或多租户之前，不提前引入账号、ACL 和租户隔离。
 
-当前任务与生产交接以 [`docs/status/handoff-20260812.md`](docs/status/handoff-20260812.md)
+当前任务与生产交接以 [`docs/status/current/handoff-20260812.md`](docs/status/current/handoff-20260812.md)
 为准，不从 README 的历史数字推断实时状态。
 
 ## 文档导航
@@ -307,7 +307,7 @@ diff、Flyway 空库/升级、依赖审计、秘密扫描、Compose smoke 与受
 | 后端、一致性、前端与运维 | [`04`](docs/interview/04-backend-and-consistency.md) · [`05`](docs/interview/05-frontend-product.md) · [`06`](docs/interview/06-deployment-security-ops.md) |
 | 120 题、10 个 STAR、白板与演示 | [`07`](docs/interview/07-interview-question-bank.md) · [`08`](docs/interview/08-resume-and-star-stories.md) · [`09`](docs/interview/09-system-design-whiteboard.md) · [`10`](docs/interview/10-demo-script.md) |
 | 锁定规格与架构决策 | [`docs/spec/00-master-spec.md`](docs/spec/00-master-spec.md) · [`docs/adr/`](docs/adr/) |
-| 完整实现状态与逐轮证据 | [`docs/spec/12-delivery-index.md`](docs/spec/12-delivery-index.md) · [`docs/status/project-status.md`](docs/status/project-status.md) |
+| 完整实现状态与逐轮证据 | [`docs/spec/12-delivery-index.md`](docs/spec/12-delivery-index.md) · [`docs/status/current/project-status.md`](docs/status/current/project-status.md) |
 | 当前/历史状态与验收证据分类 | [`docs/status/README.md`](docs/status/README.md) |
 
 面试与简历中的每个指标都应带上**日期、样本量、模型和测量环境**；线上动态计数在展示前重新读取。

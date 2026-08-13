@@ -65,7 +65,7 @@ Embedding 前会临时在 passage 前加标题、来源、日期和最多三层 
 段落、列表、标题和代码围栏切分；长表格按行切；没有换行的异常长行再按 token 预算和临近标点切。
 切块保存 ordinal、heading path、char_start/char_end，revision 更新后只检索 current revision，旧版本
 保留审计但不会混入在线答案。上线实测口径与 SQL 见
-[`../status/rag-corpus-audit-20260813.md`](../status/rag-corpus-audit-20260813.md)。
+[`../status/rag-corpus-audit-20260813.md`](../status/product/rag-corpus-audit-20260813.md)。
 
 ## 核心实体
 

@@ -74,6 +74,6 @@ CI 通过
 - `infra/caddy/`
 - `infra/scripts/`
 - `.github/workflows/`
-- `docs/design/m5-deployment.md`
+- `docs/design/current/m5-deployment.md`
 - `docs/spec/11-end-to-end-runbook.md`
 

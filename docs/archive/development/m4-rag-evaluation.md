@@ -43,7 +43,7 @@ RAG 的每个环节都有多种"看起来都对"的做法——要不要加稀�
 
 ### 标注规范
 
-实际落地的字段见 [`data/golden/README.md`](../../data/golden/README.md)。
+实际落地的字段见 [`data/golden/README.md`](../../../data/golden/README.md)。
 与本节初稿的两处差异，都是实现时改的：
 
 - **锚点是 `relevant_items`（`content_item`）而不是 `relevant_chunks`**。
@@ -128,17 +128,17 @@ RAG 的每个环节都有多种"看起来都对"的做法——要不要加稀�
 > **没有任何一处拿实测对过这张表**。
 > 「跑完了计划的实验」被当成了「达到了发布标准」，这两件事不是一回事。
 
-数据来源：检索侧 [B13-20260807](../status/eval/m4-rag-eval-B13-20260807.json)，
-生成侧 [GEN-20260807-fixed](../status/eval/m4-rag-eval-GEN-20260807-fixed.json)。
+数据来源：检索侧 [B13-20260807](../../status/eval/m4-rag-eval-B13-20260807.json)，
+生成侧 [GEN-20260807-fixed](../../status/eval/m4-rag-eval-GEN-20260807-fixed.json)。
 **两份都必须是最新的**——用 08-04 的数字对这张表会得出三条错误结论，见 5.3。
 
 | `AHR-QSO-700` §8 门禁 | 阈值 | 实测 | 判定 | 判据出处 |
 |---|---:|---:|---|---|
 | Recall@20 | ≥ 0.85 | **0.8838** | ✅ **通过** | B13 |
-| citation correctness | ≥ 0.90 | **0.9371** | ✅ **通过** | [ADR-0021](../adr/0021-citation-correctness-is-entailment-not-annotation-overlap.md) |
-| abstention accuracy | ≥ 0.90 | **1.0000**（12/12）| ✅ **通过**（样本仅 12）| [ADR-0020](../adr/0020-abstention-accuracy-measures-behaviour-not-shape.md) |
+| citation correctness | ≥ 0.90 | **0.9371** | ✅ **通过** | [ADR-0021](../../adr/0021-citation-correctness-is-entailment-not-annotation-overlap.md) |
+| abstention accuracy | ≥ 0.90 | **1.0000**（12/12）| ✅ **通过**（样本仅 12）| [ADR-0020](../../adr/0020-abstention-accuracy-measures-behaviour-not-shape.md) |
 | citation completeness | ≥ 0.95 | 0.8880 | ❌ **未过**，差 0.062 | — |
-| entity/time planner accuracy | ≥ 0.90 | 正则 0.6667 ／ LLM 0.9067 | ⬛ **已量化：本语料上不可操作** | [query-type-sweep](../status/eval/query-type-sweep-20260810.md) |
+| entity/time planner accuracy | ≥ 0.90 | 正则 0.6667 ／ LLM 0.9067 | ⬛ **已量化：本语料上不可操作** | [query-type-sweep](../../status/eval/query-type-sweep-20260810.md) |
 | 关键问题无「引用不支持结论」P0 | 定性 | 定量代理 0.9371 | ⚠️ **人工核对未做** | 见 5.6 |
 | 失败回答可用 `rag_query_id` 复现 | 必须 | 计划/证据/限定条件已可复现；**候选集未落库** | ⚠️ 接近完成 | — |
 
@@ -200,7 +200,7 @@ RAG 的每个环节都有多种"看起来都对"的做法——要不要加稀�
 `support_supported` 五轮读数：**0.8986 → 0.8952 → 0.9078 → 0.8602 → 0.9596**。
 
 最后一个数来自支持度门控上线后的回归（`GEN-20260808T180053Z`，
-[完整报告](../status/eval/m4-rag-eval-GEN-20260809.md)）：低于阈值的引用在下发前被移除。
+[完整报告](../../status/eval/m4-rag-eval-GEN-20260809.md)）：低于阈值的引用在下发前被移除。
 `abstention` 类 +35.1pt 是收益最集中的地方，而**误拒率与断言假前提率保持 0.0000**。
 
 **但门禁仍未归零（4.04%，逐题剩 1 道），原因是口径不一致而非门控漏判**：
@@ -296,7 +296,7 @@ groundedness 用交叉编码器而非 LLM 裁判：§10 允许「NLI/cross-encod
 | 2026-08-03 | 黄金集追加中文精确匹配、无 heading 文档、过期答案三类对抗样本 | ADR-0015 的 CJK 分词缺口与 ADR-0016 的 33.5% 无 heading 分支，都属于"不测就等于没实现" |
 | 2026-08-03 | **标注锚点由 chunk 改为 `content_item`** | 分块一变 chunk id 全废，而规格 §14 恰恰要求"分块变更必须跑回归"——按 chunk 标注的黄金集会在最需要它的那一刻失效。本语料已经重切过一次 |
 | 2026-08-03 | `abstention` 类加入 3 道"部分可答"题（088/089/090）| 只测该拒的题会训练出一个动辄拒答的系统。过度拒答同样是失败，需要反向样本 |
-| 2026-08-03 | **B1 跑完：拒答不能用相似度阈值判定** | 实测重叠 0.1427，最高的不可答题（"llama.cpp b10999"）得分 0.7205，高于可答题均值 0.6842。见 [B1 报告](../status/eval/m4-rag-eval-B1.md) |
+| 2026-08-03 | **B1 跑完：拒答不能用相似度阈值判定** | 实测重叠 0.1427，最高的不可答题（"llama.cpp b10999"）得分 0.7205，高于可答题均值 0.6842。见 [B1 报告](../../status/eval/m4-rag-eval-B1.md) |
 | 2026-08-03 | 补充 `TEMPORAL_SQL` 为独立验证步（不在 B0–B6 编号内）| B1 实测 `recent_updates` 是最弱类别（MRR 0.468），且它是本产品最高频问法。时间通道的收益必须单独量化 |
 | 2026-08-03 | **每个新通道必须单独跑一遍，不能只跑合并结果** | B2 若只跑并集，会看到"每项指标都变差"而误判稀疏通道无效——实际是合并方式的问题，稀疏本身修好了 MXFP4。归因需要单通道对照 |
 | 2026-08-03 | 新增按「问句是否含 ASCII 专名」的分组统计 | 中文缺口必须能被量化成一个数字（实测稀疏通道差距 52.1 个百分点），否则 ADR-0015 的触发条件无法判定 |
