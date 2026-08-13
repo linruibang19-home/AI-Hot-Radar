@@ -124,9 +124,9 @@ Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互
 
 ### TASK-M5-001｜发布基线整合与全量门禁
 
-**状态**：✅ 2026-08-11 完成；验收记录见 `docs/status/project-status.md` §0。
+**状态**：✅ 2026-08-11 完成；验收记录见 `docs/status/current/project-status.md` §0。
 **读取**：`07-quality-security-ops.md`、`11-end-to-end-runbook.md`、
-`12-delivery-index.md`、`docs/status/project-status.md`。
+`12-delivery-index.md`、`docs/status/current/project-status.md`。
 **输入**：当前已由 Docker Compose 实测运行的最新开发分支。
 **产出**：以最新开发提交为起点的正式发布候选基线、可重复的全量验收记录，
 以及与实测结果一致的状态文档。
@@ -139,11 +139,11 @@ Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互
 
 **状态**：✅ 2026-08-11 完成。15 题专项集、8 个真实近邻噪声、同候选快照 A/B、
 90 题检索/生成回归、数值关系审计与逐题人工 P0 核验均已落地；证据见
-`docs/status/rag-specialist-audit-20260811.md`。Planner 的 query-type 代理经扫描确认
+`docs/status/product/rag-specialist-audit-20260811.md`。Planner 的 query-type 代理经扫描确认
 在当前语料上不可操作，未用默认关闭的 LLM 结果冒充线上门禁通过。
 **读取**：`04-rag-agent-design.md`、`07-quality-security-ops.md`、
-`docs/design/m4-rag-evaluation.md`、`data/golden/README.md`、
-`docs/status/rag-product-readiness-20260810.md`。
+`docs/archive/development/m4-rag-evaluation.md`、`data/golden/README.md`、
+`docs/status/product/rag-product-readiness-20260810.md`。
 **输入**：现有 90 题黄金集、ENTITY/B15/GEN 基线和线上 `rag_query` 证据链。
 **产出**：中文厂商名到英文产品/模型的专项黄金集、噪声敏感性样本、同候选快照
 的重排 A/B、关键问题逐条人工引用核验，以及可阻断发布的回归结果。
@@ -156,9 +156,9 @@ Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互
 
 **状态**：✅ 2026-08-11 完成。安全边界、凭据 fail-closed、供应商快速失败、分阶段
 p95/p99 SLO、全库门禁与当前镜像 smoke 均已验证；服务器依赖项按边界保留。证据见
-`docs/status/rag-security-performance-20260811.md`。
+`docs/status/product/rag-security-performance-20260811.md`。
 **读取**：`04-rag-agent-design.md`、`07-quality-security-ops.md`、
-`docs/status/rag-product-readiness-20260810.md`、ADR-0017、ADR-0023、ADR-0024。
+`docs/status/product/rag-product-readiness-20260810.md`、ADR-0017、ADR-0023、ADR-0024。
 **输入**：当前公开问答入口、原始网页证据、三类供应商调用、`rag_query.metrics` 与
 08-11 全量延迟证据。
 **产出**：不可信证据提示边界、最终答案凭据泄漏 fail-closed、可配置且有界的供应商
@@ -171,7 +171,7 @@ p95/p99 SLO、全库门禁与当前镜像 smoke 均已验证；服务器依赖�
 ### TASK-M4-004｜RAG 问答界面精修与可信引导
 
 **状态**：✅ 2026-08-11 完成；验收记录见
-`docs/status/rag-ui-polish-20260811.md`。
+`docs/status/product/rag-ui-polish-20260811.md`。
 **读取**：`06-frontend-spec.md`、`04-rag-agent-design.md`。
 **输入**：现有 `/ask` 多轮对话、示例问题、证据质量与引用交互。
 **产出**：不改变页面骨架的空状态层级、能力边界提示、示例问题布局、输入区视觉与
@@ -185,9 +185,9 @@ p95/p99 SLO、全库门禁与当前镜像 smoke 均已验证；服务器依赖�
 ### TASK-DOC-001｜发布候选文档与交接收口
 
 **状态**：✅ 2026-08-11 完成；当前交接见
-`docs/status/handoff-20260811.md`。
-**读取**：`README.md`、`12-delivery-index.md`、`docs/status/project-status.md`、
-`docs/status/handoff-20260810.md` 以及 08-11 三份 RAG 验收记录。
+`docs/status/history/handoff-20260811.md`。
+**读取**：`README.md`、`12-delivery-index.md`、`docs/status/current/project-status.md`、
+`docs/status/history/handoff-20260810.md` 以及 08-11 三份 RAG 验收记录。
 **输入**：当前 Git 分支/提交、Docker Compose 运行态、数据库实测快照与本轮门禁结果。
 **产出**：更新总入口、交付索引、累计项目状态和新的当前交接文档；旧交接保留为历史记录。
 **完成标准**：当前分支、数据量、测试数、RAG 门禁、报告状态和剩余任务在各入口口径一致；
@@ -196,9 +196,9 @@ p95/p99 SLO、全库门禁与当前镜像 smoke 均已验证；服务器依赖�
 ### TASK-M5-002｜报告阅读体验与结构化只读模型
 
 **状态**：🟡 2026-08-11 实现与自动化验收完成，Chrome 视觉门禁待补；证据见
-`docs/status/report-reader-20260811.md`。
+`docs/status/product/report-reader-20260811.md`。
 **读取**：`01-product-requirements.md`、`06-frontend-spec.md`、
-`docs/status/handoff-20260811.md`。
+`docs/status/history/handoff-20260811.md`。
 **输入**：现有 daily/weekly/monthly DRAFT 报告、`report_item` 证据关系和当前报告路由。
 **产出**：向后兼容的结构化报告只读 API；保留全站侧栏的“档案栏 + 刊物正文”报告界面；
 日报、周报、月报使用同一组件但呈现不同周期语义；桌面与移动端可用。
@@ -211,7 +211,7 @@ Chrome 桌面/窄屏验收通过。
 ### TASK-M5-003｜非阻塞报告发布状态机与审核 API
 
 **状态**：✅ 2026-08-11 完成；决策见 ADR-0025，验收见
-`docs/status/report-publication-20260811.md`。
+`docs/status/product/report-publication-20260811.md`。
 **读取**：`01-product-requirements.md`、`05-api-contract.md`、
 `07-quality-security-ops.md`、`11-end-to-end-runbook.md`、ADR-0019、ADR-0025。
 **输入**：持续生成的 daily/weekly/monthly DRAFT、现有 OPERATOR Bearer 鉴权与
@@ -235,7 +235,7 @@ pipeline 自动解除；正式邮件拒绝非 PUBLISHED、dry-run 可预览；�
 `outbox_event` 描述成已有消费者；投递失败不得反向阻塞采集、精选或站内报告发布。
 **完成标准**：同一期同一收件人至多一次正式投递；只发送 PUBLISHED；失败可重试、可审计、
 可人工 dry-run；无订阅者时安全空跑；Compose 运行态与邮件沙箱验收通过。
-**当前证据**：ADR-0026、Flyway V023、`docs/status/report-subscriptions-20260811.md`。
+**当前证据**：ADR-0026、Flyway V023、`docs/status/product/report-subscriptions-20260811.md`。
 Core API 持有双重确认、订阅与投递事实，Web 只做代理和交互；本地 Mailpit 已实测申请、确认、
 PUBLISHED 投递、在线阅读链接与退订，验收数据随后清理。
 
@@ -243,8 +243,8 @@ PUBLISHED 投递、在线阅读链接与退订，验收数据随后清理。
 
 **状态**：✅ 2026-08-11 完成；所有不依赖目标服务器的上线准备与本地真实恢复演练通过。
 **读取**：`02-system-architecture.md`、`07-quality-security-ops.md`、
-`11-end-to-end-runbook.md`、`docs/design/m5-deployment.md`、
-`docs/design/m5-first-deploy-checklist.md`。
+`11-end-to-end-runbook.md`、`docs/design/current/m5-deployment.md`、
+`docs/design/current/m5-first-deploy-checklist.md`。
 **输入**：现有 production Compose、Caddy、GHCR release workflow、备份 worker、当前本地
 Compose 与已通过的 M4/M5 质量门禁。
 **产出**：可执行的生产环境预检、不可变镜像与密钥占位检查、正确的 Cloudflare 客户端 IP
@@ -259,11 +259,11 @@ Compose 与已通过的 M4/M5 质量门禁。
 ### TASK-M5-006｜首次生产部署与外部闭环
 
 **状态**：✅ 2026-08-12 完成；首次生产闭环见
-`docs/status/production-deployment-20260811.md`，当前交接见
-`docs/status/handoff-20260812.md`。
+`docs/status/delivery/production-deployment-20260811.md`，当前交接见
+`docs/status/current/handoff-20260812.md`。
 **读取**：`02-system-architecture.md`、`07-quality-security-ops.md`、
-`11-end-to-end-runbook.md`、`docs/design/m5-deployment.md`、
-`docs/design/m5-first-deploy-checklist.md`、TASK-M5-005 验收记录。
+`11-end-to-end-runbook.md`、`docs/design/current/m5-deployment.md`、
+`docs/design/current/m5-first-deploy-checklist.md`、TASK-M5-005 验收记录。
 **输入**：主人待提供的新域名、香港 2C4G 目标服务器、公网部署脚本、不可变镜像发布门和
 本地恢复证据。旧 `kuritian.online` 不续费，不再作为本卡上线域名。
 **产出**：专用 SSH 密钥与非 root 运维边界、目标机系统审计、Docker/防火墙、生产配置、
@@ -284,7 +284,7 @@ GitHub Release、服务器 checkout、`IMAGE_TAG` 与三张业务
 ### TASK-M5-007｜DeepSeek 生成模型可见、可切换、可审计
 
 **状态**：✅ 2026-08-11 完成；验收见
-`docs/status/generation-model-selection-20260811.md`。
+`docs/status/product/generation-model-selection-20260811.md`。
 **读取**：`01-product-requirements.md`、`05-api-contract.md`、
 `06-frontend-spec.md`、`07-quality-security-ops.md`、ADR-0027。
 **输入**：现有 DeepSeek OpenAI-compatible 客户端、`llm_usage`、Core Admin RBAC/审计与
@@ -300,7 +300,7 @@ GitHub Release、服务器 checkout、`IMAGE_TAG` 与三张业务
 ### TASK-M5-008｜RAG 质量与运行页面产品化收口
 
 **状态**：✅ 2026-08-11 完成；验收见
-`docs/status/rag-operations-ui-20260811.md`。
+`docs/status/product/rag-operations-ui-20260811.md`。
 **读取**：`04-rag-agent-design.md`、`06-frontend-spec.md`、
 `07-quality-security-ops.md`、TASK-M4-002、ADR-0021、ADR-0027。
 **输入**：既有 90 题检索/生成评测快照、线上 `rag_query` / `llm_usage` 聚合、
@@ -328,14 +328,14 @@ Web 类型、Lint、测试、构建与 Docker 运行态通过，Chrome 视觉验
 **完成标准**：当天非 arXiv 候选可进入当天精选，arXiv 不再占满整日；精确时间来源仍显示
 时分、arXiv 显示批次语义；邮件 UI 在提交前后均能回答“会收到什么/何时收到”；Python、
 Java、Web、Compose 与公网桌面/移动端验收通过，发布后数据库和页面证据写入状态文档。
-**当前证据**：`docs/status/v016-selection-email-20260812.md`；生产当天 12 条精选已分布到
+**当前证据**：`docs/status/product/v016-selection-email-20260812.md`；生产当天 12 条精选已分布到
 8 个来源族，arXiv 仅 2 条；1 个日报订阅已显式确认，下一期开始投递。
 
 ### TASK-M5-010｜工程数据时效语义与作品集封版
 
 **状态**：✅ 2026-08-12 完成；代码、脱敏截图与面试材料已通过本地门禁，等待发布验收。
 **读取**：`06-frontend-spec.md`、`07-quality-security-ops.md`、TASK-M5-008、
-TASK-M5-009、`docs/status/handoff-20260812.md`。
+TASK-M5-009、`docs/status/current/handoff-20260812.md`。
 **输入**：现有 `/eval` 版本化评测摘要、动态信源健康数据、生产页面与发布证据。
 **产出**：明确区分静态发布评测与动态运行状态；为信源后台提供可理解的刷新时间语义；
 用脱敏生产截图、分层 README 与面试学习材料完成公开作品集封版。
@@ -345,7 +345,7 @@ TASK-M5-009、`docs/status/handoff-20260812.md`。
 信源后台能说明数据读取与页面刷新语义；README 30 秒内可理解项目价值与架构；面试材料覆盖
 业务、采集、数据、RAG、后端、前端、部署、安全、权衡与追问；Web typecheck/lint/unit/build、
 Docker 页面 smoke 与 Chrome 桌面/移动端视觉验收通过。
-**当前证据**：`docs/status/portfolio-closeout-20260812.md`、`docs/interview/README.md`、
+**当前证据**：`docs/status/delivery/portfolio-closeout-20260812.md`、`docs/interview/README.md`、
 `docs/assets/screenshots/`；Web 73/73、typecheck、lint、production build 与 Docker HTTP smoke 通过。
 
 ### TASK-M5-011｜作品集叙事补全与腾讯云迁移基线
@@ -353,7 +353,7 @@ Docker 页面 smoke 与 Chrome 桌面/移动端视觉验收通过。
 **状态**：✅ 2026-08-12 完成；纯文档与迁移基线经 PR #12 / GitHub CI 验证。
 **读取**：`00-master-spec.md`、`02-system-architecture.md`、`03-data-ingestion.md`、
 `04-rag-agent-design.md`、`06-frontend-spec.md`、`07-quality-security-ops.md`、
-`11-end-to-end-runbook.md`、TASK-M5-010 与 `docs/status/handoff-20260812.md`。
+`11-end-to-end-runbook.md`、TASK-M5-010 与 `docs/status/current/handoff-20260812.md`。
 **输入**：已上线的 M0–M5 产品、五张脱敏截图、固定 RAG 发布评测、生产运行证据，
 以及待购买的广州 2C4G5M / 60GB Ubuntu 24.04 Docker 轻量应用服务器。
 **产出**：把根 README 重排为 30 秒、3 分钟、30 分钟三层阅读入口；按业务架构、采集与
@@ -366,8 +366,8 @@ Docker 页面 smoke 与 Chrome 桌面/移动端视觉验收通过。
 **完成标准**：README 能分别支持 30 秒扫读、3 分钟架构理解与 30 分钟技术深挖；11 份
 面试材料各自回答一个稳定主题且没有并行重复版本；所有相对链接、图片、敏感串扫描与
 仓库文档门禁通过；分支经 PR/CI 合入 `main`，并明确本次纯文档变更不触发生产部署。
-**当前证据**：`docs/status/portfolio-interview-completion-20260812.md`、
-`docs/status/tencent-cloud-migration-readiness-20260812.md`、`docs/interview/README.md`。
+**当前证据**：`docs/status/delivery/portfolio-interview-completion-20260812.md`、
+`docs/status/operations/tencent-cloud-migration-readiness-20260812.md`、`docs/interview/README.md`。
 
 ### TASK-M5-012｜Docker 磁盘增长边界
 
@@ -383,7 +383,7 @@ Windows 维护脚本把 BuildKit 缓存限制在 5GB，并删除七天以上且�
 **完成标准**：本地/生产 Compose 可渲染；生产所有服务具有相同的有界日志配置；维护脚本在
 Docker 运行和未运行时均安全；重建本地容器后实际日志驱动为 `local`；PostgreSQL/Redis 及
 项目健康检查通过。
-**当前证据**：`docs/status/docker-storage-controls-20260812.md`。
+**当前证据**：`docs/status/operations/docker-storage-controls-20260812.md`。
 
 ### TASK-M5-013｜仓库卫生、证据归档与代码学习地图
 
@@ -401,7 +401,7 @@ TASK-M5-011、TASK-M5-012 与当前全部受 Git 管理文件。
 **完成标准**：所有源码、迁移、配置、基础设施和文档都有可追踪入口；Git 跟踪文件无临时名、
 重复内容或敏感串；Markdown 相对链接、规格、Python、Java、Web、Compose 与 Flyway 门禁通过；
 整理 PR 经 CI 合入 `main`，生产版本差异被明确记录。
-**当前证据**：`docs/status/repository-hygiene-20260812.md`、`docs/code-map.md` 与
+**当前证据**：`docs/status/operations/repository-hygiene-20260812.md`、`docs/code-map.md` 与
 `docs/status/README.md`；PR #14 的最终 GitHub Actions run `31610709745` 已在干净的
 JDK 21/Node/Python/PostgreSQL 环境通过 Spec、AI service、Core API、Web 与 Flyway 五组门禁。
 
@@ -426,7 +426,7 @@ PR/CI 合入 `main`，纯文档变更不触发生产部署。
 ### TASK-M3-REOPEN-001｜Story 公开入口有效性收口
 
 **状态**：✅ 2026-08-13 完成；验收记录见
-`docs/status/story-public-experience-20260813.md`。本卡只收口公开阅读体验，不重写聚类身份或算法。
+`docs/status/product/story-public-experience-20260813.md`。本卡只收口公开阅读体验，不重写聚类身份或算法。
 **读取**：`00-master-spec.md`、`01-product-requirements.md`、`03-data-ingestion.md`、
 `06-frontend-spec.md`、M3 里程碑与 `docs/handbook/06-content-story-selection.md`。
 **输入**：本地 1693 个 Story 中只有 39 个达到至少两家独立信源；现有列表仍将 Story 表达为
@@ -499,8 +499,8 @@ revision/hash 绑定、严格校验和评估工具保留，但不输出人工 pr
 **完成标准**：厂商 feed 日期单调倒序且 cursor 不重不漏；Web 打乱输入仍按时间展示；当前
 revision 无 >1200 token chunk、全部非空正文有块、全部 current chunk 有 bge-m3 向量；Java、
 Python、Web、CI、生产 smoke 与浏览器视觉回归通过。
-**证据**：`docs/status/topic-timeline-performance-20260813.md`、
-`docs/status/rag-corpus-audit-20260813.md`。
+**证据**：`docs/status/product/topic-timeline-performance-20260813.md`、
+`docs/status/product/rag-corpus-audit-20260813.md`。
 
 ### TASK-M5-018｜引用安全的不可变分块集
 
@@ -525,6 +525,46 @@ chunker/backfill/retrieval/parent 与 citation 查询。
 `summary_zh` 均为 0；3 个 retired chunk 仍被历史引用并可解析。迁移后备份 132MB，隔离恢复
 快照为 `140|2215|9121|1788|17|026`。一个 18 字符且仍为 `DISCOVERED` 的包版本事件尚未进入
 正文处理阶段，不计为 RAG 漏切。
+
+### TASK-M5-019｜业务深挖教材、工作区清洁与分层容量基线
+
+**状态**：✅ 2026-08-14 完成；本卡只补可复现的工程证据和学习材料，未改变业务架构、
+RAG 检索策略或生产容量。
+**读取**：`00-master-spec.md`、`02-system-architecture.md`、`03-data-ingestion.md`、
+`04-rag-agent-design.md`、`07-quality-security-ops.md`、TASK-M5-014/017/018、全部当前 handbook、
+interview、Prompt、评分、缓存和服务入口代码。
+**输入**：当前 README 版本/迁移/动态数字已经落后于 v0.1.11/V026；业务教材尚未集中解释
+LLM 调用、Prompt、推荐排序、阈值、Agent/记忆边界和失败案例；本地存在测试、类型检查与构建
+产生的可再生缓存；项目缺少隔离第三方模型成本的分层压测脚本和诚实容量口径。
+**产出**：校准 README 当前事实；按采集、内容加工/推荐、报告邮件、RAG 离线/在线、评测与
+交付六条主线扩写 handbook/interview；新增 LLM/Prompt/阈值与 Agent 编排专题；提供默认 dry-run
+的跨平台缓存清理工具；使用本地 Docker Compose 与 k6 建立 Web/Core API/AI 本地检索、缓存
+冷热和受控外部模型路径的分层负载模型，保存环境、命令、延迟、吞吐、资源和限制。
+**边界**：不压测公共生产域名，不在并发测试中消耗真实 LLM/Embedding 额度；不删除 `.env`、
+`.venv`、`node_modules`、数据库卷、黄金集、fixture、评测证据或唯一备份；不为了简历引入
+LangChain/LangGraph、Kafka、Elasticsearch、Kubernetes 或新运行时中间件；框架比较只记录
+当前选择、触发条件和迁移代价。
+**完成标准**：缓存清理只命中 allowlist 且二次运行幂等；负载脚本可在干净开发机复现，至少
+覆盖 Core API 读路径、Web SSR/代理、AI 本地 RAG 统计/数据库控制路径；报告同时
+给出吞吐、p50/p95/p99、错误率、容器 CPU/内存、数据库/Redis/线程池观察和冷热语义，不能把
+本地开发机结果包装成 2C4G 生产 SLA；文档代码路径、阈值、Prompt 和实现状态经自动校验，
+Python/Java/Web/Compose 相关门禁通过。
+
+### TASK-M5-020｜RAG 统计聚合性能与 2C4G 容量验收
+
+**状态**：🟡 实现与本地复测完成；等待当前香港 2C4G 发布后低风险验证，隔离同规格寻顶/soak 仍后置。
+**输入**：TASK-M5-019 的真实 `/rag/stats` 基线在 20 VU 下 p95 918.94 ms，越过 750 ms 初始门；
+当前开发机结果不能外推生产容量。
+**目标**：profile `retrieval_summary` 聚合 SQL 与序列化，先以查询/索引或短 TTL 可失效缓存降低
+统计页长尾；在脱敏生产副本、相同镜像 SHA 和 2C4G 限额上完成冷/热阶梯、恒定到达率与 soak，
+形成满足 SLO 的最高稳定容量和 30% 余量。
+**边界**：不压公共生产域名，不调用真实 LLM/Embedding/reranker 做并发压测，不用调大门限掩盖
+失败，不因单机基线提前引入 Kafka/Kubernetes/独立向量库。
+**实现记录（2026-08-14）**：SQL 单独压测约 1,080 TPS/9.26 ms，确认根因是 async route 内同步
+psycopg 与并发重复聚合；改为 `asyncio.to_thread`、按窗口进程内 single-flight、Redis 30 秒可失效
+快照。相同本地 20 VU 复测 AI P95/P99 从 837.99/4046.49 ms 降至 11.21/18.77 ms，整轮
+15,536 请求、154.91 req/s、0 错误。生产脚本只跑 1→2→5 VU、只读内部路径、pgbench 和 Redis
+观察；真正容量结论仍必须等隔离 2C4G 阶梯与 soak。
 
 ## 4. AI IDE 统一提示词
 

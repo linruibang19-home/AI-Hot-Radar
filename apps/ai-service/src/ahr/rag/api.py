@@ -51,6 +51,12 @@ router = APIRouter(prefix="/rag", tags=["rag"])
 
 MAX_QUESTION_CHARS = 300
 
+# Collapse concurrent cold requests for the same dashboard window.  The lock
+# is process-local by design: Redis is not a distributed lock or source of
+# truth here, and a future multi-worker deployment may harmlessly compute one
+# snapshot per worker after a cache flush.
+_stats_locks: dict[int, asyncio.Lock] = {}
+
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=2, max_length=MAX_QUESTION_CHARS)
@@ -285,6 +291,7 @@ async def stats(days: int = 30) -> dict[str, object]:
 
     from ahr.config import get_settings
     from ahr.rag.cache import client as cache_client
+    from ahr.rag.cache import get_ops_stats, put_ops_stats
     from ahr.rag.cache import stats as cache_stats
     from ahr.rag.ops import (
         corpus_summary,
@@ -294,18 +301,38 @@ async def stats(days: int = 30) -> dict[str, object]:
     )
 
     window = max(1, min(days, 365))
-    with psycopg.connect(get_settings().database_url) as connection:
-        return {
-            "cost": cost_summary(connection, days=window),
-            "latency": latency_summary(connection, days=window),
-            # What retrieval did on real questions, which the 90-question golden
-            # set cannot report: that set is a fixed sample chosen in advance,
-            # this is the population.
-            "retrieval": retrieval_summary(connection, days=window),
-            "corpus": corpus_summary(connection),
-            # A cache nobody can measure is a cache nobody should trust.
-            "cache": await cache_stats(cache_client()),
-        }
+    redis_client = cache_client()
+    cached = await get_ops_stats(redis_client, window)
+    if cached is not None:
+        return cached
+
+    lock = _stats_locks.setdefault(window, asyncio.Lock())
+    async with lock:
+        # Another request may have filled Redis while this request waited.
+        cached = await get_ops_stats(redis_client, window)
+        if cached is not None:
+            return cached
+
+        def aggregate() -> dict[str, object]:
+            # psycopg is synchronous.  Running it in the event loop made twenty
+            # dashboard readers serialize every query and created a four-second
+            # p99 despite each SQL statement being fast in EXPLAIN ANALYZE.
+            with psycopg.connect(get_settings().database_url) as connection:
+                return {
+                    "cost": cost_summary(connection, days=window),
+                    "latency": latency_summary(connection, days=window),
+                    # What retrieval did on real questions, which the 90-question
+                    # golden set cannot report: this is real traffic population.
+                    "retrieval": retrieval_summary(connection, days=window),
+                    "corpus": corpus_summary(connection),
+                }
+
+        snapshot = await asyncio.to_thread(aggregate)
+        # Cache counters live in Redis and are cheap.  They are attached after
+        # the PostgreSQL work so a Redis outage cannot block the database read.
+        snapshot["cache"] = await cache_stats(redis_client)
+        await put_ops_stats(redis_client, window, snapshot)
+        return snapshot
 
 
 @router.get("/query/{query_id}")

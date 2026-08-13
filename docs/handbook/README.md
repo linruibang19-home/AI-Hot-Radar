@@ -31,6 +31,9 @@
 
 - [14 部署、安全与运维](14-deployment-security-ops.md)
 - [15 测试、权衡、边界与演进](15-testing-tradeoffs-roadmap.md)
+- [16 LLM、Prompt、排序与阈值](16-llm-prompts-ranking-and-thresholds.md)
+- [17 Agent、编排、记忆与成本](17-agent-orchestration-memory-and-cost.md)
+- [18 性能、容量与压测](18-performance-capacity-and-load-testing.md)
 - [面试教材](../interview/README.md)
 
 ## 一张总图

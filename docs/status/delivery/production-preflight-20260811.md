@@ -4,7 +4,7 @@
 状态：**代码侧与本地真实演练通过；目标服务器执行进度已转入 TASK-M5-006**
 
 > 本文保留 TASK-M5-005 的上线前快照。目标机、发布标签与当前外部闸门的最新证据见
-> `docs/status/production-deployment-20260811.md`。
+> `docs/status/delivery/production-deployment-20260811.md`。
 
 ## 1. 本卡完成了什么
 

@@ -24,11 +24,11 @@
 2. **参数写进文档时必须标注来源**：`实测标定` / `规格规定` / `待评测标定`。禁止出现来历不明的魔数。
 3. 与 `spec/` 冲突时，**以 `spec/` 为准并立即停下**，按 `CLAUDE.md` 的要求同时引用两个文档 ID。
 
-## 当前文档
+## 当前与归档
 
 | 文件 | 范围 | 状态 |
 |---|---|---|
-| [m4-rag-implementation.md](m4-rag-implementation.md) | M4 RAG 全流程实现方案 | 进行中 |
-| [m4-rag-evaluation.md](m4-rag-evaluation.md) | 黄金集、指标与发布门禁 | 进行中 |
-| [m5-deployment.md](m5-deployment.md) | 生产部署、安全、备份与回滚方案 | 已按首次生产验收修订 |
-| [m5-first-deploy-checklist.md](m5-first-deploy-checklist.md) | 首次部署步骤、危险边界与迁移检查表 | 当前维护入口 |
+| [../archive/development/m4-rag-implementation.md](../archive/development/m4-rag-implementation.md) | M4 RAG 全流程实现方案 | 已冻结归档 |
+| [../archive/development/m4-rag-evaluation.md](../archive/development/m4-rag-evaluation.md) | 黄金集、指标与发布门禁 | 已冻结归档 |
+| [m5-deployment.md](current/m5-deployment.md) | 生产部署、安全、备份与回滚方案 | 已按首次生产验收修订 |
+| [m5-first-deploy-checklist.md](current/m5-first-deploy-checklist.md) | 首次部署步骤、危险边界与迁移检查表 | 当前维护入口 |

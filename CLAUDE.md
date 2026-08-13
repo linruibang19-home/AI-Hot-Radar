@@ -10,7 +10,7 @@ This repository is governed by `README.md` and `docs/spec/00-master-spec.md`.
 What belongs here is only what is specific to working in this repo with Claude
 Code:
 
-- **`docs/status/project-status.md` is the running record** — what was built,
+- **`docs/status/current/project-status.md` is the running record** — what was built,
   what broke, what the numbers were, and which hypotheses turned out wrong. Read
   it to pick up context in a fresh session; append a section when finishing a
   piece of work.

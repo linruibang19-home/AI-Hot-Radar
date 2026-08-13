@@ -89,7 +89,7 @@ Web AskPanel
 
 对应迁移：V012 向量索引、V013 检索轨迹、V014 CJK bigram、V015 限制说明、V020 会话、
 V021 历史答案修复。完整算法背景见 `docs/interview/03-rag-deep-dive.md` 和
-`docs/design/m4-rag-implementation.md`。
+`docs/archive/development/m4-rag-implementation.md`。
 
 ## 5. 管理、权限与模型配置
 
