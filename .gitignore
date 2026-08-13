@@ -37,6 +37,9 @@ Thumbs.db
 # Runtime artifacts
 source-health.json
 source-health.md
+# Generated from a live corpus and contains third-party body excerpts. Keep the
+# human protocol and completed labels, never a regenerable review queue.
+data/topic-map-review/*.yaml
 
 # Database dumps written by the production backup worker.
 infra/compose/backups/

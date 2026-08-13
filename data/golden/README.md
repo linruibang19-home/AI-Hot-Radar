@@ -1,5 +1,9 @@
 # RAG 黄金集
 
+> 本目录根部的 YAML 只属于 RAG 问答集。主题地图关系使用独立协议
+> [`topic-map/README.md`](topic-map/README.md)，其运行时复核队列放在
+> `data/topic-map-review/`，不得混入这里被 RAG 加载器当成问答题。
+
 评测方案见 [`docs/design/m4-rag-evaluation.md`](../../docs/design/m4-rag-evaluation.md)。
 六个类别各 15 题，合计 90 题，满足 `AHR-RAG-400` §14（六类各 ≥15）与
 `AHR-ROADMAP-800` M4（80+ 题）。

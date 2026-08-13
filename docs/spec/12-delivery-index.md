@@ -50,7 +50,7 @@
 | `apps/web/` | Next.js 15 App Router 网站、RAG UI、评测与运维页 | 已实现；当前镜像健康 |
 | `apps/core-api/` | Spring Boot 3 内容、报告与管理 API | 已实现；当前镜像健康 |
 | `apps/ai-service/` | FastAPI 采集、加工、聚类、报告与 RAG | 已实现；当前镜像健康 |
-| `database/migrations/` | Flyway V001–V024（含 V017.1） | 当前库与空库升级通过；V023 订阅、V024 模型配置已执行 |
+| `database/migrations/` | Flyway V001–V025（含 V017.1） | 当前库与空库升级通过；V023 订阅、V024 模型配置、V025 可审计主题关系已执行 |
 | `infra/compose/docker-compose.yml` | 本地唯一启动入口 | 已验证 |
 | `infra/compose/docker-compose.prod.yml` | 生产 Compose | 目标机运行；真实配置缺危险值时仍 fail-closed |
 | `infra/caddy/Caddyfile` | HTTPS 反向代理 | `aihotradar.online` 证书已签发并自动续期 |

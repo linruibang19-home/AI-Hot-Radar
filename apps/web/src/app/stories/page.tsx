@@ -2,52 +2,41 @@ import { formatDate } from "@/lib/datetime";
 import Link from "next/link";
 
 import { CONTENT_TYPE_LABELS } from "@/components/ItemCard";
-import { fetchStories } from "@/lib/api";
+import { fetchStories, formatStorySources } from "@/lib/api";
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "事件聚合",
-  description: "同一事件的多方报道聚合，标注主来源与独立信源数。",
+  title: "事件追踪",
+  description: "把同一事件的多方报道放在一起，优先核验主来源并查看来源时间线。",
 };
 
 export const dynamic = "force-dynamic";
 
-export default async function StoriesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ all?: string }>;
-}) {
-  const params = await searchParams;
-  // Default to corroborated events only: a "story" of one item is just an
-  // article, and listing 490 of them would bury the seven that are real events.
-  const minSources = params.all === "1" ? 1 : 2;
-  const stories = await fetchStories(50, minSources);
+export default async function StoriesPage() {
+  // A one-item Story is an internal grouping identity, not a separate reader
+  // experience. The public page only exposes events that actually have more
+  // than one independent publisher behind them.
+  const stories = await fetchStories(50);
 
   return (
     <>
       <header className="page-head">
-        <h1 className="page-title">事件聚合</h1>
+        <h1 className="page-title">事件追踪</h1>
         <p className="page-subtitle">
-          同一件事的多方报道会聚成一个事件，标注主来源与独立信源数 ·
-          主来源按「官方当事方 &gt; 官方文档/仓库 &gt; 论文 &gt; 权威媒体 &gt; 技术作者」选出
+          只展示通过高置信度聚类门槛的多来源事件。同一件事只占一个位置，展开后可对照
+          主来源与其他报道；来源覆盖不等同于所有说法均已得到独立证实。
         </p>
       </header>
 
-      <nav className="tabs" aria-label="事件筛选">
-        <Link href="/stories" className={minSources === 2 ? "tab tab-active" : "tab"}>
-          多信源事件
-        </Link>
-        <Link href="/stories?all=1" className={minSources === 1 ? "tab tab-active" : "tab"}>
-          全部事件
-        </Link>
-      </nav>
+      <div className="story-purpose">
+        <strong>怎么看：</strong>先读标记为主来源的原始材料，再用其他报道补充背景、采用情况或
+        不同视角。单篇资讯仍保留在“全部 AI 动态”，不会伪装成多来源事件。
+      </div>
 
       {stories.length === 0 ? (
         <div className="empty">
-          尚未聚类。请先运行：
-          <br />
-          <code>docker compose exec ai-service python -m ahr.cli cluster</code>
+          暂无通过高置信度门槛的多来源事件。单篇内容请前往“全部 AI 动态”。
         </div>
       ) : (
         stories.map((story) => (
@@ -76,6 +65,10 @@ export default async function StoriesPage({
             <p className="card-corroboration">
               {formatDate(story.occurredAt)} · {story.itemCount} 篇报道 ·{" "}
               <strong>{story.independentSources}</strong> 家独立信源
+            </p>
+            <p className="story-source-list">
+              <span>参与来源</span>
+              {formatStorySources(story.sourceNames)}
             </p>
           </article>
         ))

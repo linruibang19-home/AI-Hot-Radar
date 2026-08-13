@@ -47,7 +47,13 @@ async def ready(response: Response) -> HealthStatus:
     except Exception as exc:  # dependency probes must never raise to the caller
         checks["postgres"] = f"error: {type(exc).__name__}"
 
-    client = aioredis.from_url(settings.redis_url, socket_connect_timeout=3)
+    # redis-py 5.3 exposes this factory without a typed signature. Keep the
+    # exception local instead of weakening strict mypy for the whole package;
+    # ping()/aclose() below are still checked through the inferred Redis type.
+    client = aioredis.from_url(  # type: ignore[no-untyped-call]
+        settings.redis_url,
+        socket_connect_timeout=3,
+    )
     try:
         await client.ping()
         checks["redis"] = "ok"

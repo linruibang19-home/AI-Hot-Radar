@@ -1,27 +1,53 @@
-import { formatTime } from "@/lib/datetime";
+import Link from "next/link";
 
 import { BackLink } from "@/components/BackLink";
-
 import { ItemCard } from "@/components/ItemCard";
 import { TimelineDay, TimelineRow } from "@/components/Timeline";
-import { fetchVendorItems, fetchVendorMap, groupByDay } from "@/lib/api";
+import { formatDateTime, formatPublicationTime } from "@/lib/datetime";
+import {
+  fetchVendorFeed,
+  fetchVendorMap,
+  groupByDay,
+  normaliseVendorRelation,
+} from "@/lib/api";
 
+import type { VendorFeedItem, VendorRelation } from "@/lib/api";
 import type { Metadata } from "next";
-
-/**
- * Everything about one company or model family.
- *
- * Deliberately the same layout as a topic page. The two are different queries —
- * this one joins through `item_entity`, that one through `item_topic` — but to
- * a reader they are the same act, and giving them different shapes would make
- * the difference look meaningful when it is only an implementation detail.
- */
 
 export const dynamic = "force-dynamic";
 
 const OPEN_DAYS = 3;
 
-/** Read the card back so the page shows the vendor's name, not its slug. */
+const RELATIONS: Record<
+  VendorRelation,
+  { label: string; empty: string; description: string }
+> = {
+  primary: {
+    label: "核心动态",
+    empty: "该厂商暂无核心动态。",
+    description: "标题或摘要核心在讲该厂商及其模型",
+  },
+  related: {
+    label: "相关与对比",
+    empty: "该厂商暂无相关或对比内容。",
+    description: "厂商作为比较对象、合作方或受影响主体",
+  },
+  mention: {
+    label: "顺带提及",
+    empty: "该厂商暂无顺带提及内容。",
+    description: "正文出现过，但不是文章的主要讨论对象",
+  },
+};
+
+const REASONS: Record<string, string> = {
+  subject_in_title: "标题直接命中",
+  subject_in_summary_lead: "摘要核心命中",
+  subject_context: "正文主语",
+  comparison_or_object: "对比或关联对象",
+  title_mention: "标题相关提及",
+  passing_mention: "正文顺带提及",
+};
+
 async function findVendor(slug: string) {
   const vendors = await fetchVendorMap();
   return vendors.find((vendor) => vendor.slug === slug) ?? null;
@@ -42,12 +68,25 @@ export async function generateMetadata({
 
 export default async function VendorDetail({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ relation?: string; cursor?: string }>;
 }) {
-  const { slug } = await params;
-  const [items, vendor] = await Promise.all([fetchVendorItems(slug, 40), findVendor(slug)]);
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const relation = normaliseVendorRelation(query.relation);
+  const [feed, vendor] = await Promise.all([
+    fetchVendorFeed(slug, relation, query.cursor),
+    findVendor(slug),
+  ]);
+  const items = feed.data.map((row) => row.item);
+  const rowsById = new Map(feed.data.map((row) => [row.item.id, row]));
   const groups = groupByDay(items);
+  const counts: Record<VendorRelation, number> = {
+    primary: vendor?.total ?? (relation === "primary" ? feed.total : 0),
+    related: vendor?.relatedTotal ?? (relation === "related" ? feed.total : 0),
+    mention: vendor?.mentionTotal ?? (relation === "mention" ? feed.total : 0),
+  };
 
   return (
     <>
@@ -58,14 +97,35 @@ export default async function VendorDetail({
       <header className="page-head">
         <h1 className="page-title">{vendor?.name ?? slug}</h1>
         <p className="page-subtitle">
-          公司与模型 · {vendor?.description ?? "该厂商相关的全部内容"} · 共 {items.length} 条
+          公司与模型 · {vendor?.description ?? "该厂商相关内容"}
+        </p>
+        <p className="association-updated">
+          关联由结构化实体与正文位置共同判定
+          {feed.updatedAt ? ` · 最近刷新 ${formatDateTime(feed.updatedAt)}` : ""}
         </p>
       </header>
 
+      <nav className="relation-tabs" aria-label="厂商内容关联层级">
+        {(Object.keys(RELATIONS) as VendorRelation[]).map((key) => (
+          <Link
+            key={key}
+            href={`/vendors/${slug}?relation=${key}`}
+            className={key === relation ? "relation-tab relation-tab-active" : "relation-tab"}
+            aria-current={key === relation ? "page" : undefined}
+          >
+            <strong>{RELATIONS[key].label}</strong>
+            <span>{counts[key]}</span>
+          </Link>
+        ))}
+      </nav>
+
+      <div className="association-explainer">
+        <strong>{RELATIONS[relation].label}</strong>
+        <span>{RELATIONS[relation].description}，当前共 {feed.total} 条。</span>
+      </div>
+
       {items.length === 0 ? (
-        // A curated vendor with nothing this week is a true statement about
-        // coverage, not an error page.
-        <div className="empty">该厂商暂无内容。</div>
+        <div className="empty">{RELATIONS[relation].empty}</div>
       ) : (
         [...groups.entries()].map(([day, dayItems], index) => (
           <TimelineDay
@@ -74,17 +134,42 @@ export default async function VendorDetail({
             count={dayItems.length}
             defaultOpen={index < OPEN_DAYS}
           >
-            {dayItems.map((item) => (
-              <TimelineRow
-                key={item.id}
-                time={formatTime(item.publishedAt ?? item.observedAt)}
-              >
-                <ItemCard item={item} />
-              </TimelineRow>
-            ))}
+            {dayItems.map((item) => {
+              const row = rowsById.get(item.id) as VendorFeedItem;
+              return (
+                <TimelineRow
+                  key={item.id}
+                  time={formatPublicationTime(
+                    item.source.id,
+                    item.publishedAt,
+                    item.observedAt,
+                  )}
+                >
+                  <div className="association-context">
+                    <span>{REASONS[row.reasonCode] ?? "可追溯实体关联"}</span>
+                    <small>命中实体：{row.matchedEntity.replaceAll("-", " ")}</small>
+                  </div>
+                  <ItemCard item={item} />
+                </TimelineRow>
+              );
+            })}
           </TimelineDay>
         ))
       )}
+
+      <nav className="feed-pagination" aria-label="厂商内容分页">
+        {query.cursor && (
+          <Link href={`/vendors/${slug}?relation=${relation}`}>返回第一页</Link>
+        )}
+        {feed.page.hasMore && feed.page.nextCursor && (
+          <Link
+            className="feed-next"
+            href={`/vendors/${slug}?relation=${relation}&cursor=${encodeURIComponent(feed.page.nextCursor)}`}
+          >
+            继续浏览 →
+          </Link>
+        )}
+      </nav>
     </>
   );
 }

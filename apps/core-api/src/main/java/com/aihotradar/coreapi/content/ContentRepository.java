@@ -220,7 +220,7 @@ public class ContentRepository {
         String sql =
                 """
                 SELECT t.slug, t.name, it.confidence
-                  FROM item_topic it
+                  FROM public_item_topic it
                   JOIN topic t ON t.id = it.topic_id
                  WHERE it.content_item_id = CAST(:id AS uuid)
                  ORDER BY it.confidence DESC NULLS LAST
@@ -237,13 +237,13 @@ public class ContentRepository {
     public List<TopicSummary> listTopics() {
         String sql =
                 """
-                SELECT t.slug, t.name, count(it.content_item_id) AS total
+                SELECT t.slug, t.name, count(ci.id) AS total
                   FROM topic t
-                  LEFT JOIN item_topic it ON it.topic_id = t.id
+                  LEFT JOIN public_item_topic it ON it.topic_id = t.id
                   LEFT JOIN content_item ci
                          ON ci.id = it.content_item_id AND ci.duplicate_of_id IS NULL
                  GROUP BY t.slug, t.name
-                HAVING count(it.content_item_id) > 0
+                HAVING count(ci.id) > 0
                  ORDER BY total DESC
                 """;
         return jdbc.query(
@@ -275,10 +275,10 @@ public class ContentRepository {
                        CASE WHEN t.parent_id IS NULL THEN t.description
                             ELSE g.description END AS group_description,
                        COALESCE(g.display_order, t.display_order) AS group_order,
-                       count(it.content_item_id) AS total
+                       count(ci.id) AS total
                   FROM topic t
                   LEFT JOIN topic g ON g.id = t.parent_id
-                  LEFT JOIN item_topic it ON it.topic_id = t.id
+                  LEFT JOIN public_item_topic it ON it.topic_id = t.id
                   LEFT JOIN content_item ci
                          ON ci.id = it.content_item_id AND ci.duplicate_of_id IS NULL
                  GROUP BY t.slug, t.name, t.description, t.display_order,
@@ -315,13 +315,24 @@ public class ContentRepository {
         String sql =
                 """
                 SELECT v.slug, v.name, v.description,
-                       count(DISTINCT ie.content_item_id) AS total
+                       count(DISTINCT ci.id) FILTER (
+                           WHERE ivr.relation_level = 'primary'
+                       ) AS total,
+                       count(DISTINCT ci.id) FILTER (
+                           WHERE ivr.relation_level = 'related'
+                       ) AS related_total,
+                       count(DISTINCT ci.id) FILTER (
+                           WHERE ivr.relation_level = 'mention'
+                       ) AS mention_total,
+                       count(DISTINCT ci.id) FILTER (
+                           WHERE ivr.relation_level = 'primary'
+                             AND COALESCE(ci.published_at, ci.observed_at) >= now() - interval '7 days'
+                       ) AS recent_primary_total,
+                       max(ivr.evaluated_at) AS updated_at
                   FROM vendor v
-                  LEFT JOIN vendor_entity ve ON ve.vendor_slug = v.slug
-                  LEFT JOIN entity e ON e.slug = ve.entity_slug
-                  LEFT JOIN item_entity ie ON ie.entity_id = e.id
+                  LEFT JOIN item_vendor_relation ivr ON ivr.vendor_slug = v.slug
                   LEFT JOIN content_item ci
-                         ON ci.id = ie.content_item_id AND ci.duplicate_of_id IS NULL
+                         ON ci.id = ivr.content_item_id AND ci.duplicate_of_id IS NULL
                  GROUP BY v.slug, v.name, v.description, v.display_order
                  ORDER BY v.display_order, v.slug
                 """;
@@ -333,7 +344,11 @@ public class ContentRepository {
                                 rs.getString("slug"),
                                 rs.getString("name"),
                                 rs.getString("description"),
-                                rs.getLong("total")));
+                                rs.getLong("total"),
+                                rs.getLong("related_total"),
+                                rs.getLong("mention_total"),
+                                rs.getLong("recent_primary_total"),
+                                rs.getObject("updated_at", OffsetDateTime.class)));
     }
 
     /**
@@ -344,7 +359,7 @@ public class ContentRepository {
      * all, and those are simply absent rather than bucketed into an "other" card that would mean
      * "the classifier had nothing to say".
      */
-    public List<VendorNode> contentTypeMap() {
+    public List<MapNode> contentTypeMap() {
         String sql =
                 """
                 SELECT m.content_type AS slug, m.name, m.description,
@@ -359,7 +374,7 @@ public class ContentRepository {
                 sql,
                 new MapSqlParameterSource(),
                 (rs, rowNum) ->
-                        new VendorNode(
+                        new MapNode(
                                 rs.getString("slug"),
                                 rs.getString("name"),
                                 rs.getString("description"),
@@ -387,12 +402,97 @@ public class ContentRepository {
                 MAPPER);
     }
 
+    /** One explainable, cursor-pageable relation tier for the public vendor page. */
+    public List<VendorItem> findVendorFeed(
+            String slug, String relation, VendorCursor cursor, int limit) {
+        StringBuilder sql =
+                new StringBuilder(
+                        """
+                        SELECT ci.id, ci.title, ci.zh_title, ci.summary_zh, cr.excerpt,
+                               ci.canonical_url, ci.published_at, ci.observed_at,
+                               ci.content_type, ci.quality_score,
+                               ci.hot_score, ci.independent_source_count,
+                               s.id AS source_id, s.name AS source_name,
+                               s.source_tier, s.organization,
+                               ivr.relation_level, ivr.score, ivr.matched_entity_slug,
+                               ivr.reason_code, ivr.evaluated_at
+                          FROM item_vendor_relation ivr
+                          JOIN content_item ci ON ci.id = ivr.content_item_id
+                          JOIN source s ON s.id = ci.source_id
+                          LEFT JOIN content_revision cr ON cr.id = ci.current_revision_id
+                         WHERE ci.duplicate_of_id IS NULL
+                           AND ivr.vendor_slug = :slug
+                           AND ivr.relation_level = :relation
+                        """);
+        MapSqlParameterSource params =
+                new MapSqlParameterSource()
+                        .addValue("slug", slug)
+                        .addValue("relation", relation)
+                        .addValue("limit", limit);
+        if (cursor != null) {
+            sql.append(
+                    """
+                      AND (ivr.score, COALESCE(ci.published_at, ci.observed_at), ci.id)
+                          < (:score, :publishedAt, CAST(:id AS uuid))
+                    """);
+            params.addValue("score", cursor.score());
+            params.addValue("publishedAt", cursor.publishedAt());
+            params.addValue("id", cursor.id());
+        }
+        sql.append(
+                """
+                 ORDER BY ivr.score DESC,
+                          COALESCE(ci.published_at, ci.observed_at) DESC,
+                          ci.id DESC
+                 LIMIT :limit
+                """);
+        return jdbc.query(
+                sql.toString(),
+                params,
+                (rs, rowNum) ->
+                        new VendorItem(
+                                mapRow(rs),
+                                rs.getString("relation_level"),
+                                rs.getDouble("score"),
+                                rs.getString("matched_entity_slug"),
+                                rs.getString("reason_code"),
+                                rs.getObject("evaluated_at", OffsetDateTime.class)));
+    }
+
+    public long countVendorFeed(String slug, String relation) {
+        Long value =
+                jdbc.queryForObject(
+                        """
+                        SELECT count(*)
+                          FROM item_vendor_relation ivr
+                          JOIN content_item ci ON ci.id = ivr.content_item_id
+                         WHERE ivr.vendor_slug = :slug
+                           AND ivr.relation_level = :relation
+                           AND ci.duplicate_of_id IS NULL
+                        """,
+                        new MapSqlParameterSource()
+                                .addValue("slug", slug)
+                                .addValue("relation", relation),
+                        Long.class);
+        return value == null ? 0 : value;
+    }
+
+    public OffsetDateTime vendorFeedUpdatedAt(String slug) {
+        List<OffsetDateTime> rows =
+                jdbc.query(
+                        "SELECT max(evaluated_at) AS updated_at FROM item_vendor_relation"
+                                + " WHERE vendor_slug = :slug",
+                        new MapSqlParameterSource("slug", slug),
+                        (rs, rowNum) -> rs.getObject("updated_at", OffsetDateTime.class));
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
     public List<ContentItem> findByTopic(String slug, int limit) {
         String sql =
                 BASE_SELECT
                         + """
                            AND ci.id IN (
-                               SELECT it.content_item_id FROM item_topic it
+                               SELECT it.content_item_id FROM public_item_topic it
                                JOIN topic t ON t.id = it.topic_id
                               WHERE t.slug = :slug
                            )
@@ -403,6 +503,63 @@ public class ContentRepository {
                 sql,
                 new MapSqlParameterSource().addValue("slug", slug).addValue("limit", limit),
                 MAPPER);
+    }
+
+    /** One confidence-filtered, cursor-pageable topic feed. */
+    public List<TopicItem> findTopicFeed(String slug, Cursor cursor, int limit) {
+        StringBuilder sql =
+                new StringBuilder(
+                        """
+                        SELECT ci.id, ci.title, ci.zh_title, ci.summary_zh, cr.excerpt,
+                               ci.canonical_url, ci.published_at, ci.observed_at,
+                               ci.content_type, ci.quality_score,
+                               ci.hot_score, ci.independent_source_count,
+                               s.id AS source_id, s.name AS source_name,
+                               s.source_tier, s.organization,
+                               pit.confidence
+                          FROM public_item_topic pit
+                          JOIN topic t ON t.id = pit.topic_id
+                          JOIN content_item ci ON ci.id = pit.content_item_id
+                          JOIN source s ON s.id = ci.source_id
+                          LEFT JOIN content_revision cr ON cr.id = ci.current_revision_id
+                         WHERE t.slug = :slug
+                           AND ci.duplicate_of_id IS NULL
+                        """);
+        MapSqlParameterSource params =
+                new MapSqlParameterSource().addValue("slug", slug).addValue("limit", limit);
+        if (cursor != null) {
+            sql.append(
+                    """
+                      AND (COALESCE(ci.published_at, ci.observed_at), ci.id)
+                          < (:publishedAt, CAST(:id AS uuid))
+                    """);
+            params.addValue("publishedAt", cursor.publishedAt());
+            params.addValue("id", cursor.id());
+        }
+        sql.append(
+                """
+                 ORDER BY COALESCE(ci.published_at, ci.observed_at) DESC, ci.id DESC
+                 LIMIT :limit
+                """);
+        return jdbc.query(
+                sql.toString(),
+                params,
+                (rs, rowNum) -> new TopicItem(mapRow(rs), rs.getDouble("confidence")));
+    }
+
+    public long countTopicFeed(String slug) {
+        Long value =
+                jdbc.queryForObject(
+                        """
+                        SELECT count(*)
+                          FROM public_item_topic pit
+                          JOIN topic t ON t.id = pit.topic_id
+                          JOIN content_item ci ON ci.id = pit.content_item_id
+                         WHERE t.slug = :slug AND ci.duplicate_of_id IS NULL
+                        """,
+                        new MapSqlParameterSource("slug", slug),
+                        Long.class);
+        return value == null ? 0 : value;
     }
 
     /**
@@ -531,7 +688,6 @@ public class ContentRepository {
 
     public record Cursor(OffsetDateTime publishedAt, String id) {}
 
-
     public record Stats(long items, long enriched, long activeSources, long chunks) {}
 
     /** A curated item plus the recorded reason it was chosen. */
@@ -553,9 +709,31 @@ public class ContentRepository {
             String groupDescription,
             long total) {}
 
-    /** One card on the topic map. Shared by the vendor and content-form dimensions:
-     * both are "a name, a blurb and how many items are behind it". */
-    public record VendorNode(String slug, String name, String description, long total) {}
+    /** One auditable company/model-family entry on the public map. */
+    public record VendorNode(
+            String slug,
+            String name,
+            String description,
+            long total,
+            long relatedTotal,
+            long mentionTotal,
+            long recentPrimaryTotal,
+            OffsetDateTime updatedAt) {}
+
+    /** A simple map card used by the content-form dimension. */
+    public record MapNode(String slug, String name, String description, long total) {}
+
+    public record VendorItem(
+            ContentItem item,
+            String relation,
+            double score,
+            String matchedEntity,
+            String reasonCode,
+            OffsetDateTime evaluatedAt) {}
+
+    public record VendorCursor(double score, OffsetDateTime publishedAt, String id) {}
+
+    public record TopicItem(ContentItem item, double confidence) {}
 
     public record HotItem(
             String id,

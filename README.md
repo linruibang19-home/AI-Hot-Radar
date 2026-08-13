@@ -104,7 +104,7 @@ flowchart TB
 | Web | Next.js 15.5、React 19、TypeScript、App Router、SSR | 内容页面、交互、同源代理、流式问答 UI | 直接查库、保存模型密钥或 OPERATOR 凭据 |
 | Core API | Spring Boot 3.4、Java 21、Maven | 公共读 API、报告发布、订阅、管理 RBAC/审计 | 网页抽取、Embedding 与 RAG 算法 |
 | AI Service | FastAPI、Python 3.12、Pydantic、httpx | 采集、抽取、结构化、聚类、报告生成、RAG、评测 | 用户权限和邮件订阅业务事实 |
-| 数据库 | PostgreSQL 16、pgvector、Flyway V001–V024 | 唯一事实源、状态机、全文/向量索引、检索与投递记录 | 临时缓存语义 |
+| 数据库 | PostgreSQL 16、pgvector、Flyway V001–V025 | 唯一事实源、状态机、全文/向量索引、检索与投递记录 | 临时缓存语义 |
 | 短状态 | Redis 7 | 读缓存、限流、RAG 缓存、短锁 | 任何不可恢复的业务真相 |
 | 模型 | DeepSeek V4 Flash/Pro；bge-m3、bge-reranker-v2-m3 | 生成/结构化；Embedding 与交叉编码器重排 | 模型输出未经 schema/引用校验直接入库或发布 |
 | 交付 | Docker Compose、Caddy、GHCR、GitHub Actions | 单机编排、HTTPS、不可变 SHA 镜像、CI/CD | 当前规模下没有证据需要的 Kubernetes/Kafka |
@@ -277,6 +277,7 @@ diff、Flyway 空库/升级、依赖审计、秘密扫描、Compose smoke 与受
 ## 当前边界与下一步
 
 - 自动 citation precision 是诊断指标，不能替代高风险数字和主体关系的人审；
+- 主题地图关系门禁已经冻结 1,995 条候选，但尚未完成人工标注；在第一版基线发布前，不能把规则命中数表述为准确率；
 - 一个 SLA 类专项问题的目标原文稳定排第 27，当前安全拒答，尚未靠扩大在线成本强行解决；
 - 信源后台是数据库快照，不是实时告警控制台；管理写操作已有 API/RBAC/审计但没有浏览器 UI；
 - `outbox_event` 当前只写不读，一致性依靠数据库轮询；没有把预留表包装成已完成的消息架构；

@@ -24,6 +24,7 @@ from ahr.processing.llm import (
     LlmUnavailableError,
     build_client_from_env,
 )
+from ahr.processing.pipeline import _store_enrichment
 from ahr.processing.schemas import EnrichmentResult
 
 PARAGRAPH = (
@@ -183,6 +184,35 @@ def test_quality_score_is_bounded_and_penalised() -> None:
         }
     )
     assert spammy.quality_score(source_authority=90) < clean
+
+
+def test_enrichment_replaces_old_associations_before_refresh() -> None:
+    """A validated re-run must not leave topics/entities from an older model result."""
+    connection = MagicMock()
+    cursor = connection.cursor.return_value.__enter__.return_value
+    cursor.fetchone.return_value = ("entity-id",)
+
+    _store_enrichment(
+        connection,
+        __import__("uuid").uuid4(),
+        EnrichmentResult.model_validate(VALID_PAYLOAD),
+        source_tier="primary",
+        model_name="test-model",
+        vocabulary={"reasoning"},
+    )
+
+    statements = [" ".join(call.args[0].split()) for call in cursor.execute.call_args_list]
+
+    def index_of(prefix: str) -> int:
+        return next(i for i, sql in enumerate(statements) if sql.startswith(prefix))
+
+    vendor_delete = index_of("DELETE FROM item_vendor_relation")
+    entity_delete = index_of("DELETE FROM item_entity")
+    topic_delete = index_of("DELETE FROM item_topic")
+    entity_insert = index_of("INSERT INTO item_entity")
+    refresh = index_of("SELECT refresh_item_vendor_relations")
+
+    assert vendor_delete < entity_delete < topic_delete < entity_insert < refresh
 
 
 def _client(handler) -> LlmClient:

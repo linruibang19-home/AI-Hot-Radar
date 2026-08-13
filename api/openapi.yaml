@@ -1,11 +1,47 @@
 openapi: 3.1.0
 info:
   title: AI Hot Radar API
-  version: 1.4.0
+  version: 1.6.0
   description: Public content, report subscriptions, RAG and source administration baseline contract.
 servers:
   - url: /api/v1
 paths:
+  /vendors/map:
+    get:
+      operationId: listVendorMap
+      responses:
+        '200':
+          description: Curated vendor entries with auditable relation counts
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: '#/components/schemas/VendorNode'}}
+  /vendors/{slug}/feed:
+    get:
+      operationId: listVendorFeed
+      parameters:
+        - {name: slug, in: path, required: true, schema: {type: string}}
+        - {$ref: '#/components/parameters/Cursor'}
+        - {$ref: '#/components/parameters/Limit'}
+        - {name: relation, in: query, schema: {type: string, enum: [primary, related, mention], default: primary}}
+      responses:
+        '200':
+          description: One explainable relation tier, relevance ordered and cursor paged
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/VendorPage'}
+  /topics/{slug}/feed:
+    get:
+      operationId: listTopicFeed
+      parameters:
+        - {name: slug, in: path, required: true, schema: {type: string}}
+        - {$ref: '#/components/parameters/Cursor'}
+        - {$ref: '#/components/parameters/Limit'}
+      responses:
+        '200':
+          description: Confidence-gated public topic feed, cursor paged
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/TopicPage'}
   /items:
     get:
       operationId: listItems
@@ -39,15 +75,17 @@ paths:
   /stories:
     get:
       operationId: listStories
+      description: Returns only high-confidence published events covered by at least two independent sources.
       parameters:
-        - {$ref: '#/components/parameters/Cursor'}
         - {$ref: '#/components/parameters/Limit'}
       responses:
         '200':
-          description: Story page
+          description: Multi-source stories ranked by heat
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/StoryPage'}
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/StorySummary'}
   /stories/{idOrSlug}:
     get:
       operationId: getStory
@@ -58,7 +96,8 @@ paths:
           description: Story detail
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/Story'}
+              schema: {$ref: '#/components/schemas/StoryDetail'}
+        '404': {$ref: '#/components/responses/Problem'}
   /rag/queries:
     post:
       operationId: createRagQuery
@@ -221,16 +260,50 @@ components:
         id: {type: string}
         name: {type: string}
         tier: {type: string}
-    Story:
+    StorySummary:
       type: object
-      required: [id, title, firstSeenAt, sources]
+      required: [id, slug, title, independentSources, itemCount, locked, sourceNames]
+      properties:
+        id: {type: string, format: uuid}
+        slug: {type: string}
+        title: {type: string}
+        occurredAt: {type: [string, 'null'], format: date-time}
+        heat: {type: [number, 'null']}
+        independentSources: {type: integer, minimum: 2}
+        itemCount: {type: integer, minimum: 2}
+        locked: {type: boolean}
+        contentType: {type: [string, 'null']}
+        primarySourceName: {type: [string, 'null']}
+        primarySourceTier: {type: [string, 'null']}
+        sourceNames:
+          type: array
+          minItems: 2
+          uniqueItems: true
+          items: {type: string}
+    StoryEntry:
+      type: object
+      required: [id, title, canonicalUrl, relationType, sourceName, sourceTier]
       properties:
         id: {type: string, format: uuid}
         title: {type: string}
         summary: {type: [string, 'null']}
-        firstSeenAt: {type: string, format: date-time}
-        lastUpdatedAt: {type: string, format: date-time}
-        sources: {type: array, items: {$ref: '#/components/schemas/Item'}}
+        canonicalUrl: {type: string, format: uri}
+        publishedAt: {type: [string, 'null'], format: date-time}
+        observedAt: {type: [string, 'null'], format: date-time}
+        contentType: {type: [string, 'null']}
+        relationType: {type: string}
+        similarity: {type: [number, 'null']}
+        sourceName: {type: string}
+        sourceTier: {type: string}
+        organization: {type: [string, 'null']}
+    StoryDetail:
+      type: object
+      required: [story, timeline]
+      properties:
+        story: {$ref: '#/components/schemas/StorySummary'}
+        timeline:
+          type: array
+          items: {$ref: '#/components/schemas/StoryEntry'}
     PageMeta:
       type: object
       required: [hasMore]
@@ -243,12 +316,49 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Item'}}
         page: {$ref: '#/components/schemas/PageMeta'}
-    StoryPage:
+    VendorNode:
       type: object
-      required: [data, page]
+      required: [slug, name, total, relatedTotal, mentionTotal, recentPrimaryTotal]
       properties:
-        data: {type: array, items: {$ref: '#/components/schemas/Story'}}
+        slug: {type: string}
+        name: {type: string}
+        description: {type: [string, 'null']}
+        total: {type: integer, minimum: 0, description: Primary relation count}
+        relatedTotal: {type: integer, minimum: 0}
+        mentionTotal: {type: integer, minimum: 0}
+        recentPrimaryTotal: {type: integer, minimum: 0}
+        updatedAt: {type: [string, 'null'], format: date-time}
+    VendorItem:
+      type: object
+      required: [item, relation, score, matchedEntity, reasonCode, evaluatedAt]
+      properties:
+        item: {$ref: '#/components/schemas/Item'}
+        relation: {type: string, enum: [primary, related, mention]}
+        score: {type: number, minimum: 0, maximum: 1}
+        matchedEntity: {type: string}
+        reasonCode: {type: string}
+        evaluatedAt: {type: string, format: date-time}
+    VendorPage:
+      type: object
+      required: [data, page, total]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/VendorItem'}}
         page: {$ref: '#/components/schemas/PageMeta'}
+        total: {type: integer, minimum: 0}
+        updatedAt: {type: [string, 'null'], format: date-time}
+    TopicItem:
+      type: object
+      required: [item, confidence]
+      properties:
+        item: {$ref: '#/components/schemas/Item'}
+        confidence: {type: number, minimum: 0, maximum: 1}
+    TopicPage:
+      type: object
+      required: [data, page, total]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/TopicItem'}}
+        page: {$ref: '#/components/schemas/PageMeta'}
+        total: {type: integer, minimum: 0}
     RagQueryRequest:
       type: object
       required: [question, timezone]

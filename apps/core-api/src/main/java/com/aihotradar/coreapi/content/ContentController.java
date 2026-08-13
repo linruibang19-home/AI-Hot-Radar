@@ -1,5 +1,6 @@
 package com.aihotradar.coreapi.content;
 
+import com.aihotradar.coreapi.cache.CacheConfig;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -7,7 +8,6 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import com.aihotradar.coreapi.cache.CacheConfig;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -159,7 +159,7 @@ public class ContentController {
     /** The content-form dimension, from `content_item.content_type`. */
     @GetMapping("/content-types/map")
     @Cacheable(value = CacheConfig.TOPICS, key = "'contentTypes'")
-    public List<ContentRepository.VendorNode> contentTypeMap() {
+    public List<ContentRepository.MapNode> contentTypeMap() {
         return repository.contentTypeMap();
     }
 
@@ -170,12 +170,62 @@ public class ContentController {
         return repository.findByVendor(slug, Math.min(Math.max(limit, 1), MAX_LIMIT));
     }
 
+    @GetMapping("/vendors/{slug}/feed")
+    public VendorPage vendorFeed(
+            @PathVariable String slug,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false, defaultValue = "20") int limit,
+            @RequestParam(required = false, defaultValue = "primary") String relation) {
+        String tier = normaliseVendorRelation(relation);
+        int pageSize = Math.min(Math.max(limit, 1), MAX_LIMIT);
+        List<ContentRepository.VendorItem> rows =
+                repository.findVendorFeed(slug, tier, decodeVendorCursor(cursor), pageSize + 1);
+        boolean hasMore = rows.size() > pageSize;
+        List<ContentRepository.VendorItem> page = hasMore ? rows.subList(0, pageSize) : rows;
+        String nextCursor =
+                hasMore && !page.isEmpty() ? encodeVendorCursor(page.get(page.size() - 1)) : null;
+        return new VendorPage(
+                page,
+                new PageResponse.PageMeta(nextCursor, hasMore),
+                repository.countVendorFeed(slug, tier),
+                repository.vendorFeedUpdatedAt(slug));
+    }
+
+    public record VendorPage(
+            List<ContentRepository.VendorItem> data,
+            PageResponse.PageMeta page,
+            long total,
+            OffsetDateTime updatedAt) {}
+
     @GetMapping("/topics/{slug}")
     public List<ContentItem> topicItems(
             @PathVariable String slug,
             @RequestParam(required = false, defaultValue = "30") int limit) {
         return repository.findByTopic(slug, Math.min(Math.max(limit, 1), MAX_LIMIT));
     }
+
+    @GetMapping("/topics/{slug}/feed")
+    public TopicPage topicFeed(
+            @PathVariable String slug,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(required = false, defaultValue = "20") int limit) {
+        int pageSize = Math.min(Math.max(limit, 1), MAX_LIMIT);
+        List<ContentRepository.TopicItem> rows =
+                repository.findTopicFeed(slug, decodeCursor(cursor), pageSize + 1);
+        boolean hasMore = rows.size() > pageSize;
+        List<ContentRepository.TopicItem> page = hasMore ? rows.subList(0, pageSize) : rows;
+        String nextCursor =
+                hasMore && !page.isEmpty()
+                        ? encodeCursor(page.get(page.size() - 1).item())
+                        : null;
+        return new TopicPage(
+                page,
+                new PageResponse.PageMeta(nextCursor, hasMore),
+                repository.countTopicFeed(slug));
+    }
+
+    public record TopicPage(
+            List<ContentRepository.TopicItem> data, PageResponse.PageMeta page, long total) {}
 
     /**
      * Every publication date with its item count, newest first.
@@ -227,6 +277,36 @@ public class ContentController {
         } catch (RuntimeException exception) {
             // A malformed cursor restarts from the top rather than 500ing: the
             // client cannot recover from an error here, but a fresh page is useful.
+            return null;
+        }
+    }
+
+    private static String normaliseVendorRelation(String relation) {
+        return switch (relation == null ? "" : relation.toLowerCase()) {
+            case "related" -> "related";
+            case "mention" -> "mention";
+            default -> "primary";
+        };
+    }
+
+    private static String encodeVendorCursor(ContentRepository.VendorItem row) {
+        ContentItem item = row.item();
+        OffsetDateTime effective =
+                item.publishedAt() == null ? item.observedAt() : item.publishedAt();
+        String raw = row.score() + "|" + effective + "|" + item.id();
+        return Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static ContentRepository.VendorCursor decodeVendorCursor(String cursor) {
+        if (cursor == null || cursor.isBlank()) return null;
+        try {
+            String raw = new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
+            String[] parts = raw.split("\\|", 3);
+            if (parts.length != 3) return null;
+            return new ContentRepository.VendorCursor(
+                    Double.parseDouble(parts[0]), OffsetDateTime.parse(parts[1]), parts[2]);
+        } catch (RuntimeException exception) {
             return null;
         }
     }

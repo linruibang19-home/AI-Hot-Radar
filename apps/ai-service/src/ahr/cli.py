@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import psycopg
+import yaml
 
 from ahr.config import get_settings
 from ahr.ingestion.registry import load_sources, summarize, sync_sources
@@ -988,6 +989,127 @@ def cmd_seed_topics(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_topic_quality(args: argparse.Namespace) -> int:
+    """Freeze or evaluate the human-reviewed topic-map relation set."""
+    from ahr.processing.topic_quality import (
+        TopicQualityError,
+        audit_corpus_bindings,
+        build_dataset,
+        build_review_packet,
+        compare_review_packets,
+        dump_dataset,
+        evaluate_dataset,
+        finalize_reviewed_dataset,
+        load_dataset,
+        load_review_packet,
+    )
+
+    try:
+        if args.action == "sample":
+            if not args.output:
+                raise TopicQualityError("sample action requires --output")
+            with psycopg.connect(get_settings().database_url) as connection:
+                # The sampler runs one query per target/stratum while ingestion
+                # continues in another service. Freeze a single MVCC view so
+                # counts and examples cannot come from different corpus states.
+                connection.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+                payload = build_dataset(
+                    connection,
+                    per_stratum=args.per_stratum,
+                    seed=args.seed,
+                )
+            dump_dataset(payload, args.output)
+            summary = {
+                "status": "sampled",
+                "dataset_id": payload["dataset_id"],
+                "samples": len(payload["samples"]),
+                "output": args.output,
+            }
+            print(json.dumps(summary, indent=2, ensure_ascii=False))
+            return 0
+
+        dataset = load_dataset(args.golden)
+        with psycopg.connect(get_settings().database_url) as connection:
+            binding_audit = audit_corpus_bindings(connection, dataset)
+        if args.action == "review-init":
+            if not args.output or not args.reviewer:
+                raise TopicQualityError("review-init requires --reviewer and --output")
+            dump_dataset(build_review_packet(dataset, args.reviewer), args.output)
+            print(
+                json.dumps(
+                    {
+                        "status": "review_packet_created",
+                        "dataset_id": dataset.dataset_id,
+                        "reviewer": args.reviewer,
+                        "samples": len(dataset.samples),
+                        "corpus_binding": binding_audit,
+                        "output": args.output,
+                    },
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        if args.action in {"review-compare", "labels-finalize"}:
+            if not args.review_a or not args.review_b:
+                raise TopicQualityError(f"{args.action} requires --review-a and --review-b")
+            packet_a = load_review_packet(args.review_a, dataset)
+            packet_b = load_review_packet(args.review_b, dataset)
+            comparison = compare_review_packets(dataset, packet_a, packet_b)
+            if args.action == "review-compare":
+                if args.output:
+                    dump_dataset(comparison, args.output)
+                print(json.dumps(comparison, indent=2, ensure_ascii=False))
+                return 2 if comparison["pending"] or comparison["disagreements"] else 0
+            if not args.output or not args.labels_output:
+                raise TopicQualityError("labels-finalize requires --output and --labels-output")
+            adjudication = None
+            if args.adjudication:
+                try:
+                    raw = yaml.safe_load(Path(args.adjudication).read_text(encoding="utf-8"))
+                except (OSError, yaml.YAMLError) as exc:
+                    raise TopicQualityError(
+                        f"cannot read adjudication packet {args.adjudication}: {exc}"
+                    ) from exc
+                if not isinstance(raw, dict):
+                    raise TopicQualityError("adjudication packet root must be an object")
+                adjudication = raw
+            full, labels = finalize_reviewed_dataset(dataset, packet_a, packet_b, adjudication)
+            dump_dataset(full, args.output)
+            dump_dataset(labels, args.labels_output)
+            print(
+                json.dumps(
+                    {
+                        "status": "finalized",
+                        "dataset_id": dataset.dataset_id,
+                        "samples": len(dataset.samples),
+                        "agreement_rate": labels["agreement_rate"],
+                        "disagreements": labels["disagreements"],
+                        "output": args.output,
+                        "labels_output": args.labels_output,
+                    },
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+            return 0
+
+        report = evaluate_dataset(dataset)
+        report["corpus_binding"] = binding_audit
+        if args.output:
+            Path(args.output).write_text(
+                json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        if args.action == "evaluate" and report["status"] != "ready":
+            return 2
+        return 0
+    except TopicQualityError as exc:
+        print(json.dumps({"status": "invalid", "detail": str(exc)}, ensure_ascii=False))
+        return 1
+
+
 def cmd_reasons(args: argparse.Namespace) -> int:
     from ahr.processing.llm import LlmUnavailableError, build_client_from_env
     from ahr.processing.recommendation import backfill_reasons
@@ -1336,6 +1458,36 @@ def main(argv: list[str] | None = None) -> int:
 
     seed = sub.add_parser("seed-topics", help="refresh topic names and grouping from taxonomy")
     seed.set_defaults(func=cmd_seed_topics)
+
+    topic_quality = sub.add_parser(
+        "topic-quality",
+        help="sample, validate or evaluate human-reviewed topic-map relations",
+    )
+    topic_quality.add_argument(
+        "action",
+        choices=[
+            "sample",
+            "validate",
+            "review-init",
+            "review-compare",
+            "labels-finalize",
+            "evaluate",
+        ],
+    )
+    topic_quality.add_argument(
+        "--golden",
+        default="/app/data/topic-map-review/annotations.yaml",
+        help="frozen YAML dataset used by validate/evaluate",
+    )
+    topic_quality.add_argument("--output", default=None)
+    topic_quality.add_argument("--labels-output", default=None)
+    topic_quality.add_argument("--reviewer", default=None)
+    topic_quality.add_argument("--review-a", default=None)
+    topic_quality.add_argument("--review-b", default=None)
+    topic_quality.add_argument("--adjudication", default=None)
+    topic_quality.add_argument("--per-stratum", type=int, default=20)
+    topic_quality.add_argument("--seed", default="topic-map-golden-v1")
+    topic_quality.set_defaults(func=cmd_topic_quality)
 
     reasons = sub.add_parser("reasons", help="write LLM recommendation reasons for selections")
     reasons.add_argument("--limit", type=int, default=40)
