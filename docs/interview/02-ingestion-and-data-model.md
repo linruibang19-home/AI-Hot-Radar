@@ -55,6 +55,18 @@ claims、事件动作/对象/时间和质量因子。解析失败最多修复一
 代码块和引用。每块保留 `heading_path`、字符位置、发布时间、语言、token 和引用资格；bge-m3
 为可引用块生成向量，PostgreSQL 同时构建全文索引。
 
+这里必须能回答“切的是原文还是摘要”：`chunk_current_revisions()` 从
+`content_item.current_revision_id → content_revision.body_text` 读取当前 canonical 正文，
+`chunk_revision()` 把切分结果逐条写入 `content_chunk.body_text`。`summary_zh` 不参与这条路径。
+Embedding 前会临时在 passage 前加标题、来源、日期和最多三层 heading，解决孤立 changelog bullet
+缺少语境的问题；这个前缀**只进入向量模型输入，不回写 chunk，也不能作为引用正文**。
+
+当前实现参数是 target 400、min 120、max 700、overlap 60、异常结构硬上限 1200 token。普通正文按
+段落、列表、标题和代码围栏切分；长表格按行切；没有换行的异常长行再按 token 预算和临近标点切。
+切块保存 ordinal、heading path、char_start/char_end，revision 更新后只检索 current revision，旧版本
+保留审计但不会混入在线答案。上线实测口径与 SQL 见
+[`../status/rag-corpus-audit-20260813.md`](../status/rag-corpus-audit-20260813.md)。
+
 ## 核心实体
 
 | 实体 | 作用 | 一致性要点 |
@@ -96,3 +108,15 @@ RAG 只检索已发布且可引用的原始 passage。下架时公共正文、�
 先打开 `database/migrations/V001__baseline.sql` 讲 source/raw/item/revision/chunk，再按功能迁移讲
 Story、RAG、报告订阅和模型配置。明确 `evidence_passage`、`embedding_record` 是早期领域名，
 当前没有这两张物理表；引用和向量都在 `content_chunk`，见 ADR-0029。
+
+## 面试官继续追问“如何证明不是摘要”
+
+按四层证据回答，不只说“代码看起来如此”：
+
+1. 迁移层：`content_revision.body_text`、`content_item.summary_zh` 和 `content_chunk.body_text` 是不同列；
+2. 写入层：`pipeline.py::chunk_revision` 的唯一文本输入是 revision body；
+3. 向量层：`rag/backfill.py` 读取 chunk body，`rag/context.py` 明确上下文前缀仅用于 embedding；
+4. 生产层：抽查 chunk 与 revision 定位、模型覆盖、空块、摘要相等数量和超限块，并保存带日期的审计。
+
+不要回答“100% 永远正确”。本次审计发现并修复了 14 个旧版超长单行块，说明门禁的价值正是让
+反例暴露出来；部署后通过定向 rechunk 和重向量化收口，而不是删数据或口头忽略。

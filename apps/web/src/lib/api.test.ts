@@ -178,6 +178,21 @@ describe("groupReports", () => {
 });
 
 describe("groupByDay", () => {
+  it("sorts newest days and items even when an API response is scrambled", () => {
+    const groups = groupByDay([
+      item("old", "2026-05-17T02:23:00Z"),
+      item("newer", "2026-08-13T03:54:00Z"),
+      item("newest", "2026-08-13T11:54:00Z"),
+      item("middle", "2026-08-05T03:54:00Z"),
+    ]);
+
+    expect([...groups.keys()]).toEqual(["2026-08-13", "2026-08-05", "2026-05-17"]);
+    expect(groups.get("2026-08-13")?.map((entry) => entry.id)).toEqual([
+      "newest",
+      "newer",
+    ]);
+  });
+
   it("buckets items by the local publication day", () => {
     // All three are 2026-08-02 in Asia/Shanghai: 23:00Z on the 1st is 07:00 on
     // the 2nd in Beijing. Bucketing by the UTC date split them across two

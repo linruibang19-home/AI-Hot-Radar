@@ -15,6 +15,8 @@
 | 实现事实与文档教材审计 | [documentation-audit-20260813.md](documentation-audit-20260813.md) |
 | 主题地图关联分层与语料克隆验收 | [topic-map-quality-20260813.md](topic-map-quality-20260813.md) |
 | 主题地图关系黄金集第一阶段 | [topic-map-golden-set-20260813.md](topic-map-golden-set-20260813.md) |
+| 主题/厂商时间线与导航性能 | [topic-timeline-performance-20260813.md](topic-timeline-performance-20260813.md) |
+| RAG 原文切块与向量覆盖审计 | [rag-corpus-audit-20260813.md](rag-corpus-audit-20260813.md) |
 
 ## RAG 证据
 
