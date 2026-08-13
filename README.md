@@ -4,11 +4,13 @@
 > 日/周/月报告，并在同一份原文证据库上提供可解释、可评测、每句话可回跳原文的 RAG 问答。
 
 - 在线体验：[https://aihotradar.online](https://aihotradar.online)
-- 当前生产：`v0.1.7@c1c6918`，香港 2C4G 单机 Docker Compose，Caddy HTTPS
-- 2026-08-12 生产快照：140 个登记信源、2040 条内容、8089 个分块（100% 向量化）、
-  1622 个事件；数据持续增长，本行不是固定业务承诺
-- 质量基线：Python 884 通过、2 跳过，Java 74、Web 73 个测试（2026-08-12 CI）；RAG 使用
-  固定 90 题发布集与逐题证据
+- 当前生产代码基线：`v0.1.11@2502274`，香港 2C4G 单机 Docker Compose，Caddy HTTPS；
+  数据与运行状态会随调度持续变化，动态数字以站内运行页为准
+- 2026-08-12 已记录生产快照：2040 条内容、8089 个活动分块（100% 向量化）、1622 个事件；
+  该行是带日期的历史证据，不是固定业务承诺
+- 质量基线：2026-08-12 完整 CI 为 Python 884 通过、2 跳过、Java 74；2026-08-14 本任务
+  复跑 RAG 相关 94 个 Python 测试、Java 21 `verify` 与 Web 78 个测试均通过；RAG 使用固定
+  90 题发布集与逐题证据
 
 ![精选与实时情报流](docs/assets/screenshots/home.png)
 
@@ -104,7 +106,7 @@ flowchart TB
 | Web | Next.js 15.5、React 19、TypeScript、App Router、SSR | 内容页面、交互、同源代理、流式问答 UI | 直接查库、保存模型密钥或 OPERATOR 凭据 |
 | Core API | Spring Boot 3.4、Java 21、Maven | 公共读 API、报告发布、订阅、管理 RBAC/审计 | 网页抽取、Embedding 与 RAG 算法 |
 | AI Service | FastAPI、Python 3.12、Pydantic、httpx | 采集、抽取、结构化、聚类、报告生成、RAG、评测 | 用户权限和邮件订阅业务事实 |
-| 数据库 | PostgreSQL 16、pgvector、Flyway V001–V025 | 唯一事实源、状态机、全文/向量索引、检索与投递记录 | 临时缓存语义 |
+| 数据库 | PostgreSQL 16、pgvector、Flyway V001–V026 | 唯一事实源、状态机、全文/向量索引、版本化 chunk set、检索与投递记录 | 临时缓存语义 |
 | 短状态 | Redis 7 | 读缓存、限流、RAG 缓存、短锁 | 任何不可恢复的业务真相 |
 | 模型 | DeepSeek V4 Flash/Pro；bge-m3、bge-reranker-v2-m3 | 生成/结构化；Embedding 与交叉编码器重排 | 模型输出未经 schema/引用校验直接入库或发布 |
 | 交付 | Docker Compose、Caddy、GHCR、GitHub Actions | 单机编排、HTTPS、不可变 SHA 镜像、CI/CD | 当前规模下没有证据需要的 Kubernetes/Kafka |
@@ -298,6 +300,10 @@ diff、Flyway 空库/升级、依赖审计、秘密扫描、Compose smoke 与受
 | 业务与系统架构 | [`01-business-and-architecture.md`](docs/interview/01-business-and-architecture.md) |
 | 采集、全文门与数据模型 | [`02-ingestion-and-data-model.md`](docs/interview/02-ingestion-and-data-model.md) |
 | RAG 全链路、指标和失败实验 | [`03-rag-deep-dive.md`](docs/interview/03-rag-deep-dive.md) |
+| LLM、Prompt、推荐排序与置信阈值 | [`handbook/16`](docs/handbook/16-llm-prompts-ranking-and-thresholds.md) |
+| Agent、编排、记忆和成本边界 | [`handbook/17`](docs/handbook/17-agent-orchestration-memory-and-cost.md) · [`interview/14`](docs/interview/14-agent-rag-interview-drill.md) |
+| 项目困难、负实验与技术取舍 | [`interview/13`](docs/interview/13-project-challenges-and-tradeoffs.md) |
+| k6/pgbench/Redis 分层压测与 QPS 口径 | [`handbook/18`](docs/handbook/18-performance-capacity-and-load-testing.md) · [`实测基线`](docs/status/loadtest/2026-08-13-local-baseline.md) |
 | 后端、一致性、前端与运维 | [`04`](docs/interview/04-backend-and-consistency.md) · [`05`](docs/interview/05-frontend-product.md) · [`06`](docs/interview/06-deployment-security-ops.md) |
 | 120 题、10 个 STAR、白板与演示 | [`07`](docs/interview/07-interview-question-bank.md) · [`08`](docs/interview/08-resume-and-star-stories.md) · [`09`](docs/interview/09-system-design-whiteboard.md) · [`10`](docs/interview/10-demo-script.md) |
 | 锁定规格与架构决策 | [`docs/spec/00-master-spec.md`](docs/spec/00-master-spec.md) · [`docs/adr/`](docs/adr/) |

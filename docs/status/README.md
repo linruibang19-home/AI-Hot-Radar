@@ -17,6 +17,7 @@
 | 主题地图关系黄金集第一阶段 | [topic-map-golden-set-20260813.md](topic-map-golden-set-20260813.md) |
 | 主题/厂商时间线与导航性能 | [topic-timeline-performance-20260813.md](topic-timeline-performance-20260813.md) |
 | RAG 原文切块与向量覆盖审计 | [rag-corpus-audit-20260813.md](rag-corpus-audit-20260813.md) |
+| 本地 Web/Core/AI、PostgreSQL、Redis 分层压测 | [loadtest/2026-08-13-local-baseline.md](loadtest/2026-08-13-local-baseline.md) |
 
 ## RAG 证据
 
