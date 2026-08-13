@@ -104,6 +104,12 @@ TASK-M5-020 复测中，RAG 统计四条 SQL 的组合事务约 1,080 TPS/9.26 m
 
 ## 5. 如何做真正的 2C4G 容量测试
 
+2026-08-14 已在香港生产机完成一次**低风险发布验证**：1→2→5 VU、60 秒共 1536 个混合 HTTP
+请求且零错误；AI/Core/Web P95 分别 10.69/96.82/644.09 ms。PostgreSQL 内容流与 RAG 统计
+代表 SQL 为 741.02/79.43 TPS，Redis PING 为 40.4k–45.4k req/s。完整口径见
+[`../status/loadtest/2026-08-14-m5-020-production.md`](../status/loadtest/2026-08-14-m5-020-production.md)。
+这只关闭“发布后是否稳定”的问题，下面流程才回答“容量上限是多少”。
+
 1. 从生产备份恢复到隔离 2C4G，脱敏订阅邮箱和管理 token；
 2. 使用与生产相同 SHA 镜像、Compose 限额、PostgreSQL 参数和数据规模；
 3. 预热 5–10 分钟，记录冷缓存和热缓存两组；

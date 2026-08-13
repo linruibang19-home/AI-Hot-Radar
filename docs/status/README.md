@@ -7,7 +7,7 @@
 
 | 用途 | 文档 |
 |---|---|
-| 当前生产、提交、数据和下一步 | [handoff-20260812.md](current/handoff-20260812.md) |
+| 当前生产、提交、数据和下一步 | [handoff-20260814.md](current/handoff-20260814.md) |
 | 完整项目历史与问题根因 | [project-status.md](current/project-status.md) |
 | 完整交付导航 | [../spec/12-delivery-index.md](../spec/12-delivery-index.md) |
 | 腾讯云迁移 | [tencent-cloud-migration-readiness-20260812.md](operations/tencent-cloud-migration-readiness-20260812.md) |
@@ -18,6 +18,7 @@
 | 主题/厂商时间线与导航性能 | [topic-timeline-performance-20260813.md](product/topic-timeline-performance-20260813.md) |
 | RAG 原文切块与向量覆盖审计 | [rag-corpus-audit-20260813.md](product/rag-corpus-audit-20260813.md) |
 | 本地 Web/Core/AI、PostgreSQL、Redis 分层压测 | [loadtest/2026-08-13-local-baseline.md](loadtest/2026-08-13-local-baseline.md) |
+| 香港 2C4G 低风险生产压测 | [loadtest/2026-08-14-m5-020-production.md](loadtest/2026-08-14-m5-020-production.md) |
 
 ## 目录职责
 
@@ -68,6 +69,7 @@
 
 - `handoff-20260810.md`：M4 末期历史状态，已被 08-11 与 08-12 交接取代；
 - `handoff-20260811.md`：首次上线前后过渡状态，已被 08-12 交接取代；
+- `handoff-20260812.md`：作品集封版快照，已被 08-14 交接取代；
 - `prelaunch-release-gate-20260811.md`：上线前门禁，不代表当前运行版本；
 - `m1-canary-evidence.*`：M1 信源阶段证据。
 

@@ -42,9 +42,9 @@ echo "[4/6] PostgreSQL read-only components"
 compose cp "$ROOT_DIR/infra/loadtest/postgres-feed.sql" postgres:/tmp/postgres-feed.sql
 compose cp "$ROOT_DIR/infra/loadtest/postgres-rag-stats.sql" postgres:/tmp/postgres-rag-stats.sql
 compose exec -T postgres sh -c \
-  'pgbench -n -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 5 -j 2 -T 30 -f /tmp/postgres-feed.sql'
+  'pgbench -n -q -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 5 -j 2 -T 30 -f /tmp/postgres-feed.sql'
 compose exec -T postgres sh -c \
-  'pgbench -n -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 5 -j 2 -T 30 -f /tmp/postgres-rag-stats.sql'
+  'pgbench -n -q -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c 5 -j 2 -T 30 -f /tmp/postgres-rag-stats.sql'
 
 echo "[5/6] Redis protocol and application-cache observations"
 compose exec -T redis redis-benchmark -q -n 50000 -c 10 -t ping
