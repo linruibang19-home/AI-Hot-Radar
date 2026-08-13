@@ -29,3 +29,16 @@
 - Web 打乱输入的日期/日内顺序测试；
 - Web 78 项、typecheck、lint、build；
 - 部署后接口结果日期单调不增、公开页无全屏遮罩、Playwright/HTTP 冒烟与生产 TTFB 对比。
+
+## 生产验收结果
+
+- v0.1.9 起厂商 feed SQL 使用 `effective_time DESC, relation_score DESC, id DESC`，cursor 使用同一
+  tuple；2026-08-13 生产 `related` 首页依次为 8 月 13、12、11、10、7、5、4、3 日，不再出现
+  5 月/8 月交错；
+- `/vendors/deepseek?relation=related` TTFB 约 0.42 秒，`primary` 约 0.35 秒；`/topics` 冷缓存
+  一次约 3.24 秒，随后三次约 0.20–0.35 秒；
+- 生产 Chrome 的主题地图无 console/page error；人为延迟 600ms 的 RSC 请求下，点击后侧栏立即
+  `aria-busy`，已读正文保留，页面中不存在全屏 `.route-loading`；
+- 全站浏览器回归 36 项中 32 项通过。日期计数失败经 API 复核为测试等待条件过早（生产标题与
+  三页 API 都是 140 条）；3 个 RAG 失败由生产匿名限流返回 429，不能为了测试绕过真实限流。
+  RAG 功能正确性继续由发布门和单查询 smoke 证明，批量浏览器 RAG 应在本地提高测试限额后运行。

@@ -68,6 +68,24 @@ Embedding/Reranker 输入；引用绑定时仍从 `content_chunk.body_text` 和 
 
 部署验收应满足：当前超限块为 0、当前非空正文全部切块、当前 chunk 全部有相同 embedding model。
 
+## v0.1.10 生产验收
+
+2026-08-13 在迁移前先生成并校验 131MB 备份；v0.1.10 上线后 V026 在约 27 秒内成功应用，随后：
+
+| 动作/检查 | 生产结果 |
+|---|---:|
+| `rechunk --oversized-only` | 13 revisions，80 old active → 107 new active |
+| 新 active 向量回填 | 107/107，2 次 provider call，remaining 0 |
+| 当前 active > 1,200 token | 0 |
+| 当前 active 缺 embedding | 0 |
+| active revision + ordinal 重复 | 0 |
+| active chunk 等于 `summary_zh` | 0 |
+| retired chunk 仍被 citation 引用 | 3 |
+| 迁移后备份/隔离恢复 | 132MB；`140|2215|9121|1788|17|026` |
+
+唯一没有 active chunk 的当前非空 revision 是 18 字符的 npm 包版本事件，工作流仍为 `DISCOVERED`；
+它尚未通过正文门与加工状态，所以不是“应进 RAG 却漏切”。流水线推进后会走同一幂等切块路径。
+
 ## 能证明与不能证明
 
 能证明：实现和生产数据都走原文 revision → passage → vector 路径；当前向量覆盖完整；引用正文没有
