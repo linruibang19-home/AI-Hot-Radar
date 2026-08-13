@@ -13,11 +13,13 @@ Two things had to be true at once for that to happen, so both are pinned here.
 from __future__ import annotations
 
 import inspect
+import uuid
 from typing import Any
 
 from ahr.processing.pipeline import (
     _unchunked_revisions,
     chunk_current_revisions,
+    chunk_revision,
     close_empty_bodies,
     process_pending,
 )
@@ -80,6 +82,7 @@ def test_unchunked_query_selects_revisions_missing_chunks() -> None:
     # Must key on the *current* revision: chunks hanging off a superseded one
     # are exactly the state being repaired.
     assert "cc.content_revision_id = ci.current_revision_id" in sql
+    assert "cc.is_active" in sql
 
 
 def test_unchunked_query_skips_known_duplicates() -> None:
@@ -138,6 +141,23 @@ def test_chunking_pass_reports_what_it_wrote() -> None:
     # Committed even with nothing to do, so the pass never holds a transaction
     # open across the enrichment loop that follows.
     assert connection.commits == 1
+
+
+def test_rechunk_retires_old_set_and_never_deletes_cited_evidence() -> None:
+    """A historical citation owns the physical chunk id it was issued with.
+
+    Re-chunking the same revision must create a new active generation while the
+    old rows remain readable; DELETE would either fail on the citation FK or,
+    if cascaded, silently destroy the answer's evidence.
+    """
+    connection = _Connection([])
+    assert chunk_revision(connection, uuid.uuid4(), "A complete original paragraph.") == 1
+
+    sql = "\n".join(connection.cursor_obj.queries)
+    assert "DELETE FROM content_chunk" not in sql
+    assert "SET is_active = FALSE" in sql
+    assert "chunk_set_id" in sql
+    assert "is_active" in sql
 
 
 # --- ingestion invalidates what it supersedes ------------------------------

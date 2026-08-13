@@ -43,4 +43,20 @@ class ContentRepositoryVendorOrderTest {
                 .contains(
                         "ORDER BY COALESCE(ci.published_at, ci.observed_at) DESC, ivr.score DESC, ci.id DESC");
     }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Test
+    void public_chunk_count_only_reports_the_active_index_generation() {
+        NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+        when(jdbc.query(any(String.class), any(MapSqlParameterSource.class), any(RowMapper.class)))
+                .thenReturn(List.of());
+        ContentRepository repository = new ContentRepository(jdbc);
+
+        repository.stats();
+
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+        verify(jdbc).query(sql.capture(), any(MapSqlParameterSource.class), any(RowMapper.class));
+        assertThat(sql.getValue().replaceAll("\\s+", " "))
+                .contains("count(*) FROM content_chunk WHERE is_active");
+    }
 }

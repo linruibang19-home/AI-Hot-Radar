@@ -364,8 +364,9 @@ def corpus_summary(connection: Any) -> dict[str, Any]:
         cursor.execute(
             """
             SELECT (SELECT count(*) FROM content_item),
-                   (SELECT count(*) FROM content_chunk),
-                   (SELECT count(*) FROM content_chunk WHERE embedding IS NOT NULL),
+                   (SELECT count(*) FROM content_chunk WHERE is_active),
+                   (SELECT count(*) FROM content_chunk
+                     WHERE is_active AND embedding IS NOT NULL),
                    (SELECT count(*) FROM source WHERE runtime_state = 'ACTIVE'),
                    (SELECT count(*) FROM rag_citation),
                    (SELECT count(*) FROM story WHERE independent_source_count > 1)

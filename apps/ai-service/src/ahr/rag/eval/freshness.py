@@ -61,7 +61,8 @@ def check(connection: Any, golden: GoldenSet) -> dict[str, Any]:
               FROM content_item ci
               JOIN content_revision cr ON cr.id = ci.current_revision_id
               JOIN content_chunk ch ON ch.content_revision_id = cr.id
-             WHERE ci.id::text = ANY(%s) AND ch.embedding IS NOT NULL
+             WHERE ci.id::text = ANY(%s)
+               AND ch.is_active AND ch.embedding IS NOT NULL
              GROUP BY ci.id
             """,
             (annotated,),
