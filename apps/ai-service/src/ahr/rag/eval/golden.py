@@ -352,7 +352,8 @@ def verify_items_exist(connection: Any, golden: GoldenSet) -> list[str]:
                AND ci.duplicate_of_id IS NULL
                AND ci.current_revision_id IS NOT NULL
                AND EXISTS (SELECT 1 FROM content_chunk ch
-                            WHERE ch.content_revision_id = ci.current_revision_id)
+                            WHERE ch.content_revision_id = ci.current_revision_id
+                              AND ch.is_active)
             """,
             (wanted,),
         )

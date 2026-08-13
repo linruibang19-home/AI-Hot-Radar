@@ -671,7 +671,7 @@ public class ContentRepository {
                 SELECT (SELECT count(*) FROM content_item WHERE duplicate_of_id IS NULL) AS items,
                        (SELECT count(*) FROM content_item WHERE enrichment_state = 'ENRICHED') AS enriched,
                        (SELECT count(*) FROM source WHERE runtime_state = 'ACTIVE') AS active_sources,
-                       (SELECT count(*) FROM content_chunk) AS chunks
+                       (SELECT count(*) FROM content_chunk WHERE is_active) AS chunks
                 """;
         List<Stats> rows =
                 jdbc.query(

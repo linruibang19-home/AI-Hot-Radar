@@ -72,7 +72,7 @@ def _rows_for(connection: Any, chunk_id: str) -> list[tuple[Any, ...]]:
         cursor.execute(
             """
             WITH hit AS (
-                SELECT content_revision_id, ordinal, heading_path
+                SELECT content_revision_id, chunk_set_id, ordinal, heading_path
                   FROM content_chunk
                  WHERE id = %s::uuid
             )
@@ -82,6 +82,7 @@ def _rows_for(connection: Any, chunk_id: str) -> list[tuple[Any, ...]]:
                    COALESCE(hit.heading_path[1], '') AS hit_section
               FROM content_chunk ch
               JOIN hit ON hit.content_revision_id = ch.content_revision_id
+                      AND hit.chunk_set_id = ch.chunk_set_id
              ORDER BY ch.ordinal
             """,
             (chunk_id,),
@@ -148,12 +149,12 @@ def tier_distribution(connection: Any, *, budget: int = PARENT_BUDGET_TOKENS) ->
             """
             WITH doc AS (
                 SELECT content_revision_id, sum(token_count) AS tokens
-                  FROM content_chunk GROUP BY 1
+                  FROM content_chunk WHERE is_active GROUP BY 1
             ),
             sec AS (
                 SELECT content_revision_id, COALESCE(heading_path[1], '') AS section,
                        sum(token_count) AS tokens
-                  FROM content_chunk GROUP BY 1, 2
+                  FROM content_chunk WHERE is_active GROUP BY 1, 2
             )
             SELECT
                 count(*) FILTER (WHERE doc.tokens <= %s) AS document,
@@ -165,6 +166,7 @@ def tier_distribution(connection: Any, *, budget: int = PARENT_BUDGET_TOKENS) ->
               JOIN doc ON doc.content_revision_id = ch.content_revision_id
               JOIN sec ON sec.content_revision_id = ch.content_revision_id
                       AND sec.section = COALESCE(ch.heading_path[1], '')
+             WHERE ch.is_active
             """,
             (budget, budget, budget, budget, budget),
         )

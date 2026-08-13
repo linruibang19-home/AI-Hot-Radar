@@ -58,7 +58,13 @@ Embedding/Reranker 输入；引用绑定时仍从 `content_chunk.body_text` 和 
 - 超长单行按估算 token 二分预算，优先附近空白/标点，保留所有有意义字符与精确 offset；
 - 新增单行超限、不丢正文、连续 offset 的回归测试；
 - CLI 增加 `rechunk --oversized-only`，只重建当前 revision 中超限的块；
-- 重建会删除旧 chunk/embedding，新块由现有 `embed` 幂等补向量，不全库重算。
+- 首次生产定向重切暴露了一个更重要的不变量：已被 `rag_citation` 引用的物理 chunk 不能删除或
+  原地改写。外键正确地拒绝了旧实现，事务整体回滚，历史答案与线上检索均未受损；
+- ADR-0031/V026 将同一 revision 的切块结果版本化为不可变 `chunk_set_id`。重切只退役旧 set，
+  插入一个新的 active set；检索、向量回填和当前语料统计只读 active，历史引用仍能读取 retired
+  chunk，parent expansion 也只在命中 chunk 所属 set 内展开；
+- 新 active chunk 由现有 `embed` 幂等补向量，不全库重算。总 chunk 行数包含历史证据，产品与
+  运维的“当前块”指标不得再用总行数冒充。
 
 部署验收应满足：当前超限块为 0、当前非空正文全部切块、当前 chunk 全部有相同 embedding model。
 

@@ -500,6 +500,22 @@ Python、Web、CI、生产 smoke 与浏览器视觉回归通过。
 **证据**：`docs/status/topic-timeline-performance-20260813.md`、
 `docs/status/rag-corpus-audit-20260813.md`。
 
+### TASK-M5-018｜引用安全的不可变分块集
+
+**状态**：🟡 2026-08-13 实现与定向测试中；由 TASK-M5-017 的生产重切外键保护现场触发。
+**读取**：`04-rag-agent-design.md`、ADR-0016/0029/0031、TASK-M5-017、V001/V026、
+chunker/backfill/retrieval/parent 与 citation 查询。
+**输入**：旧 `chunk_revision` 先删除同 revision 的块；生产中已有块被 `rag_citation` 引用，外键
+拒绝删除并使事务安全回滚。删除引用或原地覆盖都会破坏历史答案的可复核性。
+**产出**：Flyway 为 chunk 增加不可变 `chunk_set_id` 和唯一 active set；重切退役旧 set 后插入
+新 set；检索、Embedding、评测和当前语料指标仅读 active；历史引用继续读 retired；parent 仅在
+同 set 展开；补充生产故障、生命周期与人审边界的面试材料。
+**边界**：不改正文 revision、不级联删除 citation、不切换 embedding/reranker/生成模型、不改变
+召回融合策略；本卡不物理清理 retired evidence。
+**完成标准**：V026 空库和升级迁移通过；已引用块可安全重切；active revision/ordinal 唯一；
+所有在线召回和向量回填排除 retired；历史引用与父块仍可解析；TASK-M5-017 的 14 个超限 active
+块归零并补齐向量；CI、发布、生产 SQL/HTTP/浏览器验收通过。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

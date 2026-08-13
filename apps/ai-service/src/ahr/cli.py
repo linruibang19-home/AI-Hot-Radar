@@ -306,8 +306,9 @@ def cmd_rechunk(args: argparse.Namespace) -> int:
             oversized_filter = (
                 """
                  AND EXISTS (
-                       SELECT 1 FROM content_chunk cc
+                        SELECT 1 FROM content_chunk cc
                         WHERE cc.content_revision_id = cr.id
+                          AND cc.is_active
                           AND cc.token_count > %s
                  )
                 """
@@ -331,7 +332,8 @@ def cmd_rechunk(args: argparse.Namespace) -> int:
         for revision_id, body in rows:
             with connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT count(*) FROM content_chunk WHERE content_revision_id = %s",
+                    "SELECT count(*) FROM content_chunk"
+                    " WHERE content_revision_id = %s AND is_active",
                     (revision_id,),
                 )
                 row = cursor.fetchone()
