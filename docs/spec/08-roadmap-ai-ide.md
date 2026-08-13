@@ -526,6 +526,41 @@ chunker/backfill/retrieval/parent 与 citation 查询。
 快照为 `140|2215|9121|1788|17|026`。一个 18 字符且仍为 `DISCOVERED` 的包版本事件尚未进入
 正文处理阶段，不计为 RAG 漏切。
 
+### TASK-M5-019｜业务深挖教材、工作区清洁与分层容量基线
+
+**状态**：✅ 2026-08-14 完成；本卡只补可复现的工程证据和学习材料，未改变业务架构、
+RAG 检索策略或生产容量。
+**读取**：`00-master-spec.md`、`02-system-architecture.md`、`03-data-ingestion.md`、
+`04-rag-agent-design.md`、`07-quality-security-ops.md`、TASK-M5-014/017/018、全部当前 handbook、
+interview、Prompt、评分、缓存和服务入口代码。
+**输入**：当前 README 版本/迁移/动态数字已经落后于 v0.1.11/V026；业务教材尚未集中解释
+LLM 调用、Prompt、推荐排序、阈值、Agent/记忆边界和失败案例；本地存在测试、类型检查与构建
+产生的可再生缓存；项目缺少隔离第三方模型成本的分层压测脚本和诚实容量口径。
+**产出**：校准 README 当前事实；按采集、内容加工/推荐、报告邮件、RAG 离线/在线、评测与
+交付六条主线扩写 handbook/interview；新增 LLM/Prompt/阈值与 Agent 编排专题；提供默认 dry-run
+的跨平台缓存清理工具；使用本地 Docker Compose 与 k6 建立 Web/Core API/AI 本地检索、缓存
+冷热和受控外部模型路径的分层负载模型，保存环境、命令、延迟、吞吐、资源和限制。
+**边界**：不压测公共生产域名，不在并发测试中消耗真实 LLM/Embedding 额度；不删除 `.env`、
+`.venv`、`node_modules`、数据库卷、黄金集、fixture、评测证据或唯一备份；不为了简历引入
+LangChain/LangGraph、Kafka、Elasticsearch、Kubernetes 或新运行时中间件；框架比较只记录
+当前选择、触发条件和迁移代价。
+**完成标准**：缓存清理只命中 allowlist 且二次运行幂等；负载脚本可在干净开发机复现，至少
+覆盖 Core API 读路径、Web SSR/代理、AI 本地 RAG 统计/数据库控制路径；报告同时
+给出吞吐、p50/p95/p99、错误率、容器 CPU/内存、数据库/Redis/线程池观察和冷热语义，不能把
+本地开发机结果包装成 2C4G 生产 SLA；文档代码路径、阈值、Prompt 和实现状态经自动校验，
+Python/Java/Web/Compose 相关门禁通过。
+
+### TASK-M5-020｜RAG 统计聚合性能与 2C4G 容量验收
+
+**状态**：⚪ 未启动；等待新的隔离 2C4G 目标机或本地等价资源限额。
+**输入**：TASK-M5-019 的真实 `/rag/stats` 基线在 20 VU 下 p95 918.94 ms，越过 750 ms 初始门；
+当前开发机结果不能外推生产容量。
+**目标**：profile `retrieval_summary` 聚合 SQL 与序列化，先以查询/索引或短 TTL 可失效缓存降低
+统计页长尾；在脱敏生产副本、相同镜像 SHA 和 2C4G 限额上完成冷/热阶梯、恒定到达率与 soak，
+形成满足 SLO 的最高稳定容量和 30% 余量。
+**边界**：不压公共生产域名，不调用真实 LLM/Embedding/reranker 做并发压测，不用调大门限掩盖
+失败，不因单机基线提前引入 Kafka/Kubernetes/独立向量库。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

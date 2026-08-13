@@ -55,6 +55,9 @@ apps/web/test-results/
 # Agent worktrees created by the coding tool.
 .claude/worktrees/
 .codex-tmp/
+# Local k6 summary exports and other one-off verification outputs. Durable,
+# reviewed evidence belongs under docs/status/ instead.
+.artifacts/
 
 # Stray service-local mount targets created by ad-hoc Compose runs. Canonical
 # configuration and golden data live at repository-root config/ and data/.
