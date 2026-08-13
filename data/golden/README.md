@@ -4,7 +4,7 @@
 > [`topic-map/README.md`](topic-map/README.md)，其运行时复核队列放在
 > `data/topic-map-review/`，不得混入这里被 RAG 加载器当成问答题。
 
-评测方案见 [`docs/design/m4-rag-evaluation.md`](../../docs/design/m4-rag-evaluation.md)。
+评测方案见 [`docs/archive/development/m4-rag-evaluation.md`](../../docs/archive/development/m4-rag-evaluation.md)。
 六个类别各 15 题，合计 90 题，满足 `AHR-RAG-400` §14（六类各 ≥15）与
 `AHR-ROADMAP-800` M4（80+ 题）。
 
@@ -119,7 +119,7 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 `vendor-alias/` 是独立的 15 题专项集，不混入主 90 题趋势。它用
 `rag-eval --variant specialist-ab` 在一次进程内冻结通道和候选顺序，再比较 control、
 entity 与 noise 三个实验臂。最新证据见
-`docs/status/rag-specialist-audit-20260811.md`。
+`docs/status/product/rag-specialist-audit-20260811.md`。
 
 `expected_query_type` 不在受控词表内、`expected_time` 缺 `from`/`to` 或首尾颠倒，
 都会在加载时硬失败——一个拼错的类型名会被当成永久的 planner 失败，

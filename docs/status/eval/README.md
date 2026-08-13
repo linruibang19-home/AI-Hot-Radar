@@ -25,10 +25,10 @@ python scripts/build_eval_summary.py
 | B12 | `m4-rag-eval-B12-depth40-20260807.json`<br>`m4-rag-eval-B12-depth20-20260807.json` | — | 自适应重排深度 |
 | B13 | `m4-rag-eval-B13-20260807.json` | — | **负结果**：中文 bigram 端到端 ±0.0000 |
 | B15 | `m4-rag-eval-B15-20260809.json` | [B15](m4-rag-eval-B15.md) | IDF + 实体加权在 ±0.02 噪声内，不能声称提升 |
-| ENTITY | `m4-rag-eval-ENTITY-20260810.json` | [产品成熟度复核](../rag-product-readiness-20260810.md) | 在线时间通道对齐、实体时间通道与来源多样性诊断（B3，无重排） |
-| B9-FINAL | `m4-rag-eval-B9-FINAL-20260811.json` | [专项发布审计](../rag-specialist-audit-20260811.md) | 90 题完整重排发布回归，Recall@20 0.8994 |
-| SPECIALIST | `m4-rag-eval-SPECIALIST-20260811.json` | [专项发布审计](../rag-specialist-audit-20260811.md) | 15 题同快照实体/噪声 A/B；Recall@20 0.9333，噪声无退化 |
-| SPECIALIST-IDENTIFIER | `m4-rag-eval-SPECIALIST-IDENTIFIER-20260811.json` | [专项发布审计](../rag-specialist-audit-20260811.md) | **负结果**：扩大深度/identifier 未救回第 27 名目标，未上线 |
+| ENTITY | `m4-rag-eval-ENTITY-20260810.json` | [产品成熟度复核](../product/rag-product-readiness-20260810.md) | 在线时间通道对齐、实体时间通道与来源多样性诊断（B3，无重排） |
+| B9-FINAL | `m4-rag-eval-B9-FINAL-20260811.json` | [专项发布审计](../product/rag-specialist-audit-20260811.md) | 90 题完整重排发布回归，Recall@20 0.8994 |
+| SPECIALIST | `m4-rag-eval-SPECIALIST-20260811.json` | [专项发布审计](../product/rag-specialist-audit-20260811.md) | 15 题同快照实体/噪声 A/B；Recall@20 0.9333，噪声无退化 |
+| SPECIALIST-IDENTIFIER | `m4-rag-eval-SPECIALIST-IDENTIFIER-20260811.json` | [专项发布审计](../product/rag-specialist-audit-20260811.md) | **负结果**：扩大深度/identifier 未救回第 27 名目标，未上线 |
 
 ## 生成侧与延迟
 
@@ -41,9 +41,9 @@ python scripts/build_eval_summary.py
 | LAT | `m4-rag-eval-LAT-20260804.json` | [LAT](m4-rag-eval-LAT.md) | 99% 的延迟在三次外部往返 |
 | GEN（08-09 门控） | `m4-rag-eval-GEN-20260809-gated.json` | [门控回归](m4-rag-eval-GEN-20260809.md) | 支持度达标率 0.9596，误拒率不变 |
 | GEN（08-09 双口径） | `m4-rag-eval-GEN-20260809-dual.json` | [双口径说明](m4-rag-eval-GEN-20260809.md) | 段落级 0.9371；父块级 1.0000 是门控结果，不作独立判据 |
-| GENERATION-FINAL | `m4-rag-eval-GENERATION-FINAL-20260811.json` | [专项发布审计](../rag-specialist-audit-20260811.md) | 90 题：完整性 0.9881，段落支持达标率 0.9344，拒答准确率 1.0000 |
-| SPECIALIST-FINAL2 | `m4-rag-eval-SPECIALIST-FINAL2-20260811.json` | [专项发布审计](../rag-specialist-audit-20260811.md) | 15 题生成与人工 P0 审计；14 答、1 个已知缺口安全拒答 |
-| POST-FINALIZER | `m4-rag-eval-POST-FINALIZER-RAG009-20260811.json` 等 4 份 | [专项发布审计](../rag-specialist-audit-20260811.md) | 支持度过滤后的逐句门禁真实重放，4/4 完整性 1.0000 |
+| GENERATION-FINAL | `m4-rag-eval-GENERATION-FINAL-20260811.json` | [专项发布审计](../product/rag-specialist-audit-20260811.md) | 90 题：完整性 0.9881，段落支持达标率 0.9344，拒答准确率 1.0000 |
+| SPECIALIST-FINAL2 | `m4-rag-eval-SPECIALIST-FINAL2-20260811.json` | [专项发布审计](../product/rag-specialist-audit-20260811.md) | 15 题生成与人工 P0 审计；14 答、1 个已知缺口安全拒答 |
+| POST-FINALIZER | `m4-rag-eval-POST-FINALIZER-RAG009-20260811.json` 等 4 份 | [专项发布审计](../product/rag-specialist-audit-20260811.md) | 支持度过滤后的逐句门禁真实重放，4/4 完整性 1.0000 |
 
 ## 没有出现在 `/eval` 上的几份，以及为什么留着
 

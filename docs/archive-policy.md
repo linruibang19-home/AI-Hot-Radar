@@ -11,13 +11,13 @@
 |---|---|---|---|
 | CURRENT | README、handbook、handoff、runbook | 当前实现/入口 | 随代码和生产变更更新 |
 | SPEC/ADR | `docs/spec`、`docs/adr` | 需求、锁定边界、决策 | 物质变化先 ADR；旧 ADR 不改写历史 |
-| LIVING DESIGN | `docs/design` | 当前实现方案和评测设计 | 记录变更原因与版本 |
+| LIVING DESIGN | `docs/design/current` | 当前实现方案 | 记录变更原因与版本 |
 | EVIDENCE FROZEN | `docs/status`、`status/eval` | 日期环境下的不可再生证据 | 不改数字；新增更晚快照 |
-| LEGACY FROZEN | 被新入口取代的讲稿/交接 | 保留链接和历史语境 | 顶部标冻结及替代入口 |
+| LEGACY FROZEN | `docs/archive`、`docs/status/history` | 已取代讲稿/交接 | 顶部标冻结及替代入口 |
 
 ## 3. 单一入口
 
-- 当前生产：`docs/status/handoff-20260812.md`（后续用新日期文件取代并更新索引）；
+- 当前生产：`docs/status/current/handoff-20260812.md`（后续用新日期文件取代并更新索引）；
 - 当前任务：`docs/spec/08-roadmap-ai-ide.md`；
 - 当前架构与数据：相关 spec + 最新 ADR；
 - 完整学习：`docs/handbook/README.md`；
@@ -37,12 +37,11 @@
 
 ## 5. 归档方式
 
-默认采用**逻辑归档而非移动文件**：在顶部加冻结说明，并在 `docs/status/README.md` 注册替代入口。
-这样不会破坏外链、PR 证据和历史引用。只有确认没有引用且内容是纯重复副本时，才在单独任务中
-移动/删除；评测 JSON、失败实验、迁移、fixture 和生产验收永不当缓存清理。
+默认先逻辑冻结；当自动链接校验能够覆盖仓库内引用、并确认 Git rename 保留历史后，可以在独立
+文档治理任务中物理归档。开发方案与旧讲稿进入 `docs/archive/`，过时交接进入
+`docs/status/history/`；评测 JSON、失败实验、迁移、fixture 和生产验收永不当缓存清理。
 
 ## 6. 自动门禁
 
 `scripts/validate_docs.py` 检查相对 Markdown 链接、handbook/interview 必需章节、当前核心规格中
 已经纠正的旧架构说法，以及 README 当前测试口径。CI 与 `validate_spec.py` 一起执行。
-

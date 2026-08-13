@@ -31,6 +31,9 @@ REQUIRED_HANDBOOK = [
             "nextjs-web",
             "deployment-security-ops",
             "testing-tradeoffs-roadmap",
+            "llm-prompts-ranking-and-thresholds",
+            "agent-orchestration-memory-and-cost",
+            "performance-capacity-and-load-testing",
         ],
         start=1,
     )],
@@ -51,6 +54,9 @@ REQUIRED_INTERVIEW = [
     "10-demo-script.md",
     "11-code-walkthrough.md",
     "12-fourteen-day-study-plan.md",
+    "13-project-challenges-and-tradeoffs.md",
+    "14-agent-rag-interview-drill.md",
+    "15-performance-load-testing-interview.md",
 ]
 
 

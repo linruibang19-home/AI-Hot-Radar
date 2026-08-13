@@ -2,8 +2,8 @@
 
 > **累计历史，冻结口径截至 2026-08-12。** 本文保留阶段性计数、失败假设和已关闭待办，
 > 不能当作实时生产大盘。当前生产入口见 [handoff-20260812.md](handoff-20260812.md)，当前
-> 任务见 [`../spec/08-roadmap-ai-ide.md`](../spec/08-roadmap-ai-ide.md)，完整知识入口见
-> [`../handbook/README.md`](../handbook/README.md)。
+> 任务见 [`../spec/08-roadmap-ai-ide.md`](../../spec/08-roadmap-ai-ide.md)，完整知识入口见
+> [`../handbook/README.md`](../../handbook/README.md)。
 
 > 更新时间：2026-08-12
 > 当前阶段：**M5 首次生产闭环完成；v0.1.6 正在 aihotradar.online 运行**
@@ -19,7 +19,7 @@
 服务器 `production`、`IMAGE_TAG` 与 web/core-api/ai-service 镜像均对齐同一 40 位提交，
 10 个容器运行且核心健康检查通过。Caddy HTTPS、公网 smoke、真实 RAG、Gmail SMTP、
 故障/恢复告警、生产备份异机副本与隔离恢复均已有证据。目标机执行证据见
-[首次生产部署记录](production-deployment-20260811.md)，当前 checkout 见
+[首次生产部署记录](../delivery/production-deployment-20260811.md)，当前 checkout 见
 [08-12 交接](handoff-20260812.md)。
 
 | 当前实测 | 数值 |
@@ -40,13 +40,13 @@ temporal 阶段只有 5 个样本，仍显示“样本不足”。
 
 详细证据：
 
-- [RAG 专项发布门禁与人工审计](rag-specialist-audit-20260811.md)
-- [RAG 安全与性能稳定性](rag-security-performance-20260811.md)
-- [RAG 问答界面精修](rag-ui-polish-20260811.md)
-- [邮箱订阅与定时投递](report-subscriptions-20260811.md)
-- [DeepSeek 生成模型配置](generation-model-selection-20260811.md)
-- [RAG 质量与运行页面](rag-operations-ui-20260811.md)
-- [首次生产部署记录](production-deployment-20260811.md)
+- [RAG 专项发布门禁与人工审计](../product/rag-specialist-audit-20260811.md)
+- [RAG 安全与性能稳定性](../product/rag-security-performance-20260811.md)
+- [RAG 问答界面精修](../product/rag-ui-polish-20260811.md)
+- [邮箱订阅与定时投递](../product/report-subscriptions-20260811.md)
+- [DeepSeek 生成模型配置](../product/generation-model-selection-20260811.md)
+- [RAG 质量与运行页面](../product/rag-operations-ui-20260811.md)
+- [首次生产部署记录](../delivery/production-deployment-20260811.md)
 
 ## 0D. TASK-M5-004 报告邮件订阅闭环（2026-08-11）
 
@@ -60,7 +60,7 @@ Flyway V023 已在空库完整执行 24 个迁移并在现有数据卷升级成�
 （UNSUBSCRIBED），验收邮箱、报告、投递和邮件均已清理。Core API 72、Web 69、生产资产 7
 项测试通过，spec/preflight/Compose 配置均通过。Chrome、扩展和原生宿主自检正常，但本次
 Codex 浏览器执行内核因本地路径初始化失败，未完成视觉点击验收，不能把 HTTP 验收冒充为
-Chrome 验收。完整证据见 [邮件订阅验收记录](report-subscriptions-20260811.md) 和 ADR-0026。
+Chrome 验收。完整证据见 [邮件订阅验收记录](../product/report-subscriptions-20260811.md) 和 ADR-0026。
 
 ## 0B. TASK-M5-002 报告阅读体验与结构化只读模型（2026-08-11）
 
@@ -75,7 +75,7 @@ Chrome 验收。完整证据见 [邮件订阅验收记录](report-subscriptions-
 Java 58、Web 62 项测试通过，Web typecheck/lint/production build 通过。ChromeCodex
 在浏览器会话初始化前因本机内核资源路径缺失连续失败，未触达页面，因此桌面/窄屏视觉
 门禁仍为待补，不能把 HTTP 与构建通过替代视觉验收。完整证据与限制见
-[报告阅读验收记录](report-reader-20260811.md)。
+[报告阅读验收记录](../product/report-reader-20260811.md)。
 
 ## 0C. TASK-M5-003 非阻塞报告发布状态机与审核 API（2026-08-11）
 
@@ -90,7 +90,7 @@ Java 58、Web 62 项测试通过，Web typecheck/lint/production build 通过。
 且报告阶段正常写入。Python 全量 871/871、Java 62/62、Ruff、mypy 86 files、Flyway 与
 Compose smoke 通过。邮件订阅和定时调度不在本卡，当前只有手工 `send-report`。
 
-完整证据与边界见 [报告发布验收记录](report-publication-20260811.md) 和 ADR-0025。
+完整证据与边界见 [报告发布验收记录](../product/report-publication-20260811.md) 和 ADR-0025。
 
 ## 0. TASK-M5-001 发布基线复核（2026-08-11）
 
@@ -145,7 +145,7 @@ Compose smoke 通过。邮件订阅和定时调度不在本卡，当前只有手
 > **没有一处对照过它**。「跑完了计划的实验」不等于「达到了发布标准」——
 > 本项目已经三次栽在「上游做对了、接缝上丢了东西」上，这一次的接缝是
 > **验收标准与完成声明之间**。对照表见
-> [m4-rag-evaluation.md §5.2](../design/m4-rag-evaluation.md)。
+> [m4-rag-evaluation.md §5.2](../../archive/development/m4-rag-evaluation.md)。
 
 > **M3 已完成与未完成的边界**：聚类、主来源、独立信源、时间线、复核队列、
 > `report 从 Story 生成` 均已实现并跑通真实数据。
@@ -168,11 +168,11 @@ Compose smoke 通过。邮件订阅和定时调度不在本卡，当前只有手
 上述结果绑定 `B9-FINAL-20260811`、`GENERATION-FINAL-20260811`、
 `SPECIALIST-20260811` 与 `SPECIALIST-FINAL2-20260811`。发布答案的顺序已锁为：支持度
 评分 -> 删除弱引用 -> 删除无服务端引用事实句 -> 清理/重编号 -> 必要时拒答 -> 不变量
-校验。详见 [专项审计](rag-specialist-audit-20260811.md)。
+校验。详见 [专项审计](../product/rag-specialist-audit-20260811.md)。
 
 ## 1.2 历史首次发布门禁对照（2026-08-09）
 
-完整推导见 [m4-rag-evaluation.md §5.2](../design/m4-rag-evaluation.md)。
+完整推导见 [m4-rag-evaluation.md §5.2](../../archive/development/m4-rag-evaluation.md)。
 数据绑定到具体 run：检索 `B13-20260807`，生成 `GEN-20260807-fixed`。
 
 | `AHR-QSO-700` §8 | 阈值 | 实测 | 判定 |
@@ -202,10 +202,10 @@ Compose smoke 通过。邮件订阅和定时调度不在本卡，当前只有手
 
 现在低分引用在下发前被移除并重编号，剥离条数写进 `limitations` 与
 `metrics.support_dropped`。**只移除，不升级为拒答**——理由与边界见
-[m4-rag-implementation.md §8](../design/m4-rag-implementation.md)。
+[m4-rag-implementation.md §8](../../archive/development/m4-rag-implementation.md)。
 
 **90 题回归已跑**（`GEN-20260808T180053Z`，完整报告
-[m4-rag-eval-GEN-20260809.md](eval/m4-rag-eval-GEN-20260809.md)）：
+[m4-rag-eval-GEN-20260809.md](../eval/m4-rag-eval-GEN-20260809.md)）：
 
 | 指标 | 门控前 | 门控后 | Δ |
 |---|---:|---:|---:|
@@ -247,7 +247,7 @@ Compose smoke 通过。邮件订阅和定时调度不在本卡，当前只有手
 **不连数据库、不调供应商**（Planner 是问句与 `asked_at` 的纯函数），因此免费、可进 CI、断网可跑。
 准确率与 `annotation_coverage` **永远并排输出**，标注数为 0 时命令以非零码退出——
 把「不可判定」显示成「看起来没问题」是更糟的那种状态。
-标注方法见 [data/golden/README.md](../../data/golden/README.md)，
+标注方法见 [data/golden/README.md](../../../data/golden/README.md)，
 **必须按问句该被理解成什么来标，不能拿 §3 的默认值反推**，否则是让实现和自己对答案。
 
 **② `abstention accuracy` 的定义被换过，但没有 ADR。**
@@ -335,7 +335,7 @@ Compose smoke 通过。邮件订阅和定时调度不在本卡，当前只有手
 
 | 站点 | 状态 | 备注 |
 |---|---|---|
-| OpenAI（GitHub SDK/Agents） | ✅ | 官网 CDN 拦截，见 [ADR-0013](../adr/0013-openai-cdn-blocks-non-browser-clients.md) |
+| OpenAI（GitHub SDK/Agents） | ✅ | 官网 CDN 拦截，见 [ADR-0013](../../adr/0013-openai-cdn-blocks-non-browser-clients.md) |
 | Anthropic | ✅ | SDK Release + Changelog |
 | Google / Gemini | ✅ | Release + API Changelog |
 | Hugging Face | ✅ | Blog + Hub API 模型卡 |
@@ -564,7 +564,7 @@ NVFP4                                          67 个分块
 
 ### B1 基线：90 题黄金集实测（2026-08-03）
 
-完整报告 [m4-rag-eval-B1.md](eval/m4-rag-eval-B1.md)，逐题数据 [JSON](eval/m4-rag-eval-B1-20260803.json)。
+完整报告 [m4-rag-eval-B1.md](../eval/m4-rag-eval-B1.md)，逐题数据 [JSON](../eval/m4-rag-eval-B1-20260803.json)。
 `eval_run_id = B1-20260803T144251Z`。
 
 | 指标 | 纯稠密 B1 |
@@ -598,7 +598,7 @@ NVFP4                                          67 个分块
 
 ### B2 稀疏通道：修好了预测中的失败，也暴露了没预测到的问题
 
-完整报告 [m4-rag-eval-B2.md](eval/m4-rag-eval-B2.md)。
+完整报告 [m4-rag-eval-B2.md](../eval/m4-rag-eval-B2.md)。
 
 | 变体 | Recall@10 | Recall@20 | MRR | nDCG@10 |
 |---|---:|---:|---:|---:|
@@ -627,7 +627,7 @@ ADR-0015 的 zhparser 触发条件据此**修正为系统级**（中文近邻实
 
 ### B3 RRF + 时间过滤：关上了最大的缺口
 
-完整报告 [m4-rag-eval-B3.md](eval/m4-rag-eval-B3.md)。
+完整报告 [m4-rag-eval-B3.md](../eval/m4-rag-eval-B3.md)。
 
 | 变体 | Recall@10 | Recall@20 | MRR | nDCG@10 |
 |---|---:|---:|---:|---:|
@@ -653,7 +653,7 @@ ADR-0015 的 zhparser 触发条件据此**修正为系统级**（中文近邻实
 
 ### B4 重排：过了门槛，而且候选越少越好
 
-完整报告 [m4-rag-eval-B4.md](eval/m4-rag-eval-B4.md)。模型 `BAAI/bge-reranker-v2-m3`。
+完整报告 [m4-rag-eval-B4.md](../eval/m4-rag-eval-B4.md)。模型 `BAAI/bge-reranker-v2-m3`。
 
 | 变体 | Recall@10 | Recall@20 | MRR | nDCG@10 |
 |---|---:|---:|---:|---:|
@@ -761,7 +761,7 @@ Anthropic 事件是**四篇不同文档**，文档级限流拦不住后者。
 
 ### 生成侧评测：90 题端到端（2026-08-04）
 
-完整报告 [m4-rag-eval-GEN.md](eval/m4-rag-eval-GEN.md)。检索侧指标看不见生成的任何东西，
+完整报告 [m4-rag-eval-GEN.md](../eval/m4-rag-eval-GEN.md)。检索侧指标看不见生成的任何东西，
 B5/B6 尤其如此——它们改变模型读到什么，不改变排序。
 
 | 指标 | 实测 |
@@ -806,7 +806,7 @@ RAG-GOLD-049 引用精度 0.00 —— 问「哪个模型发布了 NVFP4 量化�
 
 ### B7 时效融合：把 B4 唯一的退化补回来（2026-08-04）
 
-完整报告 [m4-rag-eval-B7.md](eval/m4-rag-eval-B7.md)。
+完整报告 [m4-rag-eval-B7.md](../eval/m4-rag-eval-B7.md)。
 
 B4 的重排在五个类别上大幅提升，只有 `recent_updates` 退步（MRR 0.7333 → 0.6484）——
 **交叉编码器不知道时间**，而对资讯产品来说新近本身就是相关性的一部分。
@@ -830,7 +830,7 @@ B4 的重排在五个类别上大幅提升，只有 `recent_updates` 退步（MR
 
 ### 端到端延迟：p50 10.5s / p95 13.9s（2026-08-04）
 
-完整报告 [m4-rag-eval-LAT.md](eval/m4-rag-eval-LAT.md)。规格 §14 要求的唯一一项此前完全没有数字的指标。
+完整报告 [m4-rag-eval-LAT.md](../eval/m4-rag-eval-LAT.md)。规格 §14 要求的唯一一项此前完全没有数字的指标。
 
 | 阶段 | p50 | 占比 |
 |---|---:|---:|
@@ -855,7 +855,7 @@ prompt p95 达 **21.6k token**，说明父块展开确实在起作用，也解�
 
 ### B8 融合权重网格调优：负结果，但是有价值的那种（2026-08-04）
 
-完整报告 [m4-rag-eval-B8.md](eval/m4-rag-eval-B8.md)。`AHR-RAG-400` §5 要求权重必须用评测集调优。
+完整报告 [m4-rag-eval-B8.md](../eval/m4-rag-eval-B8.md)。`AHR-RAG-400` §5 要求权重必须用评测集调优。
 
 **结论：42 组网格跑完，保持原权重不变。**
 
@@ -914,7 +914,7 @@ prompt p95 达 **21.6k token**，说明父块展开确实在起作用，也解�
 
 ### B9 §6 剩余两个重排维度（2026-08-04）
 
-完整报告 [m4-rag-eval-B9.md](eval/m4-rag-eval-B9.md)。§6 规定重排输出四个维度，
+完整报告 [m4-rag-eval-B9.md](../eval/m4-rag-eval-B9.md)。§6 规定重排输出四个维度，
 `relevance` 由 B4 给出、`temporal_fit` 由 B7 给出，这一轮补齐 `directness` 与 `source_fit`。
 
 | | R@10 | R@20 | MRR | nDCG@10 |
@@ -961,7 +961,7 @@ answer 「在 2026-07-28 至 2026-08-04 期间，llama.cpp 发布了…」
 
 ### B10 §6 最后两条调整：我先前的「拿不到数据」是错判（2026-08-04）
 
-完整报告 [m4-rag-eval-B10.md](eval/m4-rag-eval-B10.md)。
+完整报告 [m4-rag-eval-B10.md](../eval/m4-rag-eval-B10.md)。
 
 我上一轮把「目标实体为主语 +0.05」「重复转载 −0.10」写成**当前拿不到数据**并列为不实现。
 **这个判断从没去库里核对过。** 实际查一下：
@@ -1096,8 +1096,8 @@ M5 之前没有账号体系,所以这是**本站的公共记录**而不是某个
 
 规格 `AHR-RAG-400` 是锁定契约，实现方案随开发修订，已拆到 `docs/design/`：
 
-- [m4-rag-implementation.md](../design/m4-rag-implementation.md) —— 8 环节全流程、服务边界、模块布局、对外部方案逐条取舍
-- [m4-rag-evaluation.md](../design/m4-rag-evaluation.md) —— 90 题黄金集、B0–B6 分阶段基线、指标含义与四条硬门禁
+- [m4-rag-implementation.md](../../archive/development/m4-rag-implementation.md) —— 8 环节全流程、服务边界、模块布局、对外部方案逐条取舍
+- [m4-rag-evaluation.md](../../archive/development/m4-rag-evaluation.md) —— 90 题黄金集、B0–B6 分阶段基线、指标含义与四条硬门禁
 
 ## 3.8 全部 AI 动态的分页缺陷（2026-08-04 修复）
 
@@ -1878,11 +1878,11 @@ web 容器持有的是 **VIEWER** 凭据。信源后台是 SSR 的、只读不�
 另外整理成清单的坑：Cloudflare 橙云会挡住 ACME 签发（要先灰云拿证再切橙云）、
 `.env` 必须放在 `infra/compose/` 而不是仓库根、服务器要放整个仓库（三个服务挂了 `../../config`）、
 GHCR 默认私有需要先 `docker login`。全部写进
-[m5-first-deploy-checklist.md](../design/m5-first-deploy-checklist.md)。
+[m5-first-deploy-checklist.md](../../design/current/m5-first-deploy-checklist.md)。
 
 ### 新增面试讲解稿
 
-[interview-guide.md](../interview-guide.md)：按「被问到什么怎么答」组织，
+[interview-guide.md](../../archive/interview/interview-guide-20260812.md)：按「被问到什么怎么答」组织，
 每一条都对应仓库里可验证的东西。最值钱的一段是拒答指标那次误判——
 它展示的是判断力而不是知识。
 
@@ -2153,7 +2153,7 @@ psycopg 会**扫描整个查询字符串**找占位符，`--` 注释也不例外
 ## 3.32 2026-08-10 全链路复核：RAG 实体时效、发布边界与 UI
 
 本轮不是凭已有报告宣布完成，而是从真实失败问句、Docker 运行态和数据库重新测。
-完整产品判断见 [RAG 产品成熟度复核](rag-product-readiness-20260810.md)。
+完整产品判断见 [RAG 产品成熟度复核](../product/rag-product-readiness-20260810.md)。
 
 ### RAG：关闭第二次「评测有、线上无」
 
@@ -2355,29 +2355,29 @@ processed_event       消费幂等记录
 
 ### M4 历史完成清单（原 TASK-M4-001）
 
-方案见 [design/m4-rag-implementation.md](../design/m4-rag-implementation.md) §11，顺序不可颠倒：
+方案见 [design/m4-rag-implementation.md](../../archive/development/m4-rag-implementation.md) §11，顺序不可颠倒：
 
 - [x] 分块质量修复 + 全量向量化（4140 / 4140）
 - [x] **90 题黄金集**（六类各 15 题，127 个标注 item，全部经库校验）
 - [x] **评测框架**（Recall@10/20、MRR、nDCG@10，item 层去重计分，22 个用例）
-- [x] **B1 纯稠密基线** —— 见 [m4-rag-eval-B1.md](eval/m4-rag-eval-B1.md)
-- [x] **稀疏 FTS 通道 → B2** —— 见 [m4-rag-eval-B2.md](eval/m4-rag-eval-B2.md)。MXFP4 题 R@20 0.33 → **1.00**
+- [x] **B1 纯稠密基线** —— 见 [m4-rag-eval-B1.md](../eval/m4-rag-eval-B1.md)
+- [x] **稀疏 FTS 通道 → B2** —— 见 [m4-rag-eval-B2.md](../eval/m4-rag-eval-B2.md)。MXFP4 题 R@20 0.33 → **1.00**
 - [x] **Planner（时间解析 + 意图分类）+ 时间过滤** —— `recent_updates` MRR **0.4676 → 0.7333**
-- [x] **RRF 融合 → B3** —— 见 [m4-rag-eval-B3.md](eval/m4-rag-eval-B3.md)。R@20 **0.9036**，击败 B1 与 B2
-- [x] **Reranker → B4** —— 见 [m4-rag-eval-B4.md](eval/m4-rag-eval-B4.md)。**过门槛**：MRR **0.8574**、R@20 **0.9126**
+- [x] **RRF 融合 → B3** —— 见 [m4-rag-eval-B3.md](../eval/m4-rag-eval-B3.md)。R@20 **0.9036**，击败 B1 与 B2
+- [x] **Reranker → B4** —— 见 [m4-rag-eval-B4.md](../eval/m4-rag-eval-B4.md)。**过门槛**：MRR **0.8574**、R@20 **0.9126**
 - [x] **父块三级阶梯 → B5** —— `rag/parent.py`，查询派生不落表
 - [x] **Story 折叠 → B6** —— `rag/folding.py`，实测四家媒体同一事件收敛为 3 条独立信源
 - [x] **生成 + 句级引用绑定 + 拒答** —— `rag/answer.py`、`rag/service.py`，四条不变量已断言
 - [x] **问答 API + 页面** —— `POST /rag/ask` + `/ask`，**SSE 流式未做**（见下）
-- [x] **生成侧评测**（groundedness / 引用精度 / Story coverage / 拒答）—— 见 [m4-rag-eval-GEN.md](eval/m4-rag-eval-GEN.md)
+- [x] **生成侧评测**（groundedness / 引用精度 / Story coverage / 拒答）—— 见 [m4-rag-eval-GEN.md](../eval/m4-rag-eval-GEN.md)
 - [x] **修复零分块内容** —— 根因在采集侧未重开状态，见 3.12。有正文而检索不到的条目 **10 → 0**
-- [x] **`temporal_fit` 进重排（B7）** —— `recent_updates` MRR **0.6484 → 0.7522**，见 [m4-rag-eval-B7.md](eval/m4-rag-eval-B7.md)
+- [x] **`temporal_fit` 进重排（B7）** —— `recent_updates` MRR **0.6484 → 0.7522**，见 [m4-rag-eval-B7.md](../eval/m4-rag-eval-B7.md)
 - [x] **B7 接入生产路径** —— 评测跑过但从未接进 `service.py`，已修并加测试锁死
-- [x] **端到端 p50/p95 度量** —— p50 **10.5s** / p95 **13.9s**，见 [m4-rag-eval-LAT.md](eval/m4-rag-eval-LAT.md)
-- [x] **融合权重网格调优（B8）** —— 42 组跑完，**结论是不改**，见 [m4-rag-eval-B8.md](eval/m4-rag-eval-B8.md)
-- [x] **`directness` / `source_fit` 维度（B9）** —— MRR **0.8645 → 0.8731**，见 [m4-rag-eval-B9.md](eval/m4-rag-eval-B9.md)
+- [x] **端到端 p50/p95 度量** —— p50 **10.5s** / p95 **13.9s**，见 [m4-rag-eval-LAT.md](../eval/m4-rag-eval-LAT.md)
+- [x] **融合权重网格调优（B8）** —— 42 组跑完，**结论是不改**，见 [m4-rag-eval-B8.md](../eval/m4-rag-eval-B8.md)
+- [x] **`directness` / `source_fit` 维度（B9）** —— MRR **0.8645 → 0.8731**，见 [m4-rag-eval-B9.md](../eval/m4-rag-eval-B9.md)
 - [x] **SSE 流式下发**（`AHR-API-500` §4）—— `POST /rag/ask/stream`，流的是阶段进度
-- [x] **§6 五条调整全部实现（B10）** —— 补上 `entity_subject` / `repost`，见 [m4-rag-eval-B10.md](eval/m4-rag-eval-B10.md)
+- [x] **§6 五条调整全部实现（B10）** —— 补上 `entity_subject` / `repost`，见 [m4-rag-eval-B10.md](../eval/m4-rag-eval-B10.md)
 - [x] **问答界面重做** —— 引用可点、信源等级、多信源佐证、检索计划可见、拒答给出路
 - [x] **token 级流式** —— 见 3.16。原来记的「必须先改 prompt 契约」是错判
 - [x] **问答永久链接 `/ask/{rag_query_id}`** —— 见 3.17
@@ -2416,7 +2416,7 @@ processed_event       消费幂等记录
 产物已落地：`infra/compose/docker-compose.prod.yml`（只暴露 80/443）、
 `infra/caddy/Caddyfile`、`.github/workflows/release.yml`（构建推 GHCR）、
 `infra/scripts/backup.sh`（每日 pg_dump，保留 7 天）。方案见
-[m5-deployment.md](../design/m5-deployment.md)。**下面这些只能由你本人做：**
+[m5-deployment.md](../../design/current/m5-deployment.md)。**下面这些只能由你本人做：**
 
 - [ ] **轮换全部密钥**（GitHub PAT、DeepSeek、硅基流动、Postgres 口令）——
       它们出现在开发会话记录里。这是上线前的第一件事，不是最后一件
@@ -2541,7 +2541,7 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr
 | 推荐理由仍非"完整正文" | 长文按首 3900 + 尾 2100 字摘取 | 已标注中段省略；完整正文属 RAG（M4）的检索职责 |
 | LLM 推荐理由与摘要可能出错 | 事实性风险 | 页面已标注"AI 生成"，每条均链接原文；理由 prompt 强制指出局限 |
 | ~~`mypy>=1.13.0` 无上界~~ | 已解决 | 曾导致 CI 长期为红（15 个错误）。已修完错误并加上界 `<2.0`，见 3.21 |
-| ~~entity_type 规格冲突~~ | 已解决 | 见 [ADR-0014](../adr/0014-entity-types-align-to-taxonomy.md)，扩充为 8 类 |
+| ~~entity_type 规格冲突~~ | 已解决 | 见 [ADR-0014](../../adr/0014-entity-types-align-to-taxonomy.md)，扩充为 8 类 |
 | ~~DNS 失败被判为 SSRF~~ | 已解决 | 改判 `TRANSIENT`，10 个一手信源恢复 |
 
 ## 10. 未消费的 Outbox（一条需要如实描述的架构现状）
