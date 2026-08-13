@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { fetchContentTypeMap, fetchTopicMap, fetchVendorMap } from "@/lib/api";
 
-import type { MapCard } from "@/lib/api";
+import type { MapCard, VendorMapCard } from "@/lib/api";
 import type { Metadata } from "next";
 
 /**
@@ -41,6 +41,33 @@ function CardGrid({ cards, href }: { cards: MapCard[]; href: (slug: string) => s
           {card.description && <p className="topic-card-desc">{card.description}</p>}
           <span className="topic-card-link">
             查看 <strong>{card.total}</strong> 条内容 →
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function VendorCardGrid({ cards }: { cards: VendorMapCard[] }) {
+  return (
+    <div className="topic-cards">
+      {cards.map((card) => (
+        <Link
+          key={card.slug}
+          className={card.total === 0 ? "topic-card topic-card-empty" : "topic-card"}
+          href={`/vendors/${card.slug}`}
+        >
+          <h3 className="topic-card-name">{card.name}</h3>
+          {card.description && <p className="topic-card-desc">{card.description}</p>}
+          <div className="vendor-card-stats" aria-label={`${card.name}关联统计`}>
+            <span>
+              <strong>{card.total}</strong> 核心
+            </span>
+            <span>{card.relatedTotal} 相关</span>
+            <span>{card.mentionTotal} 提及</span>
+          </div>
+          <span className="topic-card-link">
+            近 7 天 {card.recentPrimaryTotal} 条核心动态 →
           </span>
         </Link>
       ))}
@@ -101,7 +128,7 @@ export default async function TopicsPage() {
           title="公司与模型"
           description="按厂商与模型系追踪：谁发了什么、又赢了哪一局"
         >
-          <CardGrid cards={vendors} href={(slug) => `/vendors/${slug}`} />
+          <VendorCardGrid cards={vendors} />
         </Section>
       )}
 

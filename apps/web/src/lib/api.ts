@@ -217,6 +217,7 @@ export interface StorySummary {
   contentType?: string;
   primarySourceName?: string;
   primarySourceTier?: string;
+  sourceNames: string[];
 }
 
 export interface StoryEntry {
@@ -239,11 +240,14 @@ export interface StoryDetail {
   timeline: StoryEntry[];
 }
 
-export function fetchStories(limit = 30, minSources = 1): Promise<StorySummary[]> {
-  return getJson<StorySummary[]>(
-    `/api/v1/stories?limit=${limit}&minSources=${minSources}`,
-    [],
-  );
+export function fetchStories(limit = 30): Promise<StorySummary[]> {
+  return getJson<StorySummary[]>(`/api/v1/stories?limit=${limit}`, []);
+}
+
+export function formatStorySources(sourceNames: string[], limit = 3): string {
+  const visible = sourceNames.slice(0, Math.max(limit, 1));
+  const remaining = Math.max(sourceNames.length - visible.length, 0);
+  return `${visible.join(" · ")}${remaining > 0 ? ` 等 ${sourceNames.length} 个来源` : ""}`;
 }
 
 export function fetchStory(slug: string): Promise<StoryDetail | null> {
@@ -350,8 +354,49 @@ export interface MapCard {
   total: number;
 }
 
-export function fetchVendorMap(): Promise<MapCard[]> {
-  return getJson<MapCard[]>("/api/v1/vendors/map", []);
+export interface VendorMapCard extends MapCard {
+  relatedTotal: number;
+  mentionTotal: number;
+  recentPrimaryTotal: number;
+  updatedAt?: string | null;
+}
+
+export type VendorRelation = "primary" | "related" | "mention";
+
+export interface VendorFeedItem {
+  item: ContentItem;
+  relation: VendorRelation;
+  score: number;
+  matchedEntity: string;
+  reasonCode: string;
+  evaluatedAt: string;
+}
+
+export interface VendorPage {
+  data: VendorFeedItem[];
+  page: { nextCursor: string | null; hasMore: boolean };
+  total: number;
+  updatedAt?: string | null;
+}
+
+export interface TopicFeedItem {
+  item: ContentItem;
+  confidence: number;
+}
+
+export interface TopicPage {
+  data: TopicFeedItem[];
+  page: { nextCursor: string | null; hasMore: boolean };
+  total: number;
+}
+
+export function normaliseVendorRelation(value?: string): VendorRelation {
+  if (value === "related" || value === "mention") return value;
+  return "primary";
+}
+
+export function fetchVendorMap(): Promise<VendorMapCard[]> {
+  return getJson<VendorMapCard[]>("/api/v1/vendors/map", []);
 }
 
 export function fetchContentTypeMap(): Promise<MapCard[]> {
@@ -362,6 +407,33 @@ export function fetchVendorItems(slug: string, limit = 40): Promise<ContentItem[
   return getJson<ContentItem[]>(
     `/api/v1/vendors/${encodeURIComponent(slug)}?limit=${limit}`,
     [],
+  );
+}
+
+export function fetchVendorFeed(
+  slug: string,
+  relation: VendorRelation = "primary",
+  cursor?: string,
+  limit = 20,
+): Promise<VendorPage> {
+  const query = new URLSearchParams({ relation, limit: String(limit) });
+  if (cursor) query.set("cursor", cursor);
+  return getJson<VendorPage>(
+    `/api/v1/vendors/${encodeURIComponent(slug)}/feed?${query}`,
+    { data: [], page: { nextCursor: null, hasMore: false }, total: 0 },
+  );
+}
+
+export function fetchTopicFeed(
+  slug: string,
+  cursor?: string,
+  limit = 20,
+): Promise<TopicPage> {
+  const query = new URLSearchParams({ limit: String(limit) });
+  if (cursor) query.set("cursor", cursor);
+  return getJson<TopicPage>(
+    `/api/v1/topics/${encodeURIComponent(slug)}/feed?${query}`,
+    { data: [], page: { nextCursor: null, hasMore: false }, total: 0 },
   );
 }
 

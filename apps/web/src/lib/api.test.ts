@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   appendItems,
+  formatStorySources,
   formatPeriodKey,
   groupByDay,
   groupReports,
+  normaliseVendorRelation,
   normalisePeriod,
   reportWindow,
 } from "./api";
@@ -67,6 +69,31 @@ describe("appendItems", () => {
     const days = [...groupByDay(merged).keys()];
     expect(days).toHaveLength(1);
     expect(groupByDay(merged).get(days[0])).toHaveLength(2);
+  });
+});
+
+describe("formatStorySources", () => {
+  it("shows the concrete publishers behind a multi-source event", () => {
+    expect(formatStorySources(["NVIDIA", "Ollama"])).toBe("NVIDIA · Ollama");
+  });
+
+  it("keeps long source lists compact without hiding the total", () => {
+    expect(formatStorySources(["A", "B", "C", "D"], 3)).toBe(
+      "A · B · C 等 4 个来源",
+    );
+  });
+});
+
+describe("normaliseVendorRelation", () => {
+  it("accepts only the three public relation tiers", () => {
+    expect(normaliseVendorRelation("primary")).toBe("primary");
+    expect(normaliseVendorRelation("related")).toBe("related");
+    expect(normaliseVendorRelation("mention")).toBe("mention");
+  });
+
+  it("fails closed to the high-precision primary tier", () => {
+    expect(normaliseVendorRelation("all")).toBe("primary");
+    expect(normaliseVendorRelation()).toBe("primary");
   });
 });
 

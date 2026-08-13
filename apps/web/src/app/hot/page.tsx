@@ -40,7 +40,7 @@ export default async function HotPage() {
         而不再是近似重复分组。多数条目仍为 1，因为大多数发布确实只有官方一个来源；
         被多家媒体跟进的事件会因此排到前面。
         事件聚类由算法自动完成，可能存在误合或漏合，具体归并见
-        <Link href="/stories">事件聚合</Link>。
+        <Link href="/stories">事件追踪</Link>。
       </div>
     </>
   );

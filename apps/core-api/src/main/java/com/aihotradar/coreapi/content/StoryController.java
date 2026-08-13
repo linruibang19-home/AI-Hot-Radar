@@ -3,6 +3,7 @@ package com.aihotradar.coreapi.content;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.RowMapper;
@@ -26,23 +27,72 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/stories")
 public class StoryController {
 
+    /**
+     * Publication is deliberately stricter than clustering. The worker keeps
+     * borderline groups for review and downstream folding; the reader-facing
+     * surface optimises for precision and exposes only the clearest matches.
+     */
+    static final double PUBLIC_CONFIDENCE_THRESHOLD = 0.67;
+
     private final NamedParameterJdbcTemplate jdbc;
 
     public StoryController(NamedParameterJdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
-    private static final String SUMMARY_SELECT =
+    static final String SUMMARY_SELECT =
             """
             SELECT st.id, st.slug, st.title, st.occurred_at, st.heat_score,
                    st.independent_source_count, st.item_count,
                    st.locked_by_editor,
                    pi.content_type,
                    ps.name AS primary_source_name,
-                   ps.source_tier AS primary_source_tier
+                   ps.source_tier AS primary_source_tier,
+                   ARRAY(
+                       SELECT source_name
+                         FROM (
+                               SELECT DISTINCT s2.name AS source_name
+                                 FROM story_item si2
+                                 JOIN content_item ci2 ON ci2.id = si2.content_item_id
+                                 JOIN source s2 ON s2.id = ci2.source_id
+                                WHERE si2.story_id = st.id
+                              ) story_sources
+                        ORDER BY source_name
+                   ) AS source_names
               FROM story st
               LEFT JOIN content_item pi ON pi.id = st.primary_item_id
               LEFT JOIN source ps ON ps.id = pi.source_id
+            """;
+
+    static final String LIST_FILTER =
+            """
+             WHERE st.status = 'PUBLISHED'
+               AND st.independent_source_count >= 2
+               AND (SELECT COUNT(*)
+                      FROM story_item confidence_items
+                     WHERE confidence_items.story_id = st.id
+                       AND confidence_items.similarity_score IS NOT NULL) >= st.item_count - 1
+               AND (SELECT MIN(confidence_items.similarity_score)
+                      FROM story_item confidence_items
+                     WHERE confidence_items.story_id = st.id
+                       AND confidence_items.similarity_score IS NOT NULL) >= :minConfidence
+             ORDER BY st.heat_score DESC NULLS LAST, st.occurred_at DESC
+             LIMIT :limit
+            """;
+
+    static final String DETAIL_FILTER =
+            """
+             WHERE st.slug = :slug
+               AND st.status = 'PUBLISHED'
+               AND st.independent_source_count >= 2
+               AND (SELECT COUNT(*)
+                      FROM story_item confidence_items
+                     WHERE confidence_items.story_id = st.id
+                       AND confidence_items.similarity_score IS NOT NULL) >= st.item_count - 1
+               AND (SELECT MIN(confidence_items.similarity_score)
+                      FROM story_item confidence_items
+                     WHERE confidence_items.story_id = st.id
+                       AND confidence_items.similarity_score IS NOT NULL) >= :minConfidence
             """;
 
     private static final RowMapper<StorySummary> SUMMARY_MAPPER =
@@ -58,27 +108,17 @@ public class StoryController {
                             rs.getBoolean("locked_by_editor"),
                             rs.getString("content_type"),
                             rs.getString("primary_source_name"),
-                            rs.getString("primary_source_tier"));
+                            rs.getString("primary_source_tier"),
+                            readSourceNames(rs));
 
     /** Stories ranked by heat. */
     @GetMapping
-    public List<StorySummary> list(
-            @RequestParam(required = false, defaultValue = "30") int limit,
-            @RequestParam(required = false, defaultValue = "1") int minSources) {
-
-        String sql =
-                SUMMARY_SELECT
-                        + """
-                         WHERE st.status = 'PUBLISHED'
-                           AND st.independent_source_count >= :minSources
-                         ORDER BY st.heat_score DESC NULLS LAST, st.occurred_at DESC
-                         LIMIT :limit
-                        """;
+    public List<StorySummary> list(@RequestParam(required = false, defaultValue = "30") int limit) {
         return jdbc.query(
-                sql,
+                SUMMARY_SELECT + LIST_FILTER,
                 new MapSqlParameterSource()
                         .addValue("limit", Math.min(Math.max(limit, 1), 100))
-                        .addValue("minSources", Math.max(minSources, 1)),
+                        .addValue("minConfidence", PUBLIC_CONFIDENCE_THRESHOLD),
                 SUMMARY_MAPPER);
     }
 
@@ -86,8 +126,9 @@ public class StoryController {
     public ResponseEntity<StoryDetail> detail(@PathVariable String slug) {
         List<StorySummary> found =
                 jdbc.query(
-                        SUMMARY_SELECT + " WHERE st.slug = :slug",
-                        new MapSqlParameterSource("slug", slug),
+                        SUMMARY_SELECT + DETAIL_FILTER,
+                        new MapSqlParameterSource("slug", slug)
+                                .addValue("minConfidence", PUBLIC_CONFIDENCE_THRESHOLD),
                         SUMMARY_MAPPER);
         if (found.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -137,6 +178,18 @@ public class StoryController {
                 rs.getString("organization"));
     }
 
+    private static List<String> readSourceNames(ResultSet rs) throws SQLException {
+        java.sql.Array values = rs.getArray("source_names");
+        if (values == null) {
+            return List.of();
+        }
+        Object raw = values.getArray();
+        if (raw instanceof String[] names) {
+            return Arrays.asList(names);
+        }
+        return Arrays.stream((Object[]) raw).map(String::valueOf).toList();
+    }
+
     public record StorySummary(
             String id,
             String slug,
@@ -148,7 +201,8 @@ public class StoryController {
             boolean locked,
             String contentType,
             String primarySourceName,
-            String primarySourceTier) {}
+            String primarySourceTier,
+            List<String> sourceNames) {}
 
     public record StoryEntry(
             String id,

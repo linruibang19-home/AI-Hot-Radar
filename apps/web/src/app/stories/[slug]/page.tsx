@@ -5,7 +5,7 @@ import { BackLink } from "@/components/BackLink";
 import { notFound } from "next/navigation";
 
 import { CONTENT_TYPE_LABELS } from "@/components/ItemCard";
-import { fetchStory } from "@/lib/api";
+import { fetchStory, formatStorySources } from "@/lib/api";
 
 import type { Metadata } from "next";
 
@@ -38,6 +38,7 @@ export default async function StoryPage({
   }
 
   const { story, timeline } = detail;
+  const primary = timeline.find((entry) => entry.relationType === "PRIMARY");
 
   return (
     <>
@@ -56,6 +57,20 @@ export default async function StoryPage({
         </p>
       </header>
 
+      <section className="story-overview" aria-labelledby="story-overview-heading">
+        <p className="story-overview-label" id="story-overview-heading">
+          主来源摘要
+        </p>
+        <p>
+          {primary?.summary ??
+            "当前主来源还没有可展示的摘要，请直接阅读原文并对照下方其他报道。"}
+        </p>
+        <p className="story-source-list">
+          <span>参与来源</span>
+          {formatStorySources(story.sourceNames, 5)}
+        </p>
+      </section>
+
       <div className="stat-row">
         <div className="stat">
           <div className="stat-value">{story.independentSources}</div>
@@ -71,7 +86,7 @@ export default async function StoryPage({
         </div>
       </div>
 
-      <h2 className="day-heading">报道时间线</h2>
+      <h2 className="day-heading">来源时间线</h2>
 
       <div className="tl-body">
         {timeline.map((entry) => (
@@ -87,13 +102,11 @@ export default async function StoryPage({
                   {entry.relationType === "PRIMARY" && (
                     <span className="tag tag-primary">主来源</span>
                   )}
+                  {entry.relationType !== "PRIMARY" && (
+                    <span className="tag">相关报道</span>
+                  )}
                   {entry.sourceTier === "primary" && entry.relationType !== "PRIMARY" && (
                     <span className="tag">一手</span>
-                  )}
-                  {typeof entry.similarity === "number" && (
-                    <span className="tag" title="与主来源的聚类相似度">
-                      相似度 {entry.similarity.toFixed(2)}
-                    </span>
                   )}
                 </header>
 
@@ -115,8 +128,8 @@ export default async function StoryPage({
       </div>
 
       <div className="notice">
-        事件聚合由算法自动完成（story-v1），可能存在误合或漏合。
-        主来源按信源等级选出，每篇报道均链接到原文，事实请以原文为准。
+        事件分组由算法辅助完成，可能存在误合或漏合。多家来源报道同一主题不代表其中所有主张
+        都已得到独立确认；请优先核验主来源，并通过每篇报道的原文链接检查细节。
       </div>
     </>
   );
