@@ -216,7 +216,11 @@ services:
     volumes:
       - ../../config:/app/config:ro
     depends_on:
-      postgres:
+      # The processing image now calls the V025 vendor-relation function.
+      # Flyway runs in core-api, so database health alone is not a sufficient
+      # readiness signal during an upgrade: wait until migrations and the API
+      # health check have both completed before starting paid enrichment work.
+      core-api:
         condition: service_healthy
       redis:
         condition: service_healthy

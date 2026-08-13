@@ -108,7 +108,7 @@ const SECTIONS: { label: string; entries: NavEntry[] }[] = [
       { href: "/", label: "精选", icon: "curated" },
       { href: "/items", label: "全部 AI 动态", icon: "feed" },
       { href: "/hot", label: "热点榜", icon: "hot" },
-      { href: "/stories", label: "事件聚合", icon: "story" },
+      { href: "/stories", label: "事件追踪", icon: "story" },
       { href: "/reports", label: "AI 日报", icon: "report" },
       { href: "/topics", label: "主题地图", icon: "topics" },
       { href: "/ask", label: "AI 问答", icon: "ask" },

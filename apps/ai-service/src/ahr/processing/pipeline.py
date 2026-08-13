@@ -145,6 +145,14 @@ def _store_enrichment(
     score = result.quality_score(source_authority=SOURCE_AUTHORITY.get(source_tier, 50))
 
     with connection.cursor() as cursor:
+        # A successful enrichment is a complete new judgement, not a patch on
+        # the previous one. Keeping entities/topics the model no longer emits
+        # made public topic pages accumulate stale associations. These deletes
+        # are in the same transaction as the validated replacement; any later
+        # database error rolls the whole change back.
+        cursor.execute("DELETE FROM item_vendor_relation WHERE content_item_id = %s", (item_id,))
+        cursor.execute("DELETE FROM item_entity WHERE content_item_id = %s", (item_id,))
+        cursor.execute("DELETE FROM item_topic WHERE content_item_id = %s", (item_id,))
         cursor.execute(
             """
             UPDATE content_item
@@ -199,6 +207,12 @@ def _store_enrichment(
         [(topic.slug, topic.confidence) for topic in result.topics],
         vocabulary,
     )
+
+    # Public vendor navigation is a versioned projection of the extraction
+    # fact. PostgreSQL owns the deterministic rule so the historical backfill
+    # and every future enrichment cannot drift apart (ADR-0030).
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT refresh_item_vendor_relations(%s)", (item_id,))
 
 
 def _record_usage(

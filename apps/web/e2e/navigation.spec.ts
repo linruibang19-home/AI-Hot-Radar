@@ -34,7 +34,7 @@ const PAGES: Array<{ path: string; name: string; expect: string }> = [
   { path: "/", name: "精选首页", expect: "main" },
   { path: "/items", name: "全部动态", expect: "details.tl-day" },
   { path: "/hot", name: "热点榜", expect: "main" },
-  { path: "/stories", name: "事件聚合", expect: "main" },
+  { path: "/stories", name: "事件追踪", expect: "main" },
   { path: "/topics", name: "主题地图", expect: "main" },
   { path: "/reports", name: "AI 日报", expect: "main" },
   { path: "/ask", name: "RAG 问答", expect: ".ask-input" },
@@ -113,11 +113,13 @@ test.describe("navigation", () => {
 
   test("a story opens its timeline", async ({ page }) => {
     await page.goto("/stories");
+    await expect(page.getByText("参与来源").first()).toBeVisible();
     const first = page.locator('a[href^="/stories/"]').first();
     await first.click();
 
     await expect(page).toHaveURL(/\/stories\/.+/);
-    await expect(page.locator("main")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "来源时间线" })).toBeVisible();
+    await expect(page.getByText(/相似度 \d/)).toHaveCount(0);
   });
 
   test("a topic opens its filtered list", async ({ page }) => {

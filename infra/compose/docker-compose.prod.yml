@@ -204,7 +204,9 @@ services:
     volumes:
       - ../../config:/app/config:ro
     depends_on:
-      postgres:
+      # V025 is applied by core-api/Flyway. Waiting for PostgreSQL alone can
+      # start the new pipeline image before its table and function exist.
+      core-api:
         condition: service_healthy
       redis:
         condition: service_healthy
