@@ -483,7 +483,9 @@ revision/hash 绑定、严格校验和评估工具保留，但不输出人工 pr
 
 ### TASK-M5-017｜主题时间线正确性、感知性能与 RAG 语料实证收口
 
-**状态**：🟡 2026-08-13 实现与定向测试完成，等待 CI、生产定向重切/向量补齐和页面验收。
+**状态**：✅ 2026-08-13 完成。PR #17/版本 v0.1.9 已发布；生产厂商 feed 日期单调倒序，
+主题页热缓存 TTFB 约 0.20–0.35 秒，Chrome 导航/忙碌反馈门通过；原文语料门随 TASK-M5-018
+在 v0.1.10 完成最终验收。
 **读取**：TASK-M5-015/016、`06-frontend-spec.md`、`04-rag-agent-design.md`、ADR-0029/0030、
 厂商 feed、Web 时间线、chunker/backfill 与生产只读快照。
 **输入**：厂商相关页按 relation score 优先导致 5/8 月日期交错；全屏加载 portal 放大约 0.2 秒
@@ -502,7 +504,9 @@ Python、Web、CI、生产 smoke 与浏览器视觉回归通过。
 
 ### TASK-M5-018｜引用安全的不可变分块集
 
-**状态**：🟡 2026-08-13 实现与定向测试中；由 TASK-M5-017 的生产重切外键保护现场触发。
+**状态**：✅ 2026-08-13 完成。PR #18/版本 v0.1.10 已发布到生产；V026、定向重切、增量
+Embedding、SQL/HTTP/Chrome、备份恢复演练全部通过。该卡由 TASK-M5-017 的生产重切外键
+保护现场触发。
 **读取**：`04-rag-agent-design.md`、ADR-0016/0029/0031、TASK-M5-017、V001/V026、
 chunker/backfill/retrieval/parent 与 citation 查询。
 **输入**：旧 `chunk_revision` 先删除同 revision 的块；生产中已有块被 `rag_citation` 引用，外键
@@ -515,6 +519,12 @@ chunker/backfill/retrieval/parent 与 citation 查询。
 **完成标准**：V026 空库和升级迁移通过；已引用块可安全重切；active revision/ordinal 唯一；
 所有在线召回和向量回填排除 retired；历史引用与父块仍可解析；TASK-M5-017 的 14 个超限 active
 块归零并补齐向量；CI、发布、生产 SQL/HTTP/浏览器验收通过。
+
+**生产证据**：13 个受影响 revision 从 80 个旧 active 块生成 107 个新 active 块；107/107 使用
+`BAAI/bge-m3` 增量向量化且 remaining=0；当前超限块、缺向量、active 序号重复、chunk 等于
+`summary_zh` 均为 0；3 个 retired chunk 仍被历史引用并可解析。迁移后备份 132MB，隔离恢复
+快照为 `140|2215|9121|1788|17|026`。一个 18 字符且仍为 `DISCOVERED` 的包版本事件尚未进入
+正文处理阶段，不计为 RAG 漏切。
 
 ## 4. AI IDE 统一提示词
 
