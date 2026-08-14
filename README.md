@@ -6,10 +6,11 @@
 - 在线体验：[https://aihotradar.online](https://aihotradar.online)
 - 当前生产代码基线：`v0.1.14@2ba1222`，香港 2C4G 单机 Docker Compose，Caddy HTTPS；
   数据与运行状态会随调度持续变化，动态数字以站内运行页为准
-- 2026-08-12 已记录生产快照：2040 条内容、8089 个活动分块（100% 向量化）、1622 个事件；
-  该行是带日期的历史证据，不是固定业务承诺
 - 质量基线：2026-08-14 本次后端分层回归为 Python **916 通过、2 跳过**，严格 mypy 对
   87 个源文件零错误，Java 21 **84/84**；RAG 使用固定 90 题发布集与逐题证据
+
+**建议阅读顺序**：先看「30 秒」理解业务价值，再用「3 分钟」看产品、服务边界和目录地图；
+需要核验实现时进入「30 分钟」链路，最后按文末的代码/面试文档导航逐层下钻。
 
 ![精选与实时情报流](docs/assets/screenshots/home.png)
 
@@ -60,21 +61,23 @@ AI 行业信息分散在官方博客、文档更新、GitHub、论文站和行�
 
 ### 业务架构
 
-```mermaid
-flowchart LR
-    S["公开信源"] --> I["发现与全文回源"]
-    I --> Q["正文质量门与规范化"]
-    Q --> E["LLM 结构化与实体识别"]
-    E --> D["去重、Story 聚类与精选评分"]
-    D --> W["精选 / 热点 / 主题 / 事件"]
-    D --> R["日 / 周 / 月报告"]
-    D --> K["证据分块与时效索引"]
-    R --> M["双重确认邮件投递"]
-    K --> A["混合检索 RAG"]
-    W --> U["读者"]
-    R --> U
-    M --> U
-    A --> U
+```text
+[1. 输入]  官方博客 / 文档变更 / GitHub / 论文 / 行业媒体
+    │
+    ▼
+[2. 采集]  候选发现 → canonical 全文回源 → 正文、合规与新鲜度门禁
+    │
+    ▼
+[3. 事实]  URL 规范化 → 内容指纹幂等 → 正文版本 → LLM 结构化与实体
+    │
+    ▼
+[4. 组织]  近重复压缩 → 跨来源 Story 聚类 → 主来源选择 → 精选评分
+    │
+    ├──► [5A. 阅读] 精选 / 全部动态 / 热点 / 主题 / 事件时间线
+    ├──► [5B. 报告] 日报 / 周报 / 月报 → PUBLISHED 快照 → 确认订阅邮件
+    └──► [5C. 问答] 原文证据分块 → 混合检索 → 引用校验 → RAG 回答
+
+[6. 出口]  网站 / 邮件 / API / RAG 都读取同一份 PostgreSQL 已发布事实
 ```
 
 所有出口读取同一份已发布事实。邮件不维护“邮件专用语料”，RAG 不把 AI 摘要当最终证据，
@@ -82,22 +85,24 @@ flowchart LR
 
 ### 技术架构与服务边界
 
-```mermaid
-flowchart TB
-    U["Browser"] --> Caddy["Caddy :80/:443"]
-    Caddy --> Web["Next.js 15 / React 19"]
-    Web --> Core["Spring Boot 3.4 / Java 21"]
-    Web --> AI["FastAPI / Python 3.12"]
-    Scheduler["Python Scheduler"] --> PG
-    Pipeline["Python Pipeline"] --> PG
-    Core --> PG[("PostgreSQL 16 + pgvector")]
-    AI --> PG
-    Core --> Redis[("Redis 7")]
-    AI --> Redis
-    AI --> Sources["Feed / API / HTML / GitHub / arXiv"]
-    AI --> Models["DeepSeek + SiliconFlow bge"]
-    Core --> SMTP["SMTP"]
-    Backup["Backup / Restore Verify"] --> PG
+```text
+公网请求面（只有 Caddy 暴露 80/443）
+Browser
+└─ Caddy / HTTPS
+   └─ Next.js Web（SSR、交互、同源代理、SSE UI）
+      ├─ Spring Boot Core API（内容、报告、订阅、RBAC、审计）
+      └─ FastAPI AI Service（RAG、健康检查）
+
+后台数据面（不直接暴露公网）
+Python Scheduler ──领取到期租约──► Python Pipeline
+Python Pipeline  ──采集/抽取/结构化/聚类/切块/向量──► PostgreSQL
+
+共享基础设施
+├─ PostgreSQL 16 + pgvector：唯一事实源、事务状态、FTS、向量与审计轨迹
+├─ Redis 7：读缓存、限流、RAG 缓存和短锁；丢失后不丢业务事实
+├─ DeepSeek / SiliconFlow：结构化与生成 / bge-m3 Embedding 与 rerank
+├─ SMTP：只投递 Core API 已确认的 PUBLISHED 报告快照
+└─ Backup + Restore Verify：备份、隔离恢复和迁移版本核验
 ```
 
 | 层 | 技术 | 负责什么 | 明确不负责什么 |
@@ -109,6 +114,35 @@ flowchart TB
 | 短状态 | Redis 7 | 读缓存、限流、RAG 缓存、短锁 | 任何不可恢复的业务真相 |
 | 模型 | DeepSeek V4 Flash/Pro；bge-m3、bge-reranker-v2-m3 | 生成/结构化；Embedding 与交叉编码器重排 | 模型输出未经 schema/引用校验直接入库或发布 |
 | 交付 | Docker Compose、Caddy、GHCR、GitHub Actions | 单机编排、HTTPS、不可变 SHA 镜像、CI/CD | 当前规模下没有证据需要的 Kubernetes/Kafka |
+
+### 仓库地图：面试官应该从哪里读
+
+```text
+AI-Hot-Radar/
+├─ apps/
+│  ├─ web/          Next.js 页面、SSR、交互与同源代理
+│  ├─ core-api/     Spring Boot 内容/报告/订阅/管理业务
+│  └─ ai-service/   FastAPI、采集加工、RAG 与离线评测
+├─ database/migrations/  Flyway V001–V026；数据库可执行演进历史（必须保留）
+├─ api/ + schemas/       OpenAPI 与 Java/Python 共享结构契约
+├─ config/               信源、采集策略、站点覆盖、主题与模型配置
+├─ infra/                Docker Compose、Caddy、部署/备份/恢复脚本
+├─ data/                 黄金集、fixture 与可复现评测输入，不放生产秘密
+├─ docs/
+│  ├─ spec/        锁定产品/架构/RAG 规格和任务卡
+│  ├─ adr/         技术决策及被否决方案
+│  ├─ handbook/    按业务主线学习整个系统
+│  ├─ interview/   项目讲解、代码走查与面试问答
+│  └─ status/      发布、评测、压测和事故证据
+├─ .github/              CI、镜像构建与发布门禁
+├─ scripts/              文档校验、评测汇总、工作区清理
+├─ AGENTS.md             唯一、工具无关的工程约束
+└─ DEVELOPMENT.md        本地 Docker Compose 开发入口
+```
+
+这里刻意不跟踪 Claude/Cursor 专用规则副本：不同工具都读取 `AGENTS.md`，避免多份规则漂移。
+`database/migrations/`、`schemas/`、`.github/` 和 `infra/` 看起来不像产品代码，却分别证明了
+数据演进、跨语言契约、持续集成和可恢复部署，不能为了让目录“显得少”而删除。
 
 为什么拆成 Java 与 Python：稳定的内容、订阅、权限与投递边界放在 Core API；快速变化的采集、
 NLP、向量和评测生态放在 AI Service。二者共享契约和 PostgreSQL 事实，但不互相侵入职责。
@@ -156,23 +190,29 @@ RSS 或搜索摘要只能用于**发现**。当来源要求全文回源时，can
 
 ### RAG 全链路
 
-```mermaid
-flowchart LR
-    Q["问题 + 会话"] --> P["规则规划：类型 / 时间 / 实体 / 指代"]
-    P --> D["Dense: pgvector HNSW top60"]
-    P --> S["Sparse: tsvector/GIN top40"]
-    P --> T["Temporal / Entity temporal"]
-    D --> F["加权 RRF"]
-    S --> F
-    T --> F
-    F --> X["bge-reranker-v2-m3"]
-    X --> M["directness / source / temporal 调整"]
-    M --> E["同篇限流 / Story 折叠 / 主源优先"]
-    E --> B["三档父块展开 + token 预算"]
-    B --> G["DeepSeek 结构化生成"]
-    G --> C["服务端引用绑定"]
-    C --> V["覆盖、不变量与支持度审计"]
-    V --> O["回答 / 部分回答 / 拒答"]
+```text
+用户问题 + 会话
+  │
+  ├─ 1. Query Plan：问题类型、绝对时间窗、实体、受控别名与指代
+  │
+  ├─ 2. 并行候选召回
+  │      ├─ Dense：bge-m3 + pgvector HNSW，处理语义改写
+  │      ├─ Sparse：tsvector/GIN + CJK bigram，保留型号与精确词
+  │      └─ Temporal / Entity：在 SQL 层约束时间和目标实体
+  │
+  ├─ 3. 排序：加权 RRF → bge-reranker-v2-m3 → 元数据受控调整
+  │
+  ├─ 4. 证据选择：同篇限流 → Story 折叠 → 一手来源优先 → 子目标覆盖
+  │
+  ├─ 5. 上下文：三档父块展开 + token 预算；引用仍绑定原始 chunk
+  │
+  ├─ 6. 生成：DeepSeek 只读取 [E1]…[En] 证据并输出结构化 claims
+  │
+  ├─ 7. 可信出口：服务端重绑 chunk/URL → 引用覆盖/越界/支持度审计
+  │
+  └─ 8. 结果：完整回答 / 保留已支持部分 / 证据不足时拒答
+
+全过程写入 rag_query / rag_citation 与 retrieval trace；缓存键包含语料新鲜度。
 ```
 
 1. **Query Plan**：把“最近一周”解析为用户时区的绝对时间窗；识别近期、时间线、比较、

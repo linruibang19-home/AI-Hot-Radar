@@ -1,11 +1,9 @@
 # AI Hot Radar Agent Instructions
 
-**This file is the single source of these rules.** `CLAUDE.md` and
-`.cursor/rules/ai-hot-radar.mdc` point here and add only what is specific to
-their tool. Do not keep a second copy of a rule in either of them: all three
-files used to hold overlapping rule sets and they had already begun to
-disagree, which is the same "two copies of one state drift apart" failure this
-project has hit repeatedly in its own code.
+**This file is the single, tool-neutral source of repository engineering rules.**
+Do not add a second copy in a tool-specific entrypoint: the former Claude and
+Cursor pointers were removed because even forwarding files add repository noise
+and eventually drift. Every human or coding agent should start here.
 
 ## Read this, in this order
 

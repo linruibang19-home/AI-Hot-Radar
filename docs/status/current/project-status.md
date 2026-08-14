@@ -1912,7 +1912,8 @@ GHCR 默认私有需要先 `docker login`。全部写进
 - **三份执行器规则合并成一份**。`AGENTS.md` / `CLAUDE.md` / `.cursor/rules/*.mdc`
   各存一份，而且**已经开始偏离**：只有 Cursor 那份写了「Postgres 是事实来源、Redis 只做缓存」
   （这是 ADR-0005 的锁定决策，不是 Cursor 专属），只有 CLAUDE.md 那份写了
-  「规格冲突时停下来引用两个 ID」。现在 `AGENTS.md` 是唯一来源，另外两份是指针。
+  「规格冲突时停下来引用两个 ID」。`AGENTS.md` 先成为唯一来源；到 TASK-M5-022 又删除了
+  两个仅做转发的工具专用指针，各工具直接读取 `AGENTS.md`，根目录不再展示重复入口。
   **这正是本项目在代码里反复踩的「两份状态各自演进」，只不过这次踩在规则文件上。**
 - 删掉 `apps/core-api/src/main/resources/db/`（构建产物目录，`.gitignore` 第 19 行已列）。
   仓库里**没有**被误提交的构建产物。

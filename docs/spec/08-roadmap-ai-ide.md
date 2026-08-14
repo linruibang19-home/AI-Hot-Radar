@@ -4,7 +4,8 @@
 
 ## 1. 执行原则
 
-Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互相冲突的需求。根目录 `AGENTS.md`、`CLAUDE.md` 和 Cursor rule 只负责告诉执行器如何读取本规格，不复制业务真相。
+Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互相冲突的需求。根目录
+`AGENTS.md` 是唯一、工具无关的执行约束入口；各工具直接读取它，不再跟踪额外指针文件。
 
 每次开发只领取一个可验收任务卡，步骤为：
 
@@ -593,6 +594,25 @@ JVM/容器预算、Redis 缓存/限流语义与腾讯云备案迁移边界。
 `production`、`IMAGE_TAG` 与三镜像已对齐 `2ba12225e25e9ed7efe7e116928293b0d535f2a7`，10 个
 容器健康，公开 smoke 通过。部署后生成并校验 143 MiB 备份，隔离恢复得到
 `140|2358|9735|1919|17|026`（source/content/chunk/story/report/Flyway），恢复库按守卫规则清理。
+
+### TASK-M5-022｜作品集仓库入口与 README 信息架构收口
+
+**状态**：✅ 2026-08-14 完成；仅整理仓库入口与作品集说明，不改变运行行为。
+**读取**：`00-master-spec.md`、`02-system-architecture.md`、TASK-M5-019/021、根目录规则入口与
+README 当前首屏。
+**输入**：根目录同时跟踪 `AGENTS.md`、`CLAUDE.md` 与 Cursor 规则指针，内容虽以转发为主，
+仍增加首次浏览噪声和规则再次漂移的可能；README 的业务、服务和 RAG Mermaid 图横向分支过多，
+GitHub 预览需要缩放后才能理解，缺少一张解释根目录为何存在的阅读地图。
+**产出**：以工具无关的 `AGENTS.md` 作为唯一工程规则入口，移除 Claude/Cursor 重复指针；保留并
+解释 Flyway migrations、契约、配置、CI 与交付目录；把 README 的业务链路、运行拓扑和 RAG
+链路改为无需缩放的分层文本图，补充面试官 30 秒/3 分钟/深入阅读路径与根目录地图。
+**边界**：不删除 migrations、fixtures、黄金集、规格、ADR、CI 或部署资产；不改数据库、API、
+服务边界、RAG 策略和生产镜像；历史状态文档不重写，只修当前规范中的活动入口。
+**完成标准**：README 不再依赖 Mermaid 才能理解三条主线；仓库根目录每个一级入口都有用途；
+当前规范不再要求已删除的工具专用指针；文档/规格校验与 `git diff --check` 通过。
+**验证证据**：`validate_spec.py`、`validate_docs.py`、Ruff 与 `git diff --check` 通过；README 中
+业务、服务和 RAG 三条主线均为纯文本图，根目录不再跟踪 `CLAUDE.md` 或 Cursor rule，Flyway
+V001–V026、契约、CI、部署与评测证据保持不变。
 
 ## 4. AI IDE 统一提示词
 
