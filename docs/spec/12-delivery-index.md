@@ -73,7 +73,7 @@ DeepSeek 生成模型白名单切换已完成；生产 SMTP 已实投。ChromeCo
 | 路径 | 作用 | 状态 |
 |---|---|---|
 | `README.md` | 产品与工程总入口 | 当前 |
-| `AGENTS.md` / `CLAUDE.md` / `.cursor/rules/*` | AI IDE 执行约束 | 当前 |
+| `AGENTS.md` | 唯一、工具无关的 AI IDE 执行约束 | 当前 |
 | `docs/spec/00-master-spec.md` | 唯一总规格与锁定决策 | 锁定 |
 | `docs/spec/01-product-requirements.md` | 产品、页面与发布门槛 | 锁定 |
 | `docs/spec/02-system-architecture.md` | 服务、数据与部署边界 | 锁定 |
