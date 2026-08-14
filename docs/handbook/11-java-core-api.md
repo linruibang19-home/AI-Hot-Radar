@@ -6,7 +6,7 @@ Core API 使用 Java 21、Spring Boot 3.4、Spring Web、JDBC/Flyway 兼容数�
 Actuator 和邮件组件。它不是 ORM 主导的领域模型项目：查询和状态迁移多用显式 SQL，便于控制
 窗口、锁、JSON 聚合和 PostgreSQL 特性。
 
-## 2. 包结构
+## 2. 包结构：按业务域，域内分层
 
 | 包 | 责任 |
 |---|---|
@@ -14,14 +14,23 @@ Actuator 和邮件组件。它不是 ORM 主导的领域模型项目：查询和
 | `subscription` | 申请、确认、退订、SMTP、投递调度 |
 | `admin` | Source、模型、报告发布、审计、幂等 |
 | `health` | live/ready 和依赖状态 |
+| `cache` | Redis CacheManager、TTL 和序列化策略 |
+| `observability` | request id、日志与调用链上下文 |
+
+这不是缺少分层，而是 package-by-feature。`content` 内已有
+`StoryController → StoryService → StoryRepository` 与
+`ReportController → ReportService → ReportRepository`；`subscription` 和 `admin` 也围绕各自
+业务边界组织。`CoreApiArchitectureTest` 使用 ArchUnit 禁止 `@RestController` 直接依赖 JDBC。
+纯只读 projection 可由 Controller 薄委托 Repository，但 SQL、事务和状态迁移不能留在 HTTP 层。
 
 ## 3. Controller 到 SQL
 
-Controller 负责 HTTP 语义、输入校验和 DTO；Service 负责事务/状态；NamedParameterJdbcTemplate
-执行参数化 SQL。公开读只返回页面需要的摘要、来源和导航，不把内部原文或管理字段泄露。
+Controller 负责 HTTP 语义、输入校验和 DTO；Service 负责规则、聚合、事务与状态；Repository
+用 NamedParameterJdbcTemplate 执行参数化 SQL。公开读只返回页面需要的摘要、来源和导航，
+不把内部原文或管理字段泄露。
 
-学习 `ReportController` 时沿这条线：period/key 解析 → 查询报告主记录 → 加载 report entries →
-分组 section → 计算阅读统计 → 查询前后导航 → 组装 immutable record DTO。
+学习报告时沿这条线：`ReportController` 解析 HTTP → `ReportService` 规范化 period、分组 section、
+计算阅读统计 → `ReportRepository` 查询主记录/entries/导航 → immutable record DTO。
 
 ## 4. 管理安全
 
@@ -68,3 +77,5 @@ pgvector 和精确 DTO 查询；显式 SQL 更透明。若普通 CRUD 增长，�
 唯一键防重复，重试补偿。极端“供应商已收但本地未记成功”仍需 provider id/幂等能力才能完全
 消除，是剩余边界。
 
+更完整的目录取舍、JVM 与 Redis 见
+[`19-backend-layering-runtime-and-redis.md`](19-backend-layering-runtime-and-redis.md)。

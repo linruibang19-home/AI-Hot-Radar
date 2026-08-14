@@ -2,12 +2,9 @@ package com.aihotradar.coreapi.admin;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,11 +34,11 @@ public class SourceAdminController {
      */
     static final String CONFIRM_HEADER = "X-Confirm-Target";
 
-    private final NamedParameterJdbcTemplate jdbc;
+    private final SourceRepository sources;
     private final AdminAudit audit;
 
-    public SourceAdminController(NamedParameterJdbcTemplate jdbc, AdminAudit audit) {
-        this.jdbc = jdbc;
+    public SourceAdminController(SourceRepository sources, AdminAudit audit) {
+        this.sources = sources;
         this.audit = audit;
     }
 
@@ -65,25 +62,14 @@ public class SourceAdminController {
                     .body(Map.of("error", "confirmation_required", "echo", CONFIRM_HEADER));
         }
 
-        Map<String, Object> before = currentState(id);
+        Map<String, Object> before = sources.findState(id).orElse(null);
         if (before == null) {
             return ResponseEntity.notFound().build();
         }
 
-        int updated =
-                jdbc.update(
-                        """
-                        UPDATE source
-                           SET operator_enabled = :enabled,
-                               operator_note = :note
-                         WHERE id = :id
-                        """,
-                        new MapSqlParameterSource()
-                                .addValue("enabled", patch.enabled())
-                                .addValue("note", patch.note())
-                                .addValue("id", id));
+        int updated = sources.setEnabled(id, patch.enabled(), patch.note());
 
-        Map<String, Object> after = currentState(id);
+        Map<String, Object> after = sources.findState(id).orElse(null);
         Map<String, Object> detail = new HashMap<>();
         detail.put("from", before.get("effective_enabled"));
         detail.put("to", after == null ? null : after.get("effective_enabled"));
@@ -121,10 +107,7 @@ public class SourceAdminController {
                     .body(Map.of("error", "confirmation_required", "echo", CONFIRM_HEADER));
         }
 
-        int updated =
-                jdbc.update(
-                        "UPDATE source SET next_poll_at = now() WHERE id = :id AND effective_enabled",
-                        new MapSqlParameterSource("id", id));
+        int updated = sources.scheduleNow(id);
 
         if (updated == 0) {
             // Either no such source, or it is disabled. Scheduling a poll for a source the
@@ -141,18 +124,6 @@ public class SourceAdminController {
 
         audit.record(principal, "source.run", id, AdminAudit.Outcome.ALLOWED, Map.of());
         return ResponseEntity.accepted().body(Map.of("scheduled", true, "id", id));
-    }
-
-    private Map<String, Object> currentState(String id) {
-        List<Map<String, Object>> rows =
-                jdbc.queryForList(
-                        """
-                        SELECT id, configured_enabled, operator_enabled, effective_enabled,
-                               operator_note, runtime_state, next_poll_at
-                          FROM source WHERE id = :id
-                        """,
-                        new MapSqlParameterSource("id", id));
-        return rows.isEmpty() ? null : rows.get(0);
     }
 
     private AdminPrincipal principalOf(HttpServletRequest request) {

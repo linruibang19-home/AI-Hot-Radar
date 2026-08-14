@@ -96,7 +96,17 @@ V021 历史答案修复。完整算法背景见 `docs/interview/03-rag-deep-dive
 Java `admin/` 是管理事实边界：`AdminAuthFilter` 认证，`AdminPrincipal/Role` 表达权限，
 `AdminIdempotency` 防重复动作，`AdminAudit` 留审计。模型切换由
 `GenerationModelController/Service` 写 PostgreSQL；Web `admin/models/` 只允许白名单型号，
-不读取或显示密钥。信源页目前主要通过 `SourceHealthController` 读取数据库快照。
+不读取或显示密钥。信源页通过 `SourceHealthController` 读取 `SourceRepository` 的数据库快照；
+运营写请求经 `SourceAdminController` 做确认/权限语义，再由 Repository 修改调度事实并写审计。
+
+Core API 采用按业务域组织、域内分层，而不是四个全局技术目录。Story 的调用链是
+`StoryController → StoryService → StoryRepository`，Report 是
+`ReportController → ReportService → ReportRepository`。ArchUnit 门禁禁止 Controller 直接依赖
+Spring JDBC。详见 `apps/core-api/README.md` 与 `handbook/19-backend-layering-runtime-and-redis.md`。
+
+Python 的 FastAPI 只位于 `main.py`、`health.py` 与 `rag/api.py`；Scheduler/Pipeline 通过 `cli.py`
+启动。`tests/test_architecture_layers.py` 约束 FastAPI 不渗入领域策略，并限制 ingestion/rag 的
+依赖方向。详见 `apps/ai-service/README.md`。
 
 ## 6. 运行与发布
 

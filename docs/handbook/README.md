@@ -34,6 +34,7 @@
 - [16 LLM、Prompt、排序与阈值](16-llm-prompts-ranking-and-thresholds.md)
 - [17 Agent、编排、记忆与成本](17-agent-orchestration-memory-and-cost.md)
 - [18 性能、容量与压测](18-performance-capacity-and-load-testing.md)
+- [19 后端分层、生产 JVM 与 Redis 实现](19-backend-layering-runtime-and-redis.md)
 - [面试教材](../interview/README.md)
 
 ## 一张总图
