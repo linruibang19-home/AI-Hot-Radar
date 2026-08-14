@@ -6,7 +6,7 @@
 > [`../handbook/README.md`](../../handbook/README.md)。
 
 > 更新时间：2026-08-14
-> 当前阶段：**M5 首次生产闭环完成；TASK-M5-020 已部署，TASK-M5-021 本地门禁完成待合并**
+> 当前阶段：**M5 首次生产闭环完成；TASK-M5-020/021 均已部署，当前生产 v0.1.14**
 > 所有数据均来自实际运行，非估算
 
 > 本文是按时间累积的工程日志，后文保留了当时的失败、旧快照和已关闭待办。判断当前
@@ -15,8 +15,8 @@
 
 ## 0A. 2026-08-14 当前生产摘要
 
-生产压测绑定 `ba5cfbeb1c1bd581cd95f4fa5c761fd1bb8bfc22` / `v0.1.12`；最终证据与静默
-压测输出以 `v0.1.13` 同步，在线地址为
+生产压测绑定 `ba5cfbeb1c1bd581cd95f4fa5c761fd1bb8bfc22` / `v0.1.12`；后端分层与运行文档
+收口已由 PR #22 发布为 `v0.1.14@2ba1222`，在线地址为
 `https://aihotradar.online`。
 服务器 `production`、`IMAGE_TAG` 与 web/core-api/ai-service 镜像均对齐同一 40 位提交，
 10 个容器运行且核心健康检查通过。Caddy HTTPS、公网 smoke、真实 RAG、Gmail SMTP、
@@ -27,9 +27,9 @@
 | 当前实测 | 数值 |
 |---|---:|
 | source / runtime ACTIVE | 140 / 105 |
-| content_item | 2348（采集仍在增长） |
-| active content_chunk / 已向量化 | 9634 / 9634 |
-| story | 1910 |
+| content_item | 2359（采集仍在增长） |
+| active content_chunk / 已向量化 | 9655 / 9655 |
+| story | 1920 |
 | rag_query / rag_citation | 229 / 987 |
 | report | 17 |
 | Flyway / 生成模型 | V026 / deepseek-v4-flash v3 |
@@ -50,7 +50,7 @@ temporal 阶段只有 5 个样本，仍显示“样本不足”。
 - [RAG 质量与运行页面](../product/rag-operations-ui-20260811.md)
 - [首次生产部署记录](../delivery/production-deployment-20260811.md)
 
-## 0E. TASK-M5-021 后端分层与运行参数收口（2026-08-14，本地分支）
+## 0E. TASK-M5-021 后端分层与运行参数收口（2026-08-14，已发布）
 
 Story/Report 的 SQL 与组装从 Controller 下沉到 Service/Repository，Source SQL 收敛到
 `SourceRepository`；ArchUnit 禁止 `@RestController` 直接依赖 Spring JDBC。Python 保留
@@ -58,8 +58,9 @@ ingestion/processing/rag 领域分包，并新增 AST 门禁限制 FastAPI 只�
 Java 21 测试 84/84，Python 916 通过、2 跳过，mypy 87 个源文件零错误，Ruff/格式通过。
 
 生产只读复核确认香港 Ubuntu 22.04.5、Core API 512 MiB limit、Java 21
-`MaxRAMPercentage=75`、最大 heap 估算 371.25 MiB；修正文档中 480 MB 的错误注释。该节描述
-当前工作分支，不代表生产已运行 TASK-M5-021；合并与发布状态以交接文件和镜像 SHA 为准。
+`MaxRAMPercentage=75`、最大 heap 估算 371.25 MiB；修正文档中 480 MB 的错误注释。PR #22
+已合并并发布 `v0.1.14@2ba1222`；同 SHA 三镜像、10 个容器、公开 smoke 和 143 MiB 备份的
+隔离恢复均通过，发布事实以交接文件中的完整 40 位 SHA 为准。
 
 ## 0D. TASK-M5-004 报告邮件订阅闭环（2026-08-11）
 

@@ -573,7 +573,8 @@ psycopg 与并发重复聚合；改为 `asyncio.to_thread`、按窗口进程内 
 
 ### TASK-M5-021｜后端域内分层、运行参数与作品集说明收口
 
-**状态**：🟡 2026-08-14 实现与本地门禁完成，等待合并/发布；公开 API、数据库和 RAG 策略未变。
+**状态**：✅ 2026-08-14 已由 PR #22 合并并发布 `v0.1.14@2ba1222`；公开 API、数据库和
+RAG 策略未变。
 **读取**：`00-master-spec.md`、`02-system-architecture.md`、TASK-M5-019/020、Core API 与 AI
 Service 全部入口、当前生产 Compose/JVM 只读事实。
 **输入**：Core API 虽按 `content/subscription/admin` 分域，但 Story/Report/Source Controller 中仍有
@@ -588,6 +589,10 @@ JVM/容器预算、Redis 缓存/限流语义与腾讯云备案迁移边界。
 外观引入 JPA、LangChain/LangGraph 或全局四层包；腾讯云广州机不写成当前生产环境。
 **完成标准**：Java 21 全量 test/verify、Python pytest/mypy/ruff/format、文档链接和生产 Compose
 静态门禁通过；Controller→JDBC 与 FastAPI 领域渗透的回归测试可复现；动态 JVM 数字标注日期。
+**发布证据**：主分支 CI 与 tag Release 全绿，GHCR 三镜像均由同一 40 位 SHA 构建；香港
+`production`、`IMAGE_TAG` 与三镜像已对齐 `2ba12225e25e9ed7efe7e116928293b0d535f2a7`，10 个
+容器健康，公开 smoke 通过。部署后生成并校验 143 MiB 备份，隔离恢复得到
+`140|2358|9735|1919|17|026`（source/content/chunk/story/report/Flyway），恢复库按守卫规则清理。
 
 ## 4. AI IDE 统一提示词
 
