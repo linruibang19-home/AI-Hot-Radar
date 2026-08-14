@@ -614,6 +614,26 @@ GitHub 预览需要缩放后才能理解，缺少一张解释根目录为何存�
 业务、服务和 RAG 三条主线均为纯文本图，根目录不再跟踪 `CLAUDE.md` 或 Cursor rule，Flyway
 V001–V026、契约、CI、部署与评测证据保持不变。
 
+### TASK-M5-023｜README 证据优先分层与公开阅读体验
+
+**状态**：✅ 2026-08-14 完成；只调整公开项目入口，不改变运行行为。
+**读取**：`00-master-spec.md`、`01-product-requirements.md`、`02-system-architecture.md`、
+TASK-M5-019/021/022、当前 README、handbook/interview/status 导航。
+**输入**：README 首屏仍被生产数字占用，RAG 截图折叠过深；仓库地图标题直接写“面试官”，
+暴露内部使用目的；工程亮点未从功能清单中独立出来；文档导航长表不利于分层阅读。
+**产出**：首屏只保留定位、Live Demo、紧凑技术栈、首页与 RAG 两张主图；把带日期的生产和
+评测数字折叠为非实时快照；按 30 秒、3 分钟、30 分钟按需、本地运行、验证、边界和分层文档
+导航重写；仓库地图使用中性标题并解释代码、迁移、契约、配置、交付与证据目录的职责；新增
+5–7 条决策型工程亮点。
+**边界**：不编造用户量、指标和功能；不更新生产镜像或服务器；不改变 API、数据库、RAG、
+邮件和服务边界；根 README 不复制 handbook/status 的全部实现细节。
+**完成标准**：两张关键截图在首屏直接可见；所有数字都有日期、样本量或非实时说明；三条 text
+架构图无需 Mermaid；导航分为必读、深入、项目讲解与面试准备；规格/文档/链接/Ruff 和
+`git diff --check` 通过。
+**证据**：README 首屏直接显示 `home.png` 与 `rag-answer.png`；仓库地图已改为中性的“代码与
+证据如何组织”；`python scripts/validate_docs.py` 检查 136 份 Markdown / 322 个本地链接，
+`python scripts/validate_spec.py`、`python -m ruff check scripts` 与 `git diff --check` 均通过。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：
