@@ -3,6 +3,7 @@ package com.aihotradar.coreapi.content;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -58,5 +59,40 @@ class ContentRepositoryVendorOrderTest {
         verify(jdbc).query(sql.capture(), any(MapSqlParameterSource.class), any(RowMapper.class));
         assertThat(sql.getValue().replaceAll("\\s+", " "))
                 .contains("count(*) FROM content_chunk WHERE is_active");
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Test
+    void public_feed_and_navigation_only_count_reader_ready_enrichment() {
+        NamedParameterJdbcTemplate jdbc = mock(NamedParameterJdbcTemplate.class);
+        when(jdbc.query(any(String.class), any(MapSqlParameterSource.class), any(RowMapper.class)))
+                .thenReturn(List.of());
+        ContentRepository repository = new ContentRepository(jdbc);
+        ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+
+        repository.findFeed(null, 21, null, null, null);
+        verify(jdbc).query(sql.capture(), any(MapSqlParameterSource.class), any(RowMapper.class));
+        assertReaderReady(sql.getValue());
+
+        reset(jdbc);
+        when(jdbc.query(any(String.class), any(MapSqlParameterSource.class), any(RowMapper.class)))
+                .thenReturn(List.of());
+        repository.dayCounts(null, null);
+        verify(jdbc).query(sql.capture(), any(MapSqlParameterSource.class), any(RowMapper.class));
+        assertReaderReady(sql.getValue());
+
+        reset(jdbc);
+        when(jdbc.query(any(String.class), any(MapSqlParameterSource.class), any(RowMapper.class)))
+                .thenReturn(List.of());
+        repository.categoryCounts();
+        verify(jdbc).query(sql.capture(), any(MapSqlParameterSource.class), any(RowMapper.class));
+        assertReaderReady(sql.getValue());
+    }
+
+    private static void assertReaderReady(String sql) {
+        assertThat(sql.replaceAll("\\s+", " "))
+                .contains("ci.enrichment_state = 'ENRICHED'")
+                .contains("NULLIF(BTRIM(ci.zh_title), '') IS NOT NULL")
+                .contains("NULLIF(BTRIM(ci.summary_zh), '') IS NOT NULL");
     }
 }

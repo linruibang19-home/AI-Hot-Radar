@@ -60,4 +60,12 @@
 | 生产可恢复 | `../status/production/`、备份清单、SHA-256 和隔离恢复记录 |
 | 技术取舍有依据 | `../adr/`、B2/B8/B13/GEN-FIX 负结果与回滚条件 |
 
+## 三个实现专题
+
+| 深挖方向 | 先读实现教材 | 面试时要讲清楚的边界 |
+|---|---|---|
+| 信源、正文与切块 | [不同信源到可引用切块](../handbook/20-ingestion-evidence-and-chunking.md) | RSS 摘要不当全文；GitHub/arXiv/API 路径不同；当前图片/PDF 是 text-only |
+| Redis 与一致性 | [缓存、限流与短状态](../handbook/21-redis-cache-and-short-lived-state.md) | key、TTL、失效与 DB fallback；Redis 从不持有唯一业务事实 |
+| 黄金集与发布门 | [90 题黄金集与质量页](../handbook/22-rag-golden-set-and-quality-page.md) | `/eval` 是版本快照，`/ops` 才是动态运行事实；自动指标不替代高风险人审 |
+
 面试前只更新动态数字，不改历史实验结果；任何数字都要说明日期、样本量和测量环境。

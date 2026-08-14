@@ -379,7 +379,10 @@ mvn -B verify
 | 想了解什么 | 从这里开始 |
 |---|---|
 | 采集、正文门禁与数据模型 | [`docs/spec/09-source-registry-fulltext.md`](docs/spec/09-source-registry-fulltext.md)、[`docs/handbook/05-source-ingestion.md`](docs/handbook/05-source-ingestion.md) |
+| 不同信源怎样入库并切成原文证据 | [`docs/handbook/20-ingestion-evidence-and-chunking.md`](docs/handbook/20-ingestion-evidence-and-chunking.md) |
 | RAG 检索、生成、引用与评测 | [`docs/spec/04-rag-agent-design.md`](docs/spec/04-rag-agent-design.md)、[`docs/handbook/08-rag-indexing-and-retrieval.md`](docs/handbook/08-rag-indexing-and-retrieval.md)、[`docs/handbook/09-rag-generation-and-citations.md`](docs/handbook/09-rag-generation-and-citations.md)、[`docs/handbook/10-rag-evaluation.md`](docs/handbook/10-rag-evaluation.md) |
+| Redis 的 key、TTL、失效与数据库兜底 | [`docs/handbook/21-redis-cache-and-short-lived-state.md`](docs/handbook/21-redis-cache-and-short-lived-state.md) |
+| 90 题黄金集与 RAG 质量页 | [`docs/handbook/22-rag-golden-set-and-quality-page.md`](docs/handbook/22-rag-golden-set-and-quality-page.md) |
 | 系统边界与为什么这样选型 | [`docs/spec/02-system-architecture.md`](docs/spec/02-system-architecture.md)、[`docs/adr/`](docs/adr/) |
 | 报告、订阅和邮件投递 | [`docs/handbook/07-reports-and-email.md`](docs/handbook/07-reports-and-email.md) |
 | 部署、安全、备份与恢复 | [`docs/handbook/14-deployment-security-ops.md`](docs/handbook/14-deployment-security-ops.md) |

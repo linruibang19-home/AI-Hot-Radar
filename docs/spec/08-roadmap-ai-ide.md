@@ -634,6 +634,43 @@ TASK-M5-019/021/022、当前 README、handbook/interview/status 导航。
 证据如何组织”；`python scripts/validate_docs.py` 检查 136 份 Markdown / 322 个本地链接，
 `python scripts/validate_spec.py`、`python -m ruff check scripts` 与 `git diff --check` 均通过。
 
+### TASK-M5-024｜公开动态中文阅读就绪门禁
+
+**状态**：✅ 2026-08-15 本地修复与实库回归完成，按要求暂不提交、推送或部署。
+**读取**：`01-product-requirements.md`、`09-source-registry-fulltext.md`、
+`10-source-adapter-implementation.md` 与当前采集/结构化流水线。
+**输入**：采集每 120 秒入库、LLM 流水线每 900 秒结构化，两者之间的 `PENDING` 窗口被
+`/items` 直接展示；`SKIPPED` 记录还会永久退回英文原题，GitHub/RSS excerpt 中的 HTML 与
+Markdown 因而以文本形式露出。生产抽查确认同一批记录在后续 `ENRICHED` 后已有正确中文字段。
+**产出**：公开 feed、日期导航与分类计数统一只读取 `ENRICHED` 且中文标题/摘要完整的记录；
+入库总数与后台状态仍保留全部候选；Web 卡片增加第三方 HTML/Markdown 纯文本化的防御边界。
+**边界**：不删除或改写原文/候选记录，不改变详情页的原始证据能力，不缩短处理间隔，不把
+Redis 变成状态源；是否发布以本地回归与用户确认后的独立提交为准。
+**完成标准**：SQL 门禁测试、Web 纯文本清洗测试、Java/Web 全量相关门禁与本地浏览器回归通过；
+最新 `PENDING/SKIPPED` 不再出现在公开列表，完成结构化后自动进入列表。
+**验证**：Java 21 容器 `mvn -B verify` 85/85；Web `typecheck`、`lint`、`test`（81/81）与
+生产构建通过；本地 PostgreSQL 存在 196 条 `PENDING`、88 条 `SKIPPED`，临时挂载新 JAR 的
+Core API 实测前 8 条全部为中文字段完整的 `ENRICHED`，未改动原始候选数据。
+
+### TASK-M5-025｜证据入库、Redis 与 RAG 质量教材收口
+
+**状态**：🟡 2026-08-15 实现与本地全量回归完成，等待 CI 与生产发布证据。
+**读取**：`03-data-ingestion.md`、`04-rag-agent-design.md`、`09-source-registry-fulltext.md`、
+`10-source-adapter-implementation.md`、ADR-0005/0015/0029/0031，以及当前 ingestion、chunking、
+RAG cache/eval、Java CacheConfig 和 Flyway 代码。
+**输入**：现有教材分别介绍采集、RAG 与 Redis，但没有把不同 profile 的发现载荷、全文来源、
+数据库行、实际切块形态、图片/PDF 边界、全部 Redis key/TTL，以及 90 题到 `/eval` 静态快照的
+生成过程放在同一组可核验专题中；TASK-M5-023 的中文公共阅读门也尚未发布。
+**产出**：不同信源到 `raw_document/item/revision/chunk/citation` 的字段与样例；400/120/700/
+60/1200 切块规则、不可变 chunk set 与多模态边界；Java/Python Redis key、TTL、失效、限流和
+PostgreSQL fallback；六类 90 题、schema、指标、B2/B8/GEN-FIX、质量页刷新与发布门；完成
+TASK-M5-023 的提交、CI、不可变镜像和生产 smoke。
+**边界**：不把本地 2026-08-15 动态样本写成生产承诺；不宣称图片 OCR/视觉 RAG、PDF 版面引用、
+报告 Redis cache、outbox 消费者或实时 `/eval` 已实现；不改变 RAG 策略、核心实体或数据库。
+**完成标准**：三份专题可从 README/handbook/interview 导航到达；命令、TTL、字段、样例和当前
+边界与代码一致；文档校验、Python/Java/Web 全量门禁、GitHub CI/Release、香港生产部署与公网
+内容/RAG/运行页 smoke 通过。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：
