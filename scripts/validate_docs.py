@@ -34,6 +34,7 @@ REQUIRED_HANDBOOK = [
             "llm-prompts-ranking-and-thresholds",
             "agent-orchestration-memory-and-cost",
             "performance-capacity-and-load-testing",
+            "backend-layering-runtime-and-redis",
         ],
         start=1,
     )],
@@ -57,6 +58,7 @@ REQUIRED_INTERVIEW = [
     "13-project-challenges-and-tradeoffs.md",
     "14-agent-rag-interview-drill.md",
     "15-performance-load-testing-interview.md",
+    "16-backend-layering-runtime-interview.md",
 ]
 
 
@@ -150,7 +152,7 @@ def main() -> int:
     )
     require_fact(
         "README.md",
-        ["Python 884", "docs/handbook/README.md"],
+        ["Python **916", "docs/handbook/README.md"],
         [],
         errors,
     )

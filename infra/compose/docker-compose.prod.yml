@@ -115,8 +115,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # Measured 363 MB. With this set, MaxRAMPercentage=75 gives the JVM a
-    # 480 MB heap instead of three quarters of the machine.
+    # The 512 MiB container ceiling makes MaxRAMPercentage=75 resolve to an
+    # estimated ~371 MiB max heap on the current Temurin 21 runtime (the JVM
+    # reserves native/container headroom), instead of sizing from the host.
     mem_limit: 512m
     restart: unless-stopped
 

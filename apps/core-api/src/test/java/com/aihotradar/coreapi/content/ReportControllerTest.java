@@ -11,21 +11,21 @@ class ReportControllerTest {
 
     @Test
     void public_reader_lists_only_published_reports() {
-        assertThat(ReportController.LIST_SQL)
+        assertThat(ReportRepository.LIST_SQL)
                 .contains("period_type = :period")
                 .contains("status = 'PUBLISHED'");
     }
 
     @Test
     void public_reader_detail_requires_a_published_report() {
-        assertThat(ReportController.DETAIL_SQL)
+        assertThat(ReportRepository.DETAIL_SQL)
                 .contains("period_key = :key")
                 .contains("status = 'PUBLISHED'");
     }
 
     @Test
     void detail_read_model_uses_report_item_provenance_instead_of_parsing_markdown() {
-        assertThat(ReportController.ITEMS_SQL)
+        assertThat(ReportRepository.ITEMS_SQL)
                 .contains("FROM report_item")
                 .contains("JOIN content_item")
                 .contains("JOIN source")
@@ -35,31 +35,31 @@ class ReportControllerTest {
 
     @Test
     void sections_keep_the_persisted_order_and_use_reader_labels() {
-        List<ReportController.ReportSection> sections =
-                ReportController.groupSections(
+        List<ReportService.ReportSection> sections =
+                ReportService.groupSections(
                         List.of(
                                 entry("model_release", "a", "source-a", "primary", "story-a"),
                                 entry("model_release", "b", "source-b", "community", "story-a"),
                                 entry("research", "c", "source-a", "primary", null)));
 
-        assertThat(sections).extracting(ReportController.ReportSection::key)
+        assertThat(sections).extracting(ReportService.ReportSection::key)
                 .containsExactly("model_release", "research");
-        assertThat(sections).extracting(ReportController.ReportSection::label)
+        assertThat(sections).extracting(ReportService.ReportSection::label)
                 .containsExactly("模型发布", "研究进展");
         assertThat(sections.getFirst().count()).isEqualTo(2);
     }
 
     @Test
     void stats_count_unique_sources_and_events_and_never_report_zero_reading_time() {
-        List<ReportController.ReportEntry> entries =
+        List<ReportService.ReportEntry> entries =
                 List.of(
                         entry("model_release", "a", "source-a", "primary", "story-a"),
                         entry("model_release", "b", "source-b", "community", "story-a"),
                         entry("research", "c", "source-a", "primary", null));
-        List<ReportController.ReportSection> sections = ReportController.groupSections(entries);
+        List<ReportService.ReportSection> sections = ReportService.groupSections(entries);
 
-        ReportController.ReportStats stats =
-                ReportController.buildStats("很短的报告", sections, entries);
+        ReportService.ReportStats stats =
+                ReportService.buildStats("很短的报告", sections, entries);
 
         assertThat(stats.items()).isEqualTo(3);
         assertThat(stats.sections()).isEqualTo(2);
@@ -69,9 +69,9 @@ class ReportControllerTest {
         assertThat(stats.readingMinutes()).isEqualTo(1);
     }
 
-    private static ReportController.ReportEntry entry(
+    private static ReportService.ReportEntry entry(
             String section, String suffix, String source, String tier, String story) {
-        return new ReportController.ReportEntry(
+        return new ReportService.ReportEntry(
                 section,
                 0,
                 UUID.nameUUIDFromBytes(suffix.getBytes(StandardCharsets.UTF_8)),

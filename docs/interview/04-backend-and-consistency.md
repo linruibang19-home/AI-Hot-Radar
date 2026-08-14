@@ -12,6 +12,11 @@ Java 边界偏事务、权限和稳定 API；Python 边界偏模型与数据处�
 生成契约，不共享源代码对象。拆分减少模型迭代对用户和订阅事实的影响，但也增加 header、超时、
 错误语义和版本兼容等“接缝”测试责任。
 
+Java 采用按业务域组织、域内 Controller/Service/Repository 分层，不是缺少分层；ArchUnit 禁止
+Controller 直接依赖 JDBC。Python 的 HTTP 角色使用 FastAPI，但 Scheduler/Pipeline 不依赖
+FastAPI；AST 门禁限制 Web 框架只出现在 transport/组合根。完整代码追问见
+[`16-backend-layering-runtime-interview.md`](16-backend-layering-runtime-interview.md)。
+
 ## PostgreSQL 为什么是唯一事实源
 
 内容状态、正文版本、Story 关系、发布报告、订阅、投递、管理审计、向量、检索轨迹需要事务、
@@ -29,7 +34,7 @@ Redis 用于：公共读缓存、限流滑窗、RAG 结果/Embedding/重排缓�
 
 ## Flyway 与契约演进
 
-数据库只能通过 `database/migrations/` 的 Flyway V001–V024 演进；禁止手改生产表。CI 同时测
+数据库只能通过 `database/migrations/` 的 Flyway V001–V026 演进；禁止手改生产表。CI 同时测
 空库创建和上一发布版本升级。迁移必须与旧应用尽量向前兼容：先加可空字段/新表和双读，再切应用，
 最后另一个版本清理；生产发布失败优先回应用镜像，不把不可逆 DDL 当作普通回滚。
 

@@ -571,6 +571,24 @@ psycopg 与并发重复聚合；改为 `asyncio.to_thread`、按窗口进程内 
 统计为 741.02/79.43 TPS 且 0 失败；Redis PING 为 40.4k–45.4k req/s、0 eviction。该轮是
 低风险发布验证，不是容量寻顶，详见 `docs/status/loadtest/2026-08-14-m5-020-production.md`。
 
+### TASK-M5-021｜后端域内分层、运行参数与作品集说明收口
+
+**状态**：🟡 2026-08-14 实现与本地门禁完成，等待合并/发布；公开 API、数据库和 RAG 策略未变。
+**读取**：`00-master-spec.md`、`02-system-architecture.md`、TASK-M5-019/020、Core API 与 AI
+Service 全部入口、当前生产 Compose/JVM 只读事实。
+**输入**：Core API 虽按 `content/subscription/admin` 分域，但 Story/Report/Source Controller 中仍有
+直接 JDBC 或查询/聚合职责，仓库浏览时难以看清 transport/application/persistence 边界；Python
+虽已按 ingestion/processing/rag 分域，缺少自动门禁防止 FastAPI 渗入领域层；README 的生产版本、
+测试数和 JVM 说明落后，Compose 注释错误地把 512 MiB 的 75% 描述为 480 MB heap。
+**产出**：Story/Report 拆出 Service 与 Repository，Source SQL 收口 Repository；ArchUnit 禁止
+Controller 直接依赖 JDBC；Python AST 测试约束 FastAPI 与领域依赖方向；两端模块 README、工程
+手册、面试专项、代码地图和根 README 说明 package-by-feature/域内分层、JDBC 非 JPA 取舍、实际
+JVM/容器预算、Redis 缓存/限流语义与腾讯云备案迁移边界。
+**边界**：不改数据库、公开 API、服务边界、RAG 检索、邮件状态机或 Redis 事实语义；不为了目录
+外观引入 JPA、LangChain/LangGraph 或全局四层包；腾讯云广州机不写成当前生产环境。
+**完成标准**：Java 21 全量 test/verify、Python pytest/mypy/ruff/format、文档链接和生产 Compose
+静态门禁通过；Controller→JDBC 与 FastAPI 领域渗透的回归测试可复现；动态 JVM 数字标注日期。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：
