@@ -53,6 +53,20 @@ Monitor 检查服务健康、公开 smoke 和备份年龄，并发送故障/恢�
 并发、设置容器内存、swap、日志轮转与磁盘告警。60GB 是起点；长期超过 70% 先扩盘，持续 OOM、
 DB pool/请求排队或并发增长再升 4C8G。5Mbps/500GB 对文本足够，大图和附件不从该机直出。
 
+### 当前 JVM 与容器预算（2026-08-14 实测）
+
+当前生产宿主机是香港 Ubuntu 22.04.5，系统可见约 3.4 GiB 内存和 2 GiB swap；腾讯云广州
+Ubuntu 24.04 仍是备案完成后的迁移目标。Core API 容器上限 512 MiB，实际进程为 Java 21：
+
+```text
+java -XX:MaxRAMPercentage=75 -jar app.jar
+Max. Heap Size (Estimated): 371.25M
+```
+
+不能把 512 MiB 容器上限直接说成 512 MiB heap。剩余空间用于 metaspace、线程栈、code cache、
+direct/native memory。读取时 Core API 约 278 MiB；这只是瞬时观察，不是 SLO。生产 10 个容器
+均有 memory limit，Redis 另设 128 MiB `maxmemory` + `allkeys-lru`，有界日志防止磁盘失控。
+
 ## 迁移到广州 Ubuntu 24.04 的步骤
 
 网站名 **AI Hot Radar** 与域名 `aihotradar.online` 不依赖机器，可以保持不变。迁移不是在新机

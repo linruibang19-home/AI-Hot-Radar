@@ -86,5 +86,7 @@
 - [../README.md](../README.md) — 项目总入口与规范优先级
 - [../DEVELOPMENT.md](../DEVELOPMENT.md) — 本地开发、启动、常见问题
 - [interview/README.md](interview/README.md) — 面试准备导航、系统地图、题库与演示脚本
+- [handbook/19-backend-layering-runtime-and-redis.md](handbook/19-backend-layering-runtime-and-redis.md) — Java/Python 分层、生产 JVM 与 Redis 实现
+- [interview/16-backend-layering-runtime-interview.md](interview/16-backend-layering-runtime-interview.md) — 后端架构、运行时与缓存专项问答
 - [interview-guide.md](archive/interview/interview-guide-20260812.md) — 2026-08-12 冻结的早期深挖稿；新材料已迁入 handbook/interview
 - [archive-policy.md](archive-policy.md) — 文档状态、冻结与归档规则
