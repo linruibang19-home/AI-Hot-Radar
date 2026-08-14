@@ -57,6 +57,7 @@
 | 模型配置 | [generation-model-selection-20260811.md](product/generation-model-selection-20260811.md) |
 | 生产预检 | [production-preflight-20260811.md](delivery/production-preflight-20260811.md) |
 | 首次生产部署 | [production-deployment-20260811.md](delivery/production-deployment-20260811.md) |
+| v0.1.15 中文公共阅读门与教材发布 | [production-deployment-v015-20260815.md](delivery/production-deployment-v015-20260815.md) |
 | Docker 存储控制 | [docker-storage-controls-20260812.md](operations/docker-storage-controls-20260812.md) |
 
 ## 作品集与体验
