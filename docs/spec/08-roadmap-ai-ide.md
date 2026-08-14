@@ -636,7 +636,7 @@ TASK-M5-019/021/022、当前 README、handbook/interview/status 导航。
 
 ### TASK-M5-024｜公开动态中文阅读就绪门禁
 
-**状态**：✅ 2026-08-15 本地修复与实库回归完成，按要求暂不提交、推送或部署。
+**状态**：✅ 2026-08-15 已由 PR #26 合并，随 `v0.1.15@709378c` 部署香港生产。
 **读取**：`01-product-requirements.md`、`09-source-registry-fulltext.md`、
 `10-source-adapter-implementation.md` 与当前采集/结构化流水线。
 **输入**：采集每 120 秒入库、LLM 流水线每 900 秒结构化，两者之间的 `PENDING` 窗口被
@@ -654,7 +654,8 @@ Core API 实测前 8 条全部为中文字段完整的 `ENRICHED`，未改动原
 
 ### TASK-M5-025｜证据入库、Redis 与 RAG 质量教材收口
 
-**状态**：🟡 2026-08-15 实现与本地全量回归完成，等待 CI 与生产发布证据。
+**状态**：✅ 2026-08-15 已由 PR #26 合并并发布 `v0.1.15@709378c`；三份 handbook、
+全量 CI、同 SHA 三镜像、生产 preflight、10 服务健康等待与公网 smoke 均通过。
 **读取**：`03-data-ingestion.md`、`04-rag-agent-design.md`、`09-source-registry-fulltext.md`、
 `10-source-adapter-implementation.md`、ADR-0005/0015/0029/0031，以及当前 ingestion、chunking、
 RAG cache/eval、Java CacheConfig 和 Flyway 代码。
