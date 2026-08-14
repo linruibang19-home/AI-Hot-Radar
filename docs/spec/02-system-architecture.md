@@ -21,7 +21,7 @@ flowchart TD
 是同事务事件日志与未来传输预留点，不是当前任务总线，见 ADR-0028。只有持续积压、查询
 干扰或消费者独立扩缩容等证据出现后，才评估 RabbitMQ。
 
-## 2. 推荐仓库结构
+## 2. 当前仓库结构
 
 ```text
 ai-hot-radar/
@@ -29,24 +29,28 @@ ai-hot-radar/
 │   ├── web/                 # Next.js
 │   ├── core-api/            # Spring Boot
 │   └── ai-service/          # FastAPI + workers
-├── packages/
-│   ├── contracts/           # OpenAPI/JSON Schema 生成物
-│   └── ui/                  # 可选共享 UI
+├── api/                     # OpenAPI 公共契约
+├── schemas/                 # Java/Python 共享 JSON Schema
 ├── database/
 │   └── migrations/          # Flyway SQL，唯一数据库迁移入口
 ├── config/
 │   ├── sources.yaml
+│   ├── ingestion-profiles.yaml
 │   ├── social-watchlist.yaml
 │   └── taxonomy.yaml
 ├── infra/
 │   ├── compose/
-│   ├── nginx/
-│   └── observability/
-├── docs/
-├── AGENTS.md
-├── CLAUDE.md
-└── .cursor/rules/
+│   ├── caddy/
+│   └── scripts/
+├── data/                    # fixture、黄金集与可复现评测输入
+├── docs/                    # 规格、ADR、手册、面试与发布证据
+├── scripts/                 # 文档校验、评测汇总和工作区清理
+├── AGENTS.md                # 唯一、工具无关的工程规则入口
+└── DEVELOPMENT.md           # 本地开发与验证入口
 ```
+
+不跟踪 Claude/Cursor 等工具专用规则副本；任何工具都读取 `AGENTS.md`。`database/migrations/`
+不是生成垃圾，而是数据库从空库到当前结构的可执行历史，生产部署和隔离恢复都必须按序运行。
 
 ## 3. 模块职责
 

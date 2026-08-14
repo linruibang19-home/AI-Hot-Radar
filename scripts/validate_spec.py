@@ -82,13 +82,21 @@ def main() -> int:
     require(len(social_ids) == len(set(social_ids)), "duplicate social watchlist ids", errors)
 
     required_files = [
-        "README.md", "AGENTS.md", "CLAUDE.md", ".env.example",
+        "README.md", "AGENTS.md", ".env.example",
         "database/migrations/V001__baseline.sql", "api/openapi.yaml",
         "docs/spec/10-source-adapter-implementation.md", "docs/spec/11-end-to-end-runbook.md",
         "schemas/source-registry.schema.json", "schemas/ingestion-event.schema.json",
     ]
     for relative in required_files:
         require((ROOT / relative).is_file(), f"missing required file: {relative}", errors)
+
+    redundant_rule_files = ["CLAUDE.md", ".cursor/rules/ai-hot-radar.mdc"]
+    for relative in redundant_rule_files:
+        require(
+            not (ROOT / relative).exists(),
+            f"tool-specific rule pointer must not duplicate AGENTS.md: {relative}",
+            errors,
+        )
 
     if errors:
         print("SPEC VALIDATION FAILED")
