@@ -4,13 +4,12 @@
 > 日/周/月报告，并在同一份原文证据库上提供可解释、可评测、每句话可回跳原文的 RAG 问答。
 
 - 在线体验：[https://aihotradar.online](https://aihotradar.online)
-- 当前生产代码基线：`v0.1.11@2502274`，香港 2C4G 单机 Docker Compose，Caddy HTTPS；
+- 当前生产代码基线：`v0.1.13@957e790`，香港 2C4G 单机 Docker Compose，Caddy HTTPS；
   数据与运行状态会随调度持续变化，动态数字以站内运行页为准
 - 2026-08-12 已记录生产快照：2040 条内容、8089 个活动分块（100% 向量化）、1622 个事件；
   该行是带日期的历史证据，不是固定业务承诺
-- 质量基线：2026-08-12 完整 CI 为 Python 884 通过、2 跳过、Java 74；2026-08-14 本任务
-  复跑 RAG 相关 94 个 Python 测试、Java 21 `verify` 与 Web 78 个测试均通过；RAG 使用固定
-  90 题发布集与逐题证据
+- 质量基线：2026-08-14 本次后端分层回归为 Python **916 通过、2 跳过**，严格 mypy 对
+  87 个源文件零错误，Java 21 **84/84**；RAG 使用固定 90 题发布集与逐题证据
 
 ![精选与实时情报流](docs/assets/screenshots/home.png)
 
@@ -113,6 +112,13 @@ flowchart TB
 
 为什么拆成 Java 与 Python：稳定的内容、订阅、权限与投递边界放在 Core API；快速变化的采集、
 NLP、向量和评测生态放在 AI Service。二者共享契约和 PostgreSQL 事实，但不互相侵入职责。
+
+两端都不是把所有类平铺在一个目录。Java 采用“**按业务域组织、域内分层**”：`content`、
+`subscription`、`admin` 是一级边界，域内再由 Controller 处理 HTTP、Service 编排业务规则、
+Repository 承载参数化 SQL；ArchUnit 禁止 Controller 直接依赖 Spring JDBC。项目使用 Spring JDBC
+读模型而非 JPA，因此数据库行以不可变 record/DTO 表达，不为了目录外观创建没有领域行为的
+`@Entity`。Python 同样按 `ingestion`、`processing`、`rag` 三个领域包组织，FastAPI 只允许出现在
+HTTP 适配层，领域规则不依赖 Web 框架；AST 架构测试持续约束跨域依赖方向。
 
 ## 30 分钟：核心链路与工程深度
 
@@ -237,6 +243,9 @@ Reranker、Prompt 或检索策略变化后必须生成新 `eval_run_id`，旧轮
 - 管理端有 VIEWER/OPERATOR、二次确认、幂等键和审计；密钥只进入权限 600 的生产 `.env`；
 - 每日 PostgreSQL 备份带 SHA-256，已有异机副本与隔离恢复证据；Redis 丢失不影响业务事实；
 - 当前模型推理在供应商侧，2C4G 的主要风险是内存、磁盘、日志和外部 API 长尾，而不是本地 GPU。
+- 2026-08-14 生产实测：宿主机 Ubuntu 22.04.5 可见约 3.4 GiB 内存；Core API 容器上限
+  512 MiB，Java 21 以 `MaxRAMPercentage=75` 启动，最大堆估算约 371 MiB。广州 Ubuntu 24.04
+  是备案完成后的迁移目标，不是当前运行环境。
 
 **刻意不引入** Kafka/RabbitMQ、Elasticsearch/OpenSearch、独立向量库、Kubernetes、GraphRAG
 或 RAPTOR。当前数据量、并发和单机交付不证明它们的收益；触发条件和回滚方案在 `docs/adr/`。
@@ -276,14 +285,14 @@ npm run build
 Java 需要 JDK 21；也可使用 Maven JDK 21 容器运行 `mvn -B verify`。完整 CI 还包含契约生成
 diff、Flyway 空库/升级、依赖审计、秘密扫描、Compose smoke 与受影响的 RAG 门禁。
 
-## 当前边界与下一步
+## 已知边界
 
 - 自动 citation precision 是诊断指标，不能替代高风险数字和主体关系的人审；
 - 主题地图关系门禁已经冻结 1,995 条候选；个人作品明确省略双人盲审/第三人裁决，因此不发布人工 precision/recall，也不把规则命中数表述为准确率；
 - 一个 SLA 类专项问题的目标原文稳定排第 27，当前安全拒答，尚未靠扩大在线成本强行解决；
 - 信源后台是数据库快照，不是实时告警控制台；管理写操作已有 API/RBAC/审计但没有浏览器 UI；
 - `outbox_event` 当前只写不读，一致性依靠数据库轮询；没有把预留表包装成已完成的消息架构；
-- 个人 Gmail 适合上线验证，不适合长期产品投递，后续需自有域名发件与 SPF/DKIM/DMARC；
+- 个人 Gmail 适合上线验证，不等同于带 SPF/DKIM/DMARC 的长期产品邮件基础设施；
 - 进入私有知识库或多租户之前，不提前引入账号、ACL 和租户隔离。
 
 当前任务与生产交接以 [`docs/status/current/handoff-20260814.md`](docs/status/current/handoff-20260814.md)

@@ -19,6 +19,11 @@ Python 3.12 包通过 `ahr.cli` 和 FastAPI 运行：
 | `rag` | 计划、检索、融合、重排、生成、引用、缓存、评测 |
 | 根模块 | FastAPI app、配置、健康、CLI、provider usage |
 
+领域包内部继续区分 transport、application orchestration、domain policy 和 infrastructure。
+FastAPI 只允许在 `main.py`、`health.py`、`rag/api.py`；`tests/test_architecture_layers.py` 用 AST
+扫描约束 Web 框架不进入领域规则，同时禁止 ingestion 反向依赖 processing/rag、rag 依赖
+ingestion。Python 不需要复制 Java 的目录名，关键是依赖方向相同且可测试。
+
 ## 3. 配置
 
 Pydantic Settings 读取环境变量，关键 provider 和数据库配置缺失时 fail fast。生产生成模型名来自
@@ -65,3 +70,5 @@ FastAPI 路由在昂贵调用前执行输入边界和 rate limit。Service 编�
 fusion/rerank；证据对但回答错查 prompt/模型；正文对却拒答查 parser/support gate。这套分层比
 直接换大模型更快定位。
 
+生产进程、跨语言边界和缓存细节见
+[`19-backend-layering-runtime-and-redis.md`](19-backend-layering-runtime-and-redis.md)。

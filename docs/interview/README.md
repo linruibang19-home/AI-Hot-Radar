@@ -24,6 +24,7 @@
 | 13 | [`13-project-challenges-and-tradeoffs.md`](13-project-challenges-and-tradeoffs.md) | 原文门、切块、检索退化、误拒和订阅踩过哪些坑？ |
 | 14 | [`14-agent-rag-interview-drill.md`](14-agent-rag-interview-drill.md) | Agent、记忆、Prompt、工具调用和 RAG 如何被深挖？ |
 | 15 | [`15-performance-load-testing-interview.md`](15-performance-load-testing-interview.md) | QPS、P95、数据库、Redis、Java 与 Python 怎样实测？ |
+| 16 | [`16-backend-layering-runtime-interview.md`](16-backend-layering-runtime-interview.md) | 业务域分层、FastAPI、JVM、Redis 与部署如何被追问？ |
 
 补充材料：[`../interview-guide.md`](../archive/interview/interview-guide-20260812.md) 是已冻结的早期深挖稿，内容已迁入
 工程手册和本目录；[`../status/project-status.md`](../status/current/project-status.md) 是累计历史，不用于
@@ -36,7 +37,7 @@
 3. **表达**：同一项目练 30 秒、3 分钟、10 分钟和白板版本；
 4. **压力测试**：让对方质疑数字、扩容、失败、没用 Kafka/K8s、Outbox 未消费等边界。
 
-完成 00–12 后，再用 13–15 做专项追问。不要背诵所有数字：动态数据每次面试前从运行状态读取，
+完成 00–12 后，再用 13–16 做专项追问。不要背诵所有数字：动态数据每次面试前从运行状态读取，
 固定实验则始终带测试日期、硬件、样本量、模型和 run id。
 
 ## 三条讲解纪律

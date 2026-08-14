@@ -6,7 +6,7 @@
 > [`../handbook/README.md`](../../handbook/README.md)。
 
 > 更新时间：2026-08-14
-> 当前阶段：**M5 首次生产闭环完成；TASK-M5-020 已部署并通过香港 2C4G 低风险验证**
+> 当前阶段：**M5 首次生产闭环完成；TASK-M5-020 已部署，TASK-M5-021 本地门禁完成待合并**
 > 所有数据均来自实际运行，非估算
 
 > 本文是按时间累积的工程日志，后文保留了当时的失败、旧快照和已关闭待办。判断当前
@@ -26,13 +26,13 @@
 
 | 当前实测 | 数值 |
 |---|---:|
-| source / ACTIVE | 140 / 104 |
-| content_item | 2266（采集仍在增长） |
-| content_chunk / 已向量化 | 9261 / 9261 |
-| story | 1832 |
+| source / runtime ACTIVE | 140 / 105 |
+| content_item | 2348（采集仍在增长） |
+| active content_chunk / 已向量化 | 9634 / 9634 |
+| story | 1910 |
 | rag_query / rag_citation | 229 / 987 |
 | report | 17 |
-| Flyway / 生成模型 | V024 / deepseek-v4-flash v3 |
+| Flyway / 生成模型 | V026 / deepseek-v4-flash v3 |
 | 正式订阅 / 投递 | 1 / 0（已确认日报；从确认后的下一期开始投递） |
 
 当时质量证据：Python 878、Java 74、Web 71 个测试通过；RAG 主集 Recall@20 0.8994、
@@ -49,6 +49,17 @@ temporal 阶段只有 5 个样本，仍显示“样本不足”。
 - [DeepSeek 生成模型配置](../product/generation-model-selection-20260811.md)
 - [RAG 质量与运行页面](../product/rag-operations-ui-20260811.md)
 - [首次生产部署记录](../delivery/production-deployment-20260811.md)
+
+## 0E. TASK-M5-021 后端分层与运行参数收口（2026-08-14，本地分支）
+
+Story/Report 的 SQL 与组装从 Controller 下沉到 Service/Repository，Source SQL 收敛到
+`SourceRepository`；ArchUnit 禁止 `@RestController` 直接依赖 Spring JDBC。Python 保留
+ingestion/processing/rag 领域分包，并新增 AST 门禁限制 FastAPI 只进入 HTTP 适配层和组合根。
+Java 21 测试 84/84，Python 916 通过、2 跳过，mypy 87 个源文件零错误，Ruff/格式通过。
+
+生产只读复核确认香港 Ubuntu 22.04.5、Core API 512 MiB limit、Java 21
+`MaxRAMPercentage=75`、最大 heap 估算 371.25 MiB；修正文档中 480 MB 的错误注释。该节描述
+当前工作分支，不代表生产已运行 TASK-M5-021；合并与发布状态以交接文件和镜像 SHA 为准。
 
 ## 0D. TASK-M5-004 报告邮件订阅闭环（2026-08-11）
 
