@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { ContentItem } from "@/lib/api";
+import { toPlainPreview } from "@/lib/content-preview";
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
   model_release: "模型发布",
@@ -24,10 +25,11 @@ export function ItemCard({
   selectionReason?: string;
   curated?: boolean;
 }) {
-  // Prefer the Chinese title, but fall back to the original so an article that
-  // has not been enriched yet is still readable (M2 acceptance).
-  const title = item.zhTitle ?? item.title;
-  const body = item.summary ?? item.excerpt;
+  // Public list queries already require reader-ready enrichment. Keep this
+  // presentation boundary as defence in depth: detail/vendor callers may still
+  // carry third-party HTML or Markdown in their original excerpt.
+  const title = toPlainPreview(item.zhTitle ?? item.title) || "未命名动态";
+  const body = toPlainPreview(item.summary ?? item.excerpt);
   const others = (item.independentSources ?? 1) - 1;
 
   return (

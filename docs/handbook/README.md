@@ -35,6 +35,9 @@
 - [17 Agent、编排、记忆与成本](17-agent-orchestration-memory-and-cost.md)
 - [18 性能、容量与压测](18-performance-capacity-and-load-testing.md)
 - [19 后端分层、生产 JVM 与 Redis 实现](19-backend-layering-runtime-and-redis.md)
+- [20 从不同信源到可引用切块](20-ingestion-evidence-and-chunking.md)
+- [21 Redis 缓存、限流与短状态](21-redis-cache-and-short-lived-state.md)
+- [22 90 题黄金集与 RAG 质量页](22-rag-golden-set-and-quality-page.md)
 - [面试教材](../interview/README.md)
 
 ## 一张总图

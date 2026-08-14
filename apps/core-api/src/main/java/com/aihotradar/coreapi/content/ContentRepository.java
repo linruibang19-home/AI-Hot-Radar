@@ -19,12 +19,21 @@ import org.springframework.stereotype.Repository;
  * <ul>
  *   <li>near-duplicate copies are hidden ({@code duplicate_of_id IS NULL}), because
  *       AHR-DATA-300 §5 treats them as the same article;
- *   <li>items are returned even when enrichment has not run, so the site stays
- *       usable while the model is unavailable (M2 acceptance).
+ *   <li>the public feed only exposes reader-ready enrichment. Discovery rows
+ *       remain in PostgreSQL for retry and operations accounting, but pending,
+ *       skipped or incomplete rows must not leak raw RSS/GitHub markup into the
+ *       Chinese reading surface.
  * </ul>
  */
 @Repository
 public class ContentRepository {
+
+    private static final String PUBLIC_FEED_READY =
+            """
+             AND ci.enrichment_state = 'ENRICHED'
+             AND NULLIF(BTRIM(ci.zh_title), '') IS NOT NULL
+             AND NULLIF(BTRIM(ci.summary_zh), '') IS NOT NULL
+            """;
 
     private static final String BASE_SELECT =
             """
@@ -92,7 +101,7 @@ public class ContentRepository {
             String query,
             String day) {
 
-        StringBuilder sql = new StringBuilder(BASE_SELECT);
+        StringBuilder sql = new StringBuilder(BASE_SELECT).append(PUBLIC_FEED_READY);
         MapSqlParameterSource params = new MapSqlParameterSource();
 
         if (day != null && !day.isBlank()) {
@@ -599,16 +608,20 @@ public class ContentRepository {
     public List<CategoryCount> categoryCounts() {
         String sql =
                 """
-                SELECT content_type, count(*) AS total
-                  FROM content_item
-                 WHERE duplicate_of_id IS NULL AND content_type IS NOT NULL
-                 GROUP BY content_type
+                SELECT ci.content_type, count(*) AS total
+                  FROM content_item ci
+                 WHERE ci.duplicate_of_id IS NULL
+                   AND ci.content_type IS NOT NULL
+                """
+                        + PUBLIC_FEED_READY
+                        + """
+                 GROUP BY ci.content_type
                 """;
         return jdbc.query(
                 sql,
                 new MapSqlParameterSource(),
                 (rs, rowNum) ->
-                        new CategoryCount(rs.getString("content_type"), rs.getLong("total")));
+                                new CategoryCount(rs.getString("content_type"), rs.getLong("total")));
     }
 
     /**
@@ -629,13 +642,14 @@ public class ContentRepository {
         StringBuilder sql =
                 new StringBuilder(
                         """
-                        SELECT (COALESCE(published_at, observed_at)
+                        SELECT (COALESCE(ci.published_at, ci.observed_at)
                                     AT TIME ZONE 'Asia/Shanghai')::date AS day,
                                count(*) AS total
-                          FROM content_item
-                         WHERE duplicate_of_id IS NULL
-                           AND current_revision_id IS NOT NULL
-                        """);
+                          FROM content_item ci
+                         WHERE ci.duplicate_of_id IS NULL
+                           AND ci.current_revision_id IS NOT NULL
+                        """)
+                        .append(PUBLIC_FEED_READY);
         MapSqlParameterSource params = new MapSqlParameterSource();
 
         if (contentType != null && !contentType.isBlank()) {
@@ -644,15 +658,15 @@ public class ContentRepository {
             // "model" while the stored values are "model_release" and friends.
             List<String> types = ContentCategory.resolve(contentType);
             if (!types.isEmpty()) {
-                sql.append(" AND content_type IN (:contentTypes)");
+                sql.append(" AND ci.content_type IN (:contentTypes)");
                 params.addValue("contentTypes", types);
             }
         }
         if (q != null && !q.isBlank()) {
             sql.append(
-                    " AND (search_vector @@ plainto_tsquery('simple', :rawQuery)"
-                            + " OR title ILIKE :likeQuery"
-                            + " OR zh_title ILIKE :likeQuery)");
+                            " AND (ci.search_vector @@ plainto_tsquery('simple', :rawQuery)"
+                            + " OR ci.title ILIKE :likeQuery"
+                            + " OR ci.zh_title ILIKE :likeQuery)");
             params.addValue("rawQuery", q.trim());
             params.addValue("likeQuery", "%" + q.trim() + "%");
         }
