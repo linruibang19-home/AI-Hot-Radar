@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "全部 AI 动态",
-  description: "候选池全量 AI 资讯，按发布时间倒序，支持分类筛选与关键词搜索。",
+  description: "已完成中文结构化的 AI 资讯，按发布时间倒序，支持分类筛选与关键词搜索。",
 };
 
 export const dynamic = "force-dynamic";
@@ -45,7 +45,7 @@ export default async function ItemsPage({
       <header className="page-head">
         <h1 className="page-title">全部 AI 动态</h1>
         <p className="page-subtitle">
-          候选池全量内容，按发布时间倒序 · 中文标题与摘要由模型生成，事实以原文为准
+          已完成中文结构化的入库内容，按发布时间倒序 · 待处理内容不会提前展示，事实以原文为准
           {params.q ? ` · 搜索「${params.q}」` : ""}
         </p>
       </header>
