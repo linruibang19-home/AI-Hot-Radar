@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 
 import psycopg
@@ -59,7 +59,13 @@ class SourceResult:
     error_code: str | None = None
 
 
-def build_adapter(source: SourceConfig, fetcher: HttpFetcher, token: str | None) -> Any:
+def build_adapter(
+    source: SourceConfig,
+    fetcher: HttpFetcher,
+    token: str | None,
+    *,
+    max_documents: int = DEFAULT_MAX_DOCUMENTS,
+) -> Any:
     """Map a profile to its adapter. Returns None when unsupported."""
     match source.profile:
         case "github_release_api":
@@ -73,7 +79,7 @@ def build_adapter(source: SourceConfig, fetcher: HttpFetcher, token: str | None)
         case "docs_changelog":
             return DocsChangelogAdapter(fetcher)
         case "static_listing_to_article" | "dynamic_listing_to_article":
-            return HtmlListingAdapter(fetcher)
+            return HtmlListingAdapter(fetcher, max_items=max_documents)
         case "public_json_api":
             return PublicJsonApiAdapter(fetcher)
         case _:
@@ -138,7 +144,7 @@ async def ingest_source(
 ) -> SourceResult:
     result = SourceResult(source_id=source.id, profile=source.profile, state="PROBING")
 
-    adapter = build_adapter(source, fetcher, token)
+    adapter = build_adapter(source, fetcher, token, max_documents=max_documents)
     if adapter is None:
         result.state = "UNSUPPORTED_PROFILE"
         return result
@@ -177,6 +183,7 @@ async def ingest_source(
 
     result.discovered = len(batch.items)
 
+    committed_external_ids: list[str] = []
     for item in batch.items[:max_documents]:
         try:
             if item.requires_fetch:
@@ -184,6 +191,11 @@ async def ingest_source(
                     adapter, source, item, fetcher
                 )
                 document = extraction.document
+                if document.title and document.title != item.title_hint:
+                    # Sitemap/listing discovery often has no anchor title. The
+                    # article page does, and persistence resolves titles from
+                    # the discovery object so carry that evidence forward.
+                    item = replace(item, title_hint=document.title)
                 gate = evaluate(document, is_release=source.is_release_like)
                 persist_document(
                     connection,
@@ -227,6 +239,7 @@ async def ingest_source(
                 )
             # Commit per document so one bad page cannot roll back a whole run.
             connection.commit()
+            committed_external_ids.append(item.external_id)
         except IngestionError as exc:
             connection.rollback()
             result.errors.append(f"{exc.code}: {str(exc)[:80]}")
@@ -294,7 +307,21 @@ async def ingest_source(
     )
     # Cursor last: only content that actually committed is treated as seen.
     if batch.next_cursor and not batch.not_modified:
-        save_cursor(connection, source.id, batch.next_cursor)
+        next_cursor = batch.next_cursor
+        if isinstance(adapter, HtmlListingAdapter):
+            # Listing discovery cannot know whether article acquisition and
+            # persistence succeeded. Rebuild its seen set from committed
+            # documents so a failed page is retried on the next poll rather
+            # than silently disappearing behind the cursor.
+            previous_seen = list((cursor_state.extra or {}).get("seen_ids", []))
+            next_cursor = replace(
+                next_cursor,
+                extra={
+                    **(next_cursor.extra or {}),
+                    "seen_ids": (committed_external_ids + previous_seen)[:400],
+                },
+            )
+        save_cursor(connection, source.id, next_cursor)
     update_source_state(connection, source.id, state=result.state)
     connection.commit()
 

@@ -6,6 +6,8 @@ All offline: responses come from MockTransport, per AHR-QSO-700 §1.
 from __future__ import annotations
 
 import base64
+from dataclasses import replace
+from urllib.parse import urlsplit
 
 import httpx
 import pytest
@@ -166,6 +168,97 @@ async def test_listing_always_requires_article_fetch(make_fetcher) -> None:
     assert batch.items
     assert all(item.requires_fetch for item in batch.items)
     assert all(item.body_markdown is None for item in batch.items)
+
+
+async def test_sitemap_discovers_newest_article_documents(make_fetcher, fixture_bytes) -> None:
+    """A sitemap discovers documents, not category or privacy pages."""
+    sitemap = fixture_bytes("cn_media_sitemap.xml")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=sitemap, headers={"content-type": "application/xml"})
+
+    source = make_source(
+        "static_listing_to_article", discovery_url="https://cn-media.example/sitemap.xml"
+    )
+    async with make_fetcher(handler) as fetcher:
+        batch = await HtmlListingAdapter(fetcher).discover(source)
+
+    assert [item.candidate_url for item in batch.items] == [
+        "https://cn-media.example/p/585396.html",
+        "https://cn-media.example/blog/new-model-release",
+        "https://cn-media.example/articles/2026-08-01-1",
+    ]
+    assert all(item.requires_fetch for item in batch.items)
+    assert all(item.attributes["discovery_method"] == "sitemap" for item in batch.items)
+
+
+async def test_sitemap_cursor_does_not_reemit_seen_documents(make_fetcher, fixture_bytes) -> None:
+    sitemap = fixture_bytes("cn_media_sitemap.xml")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=sitemap)
+
+    source = make_source(
+        "static_listing_to_article", discovery_url="https://cn-media.example/sitemap.xml"
+    )
+    async with make_fetcher(handler) as fetcher:
+        first = await HtmlListingAdapter(fetcher).discover(source)
+        second = await HtmlListingAdapter(fetcher).discover(source, first.next_cursor)
+
+    assert first.items
+    assert second.items == []
+    assert second.empty_reason == "NO_NEW_ARTICLES"
+
+
+async def test_sitemap_window_does_not_implicitly_backfill(make_fetcher, fixture_bytes) -> None:
+    sitemap = fixture_bytes("cn_media_sitemap.xml")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=sitemap)
+
+    source = make_source(
+        "static_listing_to_article", discovery_url="https://cn-media.example/sitemap.xml"
+    )
+    async with make_fetcher(handler) as fetcher:
+        first = await HtmlListingAdapter(fetcher, max_items=2).discover(source)
+        second = await HtmlListingAdapter(fetcher, max_items=2).discover(source, first.next_cursor)
+
+    assert len(first.items) == 2
+    assert second.items == []
+
+
+@pytest.mark.parametrize(
+    ("source_id", "host", "fixture", "expected_path"),
+    [
+        ("zhidx", "zhidx.com", "zhidx_sitemap.xml", "/p/585396.html"),
+        (
+            "bytedance-seed-research",
+            "seed.bytedance.com",
+            "bytedance_seed_sitemap.xml",
+            "/en/blog/one-take-creation-flexible-referencing-introducing-seedance-2-5",
+        ),
+    ],
+)
+async def test_activated_cn_sitemaps_have_replayable_discovery_fixtures(
+    make_fetcher,
+    fixture_bytes,
+    source_id: str,
+    host: str,
+    fixture: str,
+    expected_path: str,
+) -> None:
+    sitemap = fixture_bytes(fixture)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=sitemap)
+
+    source = make_source("static_listing_to_article", discovery_url=f"https://{host}/sitemap.xml")
+    source = replace(source, id=source_id)
+    async with make_fetcher(handler) as fetcher:
+        batch = await HtmlListingAdapter(fetcher).discover(source)
+
+    assert batch.items
+    assert urlsplit(batch.items[0].candidate_url).path == expected_path
 
 
 # --- github repo activity ------------------------------------------------

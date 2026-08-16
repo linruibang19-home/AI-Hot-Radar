@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime
+from html import unescape
 from typing import Any
 from urllib.parse import urljoin, urlsplit
 
@@ -27,6 +29,9 @@ _HREF_RE = re.compile(
     r'<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', re.IGNORECASE | re.DOTALL
 )
 _TAG_RE = re.compile(r"<[^>]+>")
+_SITEMAP_URL_RE = re.compile(r"<url\b[^>]*>(.*?)</url>", re.IGNORECASE | re.DOTALL)
+_SITEMAP_LOC_RE = re.compile(r"<loc\b[^>]*>(.*?)</loc>", re.IGNORECASE | re.DOTALL)
+_SITEMAP_LASTMOD_RE = re.compile(r"<lastmod\b[^>]*>(.*?)</lastmod>", re.IGNORECASE | re.DOTALL)
 
 # Listing pages link to far more than articles; these paths are navigation.
 _NON_ARTICLE_HINTS = (
@@ -47,6 +52,14 @@ _NON_ARTICLE_HINTS = (
     "/rss",
     "/feed",
     "/about",
+)
+
+_SITEMAP_ARTICLE_PATHS = (
+    "/article/",
+    "/articles/",
+    "/blog/",
+    "/news/",
+    "/posts/",
 )
 
 
@@ -108,6 +121,60 @@ def _collect_link_urls(html: str, base_url: str) -> list[tuple[str, str | None]]
     return found
 
 
+def _parse_lastmod(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _looks_like_sitemap_article(path: str) -> bool:
+    """Keep document URLs and reject sitemap navigation/taxonomy entries.
+
+    A sitemap is not scoped below its own URL path, so the listing-page rule
+    cannot be reused. These shapes cover the registry's article-like sources;
+    a new shape still needs a fixture before activation.
+    """
+    lowered = path.lower()
+    if any(hint in lowered for hint in _NON_ARTICLE_HINTS):
+        return False
+    if any(hint in lowered for hint in _SITEMAP_ARTICLE_PATHS):
+        return bool(lowered.rstrip("/").split("/")[-1])
+    return bool(re.fullmatch(r"/p/\d+\.html", lowered))
+
+
+def _collect_sitemap_urls(xml: str, base_url: str) -> list[tuple[str, str | None]]:
+    """Extract newest article URLs from a sitemap ``urlset``.
+
+    ``lastmod`` is used only for ordering. It is modification time, not a
+    trustworthy publication timestamp, so it never populates published_at.
+    """
+    base_host = urlsplit(base_url).netloc.lower()
+    found: list[tuple[str, datetime | None]] = []
+    for block in _SITEMAP_URL_RE.findall(xml):
+        loc_match = _SITEMAP_LOC_RE.search(block)
+        if not loc_match:
+            continue
+        raw_url = unescape(_TAG_RE.sub("", loc_match.group(1))).strip()
+        parts = urlsplit(raw_url)
+        if parts.scheme != "https" or parts.netloc.lower() != base_host:
+            continue
+        if not _looks_like_sitemap_article(parts.path):
+            continue
+        lastmod_match = _SITEMAP_LASTMOD_RE.search(block)
+        lastmod = _parse_lastmod(lastmod_match.group(1) if lastmod_match else None)
+        found.append((raw_url, lastmod))
+
+    # Unknown lastmod sorts last, while equal/absent dates retain source order.
+    found.sort(
+        key=lambda item: item[1].timestamp() if item[1] is not None else float("-inf"),
+        reverse=True,
+    )
+    return [(url, None) for url, _ in found]
+
+
 class HtmlListingAdapter:
     """Discovers article URLs from a listing page."""
 
@@ -131,11 +198,21 @@ class HtmlListingAdapter:
             return DiscoveryBatch.unchanged(cursor)
 
         html = response.text()
-        candidates = _collect_jsonld_urls(html, response.final_url)
-        discovery_method = "json_ld"
+        if "<urlset" in html.lower():
+            candidates = _collect_sitemap_urls(html, response.final_url)
+            discovery_method = "sitemap"
+        else:
+            candidates = _collect_jsonld_urls(html, response.final_url)
+            discovery_method = "json_ld"
         if not candidates:
             candidates = _collect_link_urls(html, response.final_url)
             discovery_method = "same_site_links"
+
+        # A listing adapter is a live-update window, not an implicit historical
+        # backfill job. Bound the candidate window before applying the cursor so
+        # an activation cannot walk thousands of old sitemap entries every two
+        # minutes and unexpectedly spend enrichment budget.
+        candidates = candidates[: self._max_items]
 
         seen_ids = set((cursor.extra or {}).get("seen_ids", []))
         items: list[DiscoveredDocument] = []

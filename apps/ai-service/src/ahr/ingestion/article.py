@@ -16,6 +16,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from html import unescape
 
 import trafilatura
 
@@ -30,6 +31,10 @@ _CANONICAL_RE = re.compile(
 _OG_URL_RE = re.compile(
     r'<meta[^>]+property=["\']og:url["\'][^>]*content=["\']([^"\']+)["\']', re.IGNORECASE
 )
+_META_TAG_RE = re.compile(r"<meta\b[^>]*>", re.IGNORECASE)
+_META_ATTR_RE = re.compile(r'([:\w-]+)\s*=\s*["\']([^"\']*)["\']', re.IGNORECASE)
+_HTML_TITLE_RE = re.compile(r"<title\b[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+_TAG_RE = re.compile(r"<[^>]+>")
 
 
 @dataclass(frozen=True)
@@ -99,6 +104,36 @@ def _published_from_jsonld(html: str) -> datetime | None:
     return None
 
 
+def _social_title_from_html(html: str) -> str | None:
+    """Return publisher-declared OpenGraph/Twitter title metadata.
+
+    Trafilatura occasionally treats an author/公众号 label as ``metadata.title``
+    on Chinese WordPress pages. OpenGraph/Twitter metadata is an explicit
+    article-title declaration, so it takes precedence over extractor metadata.
+    """
+    wanted = {"og:title", "twitter:title"}
+    for tag in _META_TAG_RE.findall(html):
+        attrs: dict[str, str] = {
+            key.lower(): unescape(value).strip() for key, value in _META_ATTR_RE.findall(tag)
+        }
+        if (attrs.get("property") or attrs.get("name", "")).lower() in wanted:
+            value = attrs.get("content")
+            if value:
+                return value
+
+    return None
+
+
+def _document_title_from_html(html: str) -> str | None:
+    """Return the document title as a last-resort publisher declaration."""
+
+    match = _HTML_TITLE_RE.search(html)
+    if match:
+        value = unescape(_TAG_RE.sub("", match.group(1))).strip()
+        return value or None
+    return None
+
+
 def extract_article(
     response: FetchResult,
     *,
@@ -125,7 +160,12 @@ def extract_article(
     )
 
     metadata = trafilatura.extract_metadata(html)
-    title = (metadata.title if metadata else None) or title_hint
+    title = (
+        title_hint
+        or _social_title_from_html(html)
+        or (metadata.title if metadata else None)
+        or _document_title_from_html(html)
+    )
 
     published = published_hint or _published_from_jsonld(html)
     if published is None and metadata and metadata.date:
