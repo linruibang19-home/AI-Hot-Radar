@@ -152,6 +152,14 @@ GET 页面 → 提取 main → 转 Markdown → 按日期/版本 heading 切分
 4. 站点声明式 selector；
 5. 只有策略审核通过才使用 Playwright。
 
+Sitemap 实现还必须满足以下约束：
+
+- XML 实体先解码，`<lastmod>` 仅用于候选排序，不能冒充文章发布日期；
+- 每轮只保留 `max_documents` 个最新候选，启用新来源时不隐式回填数千条历史 URL；
+- 只有正文抓取、质量门禁与持久化都成功的 URL 才写入游标 `seen`；失败 URL 留待下一轮重试；
+- Sitemap 通常不含文章标题，最终标题取文章页 metadata/HTML `<title>`，不能把站点名或 URL 当标题；
+- 每个站点都要有 Sitemap 与文章页两类离线 fixture，测试发现、正文、标题和游标语义。
+
 正文提取优先级：
 
 ```text

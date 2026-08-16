@@ -17,6 +17,7 @@
 | 主题地图关系黄金集第一阶段 | [topic-map-golden-set-20260813.md](product/topic-map-golden-set-20260813.md) |
 | 主题/厂商时间线与导航性能 | [topic-timeline-performance-20260813.md](product/topic-timeline-performance-20260813.md) |
 | RAG 原文切块与向量覆盖审计 | [rag-corpus-audit-20260813.md](product/rag-corpus-audit-20260813.md) |
+| 中文信源 Sitemap 回源与全文门禁 | [domestic-source-expansion-20260817.md](product/domestic-source-expansion-20260817.md) |
 | 本地 Web/Core/AI、PostgreSQL、Redis 分层压测 | [loadtest/2026-08-13-local-baseline.md](loadtest/2026-08-13-local-baseline.md) |
 | 香港 2C4G 低风险生产压测 | [loadtest/2026-08-14-m5-020-production.md](loadtest/2026-08-14-m5-020-production.md) |
 

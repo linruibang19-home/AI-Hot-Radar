@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://cn-media.example/articles/2026-08-01-1</loc>
+    <lastmod>2026-08-01T08:00:00+08:00</lastmod>
+  </url>
+  <url>
+    <loc>https://cn-media.example/p/category/人工智能</loc>
+    <lastmod>2026-08-17T08:00:00+08:00</lastmod>
+  </url>
+  <url>
+    <loc>https://cn-media.example/privacy</loc>
+    <lastmod>2026-08-17T08:00:00+08:00</lastmod>
+  </url>
+  <url>
+    <loc>https://cn-media.example/p/585396.html</loc>
+    <lastmod>2026-08-16T09:30:00+08:00</lastmod>
+  </url>
+  <url>
+    <loc>https://cn-media.example/blog/new-model-release</loc>
+    <lastmod>2026-08-15T12:00:00Z</lastmod>
+  </url>
+  <url>
+    <loc>http://cn-media.example/blog/insecure-url</loc>
+    <lastmod>2026-08-17T09:00:00+08:00</lastmod>
+  </url>
+  <url>
+    <loc>https://other.example/blog/off-site</loc>
+    <lastmod>2026-08-17T09:00:00+08:00</lastmod>
+  </url>
+</urlset>

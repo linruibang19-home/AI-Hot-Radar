@@ -41,6 +41,13 @@ overrides:
     body_candidates: ["article", "main"]
     status: fixture_required
 
+  bytedance-seed-research:
+    host_allowlist: [seed.bytedance.com]
+    discovery_candidates: ["https://seed.bytedance.com/sitemap.xml"]
+    article_path_allow: ["/blog/"]
+    body_candidates: ["article", "main"]
+    status: fixture_verified
+
   machine-heart:
     browser_fallback: allowed_after_policy_review
     status: disabled_until_fixture
@@ -54,8 +61,12 @@ overrides:
     browser_fallback: allowed_after_policy_review
     status: disabled_until_fixture
   zhidx:
-    browser_fallback: allowed_after_policy_review
-    status: disabled_until_fixture
+    host_allowlist: [zhidx.com]
+    discovery_candidates: ["https://zhidx.com/sitemap.xml"]
+    article_path_allow: ["/p/{numeric}.html"]
+    body_candidates: ["article", "main"]
+    browser_fallback: false
+    status: fixture_verified
 
 api_mappings:
   huggingface-hub-models:
