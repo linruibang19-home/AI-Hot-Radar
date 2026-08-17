@@ -48,6 +48,30 @@ overrides:
     body_candidates: ["article", "main"]
     status: fixture_verified
 
+  alibaba-developer-ai:
+    host_allowlist: [developer.aliyun.com]
+    discovery_candidates: ["a[href^='/article/']"]
+    article_path_allow: ["/article/{numeric}"]
+    body_candidates: ["article", "main"]
+    robots_policy: "https://developer.aliyun.com/robots.txt permits /blog/ and /article/"
+    browser_fallback: false
+    status: fixture_verified
+
+  tencent-cloud-ai-team:
+    host_allowlist: [cloud.tencent.com]
+    discovery_candidates: ["a[href^='/developer/article/']"]
+    article_path_allow: ["/developer/article/{numeric}"]
+    body_candidates: ["article", "main"]
+    robots_policy: "https://cloud.tencent.com/robots.txt does not disallow public team/article pages"
+    browser_fallback: false
+    status: fixture_verified
+
+  huawei-cloud-ai-community:
+    host_allowlist: [developer.huaweicloud.com]
+    discovery_candidates: ["a[href]"]
+    browser_fallback: false
+    status: disabled_no_stable_official_article_stream
+
   machine-heart:
     browser_fallback: allowed_after_policy_review
     status: disabled_until_fixture
