@@ -674,7 +674,8 @@ TASK-M5-023 的提交、CI、不可变镜像和生产 smoke。
 
 ### TASK-M5-026｜信源后台环境快照与国内官方源扩展
 
-**状态**：进行中（2026-08-17）。
+**状态**：✅ 2026-08-17 已由 PR #32 合并，并随
+`v0.1.18@02e2d83` 部署香港生产。
 **读取**：`09-source-registry-fulltext.md`、`10-source-adapter-implementation.md`、
 `config/ingestion-profiles.yaml`、当前 SourceRepository/API/Web 控制台与中文信源生产证据。
 **输入**：本地与生产使用独立 PostgreSQL，历史采集状态和同步时间天然不同，但旧页面硬编码注册
@@ -688,6 +689,13 @@ robots/访问控制，不因“大厂”标签启用缺少稳定全文和回放�
 **完成标准**：注册表增量登记为 143 源，保留既有禁用源的稳定 ID 与历史关系；新增源发现与全文 fixture、Spec/Python/Java/Web 门禁通过；本地
 Compose 同步后页面显示本地环境与数据库汇总；生产发布后受控采集最多 3 篇并记录全文/结构化/
 切块/向量证据，失败则降级或回滚而不是保留伪 ACTIVE。
+**生产证据**：发布工作流的 Web、Core API、AI Service 三张镜像与服务器 `main`、`IMAGE_TAG`
+均对齐提交 `02e2d83`；部署前生成 183 MiB PostgreSQL 备份，catalog、SHA-256 与隔离恢复通过。
+美团 3 篇、PaddlePaddle 1 篇、ModelScope 1 篇受控样本均通过全文门禁并进入 `ENRICHED`，分别
+形成 8、25、1 个活跃 evidence chunk，34/34 已生成 bge-m3 向量。美团运行态已为 `ACTIVE`；
+两个 GitHub Release 源仍处于无失败的 `PROBING` 观察期，不把“成功采到一篇”伪装成长期健康。
+公网 `/admin/sources` 已显示当前环境、配置/数据库更新时间与动态统计；“刷新状态”只做 no-store
+只读重取，不触发采集、不跨环境复制数据。
 
 ## 4. AI IDE 统一提示词
 
