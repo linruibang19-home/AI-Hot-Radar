@@ -39,8 +39,13 @@ git diff --check               PASS
 - AI service：38 秒，PASS
 - Web：61 秒，PASS
 
-合并后的 `main` push run 在 PR 合并后补记；它验证默认分支使用的就是相同工作流，而不是只验证
-临时分支。
+### 默认分支复验
+
+- merge commit：`ddd4392258c542f89a2ccde73598880cbb4f2224`
+- `main` push run：[`32025933072`](https://github.com/linruibang19-home/AI-Hot-Radar/actions/runs/32025933072)
+- Spec validation、Flyway、Core API、AI service、Web：5/5 PASS
+
+这次复验确认默认分支使用的就是相同工作流，而不是只验证临时分支。
 
 ## 仍然存在但不属于本任务的提示
 
