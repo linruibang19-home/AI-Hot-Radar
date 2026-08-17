@@ -60,7 +60,7 @@
 | `infra/scripts/monitor.py` / `smoke-production.sh` | 健康、备份年龄告警与公网验收 | Gmail SMTP 故障/恢复实收与公网 smoke 通过 |
 | `infra/scripts/restore-verify.sh` | 受保护隔离恢复核验 | 本地真实 100 MB dump 恢复通过 |
 | `api/openapi.yaml` / `schemas/` | 服务契约与生成类型来源 | 生成无 diff |
-| `config/` | 140 信源、9 类 Profile、taxonomy 与受限 watchlist | 已加载；社交监控保持关闭 |
+| `config/` | 143 信源、9 类 Profile、taxonomy 与受限 watchlist | 已加载；社交监控保持关闭 |
 
 当前公开页面：`/`、`/items`、`/hot`、`/stories`、`/topics`、`/reports`、`/ask`、
 `/eval`、`/ops`、`/admin/models`、`/admin/sources`。日报、周报、月报均可生成并经确定性

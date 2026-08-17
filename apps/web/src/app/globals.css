@@ -2664,6 +2664,11 @@ summary:focus-visible {
   margin-top: 4px;
 }
 
+.source-refresh:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .source-freshness {
   margin: -8px 0 18px;
   padding: 9px 12px;

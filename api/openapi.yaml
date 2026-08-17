@@ -171,6 +171,17 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/SubscriptionResponse'}
         '400': {$ref: '#/components/responses/Problem'}
+  /admin/sources/summary:
+    get:
+      operationId: getSourceRegistrySummary
+      security: [{adminBearer: []}]
+      responses:
+        '200':
+          description: Database-backed source registry and freshness summary for the current environment
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SourceSummary'}
+        '401': {$ref: '#/components/responses/Problem'}
   /admin/sources/{id}/run:
     post:
       operationId: runSource
@@ -260,6 +271,15 @@ components:
         id: {type: string}
         name: {type: string}
         tier: {type: string}
+    SourceSummary:
+      type: object
+      required: [registered, enabled, disabled]
+      properties:
+        registered: {type: integer, minimum: 0}
+        enabled: {type: integer, minimum: 0}
+        disabled: {type: integer, minimum: 0}
+        dataUpdatedAt: {type: [string, 'null'], format: date-time}
+        configVersion: {type: [string, 'null']}
     StorySummary:
       type: object
       required: [id, slug, title, independentSources, itemCount, locked, sourceNames]

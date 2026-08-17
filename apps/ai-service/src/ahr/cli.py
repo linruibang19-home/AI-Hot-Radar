@@ -35,9 +35,13 @@ DEFAULT_SOURCES_PATH = Path("/app/config/sources.yaml")
 def cmd_sync_sources(args: argparse.Namespace) -> int:
     sources = load_sources(args.path)
     summary = summarize(sources)
+    config_version = args.config_version
+    if config_version is None:
+        registry = yaml.safe_load(Path(args.path).read_text(encoding="utf-8"))
+        config_version = str(registry["registry_version"])
 
     with psycopg.connect(get_settings().database_url) as connection:
-        written = sync_sources(connection, sources, config_version=args.config_version)
+        written = sync_sources(connection, sources, config_version=config_version)
         connection.commit()
 
     print(
@@ -47,6 +51,7 @@ def cmd_sync_sources(args: argparse.Namespace) -> int:
                 "total": summary.total,
                 "enabled": summary.enabled,
                 "disabled": summary.disabled,
+                "config_version": config_version,
                 "by_profile": summary.by_profile,
             },
             indent=2,
@@ -1324,7 +1329,11 @@ def main(argv: list[str] | None = None) -> int:
 
     sync = sub.add_parser("sync-sources", help="load config/sources.yaml into PostgreSQL")
     sync.add_argument("--path", default=DEFAULT_SOURCES_PATH)
-    sync.add_argument("--config-version", default="2026-08-01.1")
+    sync.add_argument(
+        "--config-version",
+        default=None,
+        help="override config/sources.yaml registry_version (normally inferred)",
+    )
     sync.set_defaults(func=cmd_sync_sources)
 
     probe = sub.add_parser("probe", help="run discovery and fulltext against real sources")

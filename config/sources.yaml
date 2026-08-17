@@ -1,5 +1,5 @@
 schema_version: 2
-registry_version: "2026-08-01.1"
+registry_version: "2026-08-17.3"
 project: AI Hot Radar
 
 # This registry separates discovery from document acquisition. A source is not
@@ -145,6 +145,7 @@ sources:
   - {id: alibaba-developer-ai, name: Alibaba Cloud Official AI Blog, organization: Alibaba Cloud, group: official_cn, region: cn, tier: primary, priority: P1, profile: dynamic_listing_to_article, discovery_url: "https://developer.aliyun.com/blog/?contentType=12", content_access: full_article_extract, verification: page_confirmed, enabled: true}
   - {id: tencent-cloud-ai-team, name: Tencent Cloud AI Team, organization: Tencent Cloud, group: official_cn, region: cn, tier: primary, priority: P1, profile: dynamic_listing_to_article, discovery_url: "https://cloud.tencent.com/developer/team/cloudAi", content_access: full_article_extract, verification: page_confirmed, enabled: true}
   - {id: huawei-cloud-ai-community, name: Huawei Cloud AI Community, organization: Huawei Cloud, group: official_cn, region: cn, tier: primary, priority: P1, profile: dynamic_listing_to_article, discovery_url: "https://developer.huaweicloud.com/techfield/ai.html", content_access: full_article_extract, verification: page_confirmed, enabled: false}
+  - {id: meituan-tech, name: Meituan Technical Team, organization: Meituan, group: official_cn, region: cn, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://tech.meituan.com/", discovery_url: "https://tech.meituan.com/rss.xml", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
 
   # 3. Official SDKs, Agent/RAG frameworks, protocols, observability, and serving
   - {id: openai-python-releases, name: OpenAI Python SDK Releases, organization: OpenAI, group: github_release, region: global, tier: primary, priority: P0, profile: github_release_api, repository: openai/openai-python, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
@@ -189,6 +190,8 @@ sources:
   - {id: n8n-releases, name: n8n Releases, organization: n8n, group: automation, region: global, tier: primary, priority: P2, profile: github_release_api, repository: n8n-io/n8n, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
   - {id: coze-studio-releases, name: Coze Studio Releases, organization: Coze, group: agent_platform, region: cn, tier: primary, priority: P1, profile: github_release_api, repository: coze-dev/coze-studio, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
   - {id: fastgpt-releases, name: FastGPT Releases, organization: FastGPT, group: rag_platform, region: cn, tier: primary, priority: P1, profile: github_release_api, repository: labring/FastGPT, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: paddlepaddle-releases, name: 百度 PaddlePaddle Releases, organization: 百度飞桨, group: model_framework, region: cn, tier: primary, priority: P1, profile: github_release_api, repository: PaddlePaddle/Paddle, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
+  - {id: modelscope-releases, name: 阿里 ModelScope Releases, organization: 魔搭社区, group: model_platform, region: cn, tier: primary, priority: P1, profile: github_release_api, repository: modelscope/modelscope, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
   - {id: mem0-releases, name: Mem0 Releases, organization: Mem0, group: memory, region: global, tier: primary, priority: P1, profile: github_release_api, repository: mem0ai/mem0, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
   - {id: transformers-releases, name: Transformers Releases, organization: Hugging Face, group: model_runtime, region: global, tier: primary, priority: P0, profile: github_release_api, repository: huggingface/transformers, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
   - {id: vllm-releases, name: vLLM Releases, organization: vLLM, group: inference, region: global, tier: primary, priority: P0, profile: github_release_api, repository: vllm-project/vllm, content_access: full_release_text, verification: protocol_guaranteed, enabled: true}

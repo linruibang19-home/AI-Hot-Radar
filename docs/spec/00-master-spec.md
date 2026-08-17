@@ -50,7 +50,7 @@ AI Hot Radar 自动发现、核验和压缩 AI 行业信息，回答三个层级
 
 必须完成：
 
-- 完整导入 140 个可采集入口与 38 个受限社交监控目标；
+- 完整导入 143 个可采集入口与 38 个受限社交监控目标；
 - 以 `config/ingestion-profiles.yaml` 实现 9 类通用 Adapter，以 `config/site-overrides.yaml` 管理少量站点差异；
 - RSS、列表和社交内容只负责发现；配置要求回源时必须取得 canonical 正文后才能通过全文门禁；
 - Wave A 激活不少于 50 个 P0/P1 一手来源，MVP 连续运行验收不少于 30 个；

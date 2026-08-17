@@ -115,6 +115,7 @@ event: error      data: {problem}
 所有 `/admin/**` 需要 RBAC + CSRF/同源保护：
 
 - `GET/PATCH /admin/sources/{id}`；
+- `GET /admin/sources/summary`：返回当前环境 PostgreSQL 中的登记/启用/关闭数、配置版本和数据更新时间；
 - `POST /admin/sources/{id}/run`；
 - `GET /admin/jobs`；
 - `POST /admin/jobs/{id}/retry`；
@@ -153,4 +154,3 @@ event: error      data: {problem}
 | 管理变更 | 禁止 | 禁止 | 60/min |
 
 阈值配置化；搜索引擎爬虫与可信同步客户端使用独立策略，不以 User-Agent 单独放行。
-

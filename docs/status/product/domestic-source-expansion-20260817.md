@@ -4,7 +4,8 @@
 
 ## 结论
 
-`config/sources.yaml` 仍登记 140 个来源；允许启动探测的来源由 124 增至 128。新增启用：
+`config/sources.yaml` 增量登记为 143 个来源；第一、二批允许启动探测的来源由 124 增至 128。
+TASK-M5-026 再加入三个已验证的官方源，配置启用数变为 131。旧的禁用源继续保留稳定 ID，避免历史内容、健康记录和外键关系失去来源。新增启用：
 
 | 来源 | 发现入口 | 正文入口 | 激活依据 |
 |---|---|---|---|
@@ -12,6 +13,9 @@
 | 字节跳动 Seed | `https://seed.bytedance.com/sitemap.xml` | canonical 文章页 | robots 可访问、离线 fixture、3/3 HTTP 全文 canary |
 | 阿里云官方 AI 博客 | `https://developer.aliyun.com/blog/?contentType=12` | `/article/<数字>` | robots 可访问、限定跨路径规则、离线 fixture、3/3 生产全文 canary |
 | 腾讯云 AI 团队 | `https://cloud.tencent.com/developer/team/cloudAi` | `/developer/article/<数字>` | robots 可访问、限定跨路径规则、离线 fixture、3/3 生产全文 canary |
+| 美团技术团队 | `https://tech.meituan.com/rss.xml` | `/<年>/<月>/<日>/<slug>.html` | 发布方 RSS、主机/路径约束、离线发现与全文 fixture；生产 canary 待发布后补证 |
+| 百度 PaddlePaddle Releases | GitHub Releases API | API 返回的官方 release body | 官方仓库、协议提供完整发布说明、离线 API fixture；生产 canary 待发布后补证 |
+| 阿里 ModelScope Releases | GitHub Releases API | API 返回的官方 release body | 官方仓库、协议提供完整发布说明、离线 API fixture；生产 canary 待发布后补证 |
 
 四者均执行“发现 URL → 回源文章 → 抽取标题/正文 → 全文门禁 → PostgreSQL 持久化”。其中 Sitemap
 来源的 `<lastmod>` 只参与发现排序，不能作为最终发布时间或正文证据。
@@ -32,14 +36,21 @@
 测试环境：Windows、Python 3.12、本仓库工作树，2026-08-17。
 
 ```text
-本轮信源适配器/全文门禁测试：32 passed
-Python 全量测试：931 passed, 2 skipped
+本轮信源适配器/全文门禁测试：41 passed
+Python 全量测试：935 passed, 2 skipped
 ruff：All checks passed
 mypy：Success, 87 source files
-规范校验：SPEC VALIDATION PASSED, sources=140
+规范校验：SPEC VALIDATION PASSED, sources=143
 ```
 
 本地 Compose 控制采集曾分别持久化 3 篇智东西和 3 篇 Seed 文章，全文门禁均为 `ACCEPTED`；抽取正文样本长度为：智东西 866–2947 字符、Seed 4373–17254 字符。该数字只证明抽取链可工作，不是生产吞吐承诺。
+
+TASK-M5-026 又对美团技术团队执行了 3 篇受控本地 canary：3 篇均从 RSS 发现后回源 canonical
+文章页，`fulltext=3`、`metadata_only=0`、`rejected=0`，正文长度为 2051、8981、4082
+字符。三条记录均停在预期的 `PARSED/PENDING`，等待下游结构化；这同时证明 RSS 摘要没有被当成
+正文持久化。PaddlePaddle 与 ModelScope 则由 GitHub Releases API 直接取得官方 release body，
+不需要第二次网页抓取；各自的裁剪 fixture 已进入离线回放测试。同步结果为 143 个登记源、131 个
+允许调度源，配置版本 `2026-08-17.3`。
 
 ## 有意保持关闭的来源
 
@@ -49,10 +60,21 @@ mypy：Success, 87 source files
 | InfoQ 中文 AI | 公开页面存在，但稳定文章发现规则尚未验证 | 不启用，补 fixture 与发现门禁 |
 | 36氪 AI | 访问控制/反自动化明显 | 不绕过，不启用 |
 | ModelScope 头条 | 页面为 JS 壳，正文回源不稳定 | 不启用 |
-| 华为开发者 AI 聚合页 | 当前入口是宽泛社区/旧版聚合页，且文章会跨到不同主机；没有稳定、可回放的同站官方文章流 | 不启用，不把跨站社区内容伪装成华为官方博客 |
+| 华为开发者 AI 聚合页 | 当前入口是宽泛社区/旧版聚合页，且文章会跨到不同主机；没有稳定、可回放的同站官方文章流 | 保留禁用注册项与历史 ID，不进入调度；不以新源覆盖或删除历史来源 |
 | 微信公众号、X | 缺少授权适配器 | 仅保留 watchlist 线索，不入正文语料 |
 
 因此，本次改动提升了中文与国内机构来源覆盖，但不会为了数量牺牲正文真实性、访问边界或 RAG 证据质量。
+
+## 为什么本地和生产后台数字不同
+
+本地 Compose 与香港生产各自持有独立 PostgreSQL 数据卷。`configured_enabled` 来自各环境最后一次
+`sync-sources`，`runtime_state`、内容数、全文率和最近成功时间则来自该环境自己的实际采集历史；
+因此代码相同也不会让两边运行数字相同。旧页面又把注册总数硬编码为固定值，使这种差异更难判断。
+
+TASK-M5-026 改为由 Core API 从当前数据库返回注册/启用/关闭数、配置版本和数据更新时间，页面
+同时显示当前 origin 和页面读取时间。“刷新状态”只执行一次无缓存的只读重取：它不会运行采集、
+不会执行 `sync-sources`，更不会把本地数据库复制到生产。采集仍由 scheduler 依据 `next_poll_at`
+推进；注册表同步是明确的部署操作。
 
 ## 生产落地证据
 

@@ -1,0 +1,12 @@
+[
+  {
+    "id": 3301,
+    "html_url": "https://github.com/PaddlePaddle/Paddle/releases/tag/v3.3.0",
+    "name": "PaddlePaddle v3.3.0",
+    "tag_name": "v3.3.0",
+    "body": "PaddlePaddle v3.3.0 release notes. This fixture is intentionally shortened and only preserves the official GitHub Releases response shape used by the adapter.",
+    "published_at": "2026-01-31T07:13:02Z",
+    "draft": false,
+    "prerelease": false
+  }
+]

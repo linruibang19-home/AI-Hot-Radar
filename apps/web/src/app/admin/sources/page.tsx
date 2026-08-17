@@ -1,6 +1,7 @@
 import { formatShortDateTime } from "@/lib/datetime";
 import type { SourceHealth } from "@/lib/api";
-import { fetchSourceHealth } from "@/lib/api";
+import { fetchSourceHealth, fetchSourceHealthSummary } from "@/lib/api";
+import { SourceRefreshButton } from "@/components/SourceRefreshButton";
 
 import type { Metadata } from "next";
 
@@ -10,9 +11,6 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
-
-/** Rows in `config/sources.yaml`, the registry this page is a view onto. */
-const REGISTRY_TOTAL = 140;
 
 function formatTime(value?: string | null): string {
   if (!value) return "—";
@@ -28,9 +26,17 @@ function summarise(sources: SourceHealth[]) {
 }
 
 export default async function AdminSourcesPage() {
-  const sources = await fetchSourceHealth();
+  const [sources, summary] = await Promise.all([
+    fetchSourceHealth(),
+    fetchSourceHealthSummary(),
+  ]);
   const states = summarise(sources);
   const renderedAt = new Date().toISOString();
+  const publicOrigin = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
+  const environment = publicOrigin.includes("localhost") ? "本地开发" : "生产";
+  const registered = summary?.registered ?? sources.length;
+  const enabled = summary?.enabled ?? sources.length;
+  const disabled = summary?.disabled ?? Math.max(registered - enabled, 0);
 
   return (
     <>
@@ -42,14 +48,16 @@ export default async function AdminSourcesPage() {
             启停与重跑走 <code>/api/v1/admin</code>，需要 OPERATOR 凭据、二次确认，并逐条留痕
           </p>
         </div>
-        <a className="button source-refresh" href="/admin/sources">
-          刷新状态
-        </a>
+        <SourceRefreshButton />
       </header>
 
       <p className="source-freshness">
-        调度器持续把采集结果写入 PostgreSQL；本页不会主动轮询，刷新或重新进入时读取最新状态。
-        本次读取于 <time dateTime={renderedAt}>{formatTime(renderedAt)}</time>。
+        当前环境：<strong>{environment}</strong>（{publicOrigin}）。调度器持续把采集结果写入该环境自己的
+        PostgreSQL；本页不会主动采集、同步另一环境或自动轮询。数据库状态截至{" "}
+        <time dateTime={summary?.dataUpdatedAt ?? undefined}>
+          {formatTime(summary?.dataUpdatedAt)}
+        </time>
+        ，页面读取于 <time dateTime={renderedAt}>{formatTime(renderedAt)}</time>。
       </p>
 
       <div className="stat-row">
@@ -61,14 +69,9 @@ export default async function AdminSourcesPage() {
         ))}
       </div>
 
-      {/* The registry holds 140 sources; this page lists the enabled ones. A
-          reader seeing 124 has no way to tell whether the rest are missing or
-          switched off on purpose, and "switched off on purpose" is the answer:
-          Wave C needs a browser renderer, and `verification: restricted`
-          sources default to disabled by policy. */}
       <p className="filter-note">
-        共 {sources.length} 个已启用信源。注册表里另有 {REGISTRY_TOTAL - sources.length}{" "}
-        个默认关闭（需浏览器渲染的 SPA、以及按来源政策默认停用的受限源），不在此列。
+        当前数据库注册 {registered} 个信源，其中 {enabled} 个有效启用、{disabled} 个关闭；
+        下表显示 {sources.length} 个有效启用信源。配置版本：{summary?.configVersion ?? "未知"}。
       </p>
 
       {sources.length === 0 ? (

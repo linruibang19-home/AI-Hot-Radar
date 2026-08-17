@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <title>CatPaw：面向端侧智能体的模型与系统协同实践 - 美团技术团队</title>
+    <meta property="og:title" content="CatPaw：面向端侧智能体的模型与系统协同实践">
+    <meta property="article:published_time" content="2026-07-28T10:00:00+08:00">
+    <link rel="canonical" href="https://tech.meituan.com/2026/07/28/CatPaw-LongCat.html">
+  </head>
+  <body>
+    <article class="post-content">
+      <h1>CatPaw：面向端侧智能体的模型与系统协同实践</h1>
+      <p>端侧智能体需要在有限算力、内存和网络条件下完成理解、规划与工具调用。团队先把任务拆成感知、决策和执行三个阶段，再为每个阶段记录输入、输出和失败原因，使一次请求能够被回放和定位。</p>
+      <h2>模型与系统协同</h2>
+      <p>模型侧通过蒸馏与量化降低推理开销，系统侧使用分层缓存、异步调度和超时降级控制尾延迟。缓存只保存可以重新计算的中间结果，任务事实仍写入持久化存储，避免服务重启后状态丢失。</p>
+      <h2>评测与上线</h2>
+      <p>离线评测覆盖工具选择正确率、参数完整率和端到端完成率；线上灰度同时观察成功率、首 token 延迟与资源峰值。出现证据不足或工具返回异常时，系统保留失败轨迹并停止扩散，不把不完整结果包装成成功答案。</p>
+    </article>
+  </body>
+</html>

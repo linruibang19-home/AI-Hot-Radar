@@ -672,6 +672,23 @@ TASK-M5-023 的提交、CI、不可变镜像和生产 smoke。
 边界与代码一致；文档校验、Python/Java/Web 全量门禁、GitHub CI/Release、香港生产部署与公网
 内容/RAG/运行页 smoke 通过。
 
+### TASK-M5-026｜信源后台环境快照与国内官方源扩展
+
+**状态**：进行中（2026-08-17）。
+**读取**：`09-source-registry-fulltext.md`、`10-source-adapter-implementation.md`、
+`config/ingestion-profiles.yaml`、当前 SourceRepository/API/Web 控制台与中文信源生产证据。
+**输入**：本地与生产使用独立 PostgreSQL，历史采集状态和同步时间天然不同，但旧页面硬编码注册
+总数且“刷新状态”没有环境、数据库更新时间和完成反馈，容易被误解为跨环境同步或立即采集；华为
+社区占位源缺少稳定同站官方文章流，而美团技术团队提供稳定官方 RSS 与公开 dated article。
+**产出**：数据库返回注册/启用/关闭数、配置版本与数据更新时间；Web 明示当前环境及刷新只重读
+当前数据库；刷新按钮带进行中/完成反馈；美团官方 RSS 以 discovery-only fixture、文章全文 fixture、
+路径/主机约束和全文门禁替换不可激活占位源；注册表版本从 YAML 自动写入 PostgreSQL。
+**边界**：刷新不触发采集、不跨环境同步、不携带 OPERATOR 写凭据；RSS 导语不作正文；不绕过
+robots/访问控制，不因“大厂”标签启用缺少稳定全文和回放证据的来源。
+**完成标准**：注册表增量登记为 143 源，保留既有禁用源的稳定 ID 与历史关系；新增源发现与全文 fixture、Spec/Python/Java/Web 门禁通过；本地
+Compose 同步后页面显示本地环境与数据库汇总；生产发布后受控采集最多 3 篇并记录全文/结构化/
+切块/向量证据，失败则降级或回滚而不是保留伪 ACTIVE。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：
