@@ -15,9 +15,9 @@
 <details>
 <summary>当前生产与质量快照（2026-08-17，历史快照，非实时承诺）</summary>
 
-- 生产版本：`v0.1.17@b6e23ae`，香港 2C4G 单机，Docker Compose 编排，Caddy 提供 HTTPS。
-- 分层回归：Python **931 passed / 2 skipped**，mypy 检查 87 个源文件无错误；Java、Web、契约、迁移、生产构建、Compose smoke 与受影响 RAG 门禁由 CI 分层执行。
-- 生产数据快照：140 个登记信源（128 个允许调度、109 个运行态 ACTIVE）、2594 条内容、11603 个活跃且已向量化证据块；数字会随持续采集增长。
+- 生产版本：`v0.1.18@02e2d83`，香港 2C4G 单机，Docker Compose 编排，Caddy 提供 HTTPS。
+- 分层回归：Python **935 passed / 2 skipped**，mypy 检查 87 个源文件无错误；Java 86 个测试、Web 81 个测试、契约、迁移、生产构建、Compose smoke 与受影响 RAG 门禁由 CI 分层执行。
+- 生产数据快照：143 个登记信源（131 个允许调度、110 个运行态 ACTIVE）、2617 条内容、11700 个活跃且已向量化证据块；数字会随持续采集增长。
 - 固定 RAG 发布评测：2026-08-11，90 题黄金集；主集 Recall@20 `0.8994`，句级引用覆盖率 `0.9881`，段落支持达标率 `0.9344`，可回答题误拒 `0 / 78`，诱导题错误断言 `0 / 12`。
 - 上述生成评测产物记录的模型字段为 `deepseek-chat`；截至本快照，生产生成配置为 `deepseek-v4-flash` v3。检索使用 bge-m3，候选重排使用 bge-reranker-v2-m3。切换模型后必须重新跑门禁，不能沿用旧结论。
 - 实时运行状态、告警、内容量与当前版本以 [`docs/status/current/`](docs/status/current/) 为准，不从 README 的历史数字反推。

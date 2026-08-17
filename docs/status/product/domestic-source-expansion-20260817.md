@@ -13,9 +13,9 @@ TASK-M5-026 再加入三个已验证的官方源，配置启用数变为 131。�
 | 字节跳动 Seed | `https://seed.bytedance.com/sitemap.xml` | canonical 文章页 | robots 可访问、离线 fixture、3/3 HTTP 全文 canary |
 | 阿里云官方 AI 博客 | `https://developer.aliyun.com/blog/?contentType=12` | `/article/<数字>` | robots 可访问、限定跨路径规则、离线 fixture、3/3 生产全文 canary |
 | 腾讯云 AI 团队 | `https://cloud.tencent.com/developer/team/cloudAi` | `/developer/article/<数字>` | robots 可访问、限定跨路径规则、离线 fixture、3/3 生产全文 canary |
-| 美团技术团队 | `https://tech.meituan.com/rss.xml` | `/<年>/<月>/<日>/<slug>.html` | 发布方 RSS、主机/路径约束、离线发现与全文 fixture；生产 canary 待发布后补证 |
-| 百度 PaddlePaddle Releases | GitHub Releases API | API 返回的官方 release body | 官方仓库、协议提供完整发布说明、离线 API fixture；生产 canary 待发布后补证 |
-| 阿里 ModelScope Releases | GitHub Releases API | API 返回的官方 release body | 官方仓库、协议提供完整发布说明、离线 API fixture；生产 canary 待发布后补证 |
+| 美团技术团队 | `https://tech.meituan.com/rss.xml` | `/<年>/<月>/<日>/<slug>.html` | 发布方 RSS、主机/路径约束、离线 fixture、3/3 生产全文 canary |
+| 百度 PaddlePaddle Releases | GitHub Releases API | API 返回的官方 release body | 官方仓库、协议提供完整发布说明、离线 fixture、1/1 生产全文 canary |
+| 阿里 ModelScope Releases | GitHub Releases API | API 返回的官方 release body | 官方仓库、协议提供完整发布说明、离线 fixture、1/1 生产全文 canary |
 
 四者均执行“发现 URL → 回源文章 → 抽取标题/正文 → 全文门禁 → PostgreSQL 持久化”。其中 Sitemap
 来源的 `<lastmod>` 只参与发现排序，不能作为最终发布时间或正文证据。
@@ -118,3 +118,25 @@ V026。这里的 `configured_enabled=128` 是允许调度的配置数，`runtime
 同一轮备份在隔离库恢复出 `140|2588|11646|2116|21|026`，分别对应
 source/content/chunk/story/report/Flyway；恢复库随后自动删除。恢复快照略小于继续运行后的生产读数，
 属于备份完成后的正常增量采集。
+
+## 第三批官方技术源与后台快照（TASK-M5-026）
+
+2026-08-17 发布 `v0.1.18` / `02e2d83b5f7794b0ee4f6fc4193a8ff6f0cfb935`。GitHub CI 与
+Release workflow 全绿，Web、Core API、AI Service 三张镜像、服务器 `main` 和 `IMAGE_TAG`
+精确对齐同一提交；部署前 183 MiB custom-format 备份通过 catalog、SHA-256 与隔离恢复校验。
+
+| 来源 | 运行状态 | 入库原文 | 结构化状态 | 活跃切块 | 向量覆盖 |
+|---|---:|---:|---:|---:|---:|
+| 美团技术团队 | `ACTIVE` | 3 | 3/3 `ENRICHED` | 8 | 8/8 |
+| 百度 PaddlePaddle Releases | `PROBING` | 1 | 1/1 `ENRICHED` | 25 | 25/25 |
+| 阿里 ModelScope Releases | `PROBING` | 1 | 1/1 `ENRICHED` | 1 | 1/1 |
+
+三者合计 5/5 完成结构化、34 个活跃证据块、34/34 bge-m3 向量。`PROBING` 不是采集失败：
+两源 `consecutive_failures=0` 且已有最近成功时间，只是尚未积累到状态机要求的长期成功证据。
+本轮之后的生产只读快照为 143 个登记源、131 个允许调度源、110 个运行态 `ACTIVE`、2617 条
+内容、11700 个活跃且已向量化 chunk、2142 个 Story、21 份报告；这些是带日期的历史快照，
+不是实时容量或长期健康承诺。
+
+公网信源后台同时完成环境语义修复：统计、配置版本与数据库更新时间均由当前 PostgreSQL 动态
+返回，响应使用 `private, no-cache, no-store`。刷新按钮重新请求当前页面并给出进行中/完成反馈，
+但不会触发 scheduler、不会执行 `sync-sources`，也不会把本地数据库同步到生产。
