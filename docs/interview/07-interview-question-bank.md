@@ -230,7 +230,7 @@ PR/CI → main → release 全量门 → GHCR SHA 镜像 → 服务器 preflight
 
 | # | 问题 | 回答主线 | 证据与边界 |
 |---:|---|---|---|
-| 43 | 140 个源是否都实时正常？ | 140 是登记配置，ACTIVE/PROBING/隔离是动态运行状态 | `/admin/sources`；必须带时间 |
+| 43 | 登记信源是否都实时正常？ | 登记配置不等于允许调度，更不等于 ACTIVE；PROBING/隔离状态会变化 | `/admin/sources` 与 current baseline；必须带时间 |
 | 44 | 如何新增一个信源？ | 注册 profile/源，准备 fixture，probe，全文门通过后 ACTIVE | spec09/10；不能仅加 URL |
 | 45 | 为什么保存 raw response？ | 解析回归、审计、重新处理，不依赖第三方页面仍存在 | raw_document；受版权/保留期约束 |
 | 46 | ETag 有什么价值？ | 304 降带宽且避免重复解析 | cursor/HTTP tests；站点不支持则 hash/cursor |

@@ -8,7 +8,8 @@
 ## `handbook/` — 完整工程教材
 
 [工程手册入口](handbook/README.md) 从产品问题、四条业务链路、运行服务、数据状态、信源、
-内容、报告邮件一路讲到 RAG、Java/Python/Next、部署和工程权衡。它回答“系统怎样工作、代码
+内容、报告邮件一路讲到 RAG、Java/Python/Next、部署和工程权衡；01–15 是主线，16–22 是
+按问题选择的实现专题。它回答“系统怎样工作、代码
 在哪里、为什么这样做、失败如何恢复”，是吃透项目的第一入口。
 
 ## `spec/` — 工程规格（唯一事实源）
@@ -19,6 +20,7 @@
 | 文件 | 作用 |
 |---|---|
 | [00-master-spec.md](spec/00-master-spec.md) | 总规格与 ADR-001~011 锁定决策 |
+| [adr/README.md](adr/README.md) | 一级锁定决策与独立 ADR-0012~0031 的编号、主题和维护规则 |
 | [01-product-requirements.md](spec/01-product-requirements.md) | 页面、角色与产品验收 |
 | [02-system-architecture.md](spec/02-system-architecture.md) | 服务边界、状态机、部署 |
 | [03-data-ingestion.md](spec/03-data-ingestion.md) | 数据模型、去重、切块、Story |
@@ -72,11 +74,13 @@
 | 文件 | 内容 |
 |---|---|
 | [status/README.md](status/README.md) | **状态总索引**：当前入口、历史快照、RAG 与发布证据 |
-| [project-status.md](status/current/project-status.md) | **项目总进度**：里程碑、数据、信源、服务、待办 |
+| [current/README.md](status/current/README.md) | **唯一当前入口**：事实优先级和阅读顺序 |
+| [production-baseline.md](status/current/production-baseline.md) | 当前生产版本、服务、数据、质量与边界 |
+| [project-status.md](status/current/project-status.md) | 冻结的累计开发日志：旧版本、失败假设和已关闭待办 |
 | [m1-canary-evidence.md](status/history/m1-canary-evidence.md) | M1 信源探测验收证据 |
 | [m1-canary-evidence.json](status/history/m1-canary-evidence.json) | 逐源原始数据 |
 | [rag-product-readiness-20260810.md](status/product/rag-product-readiness-20260810.md) | **当前 RAG 全链路、成熟产品对标与优化顺序** |
-| [handoff-20260814.md](status/current/handoff-20260814.md) | 当前生产、提交、数据与下一步入口 |
+| [handoff-20260814.md](status/current/handoff-20260814.md) | v0.1.18 发布交接历史，已由生产基线取代 |
 | [repository-hygiene-20260812.md](status/operations/repository-hygiene-20260812.md) | 本轮全仓盘点、清理与可恢复归档证据 |
 
 `handoff-20260810.md` 与 `handoff-20260811.md` 是历史快照，不用来判断当前运行版本。

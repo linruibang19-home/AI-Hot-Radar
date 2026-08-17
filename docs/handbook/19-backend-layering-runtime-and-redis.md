@@ -206,5 +206,6 @@ python -m mypy src
 python -m ruff check .
 ```
 
-当前证据：Java 84/84；Python 916 通过、2 跳过；mypy 87 个源文件零错误；Ruff 通过。架构测试
+当前回归数量会随代码增长，带日期的最近一次结果见
+`docs/status/current/production-baseline.md` 与根 README 的历史快照；本章只保留验证方法。架构测试
 防止 Controller 重新直接使用 JDBC，也防止 FastAPI 与领域依赖方向回退。

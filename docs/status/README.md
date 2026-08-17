@@ -7,12 +7,14 @@
 
 | 用途 | 文档 |
 |---|---|
-| 当前生产、提交、数据和下一步 | [handoff-20260814.md](current/handoff-20260814.md) |
-| 完整项目历史与问题根因 | [project-status.md](current/project-status.md) |
+| 当前事实优先级与阅读顺序 | [current/README.md](current/README.md) |
+| 当前生产版本、服务、数据和边界 | [production-baseline.md](current/production-baseline.md) |
+| 累计项目历史与问题根因 | [project-status.md](current/project-status.md)（冻结日志） |
 | 完整交付导航 | [../spec/12-delivery-index.md](../spec/12-delivery-index.md) |
 | 腾讯云迁移 | [tencent-cloud-migration-readiness-20260812.md](operations/tencent-cloud-migration-readiness-20260812.md) |
 | 仓库清理与归档 | [repository-hygiene-20260812.md](operations/repository-hygiene-20260812.md) |
 | 实现事实与文档教材审计 | [documentation-audit-20260813.md](delivery/documentation-audit-20260813.md) |
+| 文档事实源与全仓一致性复核 | [documentation-refresh-20260817.md](delivery/documentation-refresh-20260817.md) |
 | 主题地图关联分层与语料克隆验收 | [topic-map-quality-20260813.md](product/topic-map-quality-20260813.md) |
 | 主题地图关系黄金集第一阶段 | [topic-map-golden-set-20260813.md](product/topic-map-golden-set-20260813.md) |
 | 主题/厂商时间线与导航性能 | [topic-timeline-performance-20260813.md](product/topic-timeline-performance-20260813.md) |
@@ -25,7 +27,7 @@
 
 | 目录 | 只回答什么 |
 |---|---|
-| [`current/`](current/) | 当前交接与累计项目事实；先从这里判断线上是什么版本 |
+| [`current/`](current/) | 唯一生产基线、当前任务入口与冻结的累计开发日志 |
 | [`product/`](product/) | 某项产品/RAG 功能的日期化验收证据 |
 | [`operations/`](operations/) | 性能、存储、迁移和仓库治理事实 |
 | [`delivery/`](delivery/) | 预检、部署、作品集封版等交付关口 |
@@ -72,6 +74,7 @@
 - `handoff-20260810.md`：M4 末期历史状态，已被 08-11 与 08-12 交接取代；
 - `handoff-20260811.md`：首次上线前后过渡状态，已被 08-12 交接取代；
 - `handoff-20260812.md`：作品集封版快照，已被 08-14 交接取代；
+- `current/handoff-20260814.md`：v0.1.18 发布交接，已被日期无关的当前生产基线取代；
 - `prelaunch-release-gate-20260811.md`：上线前门禁，不代表当前运行版本；
 - `m1-canary-evidence.*`：M1 信源阶段证据。
 

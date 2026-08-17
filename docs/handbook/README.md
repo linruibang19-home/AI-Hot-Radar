@@ -27,10 +27,13 @@
 - 三端：[11 Java Core API](11-java-core-api.md)、[12 Python AI Service](12-python-ai-service.md)、
   [13 Next.js Web](13-nextjs-web.md)
 
-### 第三次：工程化和面试（约 3 小时）
+### 第三次：工程化（约 3 小时）
 
 - [14 部署、安全与运维](14-deployment-security-ops.md)
 - [15 测试、权衡、边界与演进](15-testing-tradeoffs-roadmap.md)
+
+### 专题深挖：按问题选择，不必顺序通读
+
 - [16 LLM、Prompt、排序与阈值](16-llm-prompts-ranking-and-thresholds.md)
 - [17 Agent、编排、记忆与成本](17-agent-orchestration-memory-and-cost.md)
 - [18 性能、容量与压测](18-performance-capacity-and-load-testing.md)
@@ -44,7 +47,7 @@
 
 ```mermaid
 flowchart LR
-    Source["140 个公开信源配置"] --> Scheduler["Python Scheduler"]
+    Source["配置化公开信源"] --> Scheduler["Python Scheduler"]
     Scheduler --> Ingest["发现 / 回源 / 全文门禁"]
     Ingest --> PG[("PostgreSQL + pgvector")]
     PG --> Pipeline["Python Processing Pipeline"]

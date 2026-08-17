@@ -17,8 +17,8 @@
 
 ## 3. 单一入口
 
-- 当前生产：`docs/status/current/handoff-20260812.md`（后续用新日期文件取代并更新索引）；
-- 当前任务：`docs/spec/08-roadmap-ai-ide.md`；
+- 当前生产：`docs/status/current/production-baseline.md`；日期化交接只保存发布当时的完整证据；
+- 当前任务：`docs/spec/08-roadmap-ai-ide.md` 中最后一个状态为执行中的任务卡；
 - 当前架构与数据：相关 spec + 最新 ADR；
 - 完整学习：`docs/handbook/README.md`；
 - 面试训练：`docs/interview/README.md`；
@@ -34,6 +34,9 @@
 
 根 README 可以保留最近一次快照，但必须链接 handoff 并声明不是固定承诺。历史 status 不为了
 追上当前而改写原数字。
+
+仓库 `main`、Release 标签和生产 `IMAGE_TAG` 必须分开写。仅含文档的主分支提交不等于生产
+业务镜像已重新发布。
 
 ## 5. 归档方式
 

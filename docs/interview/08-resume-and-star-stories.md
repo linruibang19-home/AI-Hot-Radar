@@ -7,7 +7,7 @@ Next.js · Spring Boot · FastAPI · PostgreSQL/pgvector · Redis · Docker Comp
 
 ## 简历项目描述
 
-独立设计并上线面向 AI 行业的时效情报平台，统一采集 140 个公开来源，完成全文回源、内容结构化、
+独立设计并上线面向 AI 行业的时效情报平台，统一管理配置化公开来源，完成全文回源、内容结构化、
 跨源事件聚类、精选与日/周/月报告，并构建带服务端原文引用、固定发布门和检索解释的混合 RAG；
 以不可变镜像部署在 2C4G 单机，完成 HTTPS、邮件订阅、RBAC/审计、告警和备份恢复闭环。
 
@@ -118,7 +118,7 @@ Next.js · Spring Boot · FastAPI · PostgreSQL/pgvector · Redis · Docker Comp
 
 ## 简历与面试禁区
 
-- 不说“实时 140 个都正常”；登记数与 ACTIVE 数不同且动态变化。
+- 不说“所有登记源都实时正常”；登记、允许调度与 ACTIVE 数不同且动态变化。
 - 不说“实现了消息队列”；outbox 当前没有消费者。
 - 不说“引用正确率 100%”；自动段落支持度是 93.4%，还需人工高风险审查。
 - 不说“微服务/K8s 架构”；当前是模块化单体 + AI Worker + 单机 Compose。
