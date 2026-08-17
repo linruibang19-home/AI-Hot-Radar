@@ -15,6 +15,7 @@
 | 仓库清理与归档 | [repository-hygiene-20260812.md](operations/repository-hygiene-20260812.md) |
 | 实现事实与文档教材审计 | [documentation-audit-20260813.md](delivery/documentation-audit-20260813.md) |
 | 文档事实源与全仓一致性复核 | [documentation-refresh-20260817.md](delivery/documentation-refresh-20260817.md) |
+| GitHub Actions Node 24 运行时升级 | [ci-actions-node24-20260817.md](delivery/ci-actions-node24-20260817.md) |
 | 主题地图关联分层与语料克隆验收 | [topic-map-quality-20260813.md](product/topic-map-quality-20260813.md) |
 | 主题地图关系黄金集第一阶段 | [topic-map-golden-set-20260813.md](product/topic-map-golden-set-20260813.md) |
 | 主题/厂商时间线与导航性能 | [topic-timeline-performance-20260813.md](product/topic-timeline-performance-20260813.md) |

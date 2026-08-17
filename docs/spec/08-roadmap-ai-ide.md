@@ -737,7 +737,8 @@ Spec validation、Flyway from empty database、Core API、AI service、Web 五�
 
 ### TASK-M5-029｜GitHub Actions Node 24 运行时升级与兼容性验证
 
-**状态**：🚧 2026-08-17 进行中。
+**状态**：✅ 2026-08-17 完成。验收证据见
+`docs/status/delivery/ci-actions-node24-20260817.md`。
 **读取**：`.github/workflows/ci.yml`、`.github/workflows/release.yml`、TASK-M5-027/028、
 GitHub 官方 Action 发布说明与最近一次 `main` CI 告警。
 **输入**：`main` CI 已由 GitHub 临时把旧 Action 强制切到 Node 24 运行，并明确提示
@@ -749,6 +750,9 @@ Flyway 与 Web 五路门禁，并保存日期化交付证据。
 构建 Action；不修改 API、数据、RAG、采集、邮件或生产 `IMAGE_TAG`，也不触发 tag release。
 **完成标准**：工作流 YAML 可解析；本地文档/规格/diff 门禁通过；PR 五路 CI 全绿且不再出现
 旧 Action 的 Node 20 弃用告警；合并 `main` 后 push CI 通过。
+**验收说明**：PR #35 首轮 run `32025546259` 的 Spec validation、AI service、Core API、
+Flyway from empty database 与 Web 五项全部通过；日志中没有旧 Action 的 Node 20/强制 Node 24
+兼容告警。合并后的 `main` push CI 结果记录在交付证据中。
 
 ## 4. AI IDE 统一提示词
 
