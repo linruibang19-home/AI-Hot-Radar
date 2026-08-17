@@ -90,3 +90,14 @@ git diff --check
 Java 容器随后在 Windows bind mount 的 fat JAR 写入收尾阶段长时间没有输出，人工中止了该次
 `mvn verify`。因此本页只把 **86 项测试通过**记为证据，不把这一次命令记成完整 verify 成功；
 正式打包是否可交付仍由 Linux CI 与 Docker 镜像构建门禁判定。这一限制不会反向写成产品缺陷。
+
+## 7. 远端发布证据
+
+- 分支：`codex/documentation-current-facts`；
+- Pull Request：[#34](https://github.com/linruibang19-home/AI-Hot-Radar/pull/34)；
+- 首个提交：`9052d57`；
+- GitHub Actions run：`32022510614`；
+- 结果：Spec validation、Flyway from empty database、Core API、AI service、Web 全部通过。
+
+该绿灯只证明对应提交可合并。后续若补充验收记录，仍需以补充提交自己的 CI 结果为准，不能借用
+前一个 SHA 的状态。

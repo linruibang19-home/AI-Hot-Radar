@@ -722,7 +722,7 @@ fat JAR 写入阶段长时间无输出并被人工中止，因此这里只声明
 
 ### TASK-M5-028｜文档发布与仓库核验
 
-**状态**：🚧 2026-08-17 执行中。
+**状态**：✅ 2026-08-17 完成。
 **读取**：`TASK-M5-027` 的变更与验收证据、`.github/workflows/ci.yml`、仓库分支和远端状态。
 **输入**：完成但尚未提交的文档事实源重构。
 **产出**：在独立 `codex/` 分支提交文档变更，完成敏感信息与临时产物检查，推送远端并以
@@ -731,6 +731,9 @@ GitHub CI 的 Web、Core API、AI Service、Flyway 与规格校验结果作为�
 文档发布与业务镜像发布是两个独立动作。
 **完成标准**：工作区只包含本任务预期文件；本地门禁通过；远端分支存在；CI 结论可追溯；
 若 CI 失败则保留失败证据并先修复，不把分支存在写成已发布到 `main`。
+**验收说明**：分支 `codex/documentation-current-facts`、PR #34；首个远端提交 `9052d57` 的
+Spec validation、Flyway from empty database、Core API、AI service、Web 五项 GitHub CI 全部通过。
+该任务只发布文档与门禁，不改变生产 `IMAGE_TAG`。
 
 ## 4. AI IDE 统一提示词
 
