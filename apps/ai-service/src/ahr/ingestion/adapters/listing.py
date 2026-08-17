@@ -62,6 +62,13 @@ _SITEMAP_ARTICLE_PATHS = (
     "/posts/",
 )
 
+# Some curated team/blog listings live in a navigation subtree while their
+# article pages use a site-wide numeric route.  Dynamic listings may opt into
+# these two bounded shapes; this is deliberately not a generic "same host"
+# escape hatch because that would turn navigation, products and courses into
+# article candidates.
+_CROSS_PATH_ARTICLE_RE = re.compile(r"^/(?:article/\d+|developer/article/\d+)/?$")
+
 
 def _collect_jsonld_urls(html: str, base_url: str) -> list[tuple[str, str | None]]:
     found: list[tuple[str, str | None]] = []
@@ -89,11 +96,15 @@ def _collect_jsonld_urls(html: str, base_url: str) -> list[tuple[str, str | None
     return found
 
 
-def _looks_like_article(path: str, listing_path: str) -> bool:
+def _looks_like_article(
+    path: str, listing_path: str, *, allow_cross_path_articles: bool = False
+) -> bool:
     if any(hint in path for hint in _NON_ARTICLE_HINTS):
         return False
     if path.rstrip("/") == listing_path.rstrip("/"):
         return False
+    if allow_cross_path_articles:
+        return bool(_CROSS_PATH_ARTICLE_RE.fullmatch(path))
     # An article lives below the listing, e.g. /blog/ -> /blog/my-post.
     if listing_path.rstrip("/") and not path.startswith(listing_path.rstrip("/")):
         return False
@@ -101,7 +112,9 @@ def _looks_like_article(path: str, listing_path: str) -> bool:
     return bool(remainder) and len(remainder) > 3
 
 
-def _collect_link_urls(html: str, base_url: str) -> list[tuple[str, str | None]]:
+def _collect_link_urls(
+    html: str, base_url: str, *, allow_cross_path_articles: bool = False
+) -> list[tuple[str, str | None]]:
     base = urlsplit(base_url)
     listing_path = base.path or "/"
     found: list[tuple[str, str | None]] = []
@@ -114,7 +127,11 @@ def _collect_link_urls(html: str, base_url: str) -> list[tuple[str, str | None]]
         parts = urlsplit(absolute)
         if parts.scheme not in ("http", "https") or parts.netloc != base.netloc:
             continue
-        if not _looks_like_article(parts.path, listing_path):
+        if not _looks_like_article(
+            parts.path,
+            listing_path,
+            allow_cross_path_articles=allow_cross_path_articles,
+        ):
             continue
         title = _TAG_RE.sub("", match.group(2)).strip() or None
         found.append((absolute, title))
@@ -205,7 +222,11 @@ class HtmlListingAdapter:
             candidates = _collect_jsonld_urls(html, response.final_url)
             discovery_method = "json_ld"
         if not candidates:
-            candidates = _collect_link_urls(html, response.final_url)
+            candidates = _collect_link_urls(
+                html,
+                response.final_url,
+                allow_cross_path_articles=source.profile == "dynamic_listing_to_article",
+            )
             discovery_method = "same_site_links"
 
         # A listing adapter is a live-update window, not an implicit historical

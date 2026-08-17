@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <title>阿里云Tair KVCache仿真分析：高精度的计算和缓存模拟设计与实现-阿里云开发者社区</title>
+    <meta property="og:title" content="阿里云Tair KVCache仿真分析：高精度的计算和缓存模拟设计与实现">
+    <link rel="canonical" href="https://developer.aliyun.com/article/1705046">
+    <script type="application/ld+json">{"@type":"Article","datePublished":"2026-01-09"}</script>
+  </head>
+  <body>
+    <article>
+      <h1>阿里云Tair KVCache仿真分析：高精度的计算和缓存模拟设计与实现</h1>
+      <p>本文介绍 KVCache 仿真分析的设计目标：在不运行完整线上推理负载的情况下，重放请求特征并估计显存占用、缓存命中以及调度开销。系统将请求长度、并发度和缓存策略建模为可复现输入，使不同硬件与调度方案能够在统一条件下比较。</p>
+      <p>实现中分别记录预填充和解码阶段的访问行为，再依据缓存块生命周期计算命中率与淘汰代价。仿真结果会与真实服务采样进行校准，避免只依赖理论公式；当误差超过阈值时，模型参数会重新拟合并保留版本。</p>
+      <p>该回放 fixture 依据公开原文的页面结构和主题缩短改写，仅用于验证标题、发布日期、canonical URL、正文抽取与全文门槛，不在仓库中复制发布者的完整文章。</p>
+    </article>
+  </body>
+</html>

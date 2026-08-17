@@ -170,6 +170,70 @@ async def test_listing_always_requires_article_fetch(make_fetcher) -> None:
     assert all(item.body_markdown is None for item in batch.items)
 
 
+@pytest.mark.parametrize(
+    ("source_id", "host", "listing_url", "fixture", "expected_path"),
+    [
+        (
+            "alibaba-developer-ai",
+            "developer.aliyun.com",
+            "https://developer.aliyun.com/blog/?contentType=12",
+            "alibaba_ai_listing.html",
+            "/article/1705046",
+        ),
+        (
+            "tencent-cloud-ai-team",
+            "cloud.tencent.com",
+            "https://cloud.tencent.com/developer/team/cloudAi",
+            "tencent_cloud_ai_listing.html",
+            "/developer/article/2717544",
+        ),
+    ],
+)
+async def test_dynamic_official_cn_listing_accepts_bounded_cross_path_articles(
+    make_fetcher,
+    fixture_bytes,
+    source_id: str,
+    host: str,
+    listing_url: str,
+    fixture: str,
+    expected_path: str,
+) -> None:
+    listing = fixture_bytes(fixture)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=listing)
+
+    source = make_source("dynamic_listing_to_article", discovery_url=listing_url)
+    source = replace(source, id=source_id)
+    async with make_fetcher(handler) as fetcher:
+        batch = await HtmlListingAdapter(fetcher).discover(source)
+
+    assert len(batch.items) == 3
+    assert urlsplit(batch.items[0].candidate_url).netloc == host
+    assert urlsplit(batch.items[0].candidate_url).path == expected_path
+    assert all(item.requires_fetch for item in batch.items)
+    assert not any("/courses" in item.candidate_url for item in batch.items)
+
+
+async def test_static_listing_keeps_cross_path_articles_blocked(make_fetcher) -> None:
+    """Only the explicitly dynamic profile may use bounded cross-path routes."""
+
+    html = b'<a href="/article/1705046">Article</a>'
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=html)
+
+    source = make_source(
+        "static_listing_to_article",
+        discovery_url="https://developer.aliyun.com/blog/",
+    )
+    async with make_fetcher(handler) as fetcher:
+        batch = await HtmlListingAdapter(fetcher).discover(source)
+
+    assert batch.items == []
+    assert batch.empty_reason == "NO_LINKS_FOUND"
+
+
 async def test_sitemap_discovers_newest_article_documents(make_fetcher, fixture_bytes) -> None:
     """A sitemap discovers documents, not category or privacy pages."""
     sitemap = fixture_bytes("cn_media_sitemap.xml")

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ahr.ingestion.article import extract_article
+from ahr.ingestion.fulltext_gate import Decision, evaluate
 from ahr.ingestion.http import FetchResult
 
 
@@ -80,3 +81,27 @@ def test_bytedance_seed_replay_uses_open_graph_article_title(fixture_bytes) -> N
     assert extraction.document.title == (
         "One-take Creation, Flexible Referencing: Introducing Seedance 2.5"
     )
+
+
+def test_alibaba_official_ai_replay_passes_fulltext_gate(fixture_bytes) -> None:
+    extraction = extract_article(
+        _response(fixture_bytes("alibaba_ai_article.html").decode()),
+        source_id="alibaba-developer-ai",
+    )
+
+    result = evaluate(extraction.document)
+    assert (
+        extraction.document.title == "阿里云Tair KVCache仿真分析：高精度的计算和缓存模拟设计与实现"
+    )
+    assert result.decision is Decision.ACCEPTED
+
+
+def test_tencent_cloud_ai_replay_passes_fulltext_gate(fixture_bytes) -> None:
+    extraction = extract_article(
+        _response(fixture_bytes("tencent_cloud_ai_article.html").decode()),
+        source_id="tencent-cloud-ai-team",
+    )
+
+    result = evaluate(extraction.document)
+    assert extraction.document.title == "全能 Agent 养成 ｜ 腾讯云 AI Skills 最佳实践"
+    assert result.decision is Decision.ACCEPTED
