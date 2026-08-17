@@ -8,36 +8,38 @@ import sys
 from pathlib import Path
 from urllib.parse import unquote
 
-
 ROOT = Path(__file__).resolve().parents[1]
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\((?P<target>[^)]+)\)")
 
 REQUIRED_HANDBOOK = [
     "README.md",
-    *[f"{index:02d}-{slug}.md" for index, slug in enumerate(
-        [
-            "product-and-business",
-            "end-to-end-flows",
-            "runtime-and-services",
-            "data-model-and-state",
-            "source-ingestion",
-            "content-story-selection",
-            "reports-and-email",
-            "rag-indexing-and-retrieval",
-            "rag-generation-and-citations",
-            "rag-evaluation",
-            "java-core-api",
-            "python-ai-service",
-            "nextjs-web",
-            "deployment-security-ops",
-            "testing-tradeoffs-roadmap",
-            "llm-prompts-ranking-and-thresholds",
-            "agent-orchestration-memory-and-cost",
-            "performance-capacity-and-load-testing",
-            "backend-layering-runtime-and-redis",
-        ],
-        start=1,
-    )],
+    *[
+        f"{index:02d}-{slug}.md"
+        for index, slug in enumerate(
+            [
+                "product-and-business",
+                "end-to-end-flows",
+                "runtime-and-services",
+                "data-model-and-state",
+                "source-ingestion",
+                "content-story-selection",
+                "reports-and-email",
+                "rag-indexing-and-retrieval",
+                "rag-generation-and-citations",
+                "rag-evaluation",
+                "java-core-api",
+                "python-ai-service",
+                "nextjs-web",
+                "deployment-security-ops",
+                "testing-tradeoffs-roadmap",
+                "llm-prompts-ranking-and-thresholds",
+                "agent-orchestration-memory-and-cost",
+                "performance-capacity-and-load-testing",
+                "backend-layering-runtime-and-redis",
+            ],
+            start=1,
+        )
+    ],
 ]
 
 REQUIRED_INTERVIEW = [
@@ -114,7 +116,9 @@ def require_files(directory: str, expected: list[str], errors: list[str]) -> Non
             errors.append(f"missing required documentation: {directory}/{name}")
 
 
-def require_fact(relative: str, required: list[str], forbidden: list[str], errors: list[str]) -> None:
+def require_fact(
+    relative: str, required: list[str], forbidden: list[str], errors: list[str]
+) -> None:
     path = ROOT / relative
     text = path.read_text(encoding="utf-8")
     for phrase in required:
@@ -123,6 +127,15 @@ def require_fact(relative: str, required: list[str], forbidden: list[str], error
     for phrase in forbidden:
         if phrase in text:
             errors.append(f"{relative} contains superseded current fact: {phrase}")
+
+
+def require_pattern(
+    relative: str, pattern: str, description: str, errors: list[str]
+) -> None:
+    """Require a dated/structured fact without freezing its numeric value."""
+    text = (ROOT / relative).read_text(encoding="utf-8")
+    if re.search(pattern, text) is None:
+        errors.append(f"{relative} is missing current fact pattern: {description}")
 
 
 def main() -> int:
@@ -152,8 +165,20 @@ def main() -> int:
     )
     require_fact(
         "README.md",
-        ["Python **916", "docs/handbook/README.md"],
+        ["docs/handbook/README.md"],
         [],
+        errors,
+    )
+    require_pattern(
+        "README.md",
+        r"当前生产与质量快照（\d{4}-\d{2}-\d{2}，历史快照，非实时承诺）",
+        "dated production snapshot disclaimer",
+        errors,
+    )
+    require_pattern(
+        "README.md",
+        r"Python \*\*\d+ passed / \d+ skipped\*\*",
+        "Python passed/skipped regression count",
         errors,
     )
 
@@ -165,7 +190,9 @@ def main() -> int:
 
     print("DOC VALIDATION PASSED")
     print(f"markdown_files={len(files)} local_links={checked_links}")
-    print(f"handbook_files={len(REQUIRED_HANDBOOK)} interview_files={len(REQUIRED_INTERVIEW)}")
+    print(
+        f"handbook_files={len(REQUIRED_HANDBOOK)} interview_files={len(REQUIRED_INTERVIEW)}"
+    )
     return 0
 
 
