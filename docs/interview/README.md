@@ -57,7 +57,7 @@
 | RAG 达到发布门 | `/eval`、`../status/eval/`、90 题逐题 artifacts |
 | 引用可追溯 | `/ask/{id}` 的句级编号、原文卡片和检索轨迹 |
 | 报告与邮件闭环 | `/reports`、订阅确认、`email_delivery` 状态与 SMTP 验收 |
-| 生产可恢复 | `../status/production/`、备份清单、SHA-256 和隔离恢复记录 |
+| 生产可恢复 | [`../status/current/production-baseline.md`](../status/current/production-baseline.md)、备份清单、SHA-256 和隔离恢复记录 |
 | 技术取舍有依据 | `../adr/`、B2/B8/B13/GEN-FIX 负结果与回滚条件 |
 
 ## 三个实现专题

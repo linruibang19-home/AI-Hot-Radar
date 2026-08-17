@@ -7,7 +7,7 @@
 | 纯函数单测 | 分块、时间、融合、token、状态规则 | Python/Java/TS tests |
 | Repository/集成 | PostgreSQL、pgvector、锁、约束、Flyway | Testcontainers/CI DB |
 | 契约 | Java/Python/Web DTO 一致 | schema/spec checks |
-| 构建 | server/client、JDK、镜像依赖 | Next build、Gradle、Docker |
+| 构建 | server/client、JDK、镜像依赖 | Next build、Maven、Docker |
 | 离线评测 | RAG 检索/生成质量 | 90 题 + 专项集 |
 | 生产 smoke | DNS/TLS/health/核心页面 | 受控发布验收 |
 
@@ -84,4 +84,3 @@
 - 自动指标不是事实正确率的全部；
 - provider 成本是价目估算，不是账单；
 - 当前生产计数是带日期快照，不是永久容量承诺。
-

@@ -697,6 +697,44 @@ Compose 同步后页面显示本地环境与数据库汇总；生产发布后受
 公网 `/admin/sources` 已显示当前环境、配置/数据库更新时间与动态统计；“刷新状态”只做 no-store
 只读重取，不触发采集、不跨环境复制数据。
 
+### TASK-M5-027｜文档事实源、生命周期与代码一致性重构
+
+**状态**：✅ 2026-08-17 完成。当前事实入口、历史冻结标识、交付索引、ADR 导航、
+handbook/interview 分层和代码事实校验均已收口；验收证据见
+`docs/status/delivery/documentation-refresh-20260817.md`。
+**读取**：根 `README.md`、`00-master-spec.md`、全部 `docs/`，以及 `apps/`、`database/migrations/`、
+`config/`、`infra/`、`.github/workflows/` 和测试目录。
+**输入**：当前代码与生产证据已经推进到 143 个登记信源、9 类 Profile、Flyway V026 和
+`v0.1.18`，但当前状态、交付索引、部署设计、handbook 与 interview 中仍混有 140 个信源、
+V024/V025、v0.1.5/v0.1.7/v0.1.15 及被取代交接等旧口径；现有链接校验不能发现反引号路径、
+无日期动态数字和“当前目录引用旧生产版本”等语义漂移。
+**产出**：建立唯一当前事实入口；冻结累计开发日志和历史交接；按当前代码校准 handbook；
+让 interview 只派生表达而不复制动态事实；收口 roadmap/design/status 的生命周期；扩展文档门禁，
+自动核对配置数量、最新迁移、当前入口、仓库路径和动态数字标签。
+**边界**：不改写历史评测 JSON、负实验、既有 ADR 和日期化生产证据；不把 GitHub `main` 的
+文档提交写成正在运行的生产镜像；不改变 API、数据库、RAG、采集、邮件或部署行为。
+**完成标准**：当前状态只有一个入口；所有活文档与代码、迁移和配置一致；历史材料明确冻结；
+handbook/interview 分层清楚；文档与规格校验、全量应用测试和 `git diff --check` 通过。
+**验收说明**：文档/规格/ruff/diff 门禁通过；Python 935 项通过（2 skipped），Web 81 项与生产
+构建通过，Java 21 容器内 86 项通过。Windows bind mount 上的 Maven `verify` 在测试全部通过后的
+fat JAR 写入阶段长时间无输出并被人工中止，因此这里只声明 Java 测试通过，不声明该次容器命令
+完成了完整 verify；CI 与镜像构建仍是可交付产物的正式门禁。
+
+### TASK-M5-028｜文档发布与仓库核验
+
+**状态**：✅ 2026-08-17 完成。
+**读取**：`TASK-M5-027` 的变更与验收证据、`.github/workflows/ci.yml`、仓库分支和远端状态。
+**输入**：完成但尚未提交的文档事实源重构。
+**产出**：在独立 `codex/` 分支提交文档变更，完成敏感信息与临时产物检查，推送远端并以
+GitHub CI 的 Web、Core API、AI Service、Flyway 与规格校验结果作为合并依据。
+**边界**：不在 CI 通过前合并 `main`；不触发生产发布，不修改香港服务器的 `IMAGE_TAG`；
+文档发布与业务镜像发布是两个独立动作。
+**完成标准**：工作区只包含本任务预期文件；本地门禁通过；远端分支存在；CI 结论可追溯；
+若 CI 失败则保留失败证据并先修复，不把分支存在写成已发布到 `main`。
+**验收说明**：分支 `codex/documentation-current-facts`、PR #34；首个远端提交 `9052d57` 的
+Spec validation、Flyway from empty database、Core API、AI service、Web 五项 GitHub CI 全部通过。
+该任务只发布文档与门禁，不改变生产 `IMAGE_TAG`。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

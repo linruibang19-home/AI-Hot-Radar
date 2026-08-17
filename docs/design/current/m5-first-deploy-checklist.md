@@ -1,5 +1,9 @@
 # M5 首次部署清单：会踩的坑，按会踩到的顺序
 
+> **历史首次部署检查表。** 其中版本标签和迁移数量是当时示例，不得直接用于今天的发布。
+> 当前生产基线见 [`../../status/current/production-baseline.md`](../../status/current/production-baseline.md)，
+> 可重复执行的发布流程见 [`../../spec/11-end-to-end-runbook.md`](../../spec/11-end-to-end-runbook.md)。
+
 上级：`docs/design/current/m5-deployment.md`（方案与选型）、`AHR-QSO-700` §4
 状态：**本地上线门禁与恢复演练已通过；目标服务器部署待执行**
 

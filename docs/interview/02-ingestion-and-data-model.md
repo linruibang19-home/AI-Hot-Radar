@@ -1,7 +1,8 @@
 # 02｜采集、全文门与数据模型
 ## 从配置到调度
 
-`config/sources.yaml` 登记 140 个入口，`ingestion-profiles.yaml` 描述 9 类通用适配器契约，
+`config/sources.yaml` 登记配置化入口，`ingestion-profiles.yaml` 描述通用适配器契约；
+具体数量由配置校验脚本计算，当前生产快照见 `../status/current/production-baseline.md`。
 `site-overrides.yaml` 只保存少量站点差异。URL、优先级和抓取周期不硬编码在业务代码里。
 
 Scheduler 查找 `next_poll_at <= now()` 的有效信源，以 `source_id` 领取有期限租约并创建

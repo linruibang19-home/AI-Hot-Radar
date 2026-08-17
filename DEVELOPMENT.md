@@ -23,7 +23,7 @@ cp .env.example .env
 docker compose -f infra/compose/docker-compose.yml up -d --build
 ```
 
-首次构建需要拉取 Gradle/Node 镜像并编译，约 5–10 分钟。
+首次构建需要拉取 Maven/JDK、Node 和 Python 基础镜像并编译，耗时取决于网络与本机缓存。
 
 ## 3. 验证三个服务
 
@@ -47,13 +47,14 @@ docker compose -f infra/compose/docker-compose.yml exec postgres psql -U ai_hot_
 python scripts/validate_spec.py
 ```
 
-校验 140 个信源、profile 引用完整性，以及 `verification: restricted` 的来源确实默认关闭。
+校验当前 `config/sources.yaml` 中的全部信源、profile 引用完整性，以及
+`verification: restricted` 的来源确实默认关闭。登记数由配置文件计算，不在开发文档写死。
 
 ## 6. 运行测试
 
 三套测试都能在 Docker 里跑，不依赖本机装了什么运行时。
 
-**ai-service（510 个用例）**——`--network none` 是刻意的：AHR-QSO-700 §1 要求测试回放 fixture 而不是访问真实站点，断网是唯一能证明这一点的方式。
+**ai-service**——`--network none` 是刻意的：AHR-QSO-700 §1 要求测试回放 fixture 而不是访问真实站点，断网是唯一能证明这一点的方式。用例数随功能增长，以当次命令输出为准。
 
 ```bash
 docker build --target test -t ahr-test apps/ai-service
@@ -63,19 +64,19 @@ docker build --target test -t ahr-test apps/ai-service
 docker run --rm --network none -v "$PWD/config:/app/config:ro" ahr-test
 ```
 
-**core-api（30 个用例）**——本机是 JDK 17，而 ADR-002 锁定 JDK 21，所以用镜像里的 JDK 跑：
+**core-api**——ADR-002 锁定 JDK 21；本机版本不匹配时使用镜像里的 JDK 跑：
 
 ```bash
 docker run --rm -v "$PWD:/repo" -w /repo/apps/core-api maven:3.9-eclipse-temurin-21 mvn -B test
 ```
 
-**web（36 个用例 + 类型检查）**
+**web（组件测试 + 类型检查）**
 
 ```bash
 docker run --rm -v "$PWD/apps/web:/app" -w /app node:22-slim sh -c "npm ci && npx vitest run && npx tsc --noEmit"
 ```
 
-**web E2E（28 个用例，Playwright）**——需要整套 Compose 已经在跑，因为它测的是真实浏览器行为：
+**web E2E（Playwright）**——需要整套 Compose 已经在跑，因为它测的是真实浏览器行为：
 
 ```bash
 docker run --rm --network host -v "$PWD/apps/web/e2e:/e2e" -w /e2e mcr.microsoft.com/playwright:v1.49.1-noble sh -c "npm install --silent && npx playwright test"
@@ -162,7 +163,7 @@ docker compose -f infra/compose/docker-compose.yml down -v
 
 ## 10. 采集操作
 
-导入 140 个信源（幂等，可重复执行）：
+同步配置文件中的全部信源（幂等，可重复执行）：
 
 ```bash
 docker compose -f infra/compose/docker-compose.yml exec ai-service python -m ahr.cli sync-sources

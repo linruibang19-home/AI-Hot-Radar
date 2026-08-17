@@ -3,10 +3,13 @@
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
 from urllib.parse import unquote
+
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 MARKDOWN_LINK = re.compile(r"!?\[[^\]]*\]\((?P<target>[^)]+)\)")
@@ -36,6 +39,9 @@ REQUIRED_HANDBOOK = [
                 "agent-orchestration-memory-and-cost",
                 "performance-capacity-and-load-testing",
                 "backend-layering-runtime-and-redis",
+                "ingestion-evidence-and-chunking",
+                "redis-cache-and-short-lived-state",
+                "rag-golden-set-and-quality-page",
             ],
             start=1,
         )
@@ -138,12 +144,41 @@ def require_pattern(
         errors.append(f"{relative} is missing current fact pattern: {description}")
 
 
+def current_repository_facts() -> tuple[int, str, str, str]:
+    """Read cheap, deterministic facts that canonical docs are allowed to repeat."""
+    registry = yaml.safe_load((ROOT / "config/sources.yaml").read_text(encoding="utf-8"))
+    source_count = len(registry.get("sources", []))
+
+    package = json.loads((ROOT / "apps/web/package.json").read_text(encoding="utf-8"))
+    next_version = package["dependencies"]["next"]
+
+    pom = (ROOT / "apps/core-api/pom.xml").read_text(encoding="utf-8")
+    spring_match = re.search(
+        r"<artifactId>spring-boot-starter-parent</artifactId>\s*<version>([^<]+)</version>",
+        pom,
+    )
+    if spring_match is None:
+        raise ValueError("cannot determine Spring Boot version from pom.xml")
+
+    migration_names = [path.name for path in (ROOT / "database/migrations").glob("V*.sql")]
+    migration_versions = [
+        (int(match.group(1)), name)
+        for name in migration_names
+        if (match := re.match(r"V(\d+)(?:_\d+)?__", name))
+    ]
+    if not migration_versions:
+        raise ValueError("no Flyway migrations found")
+    latest_migration = f"V{max(version for version, _ in migration_versions):03d}"
+    return source_count, next_version, spring_match.group(1), latest_migration
+
+
 def main() -> int:
     errors: list[str] = []
     files = markdown_files()
     require_files("docs/handbook", REQUIRED_HANDBOOK, errors)
     require_files("docs/interview", REQUIRED_INTERVIEW, errors)
     checked_links = validate_links(files, errors)
+    source_count, next_version, spring_version, latest_migration = current_repository_facts()
 
     require_fact(
         "docs/spec/00-master-spec.md",
@@ -165,8 +200,8 @@ def main() -> int:
     )
     require_fact(
         "README.md",
-        ["docs/handbook/README.md"],
-        [],
+        ["docs/handbook/README.md", f"Next.js {next_version}", f"Spring Boot {spring_version}"],
+        ["docs/status/production/"],
         errors,
     )
     require_pattern(
@@ -175,6 +210,31 @@ def main() -> int:
         "dated production snapshot disclaimer",
         errors,
     )
+    require_fact(
+        "docs/status/current/production-baseline.md",
+        [
+            "截至：",
+            f"| 登记信源 / 允许调度 / 运行态 ACTIVE | {source_count} /",
+            f"Flyway {latest_migration}",
+            "不是实时承诺",
+        ],
+        [],
+        errors,
+    )
+    for canonical in [
+        "DEVELOPMENT.md",
+        "docs/README.md",
+        "docs/archive-policy.md",
+        "docs/handbook/README.md",
+        "docs/interview/README.md",
+        "docs/spec/12-delivery-index.md",
+    ]:
+        require_fact(
+            canonical,
+            [],
+            ["status/production/", "handoff-20260812.md"],
+            errors,
+        )
     require_pattern(
         "README.md",
         r"Python \*\*\d+ passed / \d+ skipped\*\*",

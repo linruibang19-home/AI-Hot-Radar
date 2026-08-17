@@ -33,8 +33,10 @@ config/sources.yaml + ingestion-profiles.yaml
 ```
 
 重点阅读顺序：`ingestion/models.py` → `registry.py` → `pipeline.py` →
-`processing/pipeline.py` → `database/migrations/V001..V012`。遇到具体 Adapter 再进入
-`ingestion/adapters/`，不要先把七类适配器混在一起读。
+`processing/pipeline.py` → `database/migrations/`。迁移必须从 V001 顺序理解到当前最新版本，
+但不要只读前十二个基础表；V013 之后还包含检索轨迹、会话、报告发布、订阅、模型配置、
+主题关系与 chunk set 版本化。遇到具体 Adapter 再进入 `ingestion/adapters/`，并结合
+`config/ingestion-profiles.yaml` 的九类 Profile 阅读，不要把不同发现/回源路径混为一种。
 
 ## 3. 报告与邮件订阅
 
@@ -88,7 +90,7 @@ Web AskPanel
 8. `apps/web/src/components/AskPanel.tsx`：阶段事件、会话、引用和永久链接如何呈现。
 
 对应迁移：V012 向量索引、V013 检索轨迹、V014 CJK bigram、V015 限制说明、V020 会话、
-V021 历史答案修复。完整算法背景见 `docs/interview/03-rag-deep-dive.md` 和
+V021 历史答案修复、V026 chunk set 版本化。完整算法背景见 `docs/interview/03-rag-deep-dive.md` 和
 `docs/archive/development/m4-rag-implementation.md`。
 
 ## 5. 管理、权限与模型配置

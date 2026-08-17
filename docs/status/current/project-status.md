@@ -1,5 +1,10 @@
 # 项目进度总览
 
+> **累计开发日志，冻结于 2026-08-17。** 本文故意保留各阶段的旧版本、旧数字、失败假设和
+> 已关闭待办，不再作为当前状态入口。现在的生产基线只看
+> [`production-baseline.md`](production-baseline.md)，当前任务只看
+> [`../../spec/08-roadmap-ai-ide.md`](../../spec/08-roadmap-ai-ide.md)。
+
 > **累计历史，当前入口更新至 2026-08-15。** 本文保留阶段性计数、失败假设和已关闭待办，
 > 不能把中间段落当作实时生产大盘。当前生产入口见 [handoff-20260814.md](handoff-20260814.md)，当前
 > 任务见 [`../spec/08-roadmap-ai-ide.md`](../../spec/08-roadmap-ai-ide.md)，完整知识入口见

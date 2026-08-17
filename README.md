@@ -4,7 +4,7 @@
 
 **Live Demo**: [https://aihotradar.online](https://aihotradar.online)
 
-**Tech Stack**: Next.js 15.5 / React 19 / TypeScript · Spring Boot 3.4 / Java 21 · FastAPI / Python 3.12 · PostgreSQL 16 + pgvector · Redis 7 · DeepSeek / bge-m3 / bge-reranker-v2-m3 · Docker Compose / Caddy / GHCR / GitHub Actions
+**Tech Stack**: Next.js 15.5.23 / React 19 / TypeScript · Spring Boot 3.4.1 / Java 21 · FastAPI / Python 3.12 · PostgreSQL 16 + pgvector · Redis 7 · DeepSeek / bge-m3 / bge-reranker-v2-m3 · Docker Compose / Caddy / GHCR / GitHub Actions
 
 ![精选首页：持续更新的 AI 情报、热点与推荐理由](docs/assets/screenshots/home.png)
 
@@ -104,8 +104,8 @@ Next.js 15.5 / React 19
 
 | 层 | 技术 | 负责什么 | 明确不负责什么 |
 |---|---|---|---|
-| Web | Next.js 15.5、React 19、TypeScript、App Router、SSR | 内容页面、交互、同源代理、流式问答 UI | 直接查库、保存模型密钥或 OPERATOR 凭据 |
-| Core API | Spring Boot 3.4、Java 21、Maven | 公共读 API、报告发布、订阅、管理 RBAC、幂等与审计 | 网页抽取、embedding、RAG 检索算法 |
+| Web | Next.js 15.5.23、React 19、TypeScript、App Router、SSR | 内容页面、交互、同源代理、流式问答 UI | 直接查库、保存模型密钥或 OPERATOR 凭据 |
+| Core API | Spring Boot 3.4.1、Java 21、Maven | 公共读 API、报告发布、订阅、管理 RBAC、幂等与审计 | 网页抽取、embedding、RAG 检索算法 |
 | AI Service | FastAPI、Python 3.12、Pydantic、httpx | 采集、正文处理、结构化、聚类、报告生成、RAG 与评测 | 用户权限、订阅业务事实和邮件投递状态机 |
 | Fact Store | PostgreSQL 16、pgvector、Flyway | 内容版本、证据块、Story、报告、订阅、审计与向量 | 把短期缓存状态当成业务真相 |
 | Cache | Redis 7 | 查询缓存、速率限制、短期去重锁和短生命周期状态 | 持久业务事实、跨服务最终一致性的唯一依据 |
