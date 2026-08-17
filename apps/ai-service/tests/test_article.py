@@ -105,3 +105,15 @@ def test_tencent_cloud_ai_replay_passes_fulltext_gate(fixture_bytes) -> None:
     result = evaluate(extraction.document)
     assert extraction.document.title == "全能 Agent 养成 ｜ 腾讯云 AI Skills 最佳实践"
     assert result.decision is Decision.ACCEPTED
+
+
+def test_meituan_tech_replay_passes_fulltext_gate(fixture_bytes) -> None:
+    extraction = extract_article(
+        _response(fixture_bytes("meituan_tech_article.html").decode()),
+        source_id="meituan-tech",
+    )
+
+    result = evaluate(extraction.document)
+    assert extraction.document.title == "CatPaw：面向端侧智能体的模型与系统协同实践"
+    assert "模型与系统协同" in extraction.document.body_text
+    assert result.decision is Decision.ACCEPTED

@@ -20,4 +20,9 @@ public class SourceHealthController {
     public List<SourceRepository.SourceHealth> sources() {
         return sources.findEnabledHealth();
     }
+
+    @GetMapping("/sources/summary")
+    public SourceRepository.SourceSummary summary() {
+        return sources.findSummary();
+    }
 }

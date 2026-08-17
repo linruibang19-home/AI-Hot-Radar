@@ -97,6 +97,36 @@ async def test_feed_summary_is_never_body_text(make_fetcher, fixture_bytes) -> N
     assert item.body_markdown is None
 
 
+async def test_meituan_official_feed_is_discovery_only(make_fetcher, fixture_bytes) -> None:
+    """Official RSS still requires the dated article page before it becomes evidence."""
+    body = fixture_bytes("meituan_tech_feed.xml")
+    source = SourceConfig(
+        id="meituan-tech",
+        name="Meituan Technical Team",
+        organization="Meituan",
+        profile="rss_to_article",
+        tier="primary",
+        priority="P1",
+        content_access="full_article_extract",
+        verification="protocol_guaranteed",
+        enabled=True,
+        discovery_url="https://tech.meituan.com/rss.xml",
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body, headers={"content-type": "application/rss+xml"})
+
+    async with make_fetcher(handler) as fetcher:
+        batch = await RssAtomAdapter(fetcher).discover(source)
+
+    assert len(batch.items) == 1
+    item = batch.items[0]
+    assert item.candidate_url == "https://tech.meituan.com/2026/07/28/CatPaw-LongCat.html"
+    assert item.requires_fetch is True
+    assert item.body_markdown is None
+    assert item.discovery_summary == "这里是 RSS 导语，只用于发现，不能作为可引用正文。"
+
+
 async def test_tracking_params_are_stripped_from_candidate_url(make_fetcher, fixture_bytes) -> None:
     body = fixture_bytes("sample_feed.xml")
 

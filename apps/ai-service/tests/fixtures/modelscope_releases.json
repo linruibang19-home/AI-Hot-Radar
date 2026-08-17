@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1391,
+    "html_url": "https://github.com/modelscope/modelscope/releases/tag/v1.39.1",
+    "name": "ModelScope v1.39.1",
+    "tag_name": "v1.39.1",
+    "body": "ModelScope v1.39.1 release notes. This fixture is intentionally shortened and only preserves the official GitHub Releases response shape used by the adapter.",
+    "published_at": "2026-08-04T08:26:00Z",
+    "draft": false,
+    "prerelease": false
+  }
+]

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
+from pathlib import Path
 
 import httpx
 import pytest
@@ -83,6 +85,32 @@ async def test_discovers_releases_with_full_body(make_fetcher) -> None:
     assert batch.items[0].requires_fetch is False
     assert batch.items[0].body_markdown == "Release notes body"
     assert batch.next_cursor is not None and batch.next_cursor.etag == '"abc"'
+
+
+@pytest.mark.parametrize(
+    ("fixture_name", "repository", "expected_tag"),
+    [
+        ("paddlepaddle_releases.json", "PaddlePaddle/Paddle", "v3.3.0"),
+        ("modelscope_releases.json", "modelscope/modelscope", "v1.39.1"),
+    ],
+)
+async def test_domestic_official_release_fixtures_are_replayable(
+    make_fetcher, fixture_name: str, repository: str, expected_tag: str
+) -> None:
+    payload = json.loads((Path(__file__).parent / "fixtures" / fixture_name).read_text("utf-8"))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == f"/repos/{repository}/releases"
+        return httpx.Response(200, json=payload)
+
+    async with make_fetcher(handler) as fetcher:
+        batch = await GitHubReleasesAdapter(fetcher).discover(source(repository))
+
+    assert len(batch.items) == 1
+    assert batch.items[0].title_hint is not None
+    assert expected_tag in batch.items[0].title_hint
+    assert batch.items[0].requires_fetch is False
+    assert batch.items[0].body_markdown
 
 
 async def test_draft_releases_are_skipped(make_fetcher) -> None:

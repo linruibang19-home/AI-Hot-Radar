@@ -66,6 +66,15 @@ overrides:
     browser_fallback: false
     status: fixture_verified
 
+  meituan-tech:
+    host_allowlist: [tech.meituan.com]
+    discovery_content_types: [application/rss+xml, application/xml, text/xml]
+    article_path_allow: ["/{year}/{month}/{day}/{slug}.html"]
+    body_candidates: ["article", "main", ".post-content"]
+    robots_policy: "publisher-provided RSS plus public dated article URLs"
+    browser_fallback: false
+    status: fixture_verified
+
   huawei-cloud-ai-community:
     host_allowlist: [developer.huaweicloud.com]
     discovery_candidates: ["a[href]"]

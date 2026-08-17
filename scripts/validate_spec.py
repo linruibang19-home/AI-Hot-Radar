@@ -45,7 +45,7 @@ def main() -> int:
     source_ids = [source.get("id") for source in sources]
     duplicate_ids = [key for key, value in Counter(source_ids).items() if value > 1]
 
-    require(len(sources) == 140, f"expected 140 sources, got {len(sources)}", errors)
+    require(len(sources) == 143, f"expected 143 sources, got {len(sources)}", errors)
     require(not duplicate_ids, f"duplicate source ids: {duplicate_ids}", errors)
     require(all(source.get("profile") in profiles for source in sources), "unknown profile reference", errors)
     require(all(not source.get("enabled") for source in sources if source.get("verification") == "restricted"), "restricted source enabled", errors)

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>美团技术团队</title>
+    <link>https://tech.meituan.com/</link>
+    <description>美团技术团队博客</description>
+    <item>
+      <title>CatPaw：面向端侧智能体的模型与系统协同实践</title>
+      <link>https://tech.meituan.com/2026/07/28/CatPaw-LongCat.html?utm_source=feed</link>
+      <guid isPermaLink="true">https://tech.meituan.com/2026/07/28/CatPaw-LongCat.html</guid>
+      <pubDate>Tue, 28 Jul 2026 10:00:00 +0800</pubDate>
+      <description><![CDATA[这里是 RSS 导语，只用于发现，不能作为可引用正文。]]></description>
+    </item>
+  </channel>
+</rss>

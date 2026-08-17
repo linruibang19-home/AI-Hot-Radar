@@ -335,8 +335,20 @@ export interface SourceHealth {
   fulltextSuccessRate?: number | null;
 }
 
+export interface SourceHealthSummary {
+  registered: number;
+  enabled: number;
+  disabled: number;
+  dataUpdatedAt?: string | null;
+  configVersion?: string | null;
+}
+
 export function fetchSourceHealth(): Promise<SourceHealth[]> {
   return getJson<SourceHealth[]>("/api/v1/admin/sources", []);
+}
+
+export function fetchSourceHealthSummary(): Promise<SourceHealthSummary | null> {
+  return getJson<SourceHealthSummary | null>("/api/v1/admin/sources/summary", null);
 }
 
 /**

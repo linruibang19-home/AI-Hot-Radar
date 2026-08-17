@@ -1,7 +1,7 @@
 """GitHub Releases adapter.
 
 AHR-INGEST-1000 §4: the REST `body` field is the complete release note, so no
-follow-up article fetch is needed. Covers 53 of the 140 configured sources.
+follow-up article fetch is needed. Covers 55 of the 143 configured sources.
 
 Field mapping is fixed by the spec:
     id -> external_id, html_url -> canonical_url, name ?? tag_name -> title,

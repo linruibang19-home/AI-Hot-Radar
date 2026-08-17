@@ -21,16 +21,27 @@ public class SourceRepository {
     public List<SourceHealth> findEnabledHealth() {
         String sql =
                 """
+                WITH item_counts AS (
+                  SELECT source_id, count(*) AS items
+                    FROM content_item
+                   GROUP BY source_id
+                ), fulltext_counts AS (
+                  SELECT source_id,
+                         count(*) FILTER (WHERE decision = 'ACCEPTED') AS fulltext_ok,
+                         count(*) AS fulltext_total
+                    FROM fulltext_attempt
+                   GROUP BY source_id
+                )
                 SELECT s.id, s.name, s.organization, s.profile, s.priority,
                        s.source_tier, s.runtime_state, s.content_access,
                        s.last_success_at, s.last_error_code, s.consecutive_failures,
                        s.next_poll_at, s.operator_enabled, s.operator_note,
-                       (SELECT count(*) FROM content_item ci WHERE ci.source_id = s.id) AS items,
-                       (SELECT count(*) FROM fulltext_attempt fa
-                         WHERE fa.source_id = s.id AND fa.decision = 'ACCEPTED') AS fulltext_ok,
-                       (SELECT count(*) FROM fulltext_attempt fa
-                         WHERE fa.source_id = s.id) AS fulltext_total
+                       coalesce(ic.items, 0) AS items,
+                       coalesce(fc.fulltext_ok, 0) AS fulltext_ok,
+                       coalesce(fc.fulltext_total, 0) AS fulltext_total
                   FROM source s
+                  LEFT JOIN item_counts ic ON ic.source_id = s.id
+                  LEFT JOIN fulltext_counts fc ON fc.source_id = s.id
                  WHERE s.effective_enabled
                  ORDER BY
                    CASE s.runtime_state
@@ -67,6 +78,27 @@ public class SourceRepository {
                             rs.getLong("items"),
                             total == 0 ? null : Math.round((double) ok / total * 1000) / 10.0);
                 });
+    }
+
+    /** Database-backed registry summary used to label which environment a console is reading. */
+    public SourceSummary findSummary() {
+        return jdbc.queryForObject(
+                """
+                SELECT count(*) AS registered,
+                       count(*) FILTER (WHERE effective_enabled) AS enabled,
+                       count(*) FILTER (WHERE NOT effective_enabled) AS disabled,
+                       max(greatest(updated_at, coalesce(last_success_at, updated_at))) AS data_updated_at,
+                       max(config_version) AS config_version
+                  FROM source
+                """,
+                new MapSqlParameterSource(),
+                (rs, rowNum) ->
+                        new SourceSummary(
+                                rs.getLong("registered"),
+                                rs.getLong("enabled"),
+                                rs.getLong("disabled"),
+                                rs.getObject("data_updated_at", OffsetDateTime.class),
+                                rs.getString("config_version")));
     }
 
     public Optional<Map<String, Object>> findState(String id) {
@@ -118,4 +150,11 @@ public class SourceRepository {
             String operatorNote,
             long items,
             Double fulltextSuccessRate) {}
+
+    public record SourceSummary(
+            long registered,
+            long enabled,
+            long disabled,
+            OffsetDateTime dataUpdatedAt,
+            String configVersion) {}
 }
