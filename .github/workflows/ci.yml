@@ -14,8 +14,8 @@ jobs:
     name: Spec validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install pyyaml jsonschema
@@ -29,8 +29,8 @@ jobs:
       run:
         working-directory: apps/ai-service
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
@@ -48,8 +48,8 @@ jobs:
       run:
         working-directory: apps/core-api
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
@@ -74,7 +74,7 @@ jobs:
           --health-cmd "pg_isready -U ai_hot_radar -d ai_hot_radar"
           --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Apply migrations
         run: |
           # Match Flyway's dotted-version ordering. Sorting the whole filename
@@ -102,10 +102,13 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
+          # setup-node v6+ may enable npm caching from package metadata. Keep
+          # the previous workflow semantics explicit and avoid PR cache trust.
+          package-manager-cache: false
       - run: npm ci
       - run: npm audit --audit-level=high
       - run: npm run typecheck
