@@ -17,7 +17,7 @@ export default async function ModelsPage() {
     <>
       <header className="page-head">
         <h1 className="page-title">模型配置</h1>
-        <p className="page-subtitle">决定之后的内容整理、报告与问答用哪个模型 · 不重算历史内容</p>
+        <p className="page-subtitle">决定内容整理、报告与问答使用的模型</p>
       </header>
       {state ? (
         <ModelSelector initial={state} provider={provider} />

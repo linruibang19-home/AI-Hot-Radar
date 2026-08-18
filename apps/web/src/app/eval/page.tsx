@@ -93,9 +93,7 @@ export default function EvalPage() {
     <>
       <header className="page-head">
         <h1 className="page-title">RAG 质量</h1>
-        <p className="page-subtitle">
-          发布门禁、引用可靠性与剩余风险；下方保留 {goldenQuestions} 题黄金集的完整实验记录
-        </p>
+        <p className="page-subtitle">发布门禁与引用可靠性 · {goldenQuestions} 题黄金集</p>
       </header>
 
       <section className="quality-hero" aria-labelledby="release-gate-title">

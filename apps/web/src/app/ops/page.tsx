@@ -219,9 +219,7 @@ export default async function OpsPage() {
     <>
       <header className="page-head">
         <h1 className="page-title">运行状态</h1>
-        <p className="page-subtitle">
-          近 {cost.days} 天 · 真实调用 token 与延迟 · 成本按调用时的模型价目快照估算
-        </p>
+        <p className="page-subtitle">近 {cost.days} 天的调用量、延迟与成本</p>
       </header>
 
       <section className="quality-hero" aria-labelledby="operations-conclusion-title">

@@ -14,9 +14,7 @@ export default function AskPage() {
     <>
       <header className="page-head">
         <h1 className="page-title">AI 问答</h1>
-        <p className="page-subtitle">
-          只依据站内已采集的资讯回答 · 每条事实标注来源并可跳回原文 · 证据不足时拒答而非猜测
-        </p>
+        <p className="page-subtitle">基于站内资讯回答，每条事实可回溯来源</p>
       </header>
 
       {/* The explanation of how retrieval works moved *inside* the panel, which

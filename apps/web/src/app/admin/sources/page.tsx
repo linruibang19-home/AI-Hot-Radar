@@ -31,7 +31,6 @@ export default async function AdminSourcesPage() {
     fetchSourceHealthSummary(),
   ]);
   const states = summarise(sources);
-  const renderedAt = new Date().toISOString();
   const publicOrigin = process.env.PUBLIC_BASE_URL ?? "http://localhost:3000";
   const environment = publicOrigin.includes("localhost") ? "本地开发" : "生产";
   const registered = summary?.registered ?? sources.length;
@@ -43,21 +42,23 @@ export default async function AdminSourcesPage() {
       <header className="source-page-head">
         <div>
           <h1 className="page-title">信源后台</h1>
-          <p className="page-subtitle">
-            排序把失败的信源放在最前 · 本页用<strong>只读凭据</strong>渲染，
-            启停与重跑走 <code>/api/v1/admin</code>，需要 OPERATOR 凭据、二次确认，并逐条留痕
-          </p>
+          {/* 凭据分级、二次确认和留痕是后端约束，不是操作员在这一页需要读的东西。 */}
+          <p className="page-subtitle">失败的信源排在最前</p>
         </div>
         <SourceRefreshButton />
       </header>
 
+      {/* 只留会变的事实：哪个环境、数据多新。「本页不会主动采集、同步另一环境或
+          自动轮询」是在向读者解释实现，不是他们要判断的信息。 */}
       <p className="source-freshness">
-        当前环境：<strong>{environment}</strong>（{publicOrigin}）。调度器持续把采集结果写入该环境自己的
-        PostgreSQL；本页不会主动采集、同步另一环境或自动轮询。数据库状态截至{" "}
-        <time dateTime={summary?.dataUpdatedAt ?? undefined}>
-          {formatTime(summary?.dataUpdatedAt)}
-        </time>
-        ，页面读取于 <time dateTime={renderedAt}>{formatTime(renderedAt)}</time>。
+        {/* 环境名旁边再印一遍完整 origin 是重复的；留作 tooltip。 */}
+        <strong title={publicOrigin}>{environment}</strong>
+        <span>
+          数据截至{" "}
+          <time dateTime={summary?.dataUpdatedAt ?? undefined}>
+            {formatTime(summary?.dataUpdatedAt)}
+          </time>
+        </span>
       </p>
 
       <div className="stat-row">
@@ -70,8 +71,8 @@ export default async function AdminSourcesPage() {
       </div>
 
       <p className="filter-note">
-        当前数据库注册 {registered} 个信源，其中 {enabled} 个有效启用、{disabled} 个关闭；
-        下表显示 {sources.length} 个有效启用信源。配置版本：{summary?.configVersion ?? "未知"}。
+        注册 {registered} · 启用 {enabled} · 关闭 {disabled} · 配置版本{" "}
+        {summary?.configVersion ?? "未知"}
       </p>
 
       {sources.length === 0 ? (

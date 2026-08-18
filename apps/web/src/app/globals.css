@@ -12,6 +12,19 @@
   --accent-ink: #0b5648;
   --hot: #c2410c;
   --sidebar-w: 232px;
+
+  /* 字号标度。此前没有基准：body 不设 font-size，于是每个组件相对浏览器默认值
+     各自往下调，攒出 199 处声明、49 种取值，其中 42 处 ≤11px，最小 9px。中文
+     在 12px 以下已经不适合成句阅读，而正文摘要停在 13.5px。
+     这八档是全站可用的全部字号，新增层级请复用而不是再引入新值。 */
+  --fs-xs: 12px;    /* 角标、计数、时间戳：不成句的内容 */
+  --fs-sm: 13px;    /* 元信息、次要标注 */
+  --fs-base: 14px;  /* 表格、密集列表 */
+  --fs-md: 15px;    /* 正文：一切成句的中文 */
+  --fs-lg: 16px;    /* 卡片标题、列表主标题 */
+  --fs-xl: 20px;    /* 区块标题 */
+  --fs-2xl: 27px;   /* 页面标题 */
+  --fs-3xl: 40px;   /* 数值大字 */
 }
 
 * {
@@ -24,6 +37,7 @@ body {
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC",
     "Microsoft YaHei", sans-serif;
+  font-size: var(--fs-md);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
@@ -81,7 +95,7 @@ a {
   align-items: center;
   gap: 8px;
   font-weight: 800;
-  font-size: 15px;
+  font-size: var(--fs-md);
   letter-spacing: 0.1em;
   padding: 0 8px;
   margin-bottom: 26px;
@@ -105,7 +119,7 @@ a {
 /* Section headings carry the primary/secondary split in the nav, so they are
    deliberately heavier and darker than the links beneath them. */
 .nav-label {
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-weight: 700;
   color: var(--text);
   letter-spacing: 0.12em;
@@ -127,7 +141,7 @@ a {
   padding: 8px 10px;
   margin-bottom: 2px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: var(--fs-md);
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -272,7 +286,7 @@ a {
 }
 
 .page-title {
-  font-size: 27px;
+  font-size: var(--fs-2xl);
   font-weight: 700;
   margin: 0 0 5px;
   letter-spacing: -0.01em;
@@ -280,7 +294,7 @@ a {
 
 .page-subtitle {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--fs-base);
   margin: 0;
 }
 
@@ -305,7 +319,7 @@ a {
 .tab {
   position: relative;
   padding: 8px 14px 11px;
-  font-size: 14px;
+  font-size: var(--fs-md);
   color: var(--muted);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
@@ -322,7 +336,7 @@ a {
 }
 
 .tab-count {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   margin-left: 5px;
   color: var(--muted-2);
 }
@@ -343,7 +357,7 @@ a {
   border-radius: 8px;
   width: 220px;
   max-width: 100%;
-  font-size: 13px;
+  font-size: var(--fs-base);
   background: var(--surface);
 }
 
@@ -352,7 +366,7 @@ a {
   border-radius: 8px;
   background: var(--accent);
   color: #fff;
-  font-size: 13px;
+  font-size: var(--fs-base);
   padding: 7px 18px;
   cursor: pointer;
 }
@@ -362,7 +376,7 @@ a {
 }
 
 .filter-note {
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--muted);
   margin: -8px 0 16px;
 }
@@ -389,12 +403,12 @@ a {
 }
 
 .stat-value {
-  font-size: 20px;
+  font-size: var(--fs-xl);
   font-weight: 700;
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
@@ -416,13 +430,13 @@ a {
 }
 
 .hot-heading {
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
   margin: 0;
 }
 
 .hot-more {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--accent);
 }
 
@@ -451,7 +465,7 @@ a {
 .hot-rank {
   flex-shrink: 0;
   width: 16px;
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-weight: 700;
   color: var(--muted-2);
   text-align: center;
@@ -464,7 +478,7 @@ a {
 .hot-title {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 600;
   line-height: 1.5;
 }
@@ -475,14 +489,14 @@ a {
 
 .hot-score {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-weight: 700;
   color: var(--text-soft);
 }
 
 .hot-score-unit {
   font-weight: 400;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted-2);
 }
 
@@ -493,12 +507,12 @@ a {
   align-items: center;
   gap: 4px;
   margin-bottom: 10px;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .sort-label {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   margin-right: 4px;
 }
 
@@ -559,12 +573,12 @@ a {
 }
 
 .tl-date {
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-weight: 700;
 }
 
 .tl-weekday {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
@@ -601,7 +615,7 @@ a {
 }
 
 .tl-time {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -647,12 +661,12 @@ a {
 }
 
 .card-meta {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
 .card-source {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -664,7 +678,7 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--text-soft);
   font-variant-numeric: tabular-nums;
@@ -678,7 +692,7 @@ a {
 }
 
 .card-title {
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-weight: 650;
   margin: 0 0 6px;
   line-height: 1.45;
@@ -688,22 +702,23 @@ a {
   color: var(--accent-ink);
 }
 
+/* 信息流的主阅读面：站点上被读得最多的一段中文，此前是 13.5px。 */
 .card-summary {
-  font-size: 13.5px;
+  font-size: var(--fs-md);
   color: var(--text-soft);
   margin: 0;
-  line-height: 1.65;
+  line-height: 1.7;
 }
 
 .card-corroboration {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--muted);
   margin: 8px 0 0;
 }
 
 .card-reason {
   margin: 10px 0 0;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--accent-ink);
   background: var(--accent-soft);
   border-radius: 8px;
@@ -726,7 +741,7 @@ a {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 1px 8px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted);
 }
 
@@ -756,7 +771,7 @@ a {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   letter-spacing: 0.18em;
   color: var(--muted);
@@ -770,14 +785,14 @@ a {
 }
 
 .hero-title {
-  font-size: 40px;
+  font-size: var(--fs-3xl);
   font-weight: 800;
   margin: 0 0 16px;
   letter-spacing: -0.02em;
 }
 
 .hero-lead {
-  font-size: 14.5px;
+  font-size: var(--fs-md);
   color: var(--text-soft);
   margin: 0;
   max-width: 700px;
@@ -793,13 +808,13 @@ a {
   align-items: baseline;
   gap: 14px;
   flex-wrap: wrap;
-  font-size: 19px;
+  font-size: var(--fs-xl);
   font-weight: 700;
   margin: 0 0 16px;
 }
 
 .topic-group-desc {
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   font-weight: 400;
   color: var(--muted);
 }
@@ -831,13 +846,13 @@ a {
 }
 
 .topic-card-name {
-  font-size: 17px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   margin: 0 0 8px;
 }
 
 .topic-card-desc {
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--muted);
   margin: 0 0 16px;
   line-height: 1.7;
@@ -845,7 +860,7 @@ a {
 }
 
 .topic-card-link {
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--accent);
 }
 
@@ -856,7 +871,7 @@ a {
 /* ---------- misc ---------- */
 
 .day-heading {
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
   margin: 26px 0 10px;
   padding-bottom: 6px;
@@ -866,7 +881,7 @@ a {
 .day-count {
   font-weight: 400;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   margin-left: 8px;
 }
 
@@ -891,7 +906,7 @@ a {
   border: 1px solid #f0e0b0;
   border-radius: 10px;
   padding: 12px 16px;
-  font-size: 13px;
+  font-size: var(--fs-base);
   margin: 20px 0;
   line-height: 1.7;
 }
@@ -906,7 +921,7 @@ a {
   background: var(--surface);
   border-radius: 8px;
   padding: 8px 18px;
-  font-size: 14px;
+  font-size: var(--fs-md);
 }
 
 .button:hover {
@@ -926,7 +941,7 @@ a {
   background: var(--surface);
   border-radius: 999px;
   padding: 6px 14px;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .topic-chip:hover {
@@ -936,7 +951,7 @@ a {
 
 .topic-chip-count {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   margin-left: 5px;
 }
 
@@ -947,7 +962,7 @@ a {
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .table th,
@@ -1051,7 +1066,7 @@ a {
 .state {
   border-radius: 999px;
   padding: 1px 8px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .state-ACTIVE {
@@ -1161,7 +1176,7 @@ summary:focus-visible {
     border: 1px solid var(--border-soft);
     border-radius: 999px;
     padding: 5px 10px;
-    font-size: 12px;
+    font-size: var(--fs-sm);
   }
 
   .nav-link:hover {
@@ -1199,7 +1214,7 @@ summary:focus-visible {
   }
 
   .page-title {
-    font-size: 28px;
+    font-size: var(--fs-2xl);
   }
 
   .page-subtitle {
@@ -1221,7 +1236,7 @@ summary:focus-visible {
   }
 
   .hero-title {
-    font-size: 30px;
+    font-size: var(--fs-2xl);
   }
 
   /* The time gutter costs too much width on a phone; the marker rail goes
@@ -1259,7 +1274,7 @@ summary:focus-visible {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--surface);
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--muted);
   transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
 }
@@ -1292,7 +1307,7 @@ summary:focus-visible {
   border-radius: 10px;
   background: var(--accent);
   color: #fff;
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 600;
   box-shadow: 0 1px 2px rgb(15 110 92 / 0.2);
   transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
@@ -1325,7 +1340,7 @@ summary:focus-visible {
   padding-left: 10px;
   margin-left: 2px;
   border-left: 1px solid rgb(255 255 255 / 0.28);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 400;
   opacity: 0.85;
 }
@@ -1352,7 +1367,7 @@ summary:focus-visible {
   padding: 11px 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  font-size: 15px;
+  font-size: var(--fs-md);
   background: var(--surface);
   color: var(--ink);
 }
@@ -1376,7 +1391,7 @@ summary:focus-visible {
 }
 
 .ask-examples-label {
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--muted-2);
 }
 
@@ -1386,7 +1401,7 @@ summary:focus-visible {
   border-radius: 999px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--fs-base);
   cursor: pointer;
   transition: border-color 0.15s ease, color 0.15s ease;
 }
@@ -1420,7 +1435,7 @@ summary:focus-visible {
   align-items: center;
   gap: 10px;
   color: var(--muted);
-  font-size: 0.94rem;
+  font-size: var(--fs-md);
   transition: color 0.2s ease;
 }
 
@@ -1432,7 +1447,7 @@ summary:focus-visible {
   height: 18px;
   border-radius: 50%;
   border: 1px solid var(--border);
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
   line-height: 1;
   flex-shrink: 0;
 }
@@ -1458,7 +1473,7 @@ summary:focus-visible {
 
 .ask-step-detail {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--fs-base);
 }
 
 @keyframes ask-pulse {
@@ -1498,7 +1513,7 @@ summary:focus-visible {
   padding: 3px 10px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--muted);
   background: var(--bg);
 }
@@ -1517,7 +1532,7 @@ summary:focus-visible {
 /* The conclusion the prompt now requires, marked as such. A reader who stops
    after one paragraph should already have the answer. */
 .ask-lead {
-  font-size: 1.06rem;
+  font-size: var(--fs-lg);
   color: var(--ink);
   padding-left: 14px;
   border-left: 3px solid var(--accent);
@@ -1537,7 +1552,7 @@ summary:focus-visible {
   border-radius: 9px;
   background: var(--bg);
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
 }
 
@@ -1569,7 +1584,7 @@ summary:focus-visible {
 
 .ask-trace-summary {
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--ink);
 }
@@ -1592,7 +1607,7 @@ summary:focus-visible {
 }
 
 .ask-history-title {
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   margin: 0;
   display: flex;
@@ -1612,7 +1627,7 @@ summary:focus-visible {
 .ask-history-count,
 .ask-sources-count {
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: var(--fs-base);
   color: var(--accent-ink);
   background: var(--accent-soft);
   border: 1px solid var(--accent);
@@ -1630,7 +1645,7 @@ summary:focus-visible {
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  font-size: 1.02rem;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--ink);
   padding: 10px 12px;
@@ -1655,7 +1670,7 @@ summary:focus-visible {
 
 .ask-history-note {
   font-weight: 400;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
@@ -1695,12 +1710,12 @@ summary:focus-visible {
 
 .ask-history-q {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
 }
 
 .ask-history-meta {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -1720,7 +1735,7 @@ summary:focus-visible {
   border-radius: 5px;
   background: var(--bg);
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   cursor: pointer;
@@ -1740,7 +1755,7 @@ summary:focus-visible {
 .tier-badge {
   padding: 1px 7px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1772,7 +1787,7 @@ summary:focus-visible {
   border-radius: 4px;
   background: var(--accent-soft);
   color: var(--accent-ink);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
@@ -1806,7 +1821,7 @@ summary:focus-visible {
 
 .ask-considered-title {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--muted);
 }
 
@@ -1818,7 +1833,7 @@ summary:focus-visible {
 }
 
 .ask-considered li {
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .ask-body p:last-child,
@@ -1840,7 +1855,7 @@ summary:focus-visible {
 }
 
 .ask-refusal-note {
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--muted-2);
 }
 
@@ -1848,7 +1863,7 @@ summary:focus-visible {
   margin: 14px 0 0;
   padding-left: 20px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--fs-md);
   line-height: 1.7;
 }
 
@@ -1859,7 +1874,7 @@ summary:focus-visible {
 }
 
 .ask-sources-title {
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 700;
   margin: 0 0 10px;
 }
@@ -1885,7 +1900,7 @@ summary:focus-visible {
   flex-shrink: 0;
   color: var(--accent-ink);
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--fs-md);
 }
 
 .ask-source a {
@@ -1894,13 +1909,13 @@ summary:focus-visible {
 }
 
 .ask-source-meta {
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--muted-2);
   margin-top: 2px;
 }
 
 .ask-source-claim {
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--muted);
   margin-top: 4px;
   line-height: 1.6;
@@ -1908,7 +1923,7 @@ summary:focus-visible {
 
 .ask-meta {
   margin: 14px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--muted-2);
 }
 
@@ -1943,8 +1958,8 @@ summary:focus-visible {
 }
 
 .trace-note {
-  font-size: 12.5px;
-  color: var(--muted);
+  font-size: var(--fs-base);
+  color: var(--text-soft);
   line-height: 1.75;
   margin: 10px 0 14px;
 }
@@ -1957,7 +1972,7 @@ summary:focus-visible {
 
 .trace-table {
   min-width: 760px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
 }
 
 .trace-table th:not(:first-child),
@@ -1975,7 +1990,7 @@ summary:focus-visible {
 }
 
 .trace-score {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
@@ -1985,7 +2000,7 @@ summary:focus-visible {
 }
 
 .trace-meta {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted);
   margin-top: 2px;
 }
@@ -2000,7 +2015,7 @@ summary:focus-visible {
 /* The §6 adjustments, spelled out. A reader judging whether to trust a ranking
    should see the same metadata the ranker was given. */
 .trace-boost {
-  font-size: 10.5px;
+  font-size: var(--fs-xs);
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--bg);
@@ -2048,14 +2063,14 @@ summary:focus-visible {
 }
 
 .section-title {
-  font-size: 17px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   margin: 0 0 14px;
 }
 
 .eval-table {
   min-width: 900px;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .eval-table th:nth-child(n + 3),
@@ -2073,20 +2088,20 @@ summary:focus-visible {
 }
 
 .eval-changed {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--muted);
   line-height: 1.6;
   max-width: 300px;
 }
 
 .eval-meta {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted);
   margin-top: 2px;
 }
 
 .eval-delta {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2121,13 +2136,13 @@ summary:focus-visible {
 }
 
 .eval-round-title {
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
   margin: 0;
 }
 
 .eval-run-id {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted-2);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   margin-top: 2px;
@@ -2138,13 +2153,13 @@ summary:focus-visible {
   display: grid;
   grid-template-columns: 72px 1fr;
   gap: 6px 14px;
-  font-size: 13px;
+  font-size: var(--fs-base);
   line-height: 1.8;
 }
 
 .eval-facts dt {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .eval-facts dd {
@@ -2169,27 +2184,32 @@ summary:focus-visible {
 }
 
 .eval-category-name {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted);
 }
 
 .eval-category-value {
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 .eval-category-sub {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
 
+/* /eval 与 /ops 的注解解释的是量法本身——为什么缓存 token 不重复计价、
+   为什么阶段占比按每次请求取中位数。这些是页面的价值所在，之前却被排成灰色
+   小字，读起来像免责声明。给一条竖线和正常的正文对比度，当作正文而不是脚注。 */
 .eval-note {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.7;
   margin: 12px 0 0;
+  padding-left: 11px;
+  border-left: 2px solid var(--border);
+  font-size: var(--fs-base);
+  color: var(--text-soft);
+  line-height: 1.75;
 }
 
 .state.verdict-pass {
@@ -2215,7 +2235,7 @@ summary:focus-visible {
 /* ---------- citation support score (T2-4) ---------- */
 
 .support-badge {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   padding: 1px 7px;
   border-radius: 999px;
   font-variant-numeric: tabular-nums;
@@ -2242,7 +2262,7 @@ summary:focus-visible {
   align-items: baseline;
   gap: 10px;
   flex-wrap: wrap;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 /* ---------- starter questions ---------- */
@@ -2285,7 +2305,7 @@ summary:focus-visible {
   padding: 13px 8px;
   color: var(--muted);
   text-align: center;
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 650;
 }
 
@@ -2321,12 +2341,12 @@ summary:focus-visible {
   justify-content: space-between;
   margin: 0 7px 8px;
   color: var(--text-soft);
-  font-size: 14px;
+  font-size: var(--fs-md);
 }
 
 .report-archive-group h2 span {
   color: var(--muted-2);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 500;
 }
 
@@ -2344,7 +2364,7 @@ summary:focus-visible {
   padding: 8px 7px;
   border-radius: 7px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
 }
 
@@ -2385,7 +2405,7 @@ summary:focus-visible {
   margin: 0 0 5px;
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.14em;
 }
 
@@ -2400,7 +2420,7 @@ summary:focus-visible {
 .report-dateline {
   margin: 6px 0 18px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   letter-spacing: 0.04em;
 }
 
@@ -2423,7 +2443,7 @@ summary:focus-visible {
 
 .quality-hero h2 {
   margin: 4px 0 8px;
-  font-size: 1.2rem;
+  font-size: var(--fs-xl);
 }
 
 .quality-hero p {
@@ -2436,7 +2456,7 @@ summary:focus-visible {
 .eyebrow {
   color: var(--accent);
   font-family: var(--font-mono), monospace;
-  font-size: 0.68rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.13em;
 }
@@ -2453,7 +2473,7 @@ summary:focus-visible {
   border-radius: 5px;
   background: var(--bg);
   color: var(--muted);
-  font-size: 0.7rem;
+  font-size: var(--fs-xs);
 }
 
 .story-purpose,
@@ -2467,7 +2487,7 @@ summary:focus-visible {
 .story-purpose {
   margin: 20px 0 18px;
   padding: 12px 15px;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .story-purpose strong,
@@ -2483,7 +2503,7 @@ summary:focus-visible {
   gap: 6px 10px;
   margin: 8px 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .vendor-card-stats {
@@ -2492,7 +2512,7 @@ summary:focus-visible {
   flex-wrap: wrap;
   margin: 0 0 10px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .story-overview {
@@ -2509,7 +2529,7 @@ summary:focus-visible {
 }
 
 .story-overview-label {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   letter-spacing: 0.08em;
 }
 
@@ -2519,7 +2539,7 @@ summary:focus-visible {
 
 .association-updated {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   margin: 8px 0 0;
 }
 
@@ -2540,7 +2560,7 @@ summary:focus-visible {
   border-radius: 10px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .relation-tab:hover,
@@ -2561,7 +2581,7 @@ summary:focus-visible {
   border-left: 3px solid var(--accent);
   background: var(--accent-soft);
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--fs-base);
   margin-bottom: 18px;
 }
 
@@ -2576,7 +2596,7 @@ summary:focus-visible {
   align-items: center;
   flex-wrap: wrap;
   margin: 0 0 7px 2px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted);
 }
 
@@ -2592,7 +2612,7 @@ summary:focus-visible {
   justify-content: flex-end;
   gap: 18px;
   margin: 24px 0 8px;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .feed-next {
@@ -2622,7 +2642,7 @@ summary:focus-visible {
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 84%, var(--bg));
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
 }
 
 .quality-snapshot > div {
@@ -2643,7 +2663,7 @@ summary:focus-visible {
 
 .quality-refresh-note {
   margin-top: 10px !important;
-  font-size: 0.75rem;
+  font-size: var(--fs-base);
 }
 
 .quality-refresh-note a {
@@ -2670,14 +2690,22 @@ summary:focus-visible {
 }
 
 .source-freshness {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: -8px 0 18px;
-  padding: 9px 12px;
-  border-left: 2px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 4%, var(--surface));
   color: var(--muted);
-  font-size: 0.76rem;
-  line-height: 1.65;
+  font-size: var(--fs-sm);
 }
+
+.source-freshness strong {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
 
 .quality-grid {
   display: grid;
@@ -2699,19 +2727,19 @@ summary:focus-visible {
   flex: 0 0 auto;
   color: var(--accent);
   font-family: var(--font-mono), monospace;
-  font-size: 0.72rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
 }
 
 .quality-card h3 {
   margin: 0 0 6px;
-  font-size: 0.88rem;
+  font-size: var(--fs-md);
 }
 
 .quality-card p {
   margin: 0;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
   line-height: 1.65;
 }
 
@@ -2758,7 +2786,7 @@ summary:focus-visible {
   align-items: center;
   margin: -4px 0 14px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .report-subscribe-trigger,
@@ -2817,7 +2845,7 @@ summary:focus-visible {
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 22px;
+  font-size: var(--fs-xl);
 }
 
 .report-subscribe-close button:hover {
@@ -2834,20 +2862,20 @@ summary:focus-visible {
 .subscription-action-card > span {
   color: var(--accent-ink);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.16em;
 }
 
 .report-subscribe-form h2 {
   margin: 5px 0 7px;
-  font-size: 24px;
+  font-size: var(--fs-2xl);
 }
 
 .report-subscribe-form > p {
   margin: 0 0 20px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--fs-base);
   line-height: 1.65;
 }
 
@@ -2877,20 +2905,20 @@ summary:focus-visible {
   border-radius: 50%;
   background: var(--accent-soft);
   color: var(--accent-ink);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .report-subscribe-flow span {
   display: grid;
   gap: 3px;
   color: var(--text);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 650;
 }
 
 .report-subscribe-flow small {
   color: var(--muted);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-weight: 400;
   line-height: 1.35;
 }
@@ -2898,7 +2926,7 @@ summary:focus-visible {
 .report-subscribe-email {
   display: grid;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 650;
 }
 
@@ -2926,7 +2954,7 @@ summary:focus-visible {
 
 .report-subscribe-form legend {
   margin-bottom: 7px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 650;
 }
 
@@ -2962,17 +2990,17 @@ summary:focus-visible {
 }
 
 .report-subscribe-periods strong {
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .report-subscribe-periods small {
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 .report-subscribe-form .report-subscribe-timezone {
   margin: 12px 0;
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .report-subscribe-form .report-subscribe-result,
@@ -2982,7 +3010,7 @@ summary:focus-visible {
   background: #fff4e8;
   padding: 9px 11px;
   color: #8a4f13;
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .report-subscribe-form .report-subscribe-result.is-success,
@@ -2999,7 +3027,7 @@ summary:focus-visible {
 .report-subscribe-form .report-subscribe-hint {
   margin: 9px 0 0;
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   text-align: center;
 }
 
@@ -3055,7 +3083,7 @@ summary:focus-visible {
 .report-lead > span {
   color: var(--accent-ink);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.18em;
 }
@@ -3070,7 +3098,7 @@ summary:focus-visible {
 .report-lead p {
   margin: 0;
   color: var(--text-soft);
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 1.85;
 }
 
@@ -3088,12 +3116,12 @@ summary:focus-visible {
 
 .report-overview-head h2 {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 
 .report-overview-head > span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .report-overview ol {
@@ -3114,7 +3142,7 @@ summary:focus-visible {
 .report-index {
   color: var(--accent);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .report-overview li div {
@@ -3125,13 +3153,13 @@ summary:focus-visible {
 }
 
 .report-overview li strong {
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .report-overview li div span {
   overflow: hidden;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3139,7 +3167,7 @@ summary:focus-visible {
 .report-overview li em,
 .report-section > header em {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-style: normal;
 }
 
@@ -3158,19 +3186,19 @@ summary:focus-visible {
 .report-section > header > span {
   color: var(--accent);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .report-section > header h2 {
   margin: 0;
-  font-size: 19px;
+  font-size: var(--fs-xl);
   line-height: 1.3;
 }
 
 .report-section > header small {
   color: var(--muted);
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.15em;
 }
 
@@ -3185,7 +3213,7 @@ summary:focus-visible {
 
 .report-story h3 {
   margin: 0 0 5px;
-  font-size: 17px;
+  font-size: var(--fs-lg);
   line-height: 1.45;
 }
 
@@ -3201,7 +3229,7 @@ summary:focus-visible {
   gap: 5px;
   align-items: center;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .tier-badge,
@@ -3239,7 +3267,7 @@ summary:focus-visible {
 .report-story > p {
   margin: 9px 0 0;
   color: var(--text-soft);
-  font-size: 13px;
+  font-size: var(--fs-base);
   line-height: 1.8;
 }
 
@@ -3248,7 +3276,7 @@ summary:focus-visible {
   gap: 14px;
   margin-top: 10px;
   color: var(--accent-ink);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
 }
 
@@ -3279,12 +3307,12 @@ summary:focus-visible {
 
 .report-stats strong {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 20px;
+  font-size: var(--fs-xl);
 }
 
 .report-stats span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .report-next-period {
@@ -3305,12 +3333,12 @@ summary:focus-visible {
 }
 
 .report-next-period strong {
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .report-next-period span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .report-next-period > a {
@@ -3319,7 +3347,7 @@ summary:focus-visible {
   background: var(--accent-ink);
   padding: 8px 14px;
   color: white;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 650;
 }
 
@@ -3329,7 +3357,7 @@ summary:focus-visible {
   gap: 12px;
   margin: 26px 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 .report-navigation :last-child {
@@ -3351,7 +3379,7 @@ summary:focus-visible {
   gap: 6px 12px;
   color: var(--muted);
   text-align: center;
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 .report-disclosure strong {
@@ -3369,7 +3397,7 @@ summary:focus-visible {
 
 .report-empty h1 {
   margin: 4px 0 8px;
-  font-size: 25px;
+  font-size: var(--fs-2xl);
 }
 
 .report-empty p {
@@ -3385,7 +3413,7 @@ summary:focus-visible {
   padding: 7px 10px;
   border-radius: 6px;
   background: var(--bg);
-  font-size: 12px;
+  font-size: var(--fs-sm);
 }
 
 @media (max-width: 1120px) {
@@ -3410,7 +3438,7 @@ summary:focus-visible {
     padding: 11px 14px;
     color: var(--muted);
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--fs-sm);
   }
 
   .report-archive-groups {
@@ -3504,7 +3532,7 @@ summary:focus-visible {
 
 .ask-examples-label {
   grid-column: 1 / -1;
-  font-size: 13px;
+  font-size: var(--fs-base);
   font-weight: 600;
   color: var(--muted);
 }
@@ -3520,7 +3548,7 @@ summary:focus-visible {
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--text);
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
@@ -3532,7 +3560,7 @@ summary:focus-visible {
 }
 
 .ask-example-shows {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted);
 }
 
@@ -3553,7 +3581,7 @@ summary:focus-visible {
   border-left: 3px solid var(--warning, #b45309);
   background: var(--warning-bg, #fffbeb);
   color: var(--fg-muted, #57534e);
-  font-size: 0.875rem;
+  font-size: var(--fs-md);
   line-height: 1.6;
   border-radius: 0 4px 4px 0;
 }
@@ -3566,7 +3594,7 @@ summary:focus-visible {
 
 .ask-window-toggle {
   cursor: pointer;
-  font-size: 0.8125rem;
+  font-size: var(--fs-base);
   color: var(--fg-muted, #57534e);
   text-decoration: underline dotted;
   list-style: none;
@@ -3582,7 +3610,7 @@ summary:focus-visible {
   gap: 0.5rem;
   align-items: center;
   margin-top: 0.5rem;
-  font-size: 0.8125rem;
+  font-size: var(--fs-base);
 }
 
 .ask-window-body label {
@@ -3622,7 +3650,7 @@ summary:focus-visible {
   border-left: 3px solid var(--accent, #0f766e);
   background: var(--surface-muted, #f5f5f4);
   color: var(--fg-muted, #57534e);
-  font-size: 0.875rem;
+  font-size: var(--fs-md);
   line-height: 1.6;
   border-radius: 0 4px 4px 0;
 }
@@ -3634,7 +3662,7 @@ summary:focus-visible {
   padding: 0.5rem 0.85rem;
   background: var(--surface-muted, #f5f5f4);
   border-radius: 4px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-base);
   color: var(--fg-muted, #57534e);
 }
 
@@ -3652,7 +3680,7 @@ summary:focus-visible {
 }
 
 .ask-followups-label {
-  font-size: 0.8125rem;
+  font-size: var(--fs-base);
   color: var(--fg-muted, #57534e);
 }
 
@@ -3663,7 +3691,7 @@ summary:focus-visible {
   background: var(--surface, #fff);
   color: var(--accent, #0f766e);
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--fs-base);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
@@ -3720,7 +3748,7 @@ summary:focus-visible {
   align-items: center;
   gap: 8px;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--muted);
 }
 
@@ -3740,7 +3768,7 @@ summary:focus-visible {
   padding: 1px 8px;
   border-radius: 999px;
   background: var(--surface-muted, #f5f5f4);
-  font-size: 11px;
+  font-size: var(--fs-xs);
 }
 
 .chat-head-fresh {
@@ -3756,7 +3784,7 @@ summary:focus-visible {
   background: var(--surface);
   color: var(--accent-ink);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--fs-base);
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
@@ -3796,7 +3824,7 @@ summary:focus-visible {
   align-items: center;
   gap: 7px;
   color: var(--accent-ink);
-  font-size: 0.75rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -3820,7 +3848,7 @@ summary:focus-visible {
   max-width: 720px;
   margin: 0;
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
   line-height: 1.7;
 }
 
@@ -3832,7 +3860,7 @@ summary:focus-visible {
   padding: 0;
   list-style: none;
   color: var(--muted);
-  font-size: 0.8125rem;
+  font-size: var(--fs-base);
 }
 
 .chat-trust li {
@@ -3876,7 +3904,7 @@ summary:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   background: var(--surface-muted, #f5f5f4);
   color: var(--muted);
@@ -3897,7 +3925,7 @@ summary:focus-visible {
   background: var(--accent-soft);
   color: var(--ink);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
   line-height: 1.6;
 }
 
@@ -3905,7 +3933,7 @@ summary:focus-visible {
   display: block;
   margin-top: 3px;
   font-weight: 400;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--muted-2);
 }
 
@@ -3978,7 +4006,7 @@ summary:focus-visible {
   gap: 0.5rem;
   align-items: center;
   margin-top: 10px;
-  font-size: 0.8125rem;
+  font-size: var(--fs-base);
   color: var(--muted);
 }
 
@@ -4027,7 +4055,7 @@ summary:focus-visible {
 .model-message {
   margin: 0 0 4px;
   color: var(--accent-ink);
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
 }
 
 /* Model configuration page.
@@ -4052,7 +4080,7 @@ summary:focus-visible {
 
 .panel-head h2 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--fs-lg);
 }
 
 .panel-body {
@@ -4070,7 +4098,7 @@ summary:focus-visible {
   padding: 14px 22px;
   border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
 }
 
 .panel-actions {
@@ -4081,7 +4109,7 @@ summary:focus-visible {
 .field {
   display: grid;
   gap: 8px;
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
   font-weight: 600;
 }
 
@@ -4114,7 +4142,7 @@ summary:focus-visible {
   color: var(--accent-ink);
   cursor: pointer;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--fs-base);
   font-weight: 500;
 }
 
@@ -4123,7 +4151,7 @@ summary:focus-visible {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   padding: 5px 11px;
   color: var(--accent-ink);
-  font-size: 0.82rem;
+  font-size: var(--fs-base);
   white-space: nowrap;
 }
 
@@ -4155,13 +4183,13 @@ summary:focus-visible {
 }
 
 .model-row strong {
-  font-size: 1rem;
+  font-size: var(--fs-lg);
 }
 
 .model-row p {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 0.88rem;
+  font-size: var(--fs-md);
 }
 
 .sheet-backdrop {
@@ -4187,7 +4215,7 @@ summary:focus-visible {
 
 .sheet h2 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--fs-xl);
 }
 
 .sheet-actions {

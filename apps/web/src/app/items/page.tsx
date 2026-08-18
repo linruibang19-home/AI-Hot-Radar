@@ -44,10 +44,9 @@ export default async function ItemsPage({
     <>
       <header className="page-head">
         <h1 className="page-title">全部 AI 动态</h1>
-        <p className="page-subtitle">
-          已完成中文结构化的入库内容，按发布时间倒序 · 待处理内容不会提前展示，事实以原文为准
-          {params.q ? ` · 搜索「${params.q}」` : ""}
-        </p>
+        {/* 副标题原本解释了入库口径、排序和免责。标题、下方的分类计数和搜索框
+            已经说明了这些，留在这里只是把规格说明搬到了用户眼前。 */}
+        {params.q ? <p className="page-subtitle">搜索「{params.q}」</p> : null}
       </header>
 
       <div className="toolbar">

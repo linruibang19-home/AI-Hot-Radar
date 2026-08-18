@@ -23,10 +23,7 @@ export default async function StoriesPage() {
     <>
       <header className="page-head">
         <h1 className="page-title">事件追踪</h1>
-        <p className="page-subtitle">
-          只展示通过高置信度聚类门槛的多来源事件。同一件事只占一个位置，展开后可对照
-          主来源与其他报道；来源覆盖不等同于所有说法均已得到独立证实。
-        </p>
+        <p className="page-subtitle">同一件事只占一条，展开可对照各家报道</p>
       </header>
 
       <div className="story-purpose">

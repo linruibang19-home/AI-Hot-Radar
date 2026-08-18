@@ -8,6 +8,7 @@ import {
   formatPublicationTime,
   formatShortDateTime,
   formatTime,
+  formatToday,
   formatWeekday,
 } from "./datetime";
 
@@ -106,6 +107,20 @@ describe("formatDateTime", () => {
 describe("formatShortDateTime", () => {
   it("drops the year for dense tables", () => {
     expect(formatShortDateTime("2026-08-03T09:12:00Z")).toBe("08-03 17:12");
+  });
+});
+
+describe("formatToday", () => {
+  it("ends with the weekday", () => {
+    // 首页大标题长期缺了这一段：调用方按「星期三」写死了 `.slice(2)`，而表已经
+    // 改成「周三」，切完是空串，线上显示成「2026年8月19日星期」。这里断言整串，
+    // 一旦星期没跟上就会失败。
+    expect(formatToday(new Date("2026-08-19T02:00:00Z"))).toBe("2026年8月19日 周三");
+  });
+
+  it("uses the display timezone, not the server's UTC clock", () => {
+    // 北京时间 8-20 07:30，UTC 还停在 8-19。按 UTC 渲染会把标题写成前一天。
+    expect(formatToday(new Date("2026-08-19T23:30:00Z"))).toBe("2026年8月20日 周四");
   });
 });
 

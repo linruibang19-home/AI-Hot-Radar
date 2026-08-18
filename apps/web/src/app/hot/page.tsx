@@ -19,10 +19,9 @@ export default async function HotPage() {
     <>
       <header className="page-head">
         <h1 className="page-title">热点榜</h1>
-        <p className="page-subtitle">
-          热度 = 时效衰减 × 内容类型权重 ×（来源等级 + 独立信源 + 质量），与质量分是两回事：
-          质量分评价单篇文章且一经计算即稳定，热度衡量一件事当前受到多少关注并随时间衰减
-        </p>
+        {/* 原文是完整的热度公式加一段它与质量分的辨析。那属于文档，见
+            docs/spec；副标题只需要让人知道这一页按什么排。 */}
+        <p className="page-subtitle">越新、越多信源报道的越靠前，热度随时间衰减</p>
       </header>
 
       {items.length === 0 ? (

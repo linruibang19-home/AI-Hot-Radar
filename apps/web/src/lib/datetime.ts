@@ -90,7 +90,23 @@ export function formatDayLabel(key: string): string {
   return `${Number(month)}月${Number(day)}日`;
 }
 
-/** "星期一" for a YYYY-MM-DD key. */
+/**
+ * "2026年8月19日 周三" — the home page heading.
+ *
+ * Lived in `app/page.tsx` and rebuilt the weekday by hand:
+ * `` `…日星期${formatWeekday(key).slice(2)}` ``. That was written when the table
+ * held "星期三"; once it was shortened to "周三" the slice removed the whole word
+ * and the heading read "…8月19日星期" with nothing after it. A caller that
+ * restates another module's format has no way to notice the format changing, so
+ * the function belongs next to the table it depends on.
+ */
+export function formatToday(now: Date = new Date()): string {
+  const key = dayKey(now.toISOString()) ?? "";
+  const [year, month, day] = key.split("-");
+  return `${year}年${Number(month)}月${Number(day)}日 ${formatWeekday(key)}`;
+}
+
+/** "周一" for a YYYY-MM-DD key. */
 export function formatWeekday(key: string): string {
   // Parsed as UTC midnight and read back in UTC: the key already carries the
   // display-timezone date, so converting it again would shift it back.
