@@ -1,13 +1,13 @@
 # AI Hot Radar 当前生产基线
 
-> 截至：2026-08-19 CST。该快照不是实时承诺；动态状态以线上只读接口和目标机复核为准。
+> 截至：2026-08-19 CST（v0.1.20 部署后）。该快照不是实时承诺；动态状态以线上只读接口和目标机复核为准。
 
 ## 1. 代码与运行版本
 
 | 项目 | 已核验事实 |
 |---|---|
 | 在线地址 | `https://aihotradar.online` |
-| 生产业务版本 | `v0.1.19@be8601cdd61dbab5ea18cc0b48a929056c7d35fc` |
+| 生产业务版本 | `v0.1.20@0914ae9bef2ef2cc60d116ee0262d52ee63192cb` |
 | 当前仓库 `main` | 可能包含生产后的文档提交；不能直接等同于生产镜像 |
 | 主机 | 香港 Ubuntu 22.04.5，2C4G，40 GiB |
 | 编排 | Docker Compose，10 个容器 |
@@ -47,6 +47,7 @@ Redis 只保存可重建缓存、限流计数、短锁、RAG 会话热副本和 
 
 ## 4. 生产验证证据
 
+- v0.1.20 发布与部署验收：[`../delivery/ui-type-scale-release-20260819.md`](../delivery/ui-type-scale-release-20260819.md)；
 - v0.1.19 发布与部署验收：[`../delivery/model-console-release-20260819.md`](../delivery/model-console-release-20260819.md)；
 - 架构与业务流程通读核查：[`architecture-review-20260818.md`](architecture-review-20260818.md)；
 - 当前交接与 v0.1.18 验收历史：[`handoff-20260814.md`](handoff-20260814.md)；
