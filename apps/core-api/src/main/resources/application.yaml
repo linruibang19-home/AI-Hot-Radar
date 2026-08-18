@@ -48,6 +48,11 @@ ahr:
     # SSR and never mutates.
     viewer-token: ${AHR_ADMIN_VIEWER_TOKEN:}
   public-base-url: ${PUBLIC_BASE_URL:http://localhost:3000}
+  # Base64 of 32 random bytes. Wraps the generation provider's API key before it
+  # reaches PostgreSQL (V027), so a database dump on its own decrypts to nothing.
+  # Unset, the console reports that this deployment cannot store a key and the
+  # provider keeps coming from LLM_BASE_URL / LLM_API_KEY.
+  llm-credential-master-key: ${LLM_CREDENTIAL_MASTER_KEY:}
   subscription:
     token-secret: ${AHR_SUBSCRIPTION_TOKEN_SECRET:local-development-subscription-token-secret-do-not-deploy}
   email:

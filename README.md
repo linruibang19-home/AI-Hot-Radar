@@ -131,7 +131,7 @@ AI-Hot-Radar/
 │  ├─ web/                 Next.js 页面、SSR、交互与同源代理
 │  ├─ core-api/            Spring Boot 内容、报告、订阅和管理业务
 │  └─ ai-service/          FastAPI 采集加工、RAG 与离线评测
-├─ database/migrations/    Flyway V001–V026，数据库可执行演进历史
+├─ database/migrations/    Flyway V001–V027，数据库可执行演进历史
 ├─ api/ + schemas/         OpenAPI 与 Java/Python 共享结构契约
 ├─ config/                 信源、采集策略、站点覆盖、主题与模型配置
 ├─ infra/                  Docker Compose、Caddy、部署、备份和恢复脚本

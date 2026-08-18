@@ -87,6 +87,27 @@ export interface GenerationModelOption {
   pricing_source: string;
 }
 
+/**
+ * Where generation requests go and which key signs them.
+ *
+ * Never carries the key — `keyFingerprint` is how the console shows *which*
+ * credential is stored without being able to show it.
+ */
+export interface GenerationProviderState {
+  baseUrl: string;
+  usesEnvironment: boolean;
+  keyFingerprint: string | null;
+  keyFromEnvironment: boolean;
+  version: number;
+  updatedAt: string;
+  /** False when LLM_CREDENTIAL_MASTER_KEY is unset: the page says so up front. */
+  credentialStorageReady: boolean;
+}
+
+export function fetchGenerationProvider(): Promise<GenerationProviderState | null> {
+  return getJson<GenerationProviderState | null>("/api/v1/admin/models/provider", null);
+}
+
 export interface GenerationModelState {
   current: GenerationModelOption & { version: number; updated_at: string };
   available: GenerationModelOption[];

@@ -12,7 +12,7 @@
 | 主机 | 香港 Ubuntu 22.04.5，2C4G，40 GiB |
 | 编排 | Docker Compose，10 个容器 |
 | 公网入口 | Caddy 80/443；Core API、AI Service、PostgreSQL、Redis 不直接暴露公网 |
-| 数据库 | PostgreSQL 16 + pgvector，Flyway V026 |
+| 数据库 | PostgreSQL 16 + pgvector；生产 Flyway V026；仓库最新 Flyway V027（未部署） |
 
 三张业务镜像在发布时使用同一个不可变 `sha-<commit>` 标签。标准发布、回滚和 smoke 命令见
 [`../../spec/11-end-to-end-runbook.md`](../../spec/11-end-to-end-runbook.md)。
