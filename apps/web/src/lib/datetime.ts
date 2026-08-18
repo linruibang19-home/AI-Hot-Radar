@@ -115,6 +115,24 @@ export function formatWeekday(key: string): string {
   return WEEKDAYS[date.getUTCDay()];
 }
 
+/**
+ * The two halves of a feed day heading: `{ date: "8月19日", weekday: "周三" }`.
+ *
+ * Split because they render as two spans. It lives here rather than in
+ * `Timeline.tsx` — where it was — because that copy kept its own `WEEKDAYS`
+ * table in the three-character form while this module used the two-character
+ * one. Nothing reconciled them until the home page reused this module's value
+ * and stripped a prefix that was no longer there, leaving its largest heading
+ * as "2026年8月19日星期" with nothing after it.
+ *
+ * A component file is also the one place this cannot be tested: the suite reads
+ * `.tsx` files as text because the Vite config does not transform JSX, so any
+ * formatting logic parked next to a component is unreachable by assertion.
+ */
+export function dayHeading(key: string): { date: string; weekday: string } {
+  return { date: formatDayLabel(key), weekday: formatWeekday(key) };
+}
+
 /** "2026-08-03 17:12" in the display timezone. */
 export function formatDateTime(value?: string | null): string {
   const date = parse(value);

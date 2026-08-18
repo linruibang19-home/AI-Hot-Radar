@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { describe, expect, it } from "vitest";
 
 import {
   DISPLAY_TIMEZONE,
+  dayHeading,
   dayKey,
   formatDate,
   formatDateTime,
@@ -131,5 +135,44 @@ describe("formatDate", () => {
 
   it("says so when there is no date", () => {
     expect(formatDate(undefined)).toBe("时间未知");
+  });
+});
+
+/**
+ * One weekday table for the whole site.
+ *
+ * There were two, in different forms: this module held "周三" and
+ * `components/Timeline.tsx` held "星期三". Neither was wrong on its own; having
+ * two was. Nothing pointed at the discrepancy until the home page reused this
+ * module's value and stripped a prefix written for the other form, leaving the
+ * site's largest heading as "2026年8月19日星期" with nothing after it.
+ */
+describe("dayHeading", () => {
+  it("takes its weekday from the shared table", () => {
+    expect(dayHeading("2026-08-19")).toEqual({ date: "8月19日", weekday: "周三" });
+    expect(dayHeading("2026-08-19").weekday).toBe(formatWeekday("2026-08-19"));
+  });
+
+  it("drops the leading zero the way the feed heading reads", () => {
+    expect(dayHeading("2026-01-03").date).toBe("1月3日");
+  });
+
+  it("degrades to the raw key rather than throwing", () => {
+    // `dayKey()` only ever produces valid keys, but the heading renders whatever
+    // the API grouped by; throwing here would take out the whole feed.
+    expect(dayHeading("nope")).toEqual({ date: "nope", weekday: "" });
+  });
+
+  it.each(["Timeline.tsx", "ItemsFeed.tsx"])("%s keeps no table of its own", (file) => {
+    // 断言的是数组字面量而不是「星期三」这三个字：那两个文件的注释里就写着它们，
+    // 一条会被自己的说明文字误伤的断言，下次有人改注释时就会被删掉。
+    //
+    // 行为断言不足以守住这条：新加一份今天恰好一致的本地表照样能通过。
+    const source = readFileSync(
+      fileURLToPath(new URL(`../components/${file}`, import.meta.url)),
+      "utf8",
+    );
+
+    expect(source).not.toMatch(/=\s*\[\s*"(星期|周)日"/);
   });
 });
