@@ -66,6 +66,10 @@ require_min_length INTERNAL_SERVICE_TOKEN 32
 require_min_length AHR_ADMIN_BOOTSTRAP_TOKEN 32
 require_min_length AHR_ADMIN_VIEWER_TOKEN 32
 require_min_length AHR_SUBSCRIPTION_TOKEN_SECRET 32
+# Base64 of 32 random bytes is 44 characters, or 43 unpadded. Checked here as
+# well as by Compose's `:?` so the failure names the variable and its shape
+# before any container is started.
+require_min_length LLM_CREDENTIAL_MASTER_KEY 43
 
 operator_token=$(value AHR_ADMIN_BOOTSTRAP_TOKEN)
 viewer_token=$(value AHR_ADMIN_VIEWER_TOKEN)

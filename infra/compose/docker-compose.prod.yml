@@ -107,6 +107,14 @@ services:
       # console nobody can log into. Generate with `openssl rand -hex 32`.
       AHR_ADMIN_BOOTSTRAP_TOKEN: ${AHR_ADMIN_BOOTSTRAP_TOKEN:?AHR_ADMIN_BOOTSTRAP_TOKEN must be set}
       AHR_ADMIN_VIEWER_TOKEN: ${AHR_ADMIN_VIEWER_TOKEN:?AHR_ADMIN_VIEWER_TOKEN must be set}
+      # Wraps the generation provider's API key before it reaches PostgreSQL
+      # (V027). Base64 of 32 random bytes: `openssl rand -base64 32`.
+      #
+      # Required rather than defaulted, and required on every container that
+      # touches that row. Unset, this one starts fine and reports that the
+      # console cannot store a key — a save button that returns 503 — which is
+      # a worse failure than not starting, because the feature looks present.
+      LLM_CREDENTIAL_MASTER_KEY: ${LLM_CREDENTIAL_MASTER_KEY:?LLM_CREDENTIAL_MASTER_KEY must be set}
     env_file:
       - path: ${AHR_ENV_FILE:-.env}
         required: true
@@ -142,6 +150,10 @@ services:
       # because every local caller shares the Docker gateway address.
       RAG_RATE_PER_MINUTE: ${RAG_RATE_PER_MINUTE:-3}
       RAG_RATE_PER_DAY: ${RAG_RATE_PER_DAY:-20}
+      # Same expression core-api uses. Resolved from two different places the
+      # two would disagree the moment a real value is set, and the symptom
+      # would be an undecryptable credential rather than a config error.
+      LLM_CREDENTIAL_MASTER_KEY: ${LLM_CREDENTIAL_MASTER_KEY:?LLM_CREDENTIAL_MASTER_KEY must be set}
     env_file:
       - path: ${AHR_ENV_FILE:-.env}
         required: true
@@ -198,6 +210,11 @@ services:
     environment:
       APP_ENV: production
       REDIS_URL: redis://redis:6379/0
+      # This worker builds its own generation client for enrichment,
+      # recommendation reasons and reports, so it needs the envelope key too.
+      # Left out, it starts fine and then fails every LLM stage, silently, one
+      # pass at a time — the asymmetric failure the other two do not have.
+      LLM_CREDENTIAL_MASTER_KEY: ${LLM_CREDENTIAL_MASTER_KEY:?LLM_CREDENTIAL_MASTER_KEY must be set}
       PYTHONUNBUFFERED: "1"
     env_file:
       - path: ${AHR_ENV_FILE:-.env}
