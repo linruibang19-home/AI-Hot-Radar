@@ -79,6 +79,11 @@ services:
       REDIS_URL: redis://redis:6379/0
       WORKER_BASE_URL: http://ai-service:8000
       INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-change-me}
+      # Wraps the generation provider's API key before it reaches PostgreSQL
+      # (V027). Every container that reads that row needs the same value:
+      # core-api writes it, ai-service and pipeline decrypt it. A development
+      # default like the ones above; production sets its own.
+      LLM_CREDENTIAL_MASTER_KEY: ${LLM_CREDENTIAL_MASTER_KEY:-bG9jYWwtZGV2ZWxvcG1lbnQtbWFzdGVyLWtleS0wMDA=}
       # Registers the first admin credential (AHR-QSO-700 §3). A shared
       # development default, like the Postgres password above; production
       # requires it explicitly and refuses to start without it.
@@ -122,6 +127,10 @@ services:
       # so the developer and their own smoke tests spend the same twenty.
       RAG_RATE_PER_MINUTE: ${RAG_RATE_PER_MINUTE:-30}
       RAG_RATE_PER_DAY: ${RAG_RATE_PER_DAY:-500}
+      # Same expression core-api uses, deliberately. Resolved from two different
+      # places the two would disagree the moment a real key is set, and the
+      # symptom would be an undecryptable credential rather than a config error.
+      LLM_CREDENTIAL_MASTER_KEY: ${LLM_CREDENTIAL_MASTER_KEY:-bG9jYWwtZGV2ZWxvcG1lbnQtbWFzdGVyLWtleS0wMDA=}
       # No DATABASE_URL here on purpose: Compose interpolates ${VAR} from a
       # .env beside this file, never from `env_file:`, so a password kept in
       # the repository-root .env would silently resolve to the default. The
@@ -167,6 +176,7 @@ services:
       # DATABASE_URL is composed in ahr/config.py — see the note on ai-service.
       REDIS_URL: redis://redis:6379/0
       CRAWLER_USER_AGENT: ${CRAWLER_USER_AGENT:-AIHotRadarBot/1.0 (+https://example.com/bot)}
+      LLM_CREDENTIAL_MASTER_KEY: ${LLM_CREDENTIAL_MASTER_KEY:-bG9jYWwtZGV2ZWxvcG1lbnQtbWFzdGVyLWtleS0wMDA=}
       PYTHONUNBUFFERED: "1"
     env_file:
       - path: ../../.env
@@ -209,6 +219,10 @@ services:
       APP_ENV: ${APP_ENV:-local}
       # DATABASE_URL is composed in ahr/config.py — see the note on ai-service.
       REDIS_URL: redis://redis:6379/0
+      # This worker builds its own generation client for enrichment, reasons and
+      # reports, so it needs the envelope key too. Without it the container
+      # starts fine and then fails every LLM stage, one pass at a time.
+      LLM_CREDENTIAL_MASTER_KEY: ${LLM_CREDENTIAL_MASTER_KEY:-bG9jYWwtZGV2ZWxvcG1lbnQtbWFzdGVyLWtleS0wMDA=}
       PYTHONUNBUFFERED: "1"
     env_file:
       - path: ../../.env

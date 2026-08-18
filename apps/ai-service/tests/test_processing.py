@@ -32,6 +32,28 @@ PARAGRAPH = (
     "answers stay grounded in retrieved evidence rather than model memory. "
 )
 
+# An all-zero key and nonce: these tests are about the envelope format agreeing
+# with the one Core API writes, not about the strength of a value nobody ships.
+_MASTER_KEY = __import__("base64").b64encode(bytes(32)).decode()
+
+
+def _sealed(plaintext: str) -> str:
+    """Build the envelope exactly as `GenerationCredentialCipher` does.
+
+    Base64url without padding on both segments — Java's
+    `getUrlEncoder().withoutPadding()`. Writing it out here rather than calling
+    the Python decryptor's inverse is the point: the two implementations have to
+    agree across languages, so the test states the wire format independently.
+    """
+    from base64 import urlsafe_b64encode
+
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    nonce = bytes(12)
+    sealed = AESGCM(bytes(32)).encrypt(nonce, plaintext.encode("utf-8"), None)
+    encode = lambda raw: urlsafe_b64encode(raw).decode().rstrip("=")  # noqa: E731
+    return f"v1.{encode(nonce)}.{encode(sealed)}"
+
 
 # --- chunking ------------------------------------------------------------
 
@@ -331,7 +353,13 @@ def test_running_client_reads_model_and_prices_from_postgres(
     connection.__enter__.return_value = connection
     cursor = MagicMock()
     connection.cursor.return_value.__enter__.return_value = cursor
-    cursor.fetchone.return_value = ("deepseek-v4-pro", 7, 3, 0.025, 6)
+    # Two reads now: the provider row (V027), then the model row. Seeded to the
+    # environment marker with no ciphertext, which is the state every existing
+    # deployment migrates into.
+    cursor.fetchone.side_effect = [
+        ("env://LLM_BASE_URL", None),
+        ("deepseek-v4-pro", 7, 3, 0.025, 6),
+    ]
 
     monkeypatch.setenv("LLM_BASE_URL", "https://api.deepseek.example")
     monkeypatch.setenv("LLM_API_KEY", "secret")
@@ -344,3 +372,72 @@ def test_running_client_reads_model_and_prices_from_postgres(
     assert client.model_name == "deepseek-v4-pro"
     assert client.model_config_version == 7
     assert client.price_snapshot == (3.0, 0.025, 6.0)
+
+
+def _client_from_provider_row(
+    monkeypatch: pytest.MonkeyPatch, provider_row: tuple[object, object]
+) -> LlmClient:
+    connection = MagicMock()
+    connection.__enter__.return_value = connection
+    cursor = MagicMock()
+    connection.cursor.return_value.__enter__.return_value = cursor
+    cursor.fetchone.side_effect = [provider_row, ("deepseek-v4-pro", 1, 3, 0.025, 6)]
+    monkeypatch.setenv("LLM_BASE_URL", "https://api.deepseek.example")
+    monkeypatch.setenv("LLM_API_KEY", "env-key")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://db/example")
+    monkeypatch.setattr(psycopg, "connect", lambda *_args, **_kwargs: connection)
+    return build_client_from_env()
+
+
+def test_seeded_provider_row_keeps_using_the_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """V027 must be a no-op on migrate.
+
+    Every existing deployment applies it while its provider still comes from the
+    environment; if the seeded row changed where requests go, the migration
+    would move production onto an unconfigured provider.
+    """
+    client = _client_from_provider_row(monkeypatch, ("env://LLM_BASE_URL", None))
+
+    assert client._config.base_url == "https://api.deepseek.example"
+    assert client._config.api_key == "env-key"
+
+
+def test_saved_provider_overrides_the_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    from ahr.processing.llm import _decrypt_credential  # noqa: F401 - imported for symmetry
+
+    monkeypatch.setenv("LLM_CREDENTIAL_MASTER_KEY", _MASTER_KEY)
+    client = _client_from_provider_row(
+        monkeypatch, ("https://api.deepseek.com", _sealed("console-key"))
+    )
+
+    assert client._config.base_url == "https://api.deepseek.com"
+    assert client._config.api_key == "console-key"
+
+
+def test_address_can_be_stored_while_the_key_stays_in_the_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The two fields fall back independently.
+
+    An all-or-nothing rule would mean resetting one to the environment silently
+    reset the other, which is how an operator ends up calling the right host
+    with the wrong credential.
+    """
+    client = _client_from_provider_row(monkeypatch, ("https://api.deepseek.com", None))
+
+    assert client._config.base_url == "https://api.deepseek.com"
+    assert client._config.api_key == "env-key"
+
+
+def test_a_tampered_envelope_fails_instead_of_sending_garbage(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GCM is authenticated on purpose: a corrupted key must not reach a provider."""
+    monkeypatch.setenv("LLM_CREDENTIAL_MASTER_KEY", _MASTER_KEY)
+    sealed = _sealed("console-key")
+    tampered = sealed[:-4] + ("AAAA" if not sealed.endswith("AAAA") else "BBBB")
+
+    with pytest.raises(LlmUnavailableError, match="could not be decrypted"):
+        _client_from_provider_row(monkeypatch, ("https://api.deepseek.com", tampered))

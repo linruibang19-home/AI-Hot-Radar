@@ -335,13 +335,80 @@ class LlmClient:
             ) from second_error
 
 
+def _decrypt_credential(payload: str) -> str:
+    """Open the AES-256-GCM envelope Core API wrote (V027).
+
+    The master key stays in the environment on both sides, so a database dump
+    without it decrypts to nothing. GCM is authenticated: a corrupted or
+    tampered ciphertext raises here rather than producing plausible bytes that
+    would then be sent to a provider as a credential.
+    """
+    import os
+    from base64 import b64decode, urlsafe_b64decode
+
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    master = os.environ.get("LLM_CREDENTIAL_MASTER_KEY", "").strip()
+    if not master:
+        raise LlmUnavailableError("LLM_CREDENTIAL_MASTER_KEY is not set")
+    try:
+        key = b64decode(master)
+    except Exception as exc:  # noqa: BLE001 - any decode failure is the same misconfiguration
+        raise LlmUnavailableError("LLM_CREDENTIAL_MASTER_KEY is not valid base64") from exc
+    if len(key) != 32:
+        raise LlmUnavailableError("LLM_CREDENTIAL_MASTER_KEY must decode to 32 bytes")
+
+    parts = payload.split(".", 2)
+    if len(parts) != 3 or parts[0] != "v1":
+        raise LlmUnavailableError("stored credential envelope is not recognised")
+    try:
+        # Base64url without padding, matching Java's getUrlEncoder().withoutPadding().
+        nonce = urlsafe_b64decode(parts[1] + "=" * (-len(parts[1]) % 4))
+        sealed = urlsafe_b64decode(parts[2] + "=" * (-len(parts[2]) % 4))
+        return AESGCM(key).decrypt(nonce, sealed, None).decode("utf-8")
+    except Exception as exc:  # noqa: BLE001 - a wrong key and a bad envelope mean the same thing
+        raise LlmUnavailableError("stored credential could not be decrypted") from exc
+
+
+# What V027 seeds, and what the console writes back when an operator undoes a
+# saved provider. Either field carrying it means "read the environment".
+_ENVIRONMENT_MARKER = "env://LLM_BASE_URL"
+
+
+def _provider_from_database(cursor: Any, env_base_url: str, env_api_key: str) -> tuple[str, str]:
+    """The address and key to call with, preferring the stored ones.
+
+    Falls back per field rather than all-or-nothing: V027 seeds the row pointing
+    at the environment, so a deployment that has never used the console must
+    behave exactly as it did before the migration — and an operator who resets
+    the provider has to get that behaviour back, not a service that refuses to
+    start because a column is null.
+    """
+    cursor.execute(
+        """
+        SELECT base_url, api_key_ciphertext
+          FROM generation_provider_config
+         WHERE singleton_key = 1
+        """
+    )
+    row = cursor.fetchone()
+    if row is None:
+        return env_base_url, env_api_key
+
+    stored_url, ciphertext = str(row[0] or ""), row[1]
+    base_url = env_base_url if stored_url == _ENVIRONMENT_MARKER or not stored_url else stored_url
+    api_key = env_api_key if ciphertext is None else _decrypt_credential(str(ciphertext))
+    return base_url, api_key
+
+
 def build_client_from_env() -> LlmClient:
     """Construct the generation client, using PostgreSQL in a running deployment.
 
-    Credentials and the provider URL remain environment secrets. The model is a
-    product setting and therefore comes from PostgreSQL (ADR-0027). `LLM_MODEL`
-    remains only for isolated tests and tools that intentionally have no
-    `DATABASE_URL`.
+    The model is a product setting and comes from PostgreSQL (ADR-0027). Since
+    V027 the provider address and key do too, falling back to `LLM_BASE_URL` /
+    `LLM_API_KEY` whenever the console has not overridden them — which is the
+    state every existing deployment migrates into. `LLM_MODEL` remains only for
+    isolated tests and tools that intentionally have no `DATABASE_URL`.
     """
     import os
 
@@ -361,15 +428,15 @@ def build_client_from_env() -> LlmClient:
         database_url = get_settings().database_url
     model = os.environ.get("LLM_MODEL", "").strip()
 
-    if not (base_url and api_key):
-        raise LlmUnavailableError("LLM_BASE_URL and LLM_API_KEY must both be set")
-
     if database_url:
         try:
             with (
                 psycopg.connect(database_url, connect_timeout=5) as connection,
                 connection.cursor() as cursor,
             ):
+                # Provider first: the model query decides *which* model, this
+                # decides where to send it and with what key.
+                base_url, api_key = _provider_from_database(cursor, base_url, api_key)
                 cursor.execute(
                     """
                     SELECT c.model_id, c.version,
@@ -386,6 +453,14 @@ def build_client_from_env() -> LlmClient:
             raise LlmUnavailableError(f"generation model setting unavailable: {exc}") from exc
         if row is None:
             raise LlmUnavailableError("generation model setting is missing or disabled")
+        # Checked after the row is resolved, not before: since V027 the console
+        # can supply both, so a deployment with no LLM_BASE_URL in its
+        # environment is legitimate as long as the database carries one.
+        if not (base_url and api_key):
+            raise LlmUnavailableError(
+                "no generation provider configured: set it in the console, "
+                "or set LLM_BASE_URL and LLM_API_KEY"
+            )
         model = str(row[0])
         return LlmClient(
             LlmConfig(
@@ -399,6 +474,8 @@ def build_client_from_env() -> LlmClient:
             )
         )
 
+    if not (base_url and api_key):
+        raise LlmUnavailableError("LLM_BASE_URL and LLM_API_KEY must both be set")
     if not model:
         raise LlmUnavailableError("LLM_MODEL must be set when DATABASE_URL is absent")
 
