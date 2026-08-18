@@ -72,6 +72,26 @@ def test_every_secret_is_required_rather_than_defaulted(compose: dict) -> None:
         assert f"${{{secret}:?" in raw, f"{secret} has a default or is unguarded"
 
 
+def test_every_generation_worker_can_decrypt_a_stored_credential(compose: dict) -> None:
+    """V027 puts the provider key in PostgreSQL behind an AES envelope.
+
+    Three containers build a generation client, and they do not fail the same
+    way without the key. `core-api` and `ai-service` would answer that the
+    console cannot store one — a save button returning 503, a feature that looks
+    present and is not — while `pipeline` would start and then fail every
+    enrichment, reason and report, silently, one pass at a time.
+
+    Shipped once without this: the local stack had the variable and production
+    did not, so every gate passed and the feature would have been dead on
+    arrival.
+    """
+    services = compose["services"]
+    for name in ("core-api", "ai-service", "pipeline"):
+        assert "LLM_CREDENTIAL_MASTER_KEY" in services[name]["environment"], (
+            f"{name} builds a generation client but has no credential envelope key"
+        )
+
+
 def test_the_env_file_sits_beside_the_compose_file(compose: dict) -> None:
     """Compose interpolates `${VAR}` only from a `.env` next to the compose
     file, never from the repository root — the local stack was bitten by this
