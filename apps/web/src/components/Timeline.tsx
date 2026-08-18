@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { dayHeading } from "@/lib/datetime";
+
 /**
  * Collapsible day section.
  *
@@ -9,18 +11,6 @@ import type { ReactNode } from "react";
  * and the correct expanded/collapsed announcement for free.
  */
 
-const WEEKDAYS = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
-
-export function formatDayLabel(day: string): { date: string; weekday: string } {
-  const parsed = new Date(`${day}T00:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) {
-    return { date: day, weekday: "" };
-  }
-  return {
-    date: `${parsed.getUTCMonth() + 1}月${parsed.getUTCDate()}日`,
-    weekday: WEEKDAYS[parsed.getUTCDay()],
-  };
-}
 
 export function TimelineDay({
   day,
@@ -33,7 +23,7 @@ export function TimelineDay({
   defaultOpen: boolean;
   children: ReactNode;
 }) {
-  const { date, weekday } = formatDayLabel(day);
+  const { date, weekday } = dayHeading(day);
 
   return (
     <details className="tl-day" open={defaultOpen}>

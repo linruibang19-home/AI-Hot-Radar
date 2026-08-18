@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 
 import { ItemCard } from "@/components/ItemCard";
 import { TimelineRow } from "@/components/Timeline";
-import { formatDayLabel } from "@/components/Timeline";
+import { dayHeading } from "@/lib/datetime";
 import { formatTime } from "@/lib/datetime";
 import { appendItems, type ContentItem, type DayBucket, type ItemPage } from "@/lib/api";
 
@@ -129,7 +129,7 @@ export function ItemsFeed({
       {days.map((bucket, index) => {
         const open = index < OPEN_BY_DEFAULT;
         const day = state[bucket.day];
-        const { date, weekday } = formatDayLabel(bucket.day);
+        const { date, weekday } = dayHeading(bucket.day);
 
         return (
           <details
