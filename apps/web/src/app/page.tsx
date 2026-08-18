@@ -1,4 +1,4 @@
-import { dayKey, formatPublicationTime, formatWeekday } from "@/lib/datetime";
+import { dayKey, formatPublicationTime, formatToday } from "@/lib/datetime";
 import { CategoryTabs, SearchBox } from "@/components/CategoryTabs";
 import { HotList } from "@/components/HotList";
 import { ItemCard } from "@/components/ItemCard";
@@ -12,13 +12,6 @@ export const dynamic = "force-dynamic";
 
 /** How many day sections start expanded. Older days collapse to stay scannable. */
 const OPEN_DAYS = 2;
-
-function formatToday(): string {
-  // The server's clock is UTC; the heading must read as the visitor's date.
-  const key = dayKey(new Date().toISOString()) ?? "";
-  const [year, month, day] = key.split("-");
-  return `${year}年${Number(month)}月${Number(day)}日星期${formatWeekday(key).slice(2)}`;
-}
 
 /**
  * Group entries under a heading appropriate to the active sort.
@@ -74,9 +67,7 @@ export default async function Home({
     <>
       <header className="page-head">
         <h1 className="page-title">精选</h1>
-        <p className="page-subtitle">
-          {formatToday()} · AI 自动挑选的高价值内容 · 推荐理由由模型阅读全文后逐条撰写
-        </p>
+        <p className="page-subtitle">{formatToday()} · 今天值得看的 AI 动态</p>
       </header>
 
       <div className="toolbar">

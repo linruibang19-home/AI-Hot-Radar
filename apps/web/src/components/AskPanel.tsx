@@ -1170,15 +1170,8 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
             </button>
           </form>
 
-          {/* One sentence, and no control in it. The header owns starting over;
-              repeating it here was two buttons for one action. */}
-          <div className="chat-status">
-            {conversationId && turns.length > 0 ? (
-              <span>下一个问题会带上以上 {turns.length} 轮的上下文，可以直接用「它」指代。</span>
-            ) : (
-              <span>回答只依据站内已采集的资讯，每条事实都标注来源，证据不足时会拒答。</span>
-            )}
-          </div>
+          {/* 这里原本有一行状态说明。追问那句和输入框 placeholder 一字不差，
+              首轮那句和页面副标题重复 —— 同一句话在同屏说两遍。 */}
         </div>
       </div>
 
@@ -1194,9 +1187,9 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
           <summary className="ask-history-title">
             历史对话
             <span className="ask-history-count">{otherThreads.length} 段</span>
-            <span className="ask-history-note">
-              暂无账号体系，这里是本站的公共记录（M5 加鉴权后按人区分）
-            </span>
+            {/* 原文写的是「暂无账号体系……（M5 加鉴权后按人区分）」。里程碑编号
+                是内部路线图，对读者没有意义；他们只需要知道这些不是私人记录。 */}
+            <span className="ask-history-note">公开</span>
           </summary>
 
           <ul className="ask-history-list">

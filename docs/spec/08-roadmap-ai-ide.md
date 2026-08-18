@@ -754,6 +754,53 @@ Flyway 与 Web 五路门禁，并保存日期化交付证据。
 Flyway from empty database 与 Web 五项全部通过；日志中没有旧 Action 的 Node 20/强制 Node 24
 兼容告警。合并后的 `main` push CI 结果记录在交付证据中。
 
+### TASK-M5-030｜模型配置补记录、前端字号体系与架构核查收口
+
+**状态**：✅ 2026-08-19 完成。
+
+**读取**：`architecture-review-20260818.md`、`apps/web/src/app/globals.css`、
+`docs/status/current/production-baseline.md`、`docs/adr/README.md`。
+
+**输入**：三类欠账。
+其一，v0.1.19（V027 可编辑供应商、`/admin/models` 重做、`robots.txt` 修复）已于 2026-08-18
+部署，但没有任务卡也没有 ADR —— 而本文件「变更管理」一节要求认证与核心实体变化必须先有
+ADR。一个只读仓库的人会看到 V026 到 V027 之间凭空多出一张存加密凭证的表。
+其二，`production-baseline.md` 仍写着 `v0.1.18` / Flyway V026，与线上不符；它在 README
+的事实优先级里排第二，错在这里比错在别处严重。
+其三，用户三次反馈界面小字过多。盘点确认这不是文案问题：`body` 从未设置 `font-size`，
+每个组件相对浏览器默认值各自往下调，攒出 199 处声明、49 种取值，42 处 ≤11px，最小 9px；
+同一个「次要说明文字」语义分散在 8 个类、5 种字号上。
+
+**产出**：
+1. 补 [ADR-0032](../adr/0032-generation-provider-credentials-are-database-backed.md)，含放弃
+   中转站方案的负结果；补交付证据
+   [`model-console-release-20260819.md`](../status/delivery/model-console-release-20260819.md)；
+2. 更新生产基线到 `v0.1.19@be8601c` / Flyway V027，数据快照按 2026-08-19 实查刷新；
+3. `globals.css` 建立八档字号标度并把 194 处声明迁移过去，`body` 补上基准字号；
+   全站不再有 12px 以下的文字，信息流摘要从 13.5px 提到 15px；
+4. 删减 26 处解释性小字：页面副标题一律压到一句话（最长 88 字 → 23 字），`/items`
+   在无搜索时不再有副标题，`/ask` 输入框下与 placeholder 一字不差的重复说明删除，
+   历史对话上的里程碑编号（「M5 加鉴权后按人区分」）删除；`/eval` 与 `/ops` 的量法注解
+   保留内容但改为正文字号加竖线，不再排成灰色脚注；
+5. 顺带修掉首页大标题缺星期的缺陷：`formatToday` 按早期的「星期三」写死 `.slice(2)`，
+   而 `WEEKDAYS` 已改成「周三」，切完是空串，线上长期显示「2026年8月19日星期」。函数搬进
+   `lib/datetime.ts` 并补两条回归测试；
+6. 加 `type-scale.test.ts` 守住标度：断言八个 token 都在 `:root`、`body` 有基准字号、
+   每条 `font-size` 都用 token、没有 token 低于 12px。手工逐条调字号已经做过三轮，
+   每次都修好了眼前的页面、留下了产生问题的机制；
+7. 提交架构核查报告并挂进 `docs/status/current/README.md` 的阅读顺序。
+
+**边界**：不改数据库 schema、检索策略、采集与报告逻辑；不触发生产发布，不修改
+`IMAGE_TAG`。`components/Timeline.tsx` 里那份重复的星期名表不在本卡范围内。
+
+**完成标准**：`validate_spec.py`、`validate_docs.py` 通过；`apps/web` 的 typecheck、lint、
+Vitest 与 production build 通过；渲染后全站没有 12px 以下的字号。
+
+**验收说明**：Vitest `94 / 94`（新增 6 条）；`validate_spec.py` 与 `validate_docs.py` 通过
+（149 份 Markdown、407 个本地链接）。本地 dev 实测计算样式：`body` 15px，整页仅 6 档
+（12/13/14/15/16/27），12px 以下为 0；11 条旧文案在 10 个页面上均已消失。标度守卫非空转：
+扫描到 200 条声明，195 条用 token，5 条为 `clamp()`/`em` 例外，注入 `font-size: 9px` 会失败。
+
 ## 4. AI IDE 统一提示词
 
 将以下提示词与本目录一并交给任一 AI IDE：

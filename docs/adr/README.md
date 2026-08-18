@@ -30,6 +30,7 @@ ADR 只回答“为什么这样选、否决了什么、什么证据会触发回�
 | 管理认证与评测语义 | [0019](0019-admin-auth-is-a-bearer-token-not-spring-security.md)～[0023](0023-high-risk-numeric-relations-use-controlled-llm-audit.md) |
 | RAG 安全、报告和模型配置 | [0024](0024-rag-prompt-safety-and-provider-fail-fast.md)～[0027](0027-deepseek-generation-model-selection-is-database-backed.md) |
 | 编排、证据、主题关系与索引版本 | [0028](0028-current-task-orchestration-is-database-polling.md)～[0031](0031-content-chunk-sets-are-versioned.md) |
+| 生成供应商凭证入库 | [0032](0032-generation-provider-credentials-are-database-backed.md) |
 
 ## 维护规则
 
