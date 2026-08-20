@@ -125,9 +125,9 @@ Codex、Claude Code、Cursor 使用同一套规格，不为不同工具维护互
 
 ### TASK-M5-001｜发布基线整合与全量门禁
 
-**状态**：✅ 2026-08-11 完成；验收记录见 `docs/status/current/project-status.md` §0。
+**状态**：✅ 2026-08-11 完成；验收记录见 `docs/status/history/project-status.md` §0。
 **读取**：`07-quality-security-ops.md`、`11-end-to-end-runbook.md`、
-`12-delivery-index.md`、`docs/status/current/project-status.md`。
+`12-delivery-index.md`、`docs/status/history/project-status.md`。
 **输入**：当前已由 Docker Compose 实测运行的最新开发分支。
 **产出**：以最新开发提交为起点的正式发布候选基线、可重复的全量验收记录，
 以及与实测结果一致的状态文档。
@@ -187,7 +187,7 @@ p95/p99 SLO、全库门禁与当前镜像 smoke 均已验证；服务器依赖�
 
 **状态**：✅ 2026-08-11 完成；当前交接见
 `docs/status/history/handoff-20260811.md`。
-**读取**：`README.md`、`12-delivery-index.md`、`docs/status/current/project-status.md`、
+**读取**：`README.md`、`12-delivery-index.md`、`docs/status/history/project-status.md`、
 `docs/status/history/handoff-20260810.md` 以及 08-11 三份 RAG 验收记录。
 **输入**：当前 Git 分支/提交、Docker Compose 运行态、数据库实测快照与本轮门禁结果。
 **产出**：更新总入口、交付索引、累计项目状态和新的当前交接文档；旧交接保留为历史记录。

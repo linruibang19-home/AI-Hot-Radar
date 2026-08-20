@@ -9,7 +9,7 @@
 |---|---|
 | 当前事实优先级与阅读顺序 | [current/README.md](current/README.md) |
 | 当前生产版本、服务、数据和边界 | [production-baseline.md](current/production-baseline.md) |
-| 累计项目历史与问题根因 | [project-status.md](current/project-status.md)（冻结日志） |
+| 累计项目历史与问题根因 | [project-status.md](history/project-status.md)（冻结日志） |
 | 完整交付导航 | [../spec/12-delivery-index.md](../spec/12-delivery-index.md) |
 | 腾讯云迁移 | [tencent-cloud-migration-readiness-20260812.md](operations/tencent-cloud-migration-readiness-20260812.md) |
 | 仓库清理与归档 | [repository-hygiene-20260812.md](operations/repository-hygiene-20260812.md) |

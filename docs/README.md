@@ -8,7 +8,7 @@
 ## `handbook/` — 完整工程教材
 
 [工程手册入口](handbook/README.md) 从产品问题、四条业务链路、运行服务、数据状态、信源、
-内容、报告邮件一路讲到 RAG、Java/Python/Next、部署和工程权衡；01–15 是主线，16–22 是
+内容、报告邮件一路讲到 RAG、Java/Python/Next、部署和工程权衡；01–15 是主线，16–23 是
 按问题选择的实现专题。它回答“系统怎样工作、代码
 在哪里、为什么这样做、失败如何恢复”，是吃透项目的第一入口。
 
@@ -20,7 +20,7 @@
 | 文件 | 作用 |
 |---|---|
 | [00-master-spec.md](spec/00-master-spec.md) | 总规格与 ADR-001~011 锁定决策 |
-| [adr/README.md](adr/README.md) | 一级锁定决策与独立 ADR-0012~0031 的编号、主题和维护规则 |
+| [adr/README.md](adr/README.md) | 一级锁定决策与独立 ADR-0012~0032 的编号、主题和维护规则 |
 | [01-product-requirements.md](spec/01-product-requirements.md) | 页面、角色与产品验收 |
 | [02-system-architecture.md](spec/02-system-architecture.md) | 服务边界、状态机、部署 |
 | [03-data-ingestion.md](spec/03-data-ingestion.md) | 数据模型、去重、切块、Story |
@@ -53,6 +53,9 @@
 | [0017–0027](adr/) | 缓存、CJK、鉴权、拒答、引用、迁移、数字审计、发布、订阅与模型配置 |
 | [0028](adr/0028-current-task-orchestration-is-database-polling.md) | 当前后台编排是 PostgreSQL 轮询，Outbox 未消费 |
 | [0029](adr/0029-evidence-passage-is-the-content-chunk-physical-row.md) | evidence passage 的当前物理行是 `content_chunk` |
+| [0030](adr/0030-vendor-navigation-uses-auditable-relations.md) | 厂商导航使用可审计关系，不做无依据推断 |
+| [0031](adr/0031-content-chunk-sets-are-versioned.md) | `content_chunk` 以不可变 chunk set 版本化 |
+| [0032](adr/0032-generation-provider-credentials-are-database-backed.md) | 生成供应商地址与密钥入库加密，只接官方兼容端点 |
 
 ## `design/` — 开发方案（活文档）
 
@@ -76,7 +79,7 @@
 | [status/README.md](status/README.md) | **状态总索引**：当前入口、历史快照、RAG 与发布证据 |
 | [current/README.md](status/current/README.md) | **唯一当前入口**：事实优先级和阅读顺序 |
 | [production-baseline.md](status/current/production-baseline.md) | 当前生产版本、服务、数据、质量与边界 |
-| [project-status.md](status/current/project-status.md) | 冻结的累计开发日志：旧版本、失败假设和已关闭待办 |
+| [project-status.md](status/history/project-status.md) | 冻结的累计开发日志：旧版本、失败假设和已关闭待办 |
 | [m1-canary-evidence.md](status/history/m1-canary-evidence.md) | M1 信源探测验收证据 |
 | [m1-canary-evidence.json](status/history/m1-canary-evidence.json) | 逐源原始数据 |
 | [rag-product-readiness-20260810.md](status/product/rag-product-readiness-20260810.md) | **当前 RAG 全链路、成熟产品对标与优化顺序** |
