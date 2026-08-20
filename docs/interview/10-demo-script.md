@@ -13,7 +13,8 @@
 
 ### 0:00–0:35 项目价值
 
-打开首页：一句话说明 140 信源、全文回源、Story/精选/报告和证据 RAG。强调当前计数是动态快照。
+打开首页：一句话说明配置化信源、全文回源、Story/精选/报告和证据 RAG。**具体数量直接念首页
+上那四个统计块**——那是实时值，比背一个会过期的数字稳妥，也顺带说明了计数是动态的。
 
 ### 0:35–1:25 内容链
 
@@ -74,7 +75,7 @@ pgvector 的当前边界，以及按什么证据引入队列、独立搜索或�
 | API/订阅 | `apps/core-api/src/main/`、Flyway V023 |
 | 前端 | `apps/web/app/`、`apps/web/lib/` |
 | 部署 | `infra/compose/`、`infra/scripts/`、`.github/workflows/release.yml` |
-| 决策与反例 | `docs/adr/`、`docs/status/current/project-status.md` |
+| 决策与反例 | `docs/adr/`、`docs/status/history/project-status.md` |
 
 先指出文件职责，再选一个函数/测试讲输入、状态、失败和验证；不要一次打开几十个文件。
 

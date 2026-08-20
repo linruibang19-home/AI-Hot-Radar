@@ -204,9 +204,12 @@ def main() -> int:
         ["docs/status/production/"],
         errors,
     )
+    # 只要求「有日期 + 声明不是实时承诺」，不锁定标题措辞。此前的正则把整句话
+    # 连同 <details> 摘要一起冻住了，README 改版时校验失败的原因是措辞变了，
+    # 而不是这条约束真的被违反。
     require_pattern(
         "README.md",
-        r"当前生产与质量快照（\d{4}-\d{2}-\d{2}，历史快照，非实时承诺）",
+        r"生产数据快照（\d{4}-\d{2}-\d{2}，历史快照，非实时承诺）",
         "dated production snapshot disclaimer",
         errors,
     )
@@ -235,10 +238,14 @@ def main() -> int:
             ["status/production/", "handoff-20260812.md"],
             errors,
         )
+    # 曾要求 README 写死 `Python **N passed / M skipped**`。这个数字每加一条测试
+    # 就过期一次，而且没有任何机制会去更新它 —— README 里那份停在 935 时，实际
+    # 已经涨过好几轮。改为要求指向 CI 的实时徽章：同样是「回归套件真实存在且是
+    # 绿的」这个断言，但它自己会更新，也点得进去看。
     require_pattern(
         "README.md",
-        r"Python \*\*\d+ passed / \d+ skipped\*\*",
-        "Python passed/skipped regression count",
+        r"actions/workflows/ci\.yml/badge\.svg",
+        "live CI status badge",
         errors,
     )
 

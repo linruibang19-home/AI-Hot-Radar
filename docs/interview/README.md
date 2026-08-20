@@ -27,7 +27,7 @@
 | 16 | [`16-backend-layering-runtime-interview.md`](16-backend-layering-runtime-interview.md) | 业务域分层、FastAPI、JVM、Redis 与部署如何被追问？ |
 
 补充材料：[`../interview-guide.md`](../archive/interview/interview-guide-20260812.md) 是已冻结的早期深挖稿，内容已迁入
-工程手册和本目录；[`../status/project-status.md`](../status/current/project-status.md) 是累计历史，不用于
+工程手册和本目录；[`../status/history/project-status.md`](../status/history/project-status.md) 是累计历史，不用于
 判断当前生产事实。
 
 ## 四阶段训练法
