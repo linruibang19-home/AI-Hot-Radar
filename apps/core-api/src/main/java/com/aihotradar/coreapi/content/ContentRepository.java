@@ -28,7 +28,21 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class ContentRepository {
 
-    private static final String PUBLIC_FEED_READY =
+    /**
+     * The reader-ready gate. Every query whose rows reach a reader must append it.
+     *
+     * <p>It was declared with the second rule above but applied to only three of the
+     * eleven read queries, and the four that reached a reader without it leaked
+     * measurably: on 2026-08-29 the hot list returned 14 unenriched rows out of 30,
+     * the curated feed 13 of 49. The visible result was a homepage card reading
+     * {@code Previewing the Model Hardware StandardAnnouncementsAug 27, 2026We're
+     * opening…} — because {@code COALESCE(ci.zh_title, ci.title)} falls back to the
+     * raw extracted title once the Chinese one is missing.
+     *
+     * <p>{@code ContentRepositoryPublicGateTest} asserts every reader-facing query
+     * carries it, because adding it to four call sites does not stop the fifth.
+     */
+    static final String PUBLIC_FEED_READY =
             """
              AND ci.enrichment_state = 'ENRICHED'
              AND NULLIF(BTRIM(ci.zh_title), '') IS NOT NULL
@@ -191,6 +205,7 @@ public class ContentRepository {
                            AND ci.duplicate_of_id IS NULL
                            AND sr.selected_for_date > current_date - CAST(:days AS integer)
                         """);
+        sql.append(PUBLIC_FEED_READY);
         MapSqlParameterSource params =
                 new MapSqlParameterSource().addValue("days", days).addValue("limit", limit);
 
@@ -433,6 +448,7 @@ public class ContentRepository {
                            AND ivr.vendor_slug = :slug
                            AND ivr.relation_level = :relation
                         """);
+        sql.append(PUBLIC_FEED_READY);
         MapSqlParameterSource params =
                 new MapSqlParameterSource()
                         .addValue("slug", slug)
@@ -534,6 +550,7 @@ public class ContentRepository {
                          WHERE t.slug = :slug
                            AND ci.duplicate_of_id IS NULL
                         """);
+        sql.append(PUBLIC_FEED_READY);
         MapSqlParameterSource params =
                 new MapSqlParameterSource().addValue("slug", slug).addValue("limit", limit);
         if (cursor != null) {
@@ -588,6 +605,9 @@ public class ContentRepository {
                   JOIN source s ON s.id = ci.source_id
                  WHERE ci.duplicate_of_id IS NULL
                    AND ci.hot_score IS NOT NULL
+                """
+                        + PUBLIC_FEED_READY
+                        + """
                  ORDER BY ci.hot_score DESC
                  LIMIT :limit
                 """;
