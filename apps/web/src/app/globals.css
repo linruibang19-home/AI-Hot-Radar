@@ -435,9 +435,15 @@ a {
   margin: 0;
 }
 
+/* The text is small on purpose — it sits beside a heading and must not compete
+   with it — but the *target* does not have to be. Measured at 375px it was
+   21px tall, under the 24px WCAG 2.5.8 asks for, so the padding grows the hit
+   area without changing what the line looks like. */
 .hot-more {
   font-size: var(--fs-sm);
   color: var(--accent);
+  padding: 6px 2px;
+  margin: -6px -2px;
 }
 
 .hot-more:hover {
@@ -1154,12 +1160,32 @@ summary:focus-visible {
     display: none;
   }
 
+  /* The nav becomes a horizontal strip here, and the scrollbar is hidden
+     because a permanent grey bar under seven pills is noise on a phone.
+     Hiding it without any other cue was the mistake: measured at 375px the
+     strip holds 651px of content in 351px, so 精选 / 全部 AI 动态 / 热点榜 /
+     事件追踪 are visible and AI 日报 / 主题地图 / **AI 问答** are not — the
+     RAG feature this project is built around, reachable only by guessing that
+     the row swipes.
+
+     The mask fades the last 26px so the strip visibly continues. Letting it
+     wrap instead was measured too: it costs 75px of height on every page and
+     puts the 内容 group on three lines, which is worse on an 812px screen
+     than a soft edge. */
   .nav-list {
     display: flex;
     gap: 5px;
     overflow-x: auto;
     padding-bottom: 2px;
     scrollbar-width: none;
+  }
+
+  /* Only the group that actually overflows gets a soft edge: 工程 has three
+     entries and fits, 内容 has seven and does not. Where `:has` is missing the
+     rule simply does not apply, which is today's behaviour. */
+  .nav-list:has(> li:nth-child(6)) {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
   }
 
   .nav-list::-webkit-scrollbar {

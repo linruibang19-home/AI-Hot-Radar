@@ -43,9 +43,14 @@ export function HotList({
             <Link className="hot-title" href={`/items/${item.id}`}>
               {item.title}
             </Link>
-            <span className="hot-score">
-              {Math.round(item.heat)} <span className="hot-score-unit">热度</span>
-            </span>
+            {/* Same rule as the card badge: below 1 the number is noise. The
+                rank on the left already says which is hotter, so a row reading
+                "3 … 0 热度" only contradicts itself. */}
+            {Math.round(item.heat) >= 1 && (
+              <span className="hot-score">
+                {Math.round(item.heat)} <span className="hot-score-unit">热度</span>
+              </span>
+            )}
           </li>
         ))}
       </ol>
