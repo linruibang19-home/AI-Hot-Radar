@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 /**
  * Cost and latency, from production rows rather than a benchmark.
@@ -296,8 +295,8 @@ export default async function OpsPage() {
           <div>
             <h3>建议动作</h3>
             <p>
-              保持 SiliconFlow 嵌入/重排不变；在 <Link href="/admin/models">模型配置</Link>
-              中切换 DeepSeek 生成模型后，用新调用积累可比较的成本、延迟和质量快照。
+              保持 SiliconFlow 嵌入/重排不变；生成模型记录在数据库的单行配置里，换模型后新调用
+              会带上新的价目快照，与旧模型的成本、延迟和质量可以直接比较。
             </p>
           </div>
         </article>

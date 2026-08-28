@@ -57,7 +57,6 @@ Core API 是面向读者和运营动作的稳定事务边界：
 | 定时投递 | `ReportEmailDeliveryService` | 显式 SQL + SMTP | delivery 唯一键、重试状态 |
 | 报告发布 | `ReportAdminController` | `ReportPublicationService` | DRAFT/REVIEW/PUBLISHED 状态机 |
 | 信源管理 | `SourceAdminController` | `SourceRepository`、`AdminAudit` | enabled override、next poll、审计 |
-| 模型配置 | `GenerationModelController` | `GenerationModelService` | 模型白名单、激活版本、审计 |
 
 Java 不负责网页回源、正文抽取、Embedding、reranker 或 RAG 生成；这些变化快、依赖 Python AI/NLP
 生态的能力在 AI Service。Java 也不是“只做代理”：报告发布、订阅确认、投递幂等、权限和审计都

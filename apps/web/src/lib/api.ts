@@ -75,46 +75,6 @@ const EMPTY_PAGE: ItemPage = { data: [], page: { nextCursor: null, hasMore: fals
  */
 const ADMIN_VIEWER_TOKEN = process.env.AHR_ADMIN_VIEWER_TOKEN ?? "";
 
-export interface GenerationModelOption {
-  model_id: string;
-  display_name: string;
-  description: string;
-  context_window_tokens: number;
-  input_cny_per_million: number;
-  cached_input_cny_per_million: number;
-  output_cny_per_million: number;
-  pricing_effective_on: string;
-  pricing_source: string;
-}
-
-/**
- * Where generation requests go and which key signs them.
- *
- * Never carries the key — `keyFingerprint` is how the console shows *which*
- * credential is stored without being able to show it.
- */
-export interface GenerationProviderState {
-  baseUrl: string;
-  usesEnvironment: boolean;
-  keyFingerprint: string | null;
-  keyFromEnvironment: boolean;
-  version: number;
-  updatedAt: string;
-  /** False when LLM_CREDENTIAL_MASTER_KEY is unset: the page says so up front. */
-  credentialStorageReady: boolean;
-}
-
-export function fetchGenerationProvider(): Promise<GenerationProviderState | null> {
-  return getJson<GenerationProviderState | null>("/api/v1/admin/models/provider", null);
-}
-
-export interface GenerationModelState {
-  current: GenerationModelOption & { version: number; updated_at: string };
-  available: GenerationModelOption[];
-  thinkingEnabled: boolean;
-  retrievalModels: string;
-}
-
 async function getJson<T>(path: string, fallback: T): Promise<T> {
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -192,10 +152,6 @@ export function fetchStats(): Promise<Stats> {
     activeSources: 0,
     chunks: 0,
   });
-}
-
-export function fetchGenerationModels(): Promise<GenerationModelState | null> {
-  return getJson<GenerationModelState | null>("/api/v1/admin/models/generation", null);
 }
 
 export type SelectionSort = "curated" | "latest" | "heat";
