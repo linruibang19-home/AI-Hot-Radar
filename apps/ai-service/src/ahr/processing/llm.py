@@ -33,6 +33,109 @@ MAX_BODY_CHARS = 6000
 
 _JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 
+# Reasoning models emit their chain of thought inline, before the answer, and
+# `response_format: {"type": "json_object"}` does not suppress it. Measured
+# against MiniMax-M3 on 2026-08-29: with json_object set and `finish_reason:
+# stop`, the content came back as
+#
+#     <think>The user wants a one-sentence summary...</think>\n\n{"summary":"..."}
+#
+# which is not valid JSON, so every `model_validate_json` in this codebase
+# rejects it and the caller degrades to its no-model path. The provider is
+# behaving reasonably — the block is genuinely part of the response — so the
+# client strips it rather than each of the eight call sites learning to.
+#
+# Anchored to the start of the response on purpose. A model summarising an
+# article *about* reasoning models can legitimately put the literal text
+# "<think>" inside a JSON string field, and a global strip would corrupt it.
+_REASONING_TAGS = ("think", "thinking", "reasoning")
+_REASONING_PREFIX_RE = re.compile(
+    rf"\A\s*<({'|'.join(_REASONING_TAGS)})\b[^>]*>.*?</\1\s*>\s*",
+    re.DOTALL | re.IGNORECASE,
+)
+_REASONING_OPEN_RE = re.compile(
+    rf"\A\s*<({'|'.join(_REASONING_TAGS)})\b[^>]*>",
+    re.IGNORECASE,
+)
+
+
+def strip_reasoning_prefix(text: str) -> str:
+    """Remove a leading `<think>…</think>` block from a model response.
+
+    An *unterminated* opening tag means the token budget ran out mid-thought:
+    there is no answer in the response at all. Returning the raw reasoning would
+    hand the caller prose that fails validation with a confusing error; returning
+    the empty string fails the same validation for the honest reason.
+    """
+    stripped = _REASONING_PREFIX_RE.sub("", text, count=1)
+    if stripped != text:
+        return stripped
+    return "" if _REASONING_OPEN_RE.match(text) else text
+
+
+class _ReasoningPrefixFilter:
+    """`strip_reasoning_prefix` for a token stream.
+
+    The opening tag routinely arrives split across deltas, so the filter holds
+    back the first few characters until it knows whether a reasoning block is
+    starting. Once past the decision the stream is forwarded untouched — the
+    cost is a few characters of latency on the first token, not on every one.
+    """
+
+    # Longest opening tag is `<reasoning>`; the slack covers attributes.
+    _MAX_PROBE = 32
+
+    def __init__(self) -> None:
+        self._buffer = ""
+        self._state = "probing"
+
+    def feed(self, piece: str) -> str:
+        if self._state == "passthrough":
+            return piece
+
+        self._buffer += piece
+        if self._state == "probing":
+            candidate = self._buffer.lstrip()
+            if not candidate:
+                return ""
+            match = _REASONING_OPEN_RE.match(self._buffer)
+            if match:
+                self._state = "inside"
+                self._buffer = self._buffer[match.end() :]
+            elif len(candidate) < self._MAX_PROBE and any(
+                f"<{tag}".startswith(candidate.lower()[: len(tag) + 1]) for tag in _REASONING_TAGS
+            ):
+                # Still could become an opening tag; wait for more.
+                return ""
+            else:
+                self._state = "passthrough"
+                released, self._buffer = self._buffer, ""
+                return released
+
+        if self._state == "inside":
+            for tag in _REASONING_TAGS:
+                close = f"</{tag}"
+                index = self._buffer.lower().find(close)
+                if index == -1:
+                    continue
+                end = self._buffer.find(">", index)
+                if end == -1:
+                    return ""
+                self._state = "passthrough"
+                released = self._buffer[end + 1 :].lstrip()
+                self._buffer = ""
+                return released
+        return ""
+
+    def finish(self) -> str:
+        """Flush whatever the filter is still holding when the stream ends."""
+        if self._state == "probing":
+            released, self._buffer = self._buffer, ""
+            return released
+        # `inside` at end of stream means the block never closed: no answer.
+        self._buffer = ""
+        return ""
+
 
 class LlmUnavailableError(RuntimeError):
     """The provider could not be reached or is not configured.
@@ -171,7 +274,7 @@ class LlmClient:
 
             body = response.json()
             usage.add(body.get("usage"), elapsed_ms=int((time.monotonic() - started) * 1000))
-            return str(body["choices"][0]["message"]["content"])
+            return strip_reasoning_prefix(str(body["choices"][0]["message"]["content"]))
 
         raise LlmUnavailableError(
             f"llm unavailable after {self._config.max_attempts} attempts: {last_error}"
@@ -229,9 +332,12 @@ class LlmClient:
     ) -> AsyncIterator[str]:
         """`summarize`, delivered as it is produced.
 
-        Yields raw content deltas exactly as the provider sends them — no
-        interpretation happens here, because what the deltas *mean* depends on
-        the caller's contract with the model, and the RAG path has a strict one.
+        Yields content deltas as the provider sends them, with one exception: a
+        leading reasoning block is filtered out, because it is not part of the
+        answer under any caller's contract and this stream reaches a browser.
+        Beyond that no interpretation happens here — what the deltas *mean*
+        depends on the caller's contract with the model, and the RAG path has a
+        strict one.
 
         Deliberately not retried. `_complete` can retry because a failed attempt
         produced nothing the caller has seen; here the first token has already
@@ -261,6 +367,7 @@ class LlmClient:
             payload["response_format"] = {"type": "json_object"}
 
         started = time.monotonic()
+        reasoning = _ReasoningPrefixFilter()
         try:
             async with self._client.stream(
                 "POST", f"{self._config.base_url.rstrip('/')}/chat/completions", json=payload
@@ -290,7 +397,13 @@ class LlmClient:
                     for choice in chunk.get("choices") or []:
                         piece = (choice.get("delta") or {}).get("content")
                         if piece:
-                            yield str(piece)
+                            visible = reasoning.feed(str(piece))
+                            if visible:
+                                yield visible
+
+                trailing = reasoning.finish()
+                if trailing:
+                    yield trailing
         except httpx.HTTPError as exc:
             raise LlmUnavailableError(f"llm stream failed: {exc}") from exc
         finally:
