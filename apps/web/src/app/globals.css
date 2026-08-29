@@ -745,10 +745,6 @@ a {
 
 .tag {
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 1px 8px;
-  font-size: var(--fs-xs);
-  color: var(--muted);
 }
 
 .tag-primary {
@@ -1409,31 +1405,12 @@ summary:focus-visible {
 }
 
 .ask-examples {
-  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
   margin-bottom: 18px;
 }
 
-.ask-examples-label {
-  font-size: var(--fs-base);
-  color: var(--muted-2);
-}
-
-.ask-example {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: var(--fs-base);
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-
 .ask-example:hover {
-  border-color: var(--accent);
   color: var(--accent-ink);
 }
 
@@ -1632,17 +1609,6 @@ summary:focus-visible {
   padding-top: 20px;
 }
 
-.ask-history-title {
-  font-size: var(--fs-md);
-  font-weight: 700;
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 10px;
-  cursor: pointer;
-}
-
 .ask-history[open] .ask-history-title {
   margin-bottom: 12px;
 }
@@ -1786,35 +1752,10 @@ summary:focus-visible {
   white-space: nowrap;
 }
 
-.tier-primary {
-  background: #e7f2ec;
-  color: #1f6b45;
-}
-
-.tier-secondary {
-  background: #eef1f6;
-  color: #46566f;
-}
-
-.tier-expert {
-  background: #f4eee3;
-  color: #7a5a1e;
-}
-
-.tier-community {
-  background: #f2f2f0;
-  color: #5f5f58;
-}
-
 /* M3's event clustering, surfaced where it changes a reader's mind: this is
    not one outlet's word for it. */
 .corroboration-badge {
-  padding: 1px 7px;
-  border-radius: 4px;
-  background: var(--accent-soft);
-  color: var(--accent-ink);
   font-size: var(--fs-xs);
-  font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
 }
