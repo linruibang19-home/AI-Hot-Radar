@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { RetrievalTrace } from "@/components/RetrievalTrace";
-import { formatDate, formatDateTime } from "@/lib/datetime";
+import { AnswerTrace, LiveProgress } from "@/components/AnswerTrace";
+import { formatDate } from "@/lib/datetime";
 
 /**
  * The conversation, as one box you keep talking to.
@@ -81,6 +81,18 @@ export interface AnswerPayload {
     selection?: { distinct_sources?: number; source_capped?: number };
     support_dropped?: number;
     cache?: { outcome?: string; similarity?: number | null; replayOf?: string };
+    /** Candidates after RRF, before the rerank window. The funnel's first
+        number, and the one the old two-panel layout printed as 「101 条候选」
+        next to a table headed 「40 个候选」. */
+    fused?: number;
+    /** How many each channel returned, before fusion deduplicated them. */
+    channels?: { dense?: number; sparse?: number };
+    /** Wall-clock per stage, measured server-side and stored with the answer.
+        The client used to rebuild this from the SSE progress events, which a
+        permalink never receives — so a shared answer showed a panel with no
+        timings at all. Reading the stored copy makes live and permalink the
+        same render. */
+    stages_ms?: Record<string, number>;
   };
   /** Every candidate that entered the rerank window, with the rank it held in
       each channel and the reason it did or did not become evidence.
@@ -147,50 +159,50 @@ const QUERY_TYPES: Record<string, string> = {
  */
 const SUPPORT_THRESHOLD = 0.3;
 
+/**
+ * Groundedness, as a mark rather than a number.
+ *
+ * This was 「支持度 0.42」 printed beside every source — a bare float that most
+ * readers cannot calibrate, competing for attention with the title next to it.
+ * The number is what an engineer wants and it is still one hover away; what a
+ * reader needs is whether the check passed.
+ */
 function supportBadge(score: number | null | undefined) {
   // Not scored is not the same as unsupported, and must not look like it.
   if (score === null || score === undefined) return null;
   const supported = score >= SUPPORT_THRESHOLD;
   return (
     <span
-      className={`support-badge ${supported ? "support-ok" : "support-weak"}`}
+      className={`support-dot ${supported ? "support-ok" : "support-weak"}`}
       title={`证据支持度 ${score.toFixed(3)}（交叉编码器对「论断 × 被引段落」打分，阈值 ${SUPPORT_THRESHOLD}）`}
     >
-      支持度 {score.toFixed(2)}
+      {supported ? "已核验" : "支持弱"}
     </span>
   );
 }
 
 /**
- * A compact, literal account of the evidence behind one answer.
+ * The evidence counts, folded into the disclosure they describe.
  *
- * This deliberately avoids a single "confidence" score. Citation support,
- * source independence and source tier answer different questions; collapsing
- * them into one percentage would look precise while hiding which part is weak.
+ * These four numbers were their own block (「证据概览 · 4 条引用 · 4 家发布方
+ * …」) directly above a disclosure headed 「引用来源 4 条」, which restated the
+ * first of them, above a footer that restated the second under a third name.
+ * A count belongs on the thing it counts.
  */
-function EvidenceSummary({ citations }: { citations: Citation[] }) {
-  if (citations.length === 0) return null;
-
+function sourcesSummary(citations: Citation[]) {
   const scored = citations.filter((citation) => citation.supportScore != null);
   const supported = scored.filter(
     (citation) => (citation.supportScore ?? 0) >= SUPPORT_THRESHOLD,
   ).length;
-  const primary = citations.filter((citation) => citation.sourceTier === "primary").length;
   const publishers = new Set(citations.map((citation) => citation.sourceName)).size;
 
-  return (
-    <div className="ask-evidence-summary" aria-label="证据质量概览">
-      <span className="ask-evidence-label">证据概览</span>
-      <span>{citations.length} 条引用</span>
-      <span>{publishers} 家发布方</span>
-      {scored.length > 0 && (
-        <span>
-          支持度通过 {supported}/{scored.length}
-        </span>
-      )}
-      {primary > 0 && <span>{primary} 条一手来源</span>}
-    </div>
-  );
+  // 「来自」 rather than a bare count. The funnel below reports the evidence
+  // set's source count, which is legitimately larger — ten passages from five
+  // outlets can still yield four citations from four. Two bare numbers labelled
+  // 家信源 read as a contradiction; naming what each one counts does not.
+  const parts = [`${citations.length} 条`, `来自 ${publishers} 家信源`];
+  if (scored.length > 0) parts.push(`${supported}/${scored.length} 通过支持度校验`);
+  return parts.join(" · ");
 }
 
 /**
@@ -230,21 +242,6 @@ const TIERS: Record<string, { label: string; className: string }> = {
   expert: { label: "专家", className: "tier-expert" },
   community: { label: "社区", className: "tier-community" },
 };
-
-/**
- * The nine pipeline stages collapsed into the four a reader can act on.
- *
- * `dense`, `sparse` and `fuse` cost 67ms between them and finish before the
- * eye can register them; listing each would be a progress bar that lies about
- * where the time goes. The three that dominate — embed, rerank, generate — get
- * their own line, because those are the seconds someone is actually waiting.
- */
-const STEPS = [
-  { key: "plan", label: "理解问题" },
-  { key: "embed", label: "检索证据" },
-  { key: "rerank", label: "重排候选" },
-  { key: "generate", label: "生成回答" },
-] as const;
 
 interface StageEvent {
   stage: string;
@@ -294,17 +291,30 @@ function renderWithCitations(
     // binding. If one does, show it as text rather than a dead control.
     if (!citation) return <span key={index}>{part}</span>;
 
+    // Hover shows the passage; clicking still scrolls to the full entry. The
+    // marker used to carry a `title` attribute, which meant checking a claim
+    // was a click and a scroll away from the sentence making it — so nobody
+    // checked. The preview is the source's own supporting passage, not a
+    // summary of it.
     return (
-      <button
-        key={index}
-        type="button"
-        className={`cite-ref${active === number ? " is-active" : ""}`}
-        onClick={() => onFocus(number)}
-        title={`${citation.title} · ${citation.sourceName}`}
-        aria-label={`查看来源 ${number}：${citation.title}`}
-      >
-        {number}
-      </button>
+      <span key={index} className="cite-wrap">
+        <button
+          type="button"
+          className={`cite-ref${active === number ? " is-active" : ""}`}
+          onClick={() => onFocus(number)}
+          aria-label={`查看来源 ${number}：${citation.title}`}
+        >
+          {number}
+        </button>
+        <span className="cite-pop" role="tooltip">
+          <span className="cite-pop-title">{citation.title}</span>
+          <span className="cite-pop-meta">
+            {citation.sourceName}
+            {citation.publishedAt && ` · ${formatDate(citation.publishedAt)}`}
+          </span>
+          {citation.claim && <span className="cite-pop-claim">{citation.claim}</span>}
+        </span>
+      </span>
     );
   });
 }
@@ -368,77 +378,6 @@ function renderAnswerBody(
   return blocks;
 }
 
-/** The four-step progress list, from the stage events one turn reported. */
-function Progress({ stages, open }: { stages: StageEvent[]; open: boolean }) {
-  // A stage that has only *started* is not done. `generate` is the whole point
-  // of the distinction: it reports at its beginning and takes 5.7s at p50, so
-  // treating any reported stage as complete drew four ticks and then left the
-  // reader watching a finished checklist for six seconds.
-  const done = new Set(stages.filter((s) => !s.started).map((s) => s.stage));
-  const running = stages.filter((s) => s.started).map((s) => s.stage);
-  const cacheHit = stages.find((s) => s.stage === "cache" && s.outcome !== "miss");
-  const found = stages.find((s) => s.stage === "fuse")?.found;
-  const evidence = stages.find((s) => s.stage === "select")?.evidence;
-
-  // A cache hit runs no pipeline, so the four-step list has nothing to report
-  // and rendered as an empty box. Saying which layer answered is both more
-  // honest and more useful — a reader who sees a stale-looking answer should be
-  // able to tell it came from cache.
-  if (cacheHit) {
-    return (
-      <div className="ask-trace ask-cache-hit">
-        <strong>命中缓存</strong>
-        {cacheHit.outcome === "semantic" ? (
-          <span className="ask-step-detail">语义近邻 · 相似度 {cacheHit.similarity?.toFixed(4)}</span>
-        ) : (
-          <span className="ask-step-detail">同一问题、同一份语料</span>
-        )}
-        <span className="ask-step-detail">未调用模型</span>
-      </div>
-    );
-  }
-
-  return (
-    <details className="ask-trace" open={open} aria-live="polite">
-      <summary className="ask-trace-summary">
-        检索过程
-        {found ? <span className="ask-step-detail">{found} 条候选</span> : null}
-        {evidence ? <span className="ask-step-detail">{evidence} 段证据</span> : null}
-      </summary>
-      <ol className="ask-progress">
-        {STEPS.map((step) => {
-          const isDone = done.has(step.key);
-          // Active either because the server said this stage began, or because
-          // it is the first stage not yet reported — the fast ones send no
-          // "started" event, and inventing one would mean guessing at a
-          // duration the server already knows.
-          const active =
-            !isDone &&
-            (running.includes(step.key) ||
-              STEPS.filter((s) => done.has(s.key)).length === STEPS.indexOf(step));
-          return (
-            <li
-              key={step.key}
-              className={`ask-step${isDone ? " is-done" : ""}${active ? " is-active" : ""}`}
-            >
-              <span className="ask-step-mark" aria-hidden="true">
-                {isDone ? "✓" : active ? "•" : ""}
-              </span>
-              <span>{step.label}</span>
-              {step.key === "embed" && found ? (
-                <span className="ask-step-detail">{found} 条候选</span>
-              ) : null}
-              {step.key === "rerank" && evidence ? (
-                <span className="ask-step-detail">选出 {evidence} 条证据</span>
-              ) : null}
-            </li>
-          );
-        })}
-      </ol>
-    </details>
-  );
-}
-
 /**
  * One completed exchange: what was asked, and what came back with it.
  *
@@ -487,19 +426,14 @@ function ChatTurn({
           AI
         </span>
         <div className="ask-answer">
-          {/* A follow-up that was understood as something else. Shown for the
-              same reason the resolved time window is: a reader whose 「它呢」 was
-              tied to the wrong antecedent can see it rather than conclude the
-              system is broken. */}
-          {turn.rewrittenQuestion && (
-            <p className="ask-rewrite" role="status">
-              这是一个追问，已理解为：<strong>{turn.rewrittenQuestion}</strong>
-            </p>
-          )}
-
-          {/* What the planner decided, before any of it was used. The absolute
-              window matters most: "最近" became a real interval, and if it
-              caught the wrong one the reader can see that rather than guess. */}
+          {/* Two chips, not seven.
+              The row grew one chip per feature until it held the evidence
+              count, the source count, the alias expansion and the retrieval
+              cutoff — four numbers that also appeared further down the same
+              answer, twice more each. What has to be *here*, above the answer,
+              is only what silently changes what the answer can say: how the
+              question was read, and over what window. Everything else moved
+              into the funnel disclosure at the bottom, stated once. */}
           {turn.plan && (turn.plan.query_type || turn.plan.time_range) && (
             <div className="ask-plan">
               {turn.plan.query_type && (
@@ -509,43 +443,12 @@ function ChatTurn({
               )}
               {turn.plan.time_range?.from && turn.plan.time_range?.to ? (
                 <span className="ask-plan-chip">
-                  {turn.plan.time_range.label ?? "时间范围"}
-                  <span className="ask-plan-range">
-                    {formatDate(turn.plan.time_range.from)} – {formatDate(turn.plan.time_range.to)}
-                  </span>
+                  {formatDate(turn.plan.time_range.from)} – {formatDate(turn.plan.time_range.to)}
                 </span>
               ) : (
                 <span className="ask-plan-chip">全部时间</span>
               )}
               {children}
-              {turn.metrics?.evidence != null && (
-                <span className="ask-plan-chip">{turn.metrics.evidence} 段证据</span>
-              )}
-              {/* How the question was read, not just what it asked. 「智谱」 also
-                  searching for GLM is the difference between an answer and a
-                  wrong "nothing was released"; showing it lets the reader tell
-                  a good expansion from a wrong one. */}
-              {turn.metrics?.aliases && turn.metrics.aliases.length > 0 && (
-                <span className="ask-plan-chip ask-plan-alias">
-                  同时检索
-                  <span className="ask-plan-range">
-                    {turn.metrics.aliases.slice(0, 4).join(" · ")}
-                  </span>
-                </span>
-              )}
-              {/* One publisher is not corroboration however many documents it
-                  quotes, and the count was previously buried in the footer. */}
-              {turn.metrics?.selection?.distinct_sources != null && (
-                <span className="ask-plan-chip">
-                  {turn.metrics.selection.distinct_sources} 家信源
-                </span>
-              )}
-              {turn.askedAt && (
-                <span className="ask-plan-chip" title="回答只依据这一时刻之前已进入语料库的内容">
-                  检索截至
-                  <span className="ask-plan-range">{formatDateTime(turn.askedAt)}</span>
-                </span>
-              )}
             </div>
           )}
 
@@ -607,8 +510,6 @@ function ChatTurn({
             </div>
           )}
 
-          {!turn.refused && <EvidenceSummary citations={turn.citations} />}
-
           {turn.limitations.length > 0 && (
             <ul className="ask-limitations">
               {turn.limitations.map((limitation) => (
@@ -621,7 +522,7 @@ function ChatTurn({
             <details className="ask-sources">
               <summary className="ask-sources-title">
                 引用来源
-                <span className="ask-sources-count">{turn.citations.length} 条</span>
+                <span className="ask-sources-count">{sourcesSummary(turn.citations)}</span>
               </summary>
               <ol className="ask-source-list">
                 {turn.citations.map((citation) => {
@@ -677,34 +578,21 @@ function ChatTurn({
             </details>
           )}
 
-          {/* The progress this turn reported, kept with it and collapsed. It
-              used to be removed the moment the answer landed, which threw away
-              the one artefact showing *how* the answer was reached — the thing
-              that distinguishes this from a chat box. */}
-          {turn.stages && turn.stages.length > 0 && (
-            <Progress stages={turn.stages} open={isLatest} />
-          )}
-
-          <p className="ask-meta">
-            {turn.metrics?.total_ms && `耗时 ${(turn.metrics.total_ms / 1000).toFixed(1)}s`}
-            {turn.citations.length > 0 &&
-              ` · ${new Set(turn.citations.map((c) => c.sourceName)).size} 个信源`}
-            {turn.metrics?.degraded?.length ? ` · 降级：${turn.metrics.degraded.join(", ")}` : ""}
+          {/* The pipeline, as one line that opens. Everything the old footer,
+              the old progress panel and the old trace panel each said a piece
+              of is stated once here — including the timings, which now come
+              from the answer's own `stages_ms` rather than from progress
+              events a permalink never receives. */}
+          <div className="ask-foot">
+            <AnswerTrace turn={turn} />
             {/* Addressable. The id has always been returned with the answer;
                 until there was a route that read it back it pointed nowhere. */}
             {turn.queryId && (
-              <>
-                {" · "}
-                <a className="ask-permalink" href={`/ask/${turn.queryId}`}>
-                  永久链接
-                </a>
-              </>
+              <a className="ask-permalink" href={`/ask/${turn.queryId}`}>
+                永久链接
+              </a>
             )}
-          </p>
-
-          {turn.trace && turn.trace.length > 0 && (
-            <RetrievalTrace rows={turn.trace} defaultOpen={isLatest} />
-          )}
+          </div>
         </div>
       </div>
     </article>
@@ -954,7 +842,6 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
     }
   }
 
-  const latest = turns.length > 0 ? turns[turns.length - 1] : null;
   const empty = turns.length === 0 && !pending && !error;
   // Threads other than the open one. The open one is rendered in full above;
   // listing it again would offer the reader a link to where they already are.
@@ -996,20 +883,19 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
 
         <div className="chat-log">
           {empty && (
+            /* Three lines and four buttons. What was here — a kicker, a lead
+               paragraph, three capability bullets, a label, four examples each
+               with its own explanatory subtitle, and a five-line notice below
+               the box — was nine pieces of copy explaining a text field. The
+               examples still demonstrate the same four behaviours; the
+               explanation of each moved to `title`, where it is available to
+               anyone curious and silent to everyone else. */
             <div className="chat-empty">
-              <span className="chat-empty-kicker">基于站内原始资讯</span>
               <h2 className="chat-empty-title">从一个具体问题开始</h2>
               <p className="chat-empty-lead">
-                可询问近期模型发布、公司动态或产品变化；回答后还能直接追问
-                <strong>「它」「那家公司」</strong>。
+                基于站内原始资讯回答，每条事实可回溯来源；证据不足会拒答。
               </p>
-              <ul className="chat-trust" aria-label="问答能力边界">
-                <li>原文引用</li>
-                <li>时间范围可修正</li>
-                <li>证据不足会拒答</li>
-              </ul>
               <div className="ask-examples" role="group" aria-label="示例问题">
-                <span className="ask-examples-label">试试这样问</span>
                 {EXAMPLES.map((example) => (
                   <button
                     key={example.question}
@@ -1019,7 +905,6 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
                     onClick={() => void ask(example.question)}
                   >
                     {example.question}
-                    <span className="ask-example-shows">{example.shows}</span>
                   </button>
                 ))}
               </div>
@@ -1102,7 +987,7 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
                   AI
                 </span>
                 <div className="ask-answer" aria-busy="true">
-                  {stages.length > 0 && <Progress stages={stages} open />}
+                  {stages.length > 0 && <LiveProgress stages={stages} />}
                   {/* `.ask-draft`, deliberately *not* `.ask-body`: a partial
                       answer and a verified one must not look the same to
                       anything reading the DOM. Reusing the class made "the
@@ -1222,16 +1107,6 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
         </details>
       )}
 
-      {/* Rendered here rather than in the page so it sits below the box it
-          describes, and only once there is nothing more useful to say. */}
-      {latest === null && !pending && (
-        <div className="notice">
-          检索走的是<strong>混合召回 + 交叉编码器重排</strong>：稠密向量负责语义，
-          关键词通道负责精确型号与版本号（纯语义检索会把 MXFP4 召回成 NVFP4），
-          时间词解析成绝对区间后作为过滤条件。
-          引用编号由服务端反查真实段落生成，<strong>模型自己写的来源不会被显示</strong>。
-        </div>
-      )}
     </>
   );
 }
