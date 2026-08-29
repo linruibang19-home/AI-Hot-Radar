@@ -2240,6 +2240,56 @@ summary:focus-visible {
 
 /* ---------- evaluation report (T1-2) ---------- */
 
+/* The gate certifying a configuration nobody runs. Styled as an alert rather
+   than as another note: every other line in that panel is a number the reader
+   is invited to trust, and this one says not to. */
+.quality-drift {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--hot);
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--hot) 7%, transparent);
+  font-size: var(--fs-sm);
+  line-height: 1.8;
+}
+
+.quality-drift code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Ten rounds of retrieval evaluation, folded. They are the argument that the
+   current numbers were earned rather than tuned into place — worth one click,
+   and not worth being the first 300 lines a reader meets. */
+.eval-archive {
+  margin-top: 32px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+
+.eval-archive-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  cursor: pointer;
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.eval-archive[open] .eval-archive-title {
+  margin-bottom: 8px;
+}
+
+.eval-archive-note {
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--muted);
+}
+
 .eval-section {
   margin-top: 32px;
 }

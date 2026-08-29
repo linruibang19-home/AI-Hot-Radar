@@ -358,6 +358,133 @@ def retrieval_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
     }
 
 
+def live_quality_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
+    """The release gate's own metrics, recomputed over questions people asked.
+
+    The gate runs two of these against 90 questions chosen in advance: the rate
+    at which an answerable question is refused, and the share of citations that
+    clear the entailment threshold. Both are reported on `/eval` as the reason
+    a build may ship. Neither was ever measured on real traffic, so a
+    regression that only shows up on questions nobody thought to write down had
+    nothing watching for it.
+
+    The same two numbers, over a different population, and deliberately not
+    merged with the golden-set figures anywhere: the golden set is fixed so
+    rounds are comparable, and real traffic is not comparable to anything —
+    today's questions are not last week's. Read together they say whether the
+    fixed set still resembles what the system is asked. Read as one number they
+    would say nothing at all.
+
+    `SUPPORT_THRESHOLD` is imported rather than repeated. A page that calls a
+    citation supported must mean the threshold the evaluation counted against;
+    two constants that agree today are two constants that can disagree later.
+    """
+    from ahr.rag.support import SUPPORT_THRESHOLD
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT count(*),
+                   count(*) FILTER (WHERE status = 'REFUSED'),
+                   -- Both halves are needed. `IS DISTINCT FROM 'miss'` alone
+                   -- is true when the key is absent, which counted every
+                   -- answer written before cache metrics existed as a replay:
+                   -- 130 of 241 rather than the actual 4. An unrecorded cache
+                   -- outcome is unknown, not a hit.
+                   count(*) FILTER (
+                       WHERE status = 'ANSWERED'
+                         AND metrics -> 'cache' ->> 'outcome' IS NOT NULL
+                         AND metrics -> 'cache' ->> 'outcome' <> 'miss'
+                   )
+              FROM rag_query
+             WHERE created_at >= now() - make_interval(days => %s)
+            """,
+            (days,),
+        )
+        queries = cursor.fetchone() or (0, 0, 0)
+
+        # An answer with no citation is not a refusal and not a failure the
+        # gate measures, but it is the one shape that looks like a normal
+        # answer while carrying nothing checkable.
+        cursor.execute(
+            """
+            SELECT count(*)
+              FROM rag_query q
+             WHERE q.created_at >= now() - make_interval(days => %s)
+               AND q.status = 'ANSWERED'
+               AND NOT EXISTS (SELECT 1 FROM rag_citation c WHERE c.rag_query_id = q.id)
+            """,
+            (days,),
+        )
+        uncited = (cursor.fetchone() or (0,))[0]
+
+        cursor.execute(
+            """
+            SELECT count(*) FILTER (WHERE c.support_score IS NOT NULL),
+                   count(*) FILTER (WHERE c.support_score >= %s),
+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY c.support_score)
+              FROM rag_citation c
+              JOIN rag_query q ON q.id = c.rag_query_id
+             WHERE q.created_at >= now() - make_interval(days => %s)
+            """,
+            (SUPPORT_THRESHOLD, days),
+        )
+        support = cursor.fetchone() or (0, 0, None)
+
+        # Which model actually wrote the answers. `/eval` publishes a snapshot
+        # naming the model a round was measured on, and nothing checked that
+        # against the model serving — so the page went on vouching for
+        # `deepseek-chat` while `deepseek-v4-flash` answered every question.
+        # A gate that certifies a configuration nobody runs certifies nothing.
+        #
+        # Ordered by recency, not by volume. "Which model is serving" is a
+        # question about now, and the busiest model over 30 days is a question
+        # about the past: an evaluation sweep leaves hundreds of calls behind,
+        # so the model being replaced outvotes its replacement for as long as
+        # the window is wide. Measured while writing this — 469 calls on the
+        # old model against 22 on the one actually configured.
+        cursor.execute(
+            """
+            SELECT model, count(*), max(created_at)
+              FROM llm_usage
+             WHERE operation = 'rag_answer'
+               AND created_at >= now() - make_interval(days => %s)
+             GROUP BY model
+             ORDER BY max(created_at) DESC
+            """,
+            (days,),
+        )
+        serving = [
+            {"model": row[0], "calls": int(row[1]), "lastUsed": row[2].isoformat()}
+            for row in cursor.fetchall()
+        ]
+
+    total, refused, replayed = (int(queries[0]), int(queries[1]), int(queries[2]))
+    scored, supported = int(support[0]), int(support[1])
+
+    return {
+        "days": days,
+        "supportThreshold": SUPPORT_THRESHOLD,
+        "queries": total,
+        "refused": refused,
+        # Not named `over_refusal_rate`: the gate's version counts refusals of
+        # questions annotated answerable, and nothing annotates live traffic.
+        # Some of these refusals are correct. Calling it the same thing would
+        # invite a comparison the data does not support.
+        "refusalRate": round(refused / total, 4) if total else None,
+        "answeredWithoutCitation": int(uncited),
+        "replayedFromCache": replayed,
+        "citations": scored,
+        "supported": supported,
+        "supportRate": round(supported / scored, 4) if scored else None,
+        "supportMedian": round(float(support[2]), 4) if support[2] is not None else None,
+        "servingModels": serving,
+        # The one that wrote the most recent answer, for comparison against the
+        # model the published snapshot was measured on.
+        "servingModel": serving[0]["model"] if serving else None,
+    }
+
+
 def corpus_summary(connection: Any) -> dict[str, Any]:
     """What the answers are drawn from, so the numbers above have a scale."""
     with connection.cursor() as cursor:

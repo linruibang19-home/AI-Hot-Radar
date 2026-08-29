@@ -297,6 +297,7 @@ async def stats(days: int = 30) -> dict[str, object]:
         corpus_summary,
         cost_summary,
         latency_summary,
+        live_quality_summary,
         retrieval_summary,
     )
 
@@ -324,6 +325,10 @@ async def stats(days: int = 30) -> dict[str, object]:
                     # What retrieval did on real questions, which the 90-question
                     # golden set cannot report: this is real traffic population.
                     "retrieval": retrieval_summary(connection, days=window),
+                    # The gate's two headline metrics, recomputed over the
+                    # questions people actually asked. `/eval` shows them beside
+                    # the golden-set figures so a divergence is visible.
+                    "quality": live_quality_summary(connection, days=window),
                     "corpus": corpus_summary(connection),
                 }
 

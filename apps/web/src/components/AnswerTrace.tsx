@@ -24,7 +24,10 @@ import { formatDateTime } from "@/lib/datetime";
  * no timings, since a stored answer never replays its progress stream.
  */
 
-const OUTCOMES: Record<string, { label: string; className: string; hint: string }> = {
+const OUTCOMES: Record<
+  string,
+  { label: string; className: string; hint: string }
+> = {
   cited: {
     label: "被引用",
     className: "trace-cited",
@@ -120,7 +123,11 @@ function score(value: number | null) {
 }
 
 /** The four-step list, shown only while a question is still running. */
-export function LiveProgress({ stages }: { stages: { stage: string; started?: boolean }[] }) {
+export function LiveProgress({
+  stages,
+}: {
+  stages: { stage: string; started?: boolean }[];
+}) {
   const STEPS = [
     { key: "plan", label: "理解问题" },
     { key: "embed", label: "检索证据" },
@@ -170,9 +177,14 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
   const cited = turn.citations.length;
 
   const rescued = rows.filter(
-    (r) => r.fusedRank !== null && r.rerankRank !== null && r.rerankRank < r.fusedRank,
+    (r) =>
+      r.fusedRank !== null &&
+      r.rerankRank !== null &&
+      r.rerankRank < r.fusedRank,
   ).length;
-  const sparseOnly = rows.filter((r) => r.denseRank === null && r.sparseRank !== null).length;
+  const sparseOnly = rows.filter(
+    (r) => r.denseRank === null && r.sparseRank !== null,
+  ).length;
 
   // Default to the passages that reached the model. The other thirty are the
   // answer to "why not that article", which is a question a reader asks second.
@@ -254,7 +266,12 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
                   title={`${t.label} ${t.ms}ms`}
                 />
               ))}
-              {other > 0 && <span className="funnel-seg seg-other" style={{ flexGrow: other }} />}
+              {other > 0 && (
+                <span
+                  className="funnel-seg seg-other"
+                  style={{ flexGrow: other }}
+                />
+              )}
             </div>
             <ul className="funnel-legend">
               {named.map((t, index) => (
@@ -287,7 +304,9 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
             {turn.plan?.query_type && (
               <>
                 <dt>问题类型</dt>
-                <dd>{QUERY_TYPES[turn.plan.query_type] ?? turn.plan.query_type}</dd>
+                <dd>
+                  {QUERY_TYPES[turn.plan.query_type] ?? turn.plan.query_type}
+                </dd>
               </>
             )}
             <dt>时间窗</dt>
@@ -300,11 +319,12 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
               <>
                 <dt>双通道召回</dt>
                 <dd>
-                  稠密 {metrics.channels.dense ?? 0} · 关键词 {metrics.channels.sparse ?? 0} → 融合{" "}
-                  {recalled ?? 0}
+                  稠密 {metrics.channels.dense ?? 0} · 关键词{" "}
+                  {metrics.channels.sparse ?? 0} → 融合 {recalled ?? 0}
                   {sparseOnly > 0 && (
                     <span className="funnel-hint">
-                      其中 {sparseOnly} 条只有关键词通道召回到——纯语义检索会把 MXFP4 召回成 NVFP4
+                      其中 {sparseOnly} 条只有关键词通道召回到——纯语义检索会把
+                      MXFP4 召回成 NVFP4
                     </span>
                   )}
                 </dd>
@@ -342,7 +362,9 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
             {turn.askedAt && (
               <>
                 <dt>检索截至</dt>
-                <dd>{formatDateTime(turn.askedAt)}（只依据此刻前已入库的内容）</dd>
+                <dd>
+                  {formatDateTime(turn.askedAt)}（只依据此刻前已入库的内容）
+                </dd>
               </>
             )}
             {metrics.degraded && metrics.degraded.length > 0 && (
@@ -359,8 +381,8 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
             <h4>
               候选去向
               <span className="funnel-sub">
-                两个通道各自召回 → RRF 融合 → §6 元数据调整 → 交叉编码器重排 → 每篇/每信源限流 →
-                同事件折叠 → 预算截断
+                两个通道各自召回 → RRF 融合 → §6 元数据调整 → 交叉编码器重排 →
+                每篇/每信源限流 → 同事件折叠 → 预算截断
               </span>
             </h4>
             <CandidateTable rows={inEvidence} />
@@ -369,7 +391,8 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
                 <summary>展开全部 {rows.length} 条候选，含被淘汰的</summary>
                 <CandidateTable rows={rows} />
                 <p className="funnel-note">
-                  <strong>同篇超额</strong>拦的是一篇文档的多个段落，<strong>同信源超额</strong>
+                  <strong>同篇超额</strong>拦的是一篇文档的多个段落，
+                  <strong>同信源超额</strong>
                   拦的是一家媒体的多篇报道，<strong>同事件折叠</strong>
                   拦的是多家媒体对同一件事的报道。三者在答案里长得一样，含义完全不同。
                 </p>
@@ -403,7 +426,9 @@ function CandidateTable({ rows }: { rows: TraceRow[] }) {
               <tr key={row.chunkId} className={outcome.className}>
                 <td>
                   {row.itemId ? (
-                    <a href={`/items/${row.itemId}`}>{row.title || "（无标题）"}</a>
+                    <a href={`/items/${row.itemId}`}>
+                      {row.title || "（无标题）"}
+                    </a>
                   ) : (
                     row.title || "（无标题）"
                   )}
@@ -438,7 +463,10 @@ function CandidateTable({ rows }: { rows: TraceRow[] }) {
                   <div className="trace-score">{score(row.rerankScore)}</div>
                 </td>
                 <td>
-                  <span className={`state ${outcome.className}`} title={outcome.hint}>
+                  <span
+                    className={`state ${outcome.className}`}
+                    title={outcome.hint}
+                  >
                     {outcome.label}
                   </span>
                 </td>
