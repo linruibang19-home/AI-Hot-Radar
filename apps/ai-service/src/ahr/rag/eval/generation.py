@@ -65,6 +65,10 @@ class GenerationResult:
     # meant bisecting git history to find out which stage had changed —
     # a finished report simply did not contain the answer.
     refusal_cause: str | None = None
+    # The sentences `drop_uncited_sentences` removed. `refusal_cause` says
+    # which stage emptied the answer; this says what it emptied, which is the
+    # question immediately after and the one a report still could not answer.
+    uncited_examples: list[str] = field(default_factory=list)
     citations: int = 0
     must_contain_hit: float | None = None
     must_not_claim_mentions: list[str] = field(default_factory=list)
@@ -239,6 +243,10 @@ def score_answer(
         answerable=question.answerable,
         refused=answer.refused,
         refusal_cause=(answer.metrics.get("refusal_cause") if answer.refused else None),
+        # Recorded whether or not the answer was refused: a *surviving* answer
+        # that lost three sentences on the way is the near miss worth seeing
+        # before it becomes the next refusal.
+        uncited_examples=list(answer.metrics.get("uncited_examples") or []),
         citations=len(answer.citations),
         citation_coverage=citation_coverage(answer.answer_markdown),
         citation_precision=citation_precision(cited_items, question.relevant_ids),

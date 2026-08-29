@@ -168,6 +168,40 @@ def _latest_window(turns: list[Turn]) -> tuple[date, date] | None:
     return None
 
 
+# A sentence that describes what the evidence does *not* contain. Anchored to
+# the start so a factual assertion cannot be smuggled in front of one; the
+# absence of a digit is the second guard, because 「证据里没提到 X，不过 X 是
+# 70B」 is an assertion wearing a scope statement's opening words.
+_SCOPE_RE = re.compile(
+    r"^(?:检索(?:到)?的?(?:内容|结果)|证据|资料|语料|现有材料)"
+    r"[^。！？]*?(?:未|没有|不包含|缺少)[^。！？]*[。！？]?$"
+)
+_ASSERTION_MARKERS = ("但", "不过", "然而", "实际上", "事实上")
+
+
+def _scope_statement(dropped: list[str]) -> str | None:
+    """The model's own account of what it could not find, when it is only that.
+
+    Used as a refusal explanation, never as an answer: it is uncited by
+    construction, so it must not reach the page as a claim. What it replaces is
+    a generic sentence that told the reader strictly less than the system knew.
+
+    A candidate is rejected outright if it carries any hedge word or digit —
+    both are how a real assertion rides along inside a sentence that opens like
+    a scope statement.
+    """
+    for sentence in dropped:
+        text = sentence.strip()
+        if not _SCOPE_RE.match(text):
+            continue
+        if any(marker in text for marker in _ASSERTION_MARKERS):
+            continue
+        if any(character.isdigit() for character in text):
+            continue
+        return text
+    return None
+
+
 def _window_of(answer: Answer) -> tuple[str, str] | None:
     """This answer's resolved range, as the local ISO dates a `Turn` carries."""
     time_range = getattr(answer.plan, "time_range", None) if answer.plan else None
@@ -1106,6 +1140,23 @@ async def answer_question(
             # not a fallback: §10 forbids letting the model fill the gap from
             # general knowledge.
             refusal_reason = "检索到的内容不足以回答这个问题"
+            # …unless the model already said something more precise.
+            #
+            # Rule 3 asks it to write 「检索到的内容里没有提到 X」 rather than
+            # speculate, and it does. That sentence is a statement about the
+            # *absence* of evidence, so it cannot carry a `[n]` — nothing
+            # supports the claim that nothing supports a claim — and
+            # `drop_uncited_sentences` removes it. The answer then empties and
+            # the reader gets a generic sentence in place of the specific one
+            # the model had written for them.
+            #
+            # It stays a refusal: nothing grounded survived, and publishing the
+            # scope statement as an answer would put an uncited sentence on the
+            # page. Only the explanation changes, which is the part that was
+            # needlessly worse than what the system knew.
+            scope = _scope_statement(dropped_sentences)
+            if scope and not citations:
+                refusal_reason = scope
             # *Which* of the three ways this happens, recorded separately.
             #
             # The sentence above is the same whether the model declined to
