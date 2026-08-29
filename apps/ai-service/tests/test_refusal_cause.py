@@ -45,6 +45,18 @@ def test_the_other_refusal_exits_are_labelled_too() -> None:
     source = inspect.getsource(service.answer_question)
     assert '"invariant_violation"' in source
     assert '"credential_policy"' in source
+    assert '"generation_unavailable"' in source
+
+
+def test_a_provider_outage_is_not_filed_as_a_quality_result() -> None:
+    """Measured the hard way. A run against an account with no balance left
+    reported `over_refusal_rate` 1.0 across all 78 answerable questions — at a
+    glance indistinguishable from the change under test having broken the
+    pipeline, and worth a day of bisecting a defect that is not there."""
+    source = inspect.getsource(generation)
+    assert '"run_valid"' in source
+    assert '"invalid_reason"' in source
+    assert 'causes.get("generation_unavailable"' in source
 
 
 def test_the_evaluation_carries_the_cause_through_to_the_report() -> None:

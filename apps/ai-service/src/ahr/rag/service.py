@@ -988,6 +988,13 @@ async def answer_question(
             )
         except LlmUnavailableError as exc:
             logger.warning("generation failed: %s", exc)
+            # Labelled, like every other refusal. Without this the evaluation
+            # reported `unrecorded` for all 78 answerable questions during a
+            # provider outage — an `over_refusal_rate` of 1.0 that looks exactly
+            # like a catastrophic quality regression and is a billing problem.
+            # The whole point of `refusal_cause` is that a report never leaves
+            # someone bisecting for a defect that is not there.
+            metrics["refusal_cause"] = "generation_unavailable"
             return Answer(
                 question=question,
                 answer_markdown="",

@@ -82,7 +82,15 @@ MAX_PARENT_CHARS = PARENT_BUDGET_TOKENS * CHARS_PER_TOKEN
 # The safety property is unchanged: every asserted fact still carries the
 # citation of the document that states it, and a claim about the *relationship*
 # (faster, cheaper, better) still requires evidence that says so.
-ANSWER_PROMPT_VERSION = "rag-answer-v7"
+#
+# v8 adds the shape v7 exposed. With rule 9 relaxed the model went on to write
+# 「证据中只出现了 A 和 B 的对比，其中 A 是 20.8B 参数的推理模型…，但证据没有
+# 说明两者在量化上的差异」 — real facts drawn from real evidence, buried inside
+# a sentence framed as a statement about what is *missing*, and therefore
+# carrying no `[E#]`. `drop_uncited_sentences` deletes the whole sentence,
+# taking the facts and the conclusion with it. The rule now says: state what
+# the evidence does say, cited, and put the gap in its own sentence.
+ANSWER_PROMPT_VERSION = "rag-answer-v8"
 
 _CITATION_RE = re.compile(r"\[E(\d+)\]")
 
@@ -149,6 +157,19 @@ SYSTEM_PROMPT = """你是 AI Hot Radar 的问答助手，只依据给定证据�
 按句号、问号、感叹号、分号和列表项逐句检查 `answer_markdown`：只要该句包含
 可核实的事实，就必须在该句结束前出现至少一个有效的 `[E#]`。引用不能只放在
 整段最后来覆盖前面的多句。没有合适证据的句子必须删除，不能保留为无引用断言。
+
+**说明「证据里缺什么」的句子要单独成句，并且只说缺什么。** 一旦在这种句子里
+顺带复述了证据的内容（参数量、量化档位、版本号、性能数字等），整句就是事实
+陈述，必须标注编号。写成两句：先把证据说过的写清楚并标注编号，再单独一句说
+证据没有覆盖到的部分。反例——下面这句因为没有编号会被整句删除，结论也一起丢失：
+
+    证据中只出现了 A 和 B 的对比，其中 A 是 20.8B 参数的推理模型，而 B 是同一
+    架构的另一个版本，但证据没有说明两者在量化上的差异。
+
+应写成：
+
+    A 是 20.8B 参数的推理模型 [E1]，B 是同一架构的另一个版本 [E2]。
+    证据没有说明两者在量化上的差异。
 
 错误：`GLM-5.2 已上线。它提供 99% 可用性。[E3]`
 正确：`GLM-5.2 已上线。[E3] 它提供 99% 可用性。[E3]`

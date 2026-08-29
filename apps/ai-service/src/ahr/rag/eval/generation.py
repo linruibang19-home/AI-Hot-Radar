@@ -351,6 +351,19 @@ def summarise(results: list[GenerationResult]) -> dict[str, Any]:
                 )
         if causes:
             summary["over_refusal_causes"] = dict(sorted(causes.items()))
+            # A provider outage is not a quality result and must not be filed
+            # as one. Measured the hard way: a run made against an account with
+            # no balance left reported `over_refusal_rate` 1.0 across all 78
+            # answerable questions, which is indistinguishable at a glance from
+            # the pipeline having been broken by the change under test.
+            unavailable = causes.get("generation_unavailable", 0)
+            if unavailable:
+                summary["generation_unavailable"] = unavailable
+                summary["run_valid"] = False
+                summary["invalid_reason"] = (
+                    f"{unavailable}/{len(answerable)} 道可答题在生成阶段就失败了"
+                    "（供应商不可用），本次结果不能作为质量测量"
+                )
             # The questions themselves, so the next reader opens the report
             # rather than re-running the model to find out which ones failed.
             summary["over_refused_questions"] = sorted(
