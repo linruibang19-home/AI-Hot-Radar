@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { HotItem } from "@/lib/api";
+import { heatBadge, showsHeatBadge } from "@/lib/heat";
 
 /**
  * The 当前热点 panel.
@@ -43,12 +44,11 @@ export function HotList({
             <Link className="hot-title" href={`/items/${item.id}`}>
               {item.title}
             </Link>
-            {/* Same rule as the card badge: below 1 the number is noise. The
-                rank on the left already says which is hotter, so a row reading
-                "3 … 0 热度" only contradicts itself. */}
-            {Math.round(item.heat) >= 1 && (
+            {/* The rank on the left already says which is hotter, so a row
+                reading "3 … 0 热度" only contradicts itself. */}
+            {showsHeatBadge(item.heat) && (
               <span className="hot-score">
-                {Math.round(item.heat)} <span className="hot-score-unit">热度</span>
+                {heatBadge(item.heat)} <span className="hot-score-unit">热度</span>
               </span>
             )}
           </li>

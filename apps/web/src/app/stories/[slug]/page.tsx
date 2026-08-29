@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 
 import { CONTENT_TYPE_LABELS } from "@/components/ItemCard";
 import { fetchStory, formatStorySources } from "@/lib/api";
+import { heatStat } from "@/lib/heat";
 
 import type { Metadata } from "next";
 
@@ -81,7 +82,7 @@ export default async function StoryPage({
           <div className="stat-label">报道篇数</div>
         </div>
         <div className="stat">
-          <div className="stat-value">{Math.round(story.heat ?? 0)}</div>
+          <div className="stat-value">{heatStat(story.heat)}</div>
           <div className="stat-label">当前热度</div>
         </div>
       </div>

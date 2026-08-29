@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { ContentItem } from "@/lib/api";
 import { toPlainPreview } from "@/lib/content-preview";
+import { heatBadge, showsHeatBadge } from "@/lib/heat";
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
   model_release: "模型发布",
@@ -41,18 +42,10 @@ export function ItemCard({
         {item.contentType && (
           <span className="tag">{CONTENT_TYPE_LABELS[item.contentType] ?? item.contentType}</span>
         )}
-        {typeof item.hotScore === "number" && Math.round(item.hotScore) >= 1 && (
-          // Rounded and unlabelled: hot_score is unbounded and decays
-          // continuously, so decimals would imply precision it does not have.
-          //
-          // Hidden below 1 rather than shown as "0". Heat decays by half-life,
-          // so most of the corpus sits under 0.5 at any moment — measured on
-          // production 2026-08-29, 3029 of 3392 reader-visible items. A badge
-          // reading "• 0" on nine cards in ten costs a slot in the header row
-          // and tells the reader nothing; absence says the same thing quietly.
+        {showsHeatBadge(item.hotScore) && (
           <span className="card-heat" title="热度">
             <span className="card-heat-dot" aria-hidden="true" />
-            {Math.round(item.hotScore)}
+            {heatBadge(item.hotScore)}
           </span>
         )}
       </header>
