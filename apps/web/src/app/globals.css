@@ -1,4 +1,14 @@
 :root {
+  /* This design is light-only — there is no dark palette anywhere in this file,
+     and every surface sets its own colour. Saying so matters anyway: without
+     the declaration the UA falls back to `prefers-color-scheme` for the parts
+     it draws itself, so a reader in dark mode gets a dark scrollbar against a
+     light page, and the mobile browsers that force-darken undeclared documents
+     (common on Android in this site's audience) will invert the whole thing.
+     Verified on desktop Chromium under dark emulation: the page content stays
+     light because the CSS is explicit; this covers what the CSS cannot reach. */
+  color-scheme: light;
+
   --bg: #f6f7f8;
   --surface: #ffffff;
   --border: #e6e7e5;
