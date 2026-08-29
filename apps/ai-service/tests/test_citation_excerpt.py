@@ -57,5 +57,5 @@ def test_a_replayed_answer_keeps_its_excerpts() -> None:
     """A cache hit *is* that answer. Rebuilding its citations without the
     excerpt would make the replay quietly less checkable than the original."""
     source = inspect.getsource(service)
-    rebuild = source[source.index("claim_text=str(row.get(\"claim\")") :][:900]
+    rebuild = source[source.index('claim_text=str(row.get("claim")') :][:900]
     assert 'excerpt=str(row.get("excerpt") or "")' in rebuild

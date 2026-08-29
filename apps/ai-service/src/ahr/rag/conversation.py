@@ -68,6 +68,11 @@ class Turn:
 
     question: str
     cited_titles: tuple[str, ...]
+    # The range this turn resolved, as local ISO dates. Carried so a follow-up
+    # that names no time can stay inside the window the conversation already
+    # announced, instead of silently widening to the whole corpus under a
+    # heading that still says 08-22 至 08-29.
+    window: tuple[str, str] | None = None
 
 
 def load_turns(connection: Any, conversation_id: str, *, limit: int = MAX_TURNS) -> list[Turn]:
@@ -87,6 +92,8 @@ def load_turns(connection: Any, conversation_id: str, *, limit: int = MAX_TURNS)
         cursor.execute(
             """
             SELECT COALESCE(q.retrieval_plan->>'question', q.question),
+                   left(q.retrieval_plan->'time_range'->>'from', 10),
+                   left(q.retrieval_plan->'time_range'->>'to', 10),
                    COALESCE(
                        array_agg(DISTINCT COALESCE(ci.zh_title, ci.title))
                            FILTER (WHERE ci.id IS NOT NULL),
@@ -107,7 +114,11 @@ def load_turns(connection: Any, conversation_id: str, *, limit: int = MAX_TURNS)
         rows = cursor.fetchall()
 
     return [
-        Turn(question=str(row[0]), cited_titles=tuple(str(t) for t in (row[1] or [])[:3]))
+        Turn(
+            question=str(row[0]),
+            cited_titles=tuple(str(t) for t in (row[3] or [])[:3]),
+            window=(row[1], row[2]) if row[1] and row[2] else None,
+        )
         for row in reversed(rows)
     ]
 
@@ -134,6 +145,9 @@ async def turns_for(connection: Any, conversation_id: str, *, limit: int = MAX_T
             Turn(
                 question=str(row.get("question", "")),
                 cited_titles=tuple(str(t) for t in row.get("citedTitles") or ()),
+                window=(
+                    (str(row["window"][0]), str(row["window"][1])) if row.get("window") else None
+                ),
             )
             for row in cached
         ][-limit:]
@@ -144,7 +158,11 @@ async def turns_for(connection: Any, conversation_id: str, *, limit: int = MAX_T
 
 
 def _as_row(turn: Turn) -> dict[str, Any]:
-    return {"question": turn.question, "citedTitles": list(turn.cited_titles)}
+    return {
+        "question": turn.question,
+        "citedTitles": list(turn.cited_titles),
+        "window": list(turn.window) if turn.window else None,
+    }
 
 
 async def remember(

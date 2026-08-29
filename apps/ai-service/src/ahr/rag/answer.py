@@ -850,16 +850,22 @@ _BOUND_CITATION_RE = re.compile(r"\[(\d+)\]")
 _BOUND_SENTENCE_RE = re.compile(r"[^。！？\n]+(?:[。！？](?:\s*\[\d+\])*)?")
 
 
-def drop_uncited_sentences(answer_markdown: str) -> tuple[str, int]:
+def drop_uncited_sentences(answer_markdown: str) -> tuple[str, int, list[str]]:
     """Delete factual prose the model failed to anchor, never invent a source.
 
     Prompt compliance is stochastic; publication safety cannot be. A prose
     sentence without a server-bound ``[n]`` marker is removed. The caller then
     drops citation records no longer referenced by the surviving text and
     refuses if nothing grounded remains.
+
+    Returns the surviving text, how many sentences went, and **the sentences
+    themselves**. The count alone said an answer had been emptied and nothing
+    about what it had said — so 「why was this refused」 was answerable from a
+    finished evaluation report and 「why was that sentence uncited」 was not,
+    which is one bisect short of useful.
     """
     kept_lines: list[str] = []
-    removed = 0
+    removed: list[str] = []
     for line in answer_markdown.splitlines():
         stripped = line.strip()
         if not stripped:
@@ -871,14 +877,14 @@ def drop_uncited_sentences(answer_markdown: str) -> tuple[str, int]:
         content = stripped[2:].strip() if bullet else stripped
         sentences = [part.strip() for part in _BOUND_SENTENCE_RE.findall(content) if part.strip()]
         grounded = [part for part in sentences if _BOUND_CITATION_RE.search(part)]
-        removed += len(sentences) - len(grounded)
+        removed.extend(part for part in sentences if not _BOUND_CITATION_RE.search(part))
         if grounded:
             joined = " ".join(grounded)
             kept_lines.append(f"- {joined}" if bullet else joined)
 
     while kept_lines and not kept_lines[-1]:
         kept_lines.pop()
-    return "\n".join(kept_lines).strip(), removed
+    return "\n".join(kept_lines).strip(), len(removed), removed
 
 
 def drop_citations(

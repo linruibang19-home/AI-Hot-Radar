@@ -148,6 +148,34 @@ async def _noop_stage(name: str, detail: dict[str, Any]) -> None:
     return None
 
 
+def _latest_window(turns: list[Turn]) -> tuple[date, date] | None:
+    """The range this conversation is currently looking at.
+
+    Newest first, so a follow-up that widens the window sets the scope for the
+    turns after it rather than being overruled by the opening question forever.
+    A turn that resolved no window contributes nothing and is skipped rather
+    than treated as 「all time」 — otherwise one undated follow-up would erase
+    the conversation's scope for every turn after it.
+    """
+    for turn in reversed(turns):
+        if not turn.window:
+            continue
+        try:
+            return (date.fromisoformat(turn.window[0]), date.fromisoformat(turn.window[1]))
+        except (TypeError, ValueError):
+            # A malformed stored range is not worth failing an answer over.
+            continue
+    return None
+
+
+def _window_of(answer: Answer) -> tuple[str, str] | None:
+    """This answer's resolved range, as the local ISO dates a `Turn` carries."""
+    time_range = getattr(answer.plan, "time_range", None) if answer.plan else None
+    if time_range is None:
+        return None
+    return (time_range.start.date().isoformat(), time_range.end.date().isoformat())
+
+
 async def _generate(
     llm: LlmClient,
     *,
@@ -202,6 +230,7 @@ async def retrieve(
     trace: RetrievalTrace | None = None,
     query_vector: list[float] | None = None,
     window_override: tuple[date, date] | None = None,
+    inherited_window: tuple[date, date] | None = None,
 ) -> tuple[list[ChunkHit], Any, dict[str, Any]]:
     """The B4 pipeline, returning hits, the frozen plan, and what happened.
 
@@ -222,7 +251,12 @@ async def retrieve(
         await report(name, {"ms": stages[name], **detail})
 
     step = time.monotonic()
-    retrieval_plan = build_plan(question, asked_at=asked_at, window_override=window_override)
+    retrieval_plan = build_plan(
+        question,
+        asked_at=asked_at,
+        window_override=window_override,
+        inherited_window=inherited_window,
+    )
     await mark(
         "plan",
         step,
@@ -761,12 +795,18 @@ async def answer_question(
         asked = question
         rewritten: str | None = None
         turns: list[Turn] = []
+        # The range this conversation is already looking at. The newest turn
+        # that resolved one wins, so a follow-up that widens the window sets
+        # the scope for the turns after it rather than being overruled by the
+        # first question forever.
+        inherited_window: tuple[date, date] | None = None
         if conversation_id:
             turns = await turns_for(connection, conversation_id)
             standalone, changed = await rewrite(llm, question, turns)
             if changed:
                 rewritten = standalone
                 question = standalone
+            inherited_window = _latest_window(turns)
 
         # Before the cache and before retrieval. A question about the site is
         # not a question the index can answer, and retrieval always returns a
@@ -854,6 +894,7 @@ async def answer_question(
             trace=trace,
             query_vector=cache_state.vector,
             window_override=window_override,
+            inherited_window=inherited_window,
         )
         metrics["cache"] = cache_state.as_metrics()
         step = time.monotonic()
@@ -1046,7 +1087,7 @@ async def answer_question(
         # citation. Running this before support gating left a real hole: a
         # sentence was grounded at the first check, its only weak citation was
         # then dropped, and the now-uncited sentence reached the page.
-        text, uncited_dropped = drop_uncited_sentences(text)
+        text, uncited_dropped, dropped_sentences = drop_uncited_sentences(text)
         if uncited_dropped:
             referenced = {int(value) for value in re.findall(r"\[(\d+)\]", text)}
             orphaned = {
@@ -1077,13 +1118,27 @@ async def answer_question(
             #
             # A refusal reported without its mechanism is a failure the next
             # person also has to re-derive.
+            #
+            # Ordered upstream-first, and that ordering is the whole
+            # correctness of this label. The support gate runs *before*
+            # `drop_uncited_sentences`, so removing every citation mechanically
+            # makes every sentence uncited a moment later. Checking the later
+            # stage first reported `all_sentences_uncited` for refusals whose
+            # actual cause was the support threshold — a diagnostic that points
+            # at the stage which merely observed the damage.
             metrics["refusal_cause"] = (
-                "all_sentences_uncited"
-                if uncited_dropped and not text
-                else "all_citations_unsupported"
+                "all_citations_unsupported"
                 if weak and not citations
+                else "all_sentences_uncited"
+                if uncited_dropped and not text
                 else "model_declined"
             )
+            # What was deleted, so the next question — *why* was it uncited —
+            # is answerable from the report too. Bounded: three sentences is
+            # enough to see the shape, and this rides in a metrics blob stored
+            # on every query.
+            if dropped_sentences:
+                metrics["uncited_examples"] = [s[:160] for s in dropped_sentences[:3]]
 
         metrics["stages_ms"]["support"] = int((time.monotonic() - step) * 1000)
         metrics["support"] = summarise(scores, len(citations))
@@ -1432,6 +1487,7 @@ async def _extend_thread(answer: Answer, prior: list[Turn], conversation_id: str
         Turn(
             question=issued,
             cited_titles=tuple(c.title for c in answer.citations[:3] if c.title),
+            window=_window_of(answer),
         ),
     )
 

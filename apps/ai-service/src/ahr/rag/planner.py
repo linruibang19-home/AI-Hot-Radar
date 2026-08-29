@@ -19,7 +19,7 @@ window would silently return the wrong days.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -350,6 +350,7 @@ def plan(
     *,
     asked_at: datetime | None = None,
     window_override: tuple[date, date] | None = None,
+    inherited_window: tuple[date, date] | None = None,
 ) -> RetrievalPlan:
     """Freeze a plan for this question.
 
@@ -362,6 +363,18 @@ def plan(
     it instead of concluding the system is broken; what shipped let them see it
     and retype the whole question. That is the same shape as citation numbers
     being a guarantee with no path to it.
+
+    `inherited_window` is the range an earlier turn of the same conversation
+    resolved. A follow-up carries its subject forward — that is what the
+    rewriter is for — and carried no time at all: 「最近有什么动态」 resolved a
+    week, then 「那安全漏洞呢」 resolved nothing and searched the whole corpus
+    under a conversation that had announced 08-22 至 08-29. The reader was
+    shown one range and given results from another.
+
+    It ranks below both an explicit range in the follow-up itself and the
+    reader's override, and it is not promoted to a hard filter: the
+    conversation established what the reader is *looking at*, which is weaker
+    evidence than a range they typed.
     """
     moment = asked_at or datetime.now(UTC)
     if moment.tzinfo is None:
@@ -385,6 +398,14 @@ def plan(
             freshness_required=True,
             notes=tuple(notes),
         )
+
+    # Below an explicit range in the follow-up, above the query-type default:
+    # a conversation that has already settled on a week should not have its
+    # third turn silently widened to thirty days.
+    if time_range is None and inherited_window is not None:
+        inherited = range_from_dates(*inherited_window)
+        time_range = replace(inherited, label=f"沿用对话 · {inherited.label}")
+        notes.append("问题未含时间词，沿用本次对话已确定的时间范围")
 
     if time_range and not time_range.explicit:
         notes.append(f"未给出时间跨度，按默认 {RECENT_DAYS} 天检索")
