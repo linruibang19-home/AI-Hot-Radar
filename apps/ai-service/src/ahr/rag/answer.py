@@ -196,6 +196,11 @@ class Citation:
     # Filled after generation by `support.score_citations`. None means "not
     # scored" — a reranker outage must not render as "unsupported".
     support_score: float | None = None
+    # The cited passage, verbatim. `claim_text` is the sentence *the model*
+    # wrote; this is the text it was supposed to have written it from. A
+    # citation preview showing only the claim asks the reader to check the
+    # model against itself, which is the one thing it cannot do.
+    excerpt: str = ""
 
 
 @dataclass
@@ -271,6 +276,7 @@ class Answer:
                     "storySlug": c.story_slug,
                     "independentSources": c.independent_sources,
                     "supportScore": c.support_score,
+                    "excerpt": c.excerpt,
                 }
                 for c in self.citations
             ],

@@ -58,7 +58,14 @@ class GenerationResult:
     category: str
     answerable: bool
     refused: bool
-    citations: int
+    # Which mechanism refused. `refused` alone is three unrelated outcomes
+    # sharing a boolean: the model declined, the support gate removed every
+    # citation, or `drop_uncited_sentences` deleted the last surviving
+    # sentence. Locating a 2.56pt `over_refusal_rate` regression without this
+    # meant bisecting git history to find out which stage had changed —
+    # a finished report simply did not contain the answer.
+    refusal_cause: str | None = None
+    citations: int = 0
     must_contain_hit: float | None = None
     must_not_claim_mentions: list[str] = field(default_factory=list)
     # What the answer actually said. Stored so a finished run can be
@@ -231,6 +238,7 @@ def score_answer(
         category=question.category,
         answerable=question.answerable,
         refused=answer.refused,
+        refusal_cause=(answer.metrics.get("refusal_cause") if answer.refused else None),
         citations=len(answer.citations),
         citation_coverage=citation_coverage(answer.answer_markdown),
         citation_precision=citation_precision(cited_items, question.relevant_ids),
@@ -324,6 +332,24 @@ def summarise(results: list[GenerationResult]) -> dict[str, Any]:
         summary["over_refusal_rate"] = round(
             sum(1 for r in answerable if r.refused) / len(answerable), 4
         )
+        # And *why*, broken out. The rate on its own says a regression exists;
+        # this says which stage produced it, which is the difference between
+        # reading the report and bisecting the repository.
+        causes: dict[str, int] = {}
+        for row in answerable:
+            if row.refused:
+                causes[row.refusal_cause or "unrecorded"] = (
+                    causes.get(row.refusal_cause or "unrecorded", 0) + 1
+                )
+        if causes:
+            summary["over_refusal_causes"] = dict(sorted(causes.items()))
+            # The questions themselves, so the next reader opens the report
+            # rather than re-running the model to find out which ones failed.
+            summary["over_refused_questions"] = sorted(
+                f"{r.question_id}:{r.refusal_cause or 'unrecorded'}"
+                for r in answerable
+                if r.refused
+            )
 
     by_category: dict[str, Any] = {}
     for category in sorted({r.category for r in results}):

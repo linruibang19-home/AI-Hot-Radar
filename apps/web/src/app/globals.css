@@ -27,14 +27,14 @@
      各自往下调，攒出 199 处声明、49 种取值，其中 42 处 ≤11px，最小 9px。中文
      在 12px 以下已经不适合成句阅读，而正文摘要停在 13.5px。
      这八档是全站可用的全部字号，新增层级请复用而不是再引入新值。 */
-  --fs-xs: 12px;    /* 角标、计数、时间戳：不成句的内容 */
-  --fs-sm: 13px;    /* 元信息、次要标注 */
-  --fs-base: 14px;  /* 表格、密集列表 */
-  --fs-md: 15px;    /* 正文：一切成句的中文 */
-  --fs-lg: 16px;    /* 卡片标题、列表主标题 */
-  --fs-xl: 20px;    /* 区块标题 */
-  --fs-2xl: 27px;   /* 页面标题 */
-  --fs-3xl: 40px;   /* 数值大字 */
+  --fs-xs: 12px; /* 角标、计数、时间戳：不成句的内容 */
+  --fs-sm: 13px; /* 元信息、次要标注 */
+  --fs-base: 14px; /* 表格、密集列表 */
+  --fs-md: 15px; /* 正文：一切成句的中文 */
+  --fs-lg: 16px; /* 卡片标题、列表主标题 */
+  --fs-xl: 20px; /* 区块标题 */
+  --fs-2xl: 27px; /* 页面标题 */
+  --fs-3xl: 40px; /* 数值大字 */
 }
 
 * {
@@ -45,8 +45,13 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC",
-    "Microsoft YaHei", sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
   font-size: var(--fs-md);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -85,7 +90,9 @@ a {
    makes the divider lag the pointer. The dragging class is set on <html>. */
 :root:not(.sidebar-dragging) .sidebar,
 :root:not(.sidebar-dragging) .main {
-  transition: width 0.18s ease, margin-left 0.18s ease;
+  transition:
+    width 0.18s ease,
+    margin-left 0.18s ease;
 }
 
 .main-inner {
@@ -156,7 +163,10 @@ a {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
 }
 
 .nav-icon {
@@ -164,7 +174,9 @@ a {
   height: 17px;
   flex-shrink: 0;
   opacity: 0.85;
-  transition: opacity 0.16s ease, transform 0.16s ease;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 
 .nav-link:hover {
@@ -234,7 +246,6 @@ a {
   }
 }
 
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -278,7 +289,10 @@ a {
   background: var(--border);
   opacity: 0;
   transform: scaleY(0.5);
-  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    background 0.15s ease;
 }
 
 .sidebar-resizer:hover .sidebar-resizer-grip,
@@ -1190,7 +1204,11 @@ summary:focus-visible {
      entries and fits, 内容 has seven and does not. Where `:has` is missing the
      rule simply does not apply, which is today's behaviour. */
   .nav-list:has(> li:nth-child(6)) {
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 26px),
+      transparent
+    );
     mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
   }
 
@@ -1308,7 +1326,10 @@ summary:focus-visible {
   background: var(--surface);
   font-size: var(--fs-base);
   color: var(--muted);
-  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    color 0.16s ease,
+    background 0.16s ease;
 }
 
 .back-link:hover {
@@ -1342,7 +1363,10 @@ summary:focus-visible {
   font-size: var(--fs-md);
   font-weight: 600;
   box-shadow: 0 1px 2px rgb(15 110 92 / 0.2);
-  transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  transition:
+    background 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
 }
 
 .origin-link:hover {
@@ -1454,7 +1478,9 @@ summary:focus-visible {
   background: var(--bg);
   color: var(--muted-2);
   font-size: var(--fs-sm);
-  transition: color 0.2s ease, background 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
 }
 
 .live-step.is-done {
@@ -1586,6 +1612,20 @@ summary:focus-visible {
 .funnel-steps b {
   color: var(--text);
   font-weight: 600;
+}
+
+/* The channels, stacked, so the line shows three arrows converging on one
+   fusion step rather than a single 「召回」 that reads as one search. */
+.funnel-fan {
+  display: inline-grid;
+  gap: 1px;
+  padding: 3px 9px;
+  border-left: 2px solid var(--border);
+  line-height: 1.5;
+}
+
+.funnel-fan-row {
+  white-space: nowrap;
 }
 
 .funnel-steps i {
@@ -1816,7 +1856,9 @@ summary:focus-visible {
   padding: 10px 12px;
   margin: 0 -12px;
   border-radius: 10px;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .ask-sources-title:hover,
@@ -1825,12 +1867,92 @@ summary:focus-visible {
   color: var(--accent-ink);
 }
 
-/* The disclosure triangle is the only cue that these open, so it gets the
-   accent rather than the browser's default black. */
+/* A chevron of our own, in place of the browser's triangle.
+   The default marker sits at the very start of the line, is styled
+   inconsistently across browsers, and at 13px grey reads as punctuation. These
+   two summaries and the funnel line are the only controls on an answer that
+   open anything, and a reader looking at 「引用来源 8 条 · 来自 4 家信源」 could
+   not tell it was a control at all. */
 .ask-sources-title::marker,
-.ask-history-title::marker {
-  color: var(--accent);
-  font-size: 0.9em;
+.ask-history-title::marker,
+.funnel-line::marker,
+.funnel-all > summary::marker {
+  content: "";
+}
+
+.ask-sources-title::after,
+.ask-history-title::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-right: 1.5px solid currentcolor;
+  border-bottom: 1.5px solid currentcolor;
+  transform: rotate(45deg) translate(-2px, -2px);
+  opacity: 0.55;
+  transition:
+    transform 0.18s ease,
+    opacity 0.15s ease;
+}
+
+.ask-sources[open] > .ask-sources-title::after,
+.ask-history[open] > .ask-history-title::after {
+  transform: rotate(-135deg) translate(-2px, -2px);
+  opacity: 1;
+}
+
+.ask-sources-title:hover::after,
+.ask-history-title:hover::after {
+  opacity: 1;
+}
+
+/* Keyboard users get the same affordance the pointer does. `:focus-visible` on
+   the summary, not `:focus`: clicking one should not leave a ring behind. */
+.ask-sources-title:focus-visible,
+.ask-history-title:focus-visible,
+.funnel-line:focus-visible,
+.funnel-all > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* The funnel line is a control too, and it was the flattest of the three:
+   plain grey text with a small 「全过程」 at the end. */
+.funnel-line:hover {
+  color: var(--text-soft);
+}
+
+.funnel-line:hover .funnel-more,
+.funnel[open] .funnel-more {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
+.funnel-more {
+  padding: 3px 9px;
+  border-radius: 6px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.funnel-all > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.funnel-all > summary:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .ask-history-note {
@@ -1905,7 +2027,10 @@ summary:focus-visible {
   line-height: 1;
   cursor: pointer;
   vertical-align: 2px;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .cite-ref:hover,
@@ -1962,10 +2087,33 @@ summary:focus-visible {
   color: var(--muted-2);
 }
 
+/* The source's own words, set as a quotation. This is the half that makes the
+   preview worth hovering; the claim below it is the model's restatement, and
+   the two must never look alike. */
+.cite-pop-excerpt {
+  padding-left: 9px;
+  border-left: 2px solid var(--accent);
+  color: var(--text);
+}
+
 .cite-pop-claim {
   padding-top: 6px;
   border-top: 1px solid var(--border-soft);
+  color: var(--muted);
+}
+
+.cite-pop-claim em {
+  color: var(--muted-2);
+  font-style: normal;
+}
+
+.ask-source-excerpt {
+  margin: 6px 0 0;
+  padding: 6px 0 6px 10px;
+  border-left: 2px solid var(--accent);
   color: var(--text-soft);
+  font-size: var(--fs-sm);
+  line-height: 1.75;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2072,10 +2220,18 @@ summary:focus-visible {
   border-top: 1px solid var(--border);
 }
 
+/* The negative margin from the shared rule is kept deliberately: it is what
+   lets the hover background bleed past the text and read as a row you can
+   press. An earlier `margin: 0 0 10px` here cancelled it, leaving a hover
+   highlight that stopped at the text and looked like a selection artefact. */
 .ask-sources-title {
   font-size: var(--fs-md);
   font-weight: 700;
-  margin: 0 0 10px;
+  margin: 0 -12px 6px;
+}
+
+.ask-sources[open] > .ask-sources-title {
+  margin-bottom: 10px;
 }
 
 .ask-source-list {
@@ -2095,11 +2251,37 @@ summary:focus-visible {
   border-bottom: none;
 }
 
+.funnel-plain {
+  color: var(--muted-2);
+}
+
+.funnel-version {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--fs-xs);
+}
+
+/* The return leg, so it has to look pressable. It was a static label. */
+.ask-source-no:hover,
+.ask-source-no:focus-visible {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
 .ask-source-no {
   flex-shrink: 0;
+  align-self: flex-start;
+  padding: 1px 5px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
   color: var(--accent-ink);
   font-weight: 700;
   font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .ask-source a {
@@ -2939,7 +3121,6 @@ summary:focus-visible {
   font-weight: 600;
 }
 
-
 .quality-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3776,7 +3957,9 @@ summary:focus-visible {
   font-size: var(--fs-base);
   color: var(--text);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .ask-example:hover {
@@ -3894,7 +4077,9 @@ summary:focus-visible {
   font: inherit;
   font-size: var(--fs-base);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .ask-followup:hover {
@@ -3987,7 +4172,9 @@ summary:focus-visible {
   font: inherit;
   font-size: var(--fs-base);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .chat-new:hover:not(:disabled) {
@@ -4016,8 +4203,16 @@ summary:focus-visible {
   border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
   border-radius: 14px;
   background:
-    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--accent) 9%, transparent), transparent 42%),
-    linear-gradient(145deg, color-mix(in srgb, var(--accent-soft) 52%, var(--surface)), var(--surface));
+    radial-gradient(
+      circle at 100% 0,
+      color-mix(in srgb, var(--accent) 9%, transparent),
+      transparent 42%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--accent-soft) 52%, var(--surface)),
+      var(--surface)
+    );
 }
 
 .chat-empty-title {

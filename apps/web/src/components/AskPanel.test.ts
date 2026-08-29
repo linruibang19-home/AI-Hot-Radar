@@ -122,6 +122,17 @@ describe("what the reader is shown about the conversation", () => {
     expect(SOURCE).not.toContain("综合置信度");
   });
 
+  it("previews the source's own words, not the model's restatement", () => {
+    // `claim` is the sentence the model wrote. Showing it where a source quote
+    // belongs asks the reader to check the model against itself — on the one
+    // control whose entire purpose is proving a fact is grounded.
+    expect(SOURCE).toContain("cite-pop-excerpt");
+    expect(SOURCE).toContain("citation.excerpt");
+    // Both are shown; what matters is that they are never interchangeable.
+    expect(SOURCE).toContain("本文据此写道");
+    expect(SOURCE).not.toContain("支撑：{citation.claim}");
+  });
+
   it("sets concrete expectations before the first question", () => {
     // The three capability bullets became one sentence. What must survive is
     // that a first-time visitor is told the two things that make this not a
@@ -186,6 +197,29 @@ describe("pipeline numbers have exactly one home", () => {
     const summary = TRACE.slice(TRACE.indexOf("<summary"), TRACE.indexOf("</summary>"));
     expect(summary).toContain("funnel-steps");
     expect(summary).toContain("召回");
+  });
+
+  it("counts the retrieval channels instead of asserting how many there are", () => {
+    // There are three. `temporal` (or `entity_temporal`) runs whenever the
+    // planner resolved a time window, and the panel read two keys out of
+    // `metrics.channels` under a heading that said 双通道 — while the candidate
+    // table beside it showed `sparse+entity_temporal` on nearly every row.
+    // Matched against the rendered tag, not the file: the comment explaining
+    // why the old heading was wrong has to quote it.
+    expect(TRACE).not.toMatch(/<dt>双通道/);
+    expect(TRACE).toMatch(/<dt>\{channels\.length\} 路召回<\/dt>/);
+    expect(TRACE).toMatch(/Object\.entries\(metrics\.channels/);
+    expect(TRACE).not.toMatch(/metrics\.channels\.dense/);
+    expect(TRACE).not.toMatch(/metrics\.channels\.sparse/);
+  });
+
+  it("shows the channels separately on the funnel line", () => {
+    // Collapsed into one 「召回 99」, the line read as a single search feeding
+    // the reranker — which is what the first person to see it asked about.
+    const summary = TRACE.slice(TRACE.indexOf("<summary"), TRACE.indexOf("</summary>"));
+    expect(summary).toContain("funnel-fan");
+    expect(summary).toContain("融合");
+    expect(summary).not.toContain("召回 <b>");
   });
 
   it("defaults the candidate table to what reached the model", () => {

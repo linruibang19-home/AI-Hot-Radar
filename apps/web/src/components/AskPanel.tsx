@@ -39,6 +39,10 @@ interface Citation {
   /** Cross-encoder score of (claim, cited passage). Null means not scored —
       a reranker outage must not render as "unsupported". */
   supportScore?: number | null;
+  /** The cited passage, verbatim from `content_chunk.body_text`. `claim` is
+      what the model wrote; this is what it was supposed to write it from.
+      Showing only the claim asks a reader to check the model against itself. */
+  excerpt?: string;
 }
 
 interface Considered {
@@ -67,6 +71,9 @@ export interface AnswerPayload {
   weakRetrieval?: boolean;
   /** "rag" or "corpus_stats" — the site answering about itself. */
   kind?: string;
+  /** The generation model that wrote this answer. Present on a live answer;
+      a stored one carries it in `metrics` instead. */
+  model?: string;
   /** The thread this turn belongs to; the server mints it on the first turn. */
   conversationId?: string | null;
   /** What a follow-up was rewritten into, when it was. */
@@ -85,8 +92,18 @@ export interface AnswerPayload {
         number, and the one the old two-panel layout printed as 「101 条候选」
         next to a table headed 「40 个候选」. */
     fused?: number;
-    /** How many each channel returned, before fusion deduplicated them. */
-    channels?: { dense?: number; sparse?: number };
+    /** How many each channel returned, before fusion deduplicated them.
+        An open map, not `{dense, sparse}`: there is a third channel
+        (`temporal` / `entity_temporal`) whenever the planner resolved a window,
+        and typing only the two the panel happened to read is how it came to
+        display 「双通道」 over a map that usually held three. */
+    channels?: Record<string, number>;
+    /** Which prompt template wrote this answer, and which model config served
+        it. Both were recorded from the start and shown nowhere — so the only
+        way to tell why a six-month-old answer reads differently from a fresh
+        one was to guess. */
+    prompt_version?: string;
+    model_config_version?: string;
     /** Wall-clock per stage, measured server-side and stored with the answer.
         The client used to rebuild this from the SSE progress events, which a
         permalink never receives — so a shared answer showed a panel with no
@@ -194,14 +211,16 @@ function sourcesSummary(citations: Citation[]) {
   const supported = scored.filter(
     (citation) => (citation.supportScore ?? 0) >= SUPPORT_THRESHOLD,
   ).length;
-  const publishers = new Set(citations.map((citation) => citation.sourceName)).size;
+  const publishers = new Set(citations.map((citation) => citation.sourceName))
+    .size;
 
   // 「来自」 rather than a bare count. The funnel below reports the evidence
   // set's source count, which is legitimately larger — ten passages from five
   // outlets can still yield four citations from four. Two bare numbers labelled
   // 家信源 read as a contradiction; naming what each one counts does not.
   const parts = [`${citations.length} 条`, `来自 ${publishers} 家信源`];
-  if (scored.length > 0) parts.push(`${supported}/${scored.length} 通过支持度校验`);
+  if (scored.length > 0)
+    parts.push(`${supported}/${scored.length} 通过支持度校验`);
   return parts.join(" · ");
 }
 
@@ -272,6 +291,11 @@ function renderWithCitations(
   citations: Citation[],
   onFocus: (n: number) => void,
   active: number | null,
+  /** Scopes the marker ids to this turn, and lets the source list find the
+      sentence that used it. Absent on the streamed draft, which has no
+      citations and must not claim ids the verified answer will want. */
+  turnKey?: string,
+  seen?: Set<number>,
 ) {
   const byNumber = new Map(citations.map((c) => [c.number, c]));
 
@@ -291,15 +315,25 @@ function renderWithCitations(
     // binding. If one does, show it as text rather than a dead control.
     if (!citation) return <span key={index}>{part}</span>;
 
-    // Hover shows the passage; clicking still scrolls to the full entry. The
-    // marker used to carry a `title` attribute, which meant checking a claim
-    // was a click and a scroll away from the sentence making it — so nobody
-    // checked. The preview is the source's own supporting passage, not a
-    // summary of it.
+    // Only the first occurrence of each number is addressable. A number used
+    // three times would otherwise mint three identical ids, and the jump back
+    // from the source list would land on whichever the browser found first.
+    const first = seen !== undefined && !seen.has(number);
+    if (first) seen.add(number);
+
+    // Hover shows the cited passage; clicking still scrolls to the full entry.
+    //
+    // The first version of this showed `claim` — the sentence *the model*
+    // wrote — in the position where a source quote belongs. On a panel whose
+    // entire purpose is proving a fact is grounded, that asks the reader to
+    // check the model against itself. `excerpt` is `content_chunk.body_text`,
+    // verbatim, and it leads; the claim follows, labelled as the assertion it
+    // is, so the two can never again be mistaken for each other.
     return (
       <span key={index} className="cite-wrap">
         <button
           type="button"
+          id={turnKey && first ? `mark-${turnKey}-${number}` : undefined}
           className={`cite-ref${active === number ? " is-active" : ""}`}
           onClick={() => onFocus(number)}
           aria-label={`查看来源 ${number}：${citation.title}`}
@@ -312,7 +346,15 @@ function renderWithCitations(
             {citation.sourceName}
             {citation.publishedAt && ` · ${formatDate(citation.publishedAt)}`}
           </span>
-          {citation.claim && <span className="cite-pop-claim">{citation.claim}</span>}
+          {citation.excerpt && (
+            <span className="cite-pop-excerpt">{citation.excerpt}</span>
+          )}
+          {citation.claim && (
+            <span className="cite-pop-claim">
+              <em>本文据此写道：</em>
+              {citation.claim}
+            </span>
+          )}
         </span>
       </span>
     );
@@ -333,9 +375,13 @@ function renderAnswerBody(
   citations: Citation[],
   onFocus: (n: number) => void,
   active: number | null,
+  turnKey?: string,
 ) {
   const blocks: React.ReactNode[] = [];
   let bullets: string[] = [];
+  // Shared across every block, so "first occurrence" means first in the whole
+  // answer rather than first in each paragraph.
+  const seen = new Set<number>();
 
   const flush = () => {
     if (!bullets.length) return;
@@ -344,7 +390,16 @@ function renderAnswerBody(
     blocks.push(
       <ul key={`ul-${blocks.length}`} className="ask-points">
         {items.map((item, index) => (
-          <li key={index}>{renderWithCitations(item, citations, onFocus, active)}</li>
+          <li key={index}>
+            {renderWithCitations(
+              item,
+              citations,
+              onFocus,
+              active,
+              turnKey,
+              seen,
+            )}
+          </li>
         ))}
       </ul>,
     );
@@ -370,7 +425,7 @@ function renderAnswerBody(
     const isLead = blocks.length === 0;
     blocks.push(
       <p key={`p-${blocks.length}`} className={isLead ? "ask-lead" : undefined}>
-        {renderWithCitations(line, citations, onFocus, active)}
+        {renderWithCitations(line, citations, onFocus, active, turnKey, seen)}
       </p>,
     );
   }
@@ -417,7 +472,9 @@ function ChatTurn({
         </span>
         <div className="chat-bubble">
           {turn.question}
-          {turn.askedAt && <time className="chat-time">{formatDate(turn.askedAt)}</time>}
+          {turn.askedAt && (
+            <time className="chat-time">{formatDate(turn.askedAt)}</time>
+          )}
         </div>
       </div>
 
@@ -443,7 +500,8 @@ function ChatTurn({
               )}
               {turn.plan.time_range?.from && turn.plan.time_range?.to ? (
                 <span className="ask-plan-chip">
-                  {formatDate(turn.plan.time_range.from)} – {formatDate(turn.plan.time_range.to)}
+                  {formatDate(turn.plan.time_range.from)} –{" "}
+                  {formatDate(turn.plan.time_range.to)}
                 </span>
               ) : (
                 <span className="ask-plan-chip">全部时间</span>
@@ -458,7 +516,8 @@ function ChatTurn({
               does not instead of assuming they were lost. */}
           {turn.kind === "corpus_stats" && (
             <p className="ask-kind" role="status">
-              这是<strong>本站运行数据</strong>，直接来自数据库计数，不是检索结果，因此没有引用来源。
+              这是<strong>本站运行数据</strong>
+              ，直接来自数据库计数，不是检索结果，因此没有引用来源。
             </p>
           )}
 
@@ -479,7 +538,10 @@ function ChatTurn({
           {turn.refused ? (
             <div className="ask-refusal">
               <strong>没有足够证据回答这个问题。</strong>
-              <p>{turn.refusalReason ?? "检索到的内容不足以支持一个可核实的回答。"}</p>
+              <p>
+                {turn.refusalReason ??
+                  "检索到的内容不足以支持一个可核实的回答。"}
+              </p>
               <p className="ask-refusal-note">
                 这是刻意的：本站不会用模型的常识补答，没有来源支撑的内容不会显示。
               </p>
@@ -489,14 +551,17 @@ function ChatTurn({
                   can act on — usually by noticing the window is wrong. */}
               {turn.considered?.length > 0 && (
                 <div className="ask-considered">
-                  <p className="ask-considered-title">检索到但不足以支撑回答的内容：</p>
+                  <p className="ask-considered-title">
+                    检索到但不足以支撑回答的内容：
+                  </p>
                   <ul>
                     {turn.considered.slice(0, 5).map((row) => (
                       <li key={row.itemId}>
                         <a href={`/items/${row.itemId}`}>{row.title}</a>
                         <span className="ask-source-meta">
                           {row.sourceName}
-                          {row.publishedAt && ` · ${formatDate(row.publishedAt)}`}
+                          {row.publishedAt &&
+                            ` · ${formatDate(row.publishedAt)}`}
                         </span>
                       </li>
                     ))}
@@ -506,7 +571,13 @@ function ChatTurn({
             </div>
           ) : (
             <div className="ask-body">
-              {renderAnswerBody(turn.answerMarkdown, turn.citations, focusCitation, activeCite)}
+              {renderAnswerBody(
+                turn.answerMarkdown,
+                turn.citations,
+                focusCitation,
+                activeCite,
+                key,
+              )}
             </div>
           )}
 
@@ -522,7 +593,9 @@ function ChatTurn({
             <details className="ask-sources">
               <summary className="ask-sources-title">
                 引用来源
-                <span className="ask-sources-count">{sourcesSummary(turn.citations)}</span>
+                <span className="ask-sources-count">
+                  {sourcesSummary(turn.citations)}
+                </span>
               </summary>
               <ol className="ask-source-list">
                 {turn.citations.map((citation) => {
@@ -533,16 +606,39 @@ function ChatTurn({
                       id={`cite-${key}-${citation.number}`}
                       className={`ask-source${activeCite === citation.number ? " is-active" : ""}`}
                     >
-                      <span className="ask-source-no">[{citation.number}]</span>
+                      {/* The return leg. Clicking [n] in the answer brings you
+                          here; nothing brought you back, so a reader who had
+                          scrolled through eight sources had to hunt for the
+                          sentence that cited the one they were reading. */}
+                      <button
+                        type="button"
+                        className="ask-source-no"
+                        onClick={() => {
+                          setActiveCite(citation.number);
+                          document
+                            .getElementById(`mark-${key}-${citation.number}`)
+                            ?.scrollIntoView({
+                              behavior: "smooth",
+                              block: "center",
+                            });
+                        }}
+                        title="回到答案里用到它的那句话"
+                      >
+                        [{citation.number}]
+                      </button>
                       <div>
                         <div className="ask-source-head">
                           {/* Internal first: the detail page carries the Chinese
                               summary, entities and the event timeline. The
                               publisher's own copy is one click further, never
                               replaced. */}
-                          <a href={`/items/${citation.itemId}`}>{citation.title}</a>
+                          <a href={`/items/${citation.itemId}`}>
+                            {citation.title}
+                          </a>
                           {tier && (
-                            <span className={`tier-badge ${tier.className}`}>{tier.label}</span>
+                            <span className={`tier-badge ${tier.className}`}>
+                              {tier.label}
+                            </span>
                           )}
                           {/* M3's whole purpose, finally visible where it
                               changes a reader's mind: this is not one outlet's
@@ -551,7 +647,9 @@ function ChatTurn({
                             <a
                               className="corroboration-badge"
                               href={
-                                citation.storySlug ? `/stories/${citation.storySlug}` : "/stories"
+                                citation.storySlug
+                                  ? `/stories/${citation.storySlug}`
+                                  : "/stories"
                               }
                             >
                               {citation.independentSources} 家独立信源
@@ -561,14 +659,29 @@ function ChatTurn({
                         </div>
                         <div className="ask-source-meta">
                           {citation.sourceName}
-                          {citation.publishedAt && ` · ${formatDate(citation.publishedAt)}`}
+                          {citation.publishedAt &&
+                            ` · ${formatDate(citation.publishedAt)}`}
                           {" · "}
-                          <a href={citation.url} target="_blank" rel="noopener noreferrer">
+                          <a
+                            href={citation.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
                             阅读原文 ↗
                           </a>
                         </div>
+                        {/* Source first, claim second. The list had only the
+                            claim, labelled 「支撑：」 — which named the source's
+                            role while printing the model's words. */}
+                        {citation.excerpt && (
+                          <blockquote className="ask-source-excerpt">
+                            {citation.excerpt}
+                          </blockquote>
+                        )}
                         {citation.claim && (
-                          <div className="ask-source-claim">支撑：{citation.claim}</div>
+                          <div className="ask-source-claim">
+                            本文据此写道：{citation.claim}
+                          </div>
                         )}
                       </div>
                     </li>
@@ -628,7 +741,10 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
   // The range the reader set, if they corrected the planner's. Held here rather
   // than derived from the answer: it has to survive the re-ask that applies it,
   // and the answer it produces reports the new range, not the old.
-  const [readerWindow, setReaderWindow] = useState<{ from: string; to: string } | null>(null);
+  const [readerWindow, setReaderWindow] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(
     initial?.conversationId ?? null,
   );
@@ -687,7 +803,8 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
   // the answer lands would move the page under a reader already reading the
   // streamed copy of the same text.
   useEffect(() => {
-    if (pending) bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (pending)
+      bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [pending]);
 
   function startFresh() {
@@ -712,7 +829,9 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
   async function resume(id: string) {
     if (loading) return;
     try {
-      const response = await fetch(`/api/ask?conversation=${encodeURIComponent(id)}`);
+      const response = await fetch(
+        `/api/ask?conversation=${encodeURIComponent(id)}`,
+      );
       const data = await response.json();
       const restored: AnswerPayload[] = data.turns ?? [];
       if (restored.length === 0) return;
@@ -738,7 +857,10 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
     }
   }
 
-  async function ask(text: string, window?: { from: string; to: string } | null) {
+  async function ask(
+    text: string,
+    window?: { from: string; to: string } | null,
+  ) {
     const trimmed = text.trim();
     if (trimmed.length < 2 || loading) return;
 
@@ -807,14 +929,19 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
               // one sitting, and a thread resumed a week later would carry
               // context the reader has forgotten into a corpus that has moved.
               try {
-                sessionStorage.setItem("ahr:conversation", landed.conversationId);
+                sessionStorage.setItem(
+                  "ahr:conversation",
+                  landed.conversationId,
+                );
               } catch {
                 // Private mode or a full quota. The conversation still works for
                 // this page; only resuming after a reload is lost.
               }
             }
             if (landed.queryId) {
-              fetch(`/api/ask?suggestions=${encodeURIComponent(landed.queryId)}`)
+              fetch(
+                `/api/ask?suggestions=${encodeURIComponent(landed.queryId)}`,
+              )
                 .then((response) => response.json())
                 .then((data) => setSuggestions(data.suggestions ?? []))
                 .catch(() => setSuggestions([]));
@@ -845,7 +972,9 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
   const empty = turns.length === 0 && !pending && !error;
   // Threads other than the open one. The open one is rendered in full above;
   // listing it again would offer the reader a link to where they already are.
-  const otherThreads = threads.filter((t) => t.conversationId !== conversationId);
+  const otherThreads = threads.filter(
+    (t) => t.conversationId !== conversationId,
+  );
 
   return (
     <>
@@ -931,11 +1060,16 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
                       从
                       <input
                         type="date"
-                        value={readerWindow?.from ?? (turn.plan?.time_range?.from ?? "").slice(0, 10)}
+                        value={
+                          readerWindow?.from ??
+                          (turn.plan?.time_range?.from ?? "").slice(0, 10)
+                        }
                         onChange={(event) =>
                           setReaderWindow((prev) => ({
                             from: event.target.value,
-                            to: prev?.to ?? (turn.plan?.time_range?.to ?? "").slice(0, 10),
+                            to:
+                              prev?.to ??
+                              (turn.plan?.time_range?.to ?? "").slice(0, 10),
                           }))
                         }
                       />
@@ -944,10 +1078,15 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
                       到
                       <input
                         type="date"
-                        value={readerWindow?.to ?? (turn.plan?.time_range?.to ?? "").slice(0, 10)}
+                        value={
+                          readerWindow?.to ??
+                          (turn.plan?.time_range?.to ?? "").slice(0, 10)
+                        }
                         onChange={(event) =>
                           setReaderWindow((prev) => ({
-                            from: prev?.from ?? (turn.plan?.time_range?.from ?? "").slice(0, 10),
+                            from:
+                              prev?.from ??
+                              (turn.plan?.time_range?.from ?? "").slice(0, 10),
                             to: event.target.value,
                           }))
                         }
@@ -956,7 +1095,9 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
                     <button
                       type="button"
                       className="ask-window-apply"
-                      disabled={loading || !readerWindow?.from || !readerWindow?.to}
+                      disabled={
+                        loading || !readerWindow?.from || !readerWindow?.to
+                      }
                       onClick={() => {
                         if (readerWindow?.from && readerWindow?.to) {
                           void ask(turn.question ?? "", readerWindow);
@@ -996,7 +1137,9 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
                       waited on `.ask-body` started asserting against a page
                       whose sources had not been delivered yet. */}
                   {streamed && (
-                    <div className="ask-draft">{renderAnswerBody(streamed, [], () => {}, null)}</div>
+                    <div className="ask-draft">
+                      {renderAnswerBody(streamed, [], () => {}, null)}
+                    </div>
                   )}
                   <p className="ask-meta ask-streaming" aria-live="polite">
                     {streamed ? "正在生成…" : "正在检索证据…"}
@@ -1058,7 +1201,11 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
               maxLength={300}
               aria-label="问题"
             />
-            <button className="button ask-submit" type="submit" disabled={loading}>
+            <button
+              className="button ask-submit"
+              type="submit"
+              disabled={loading}
+            >
               {loading ? "检索中…" : "提问"}
             </button>
           </form>
@@ -1106,7 +1253,6 @@ export function AskPanel({ initial }: { initial?: AnswerPayload } = {}) {
           </ul>
         </details>
       )}
-
     </>
   );
 }

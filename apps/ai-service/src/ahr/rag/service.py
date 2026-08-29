@@ -72,6 +72,7 @@ from ahr.rag.planner import plan as build_plan
 from ahr.rag.planner import plan_from_dict
 from ahr.rag.rerank import DEFAULT_TOP_N, RerankClient, RerankUnavailableError
 from ahr.rag.retrieval import (
+    EXCERPT_CHARS,
     KEYWORD_FTS_TOP_K,
     TEMPORAL_SQL_TOP_K,
     VECTOR_PASSAGE_TOP_K,
@@ -80,6 +81,7 @@ from ahr.rag.retrieval import (
     entity_names,
     expand_vendor_aliases,
     expand_vendor_entity_ids,
+    load_chunk_excerpts,
     load_chunk_texts,
     load_item_metadata,
     resolve_query_entities,
@@ -586,6 +588,7 @@ def _replay(payload: dict[str, Any], *, outcome: str, similarity: float | None) 
             story_slug=row.get("storySlug"),
             independent_sources=int(row.get("independentSources") or 1),
             support_score=row.get("supportScore"),
+            excerpt=str(row.get("excerpt") or ""),
         )
         for index, row in enumerate(payload.get("citations") or [])
     ]
@@ -1062,6 +1065,25 @@ async def answer_question(
             # not a fallback: §10 forbids letting the model fill the gap from
             # general knowledge.
             refusal_reason = "检索到的内容不足以回答这个问题"
+            # *Which* of the three ways this happens, recorded separately.
+            #
+            # The sentence above is the same whether the model declined to
+            # answer, whether the support gate removed every citation, or
+            # whether `drop_uncited_sentences` deleted the last surviving
+            # sentence — three unrelated mechanisms wearing one label. Telling
+            # them apart from a finished evaluation report was impossible, so a
+            # regression that moved `over_refusal_rate` by 2.56pt had to be
+            # bisected against git history to find out which stage caused it.
+            #
+            # A refusal reported without its mechanism is a failure the next
+            # person also has to re-derive.
+            metrics["refusal_cause"] = (
+                "all_sentences_uncited"
+                if uncited_dropped and not text
+                else "all_citations_unsupported"
+                if weak and not citations
+                else "model_declined"
+            )
 
         metrics["stages_ms"]["support"] = int((time.monotonic() - step) * 1000)
         metrics["support"] = summarise(scores, len(citations))
@@ -1072,6 +1094,7 @@ async def answer_question(
             logger.warning("answer failed invariants: %s", violations)
             refused = True
             refusal_reason = "回答未通过引用校验"
+            metrics["refusal_cause"] = "invariant_violation"
             text = ""
             citations = []
             limitations = [*limitations, *violations]
@@ -1097,12 +1120,26 @@ async def answer_question(
             logger.warning("RAG answer blocked by credential output policy: %s", credential_kinds)
             refused = True
             refusal_reason = "回答触发敏感凭据输出保护"
+            metrics["refusal_cause"] = "credential_policy"
             text = ""
             citations = []
             limitations = ["候选答案包含疑似访问凭据，已阻止发布。"]
 
         if dangling:
             limitations.append(f"模型引用了不存在的证据编号：{', '.join(dangling)}")
+
+        # The passage each surviving citation points at, verbatim, so the reader
+        # can check the claim against the source rather than against the model's
+        # own restatement of it. Read after every gate above has had its say —
+        # `check_invariants` and the credential policy can both empty the list,
+        # and loading text for citations about to be discarded is a query for
+        # nothing.
+        if citations:
+            excerpts = load_chunk_excerpts(
+                connection, [citation.chunk_id for citation in citations]
+            )
+            for citation in citations:
+                citation.excerpt = excerpts.get(citation.chunk_id, "")
 
         metrics.update(
             {
@@ -1196,7 +1233,11 @@ HISTORY_LIMIT = 20
 # One query serves both the history list and a single permalink. They must
 # agree: a conversation that renders one way in the list and another way at its
 # own URL is two features telling the reader different things about one answer.
-_CONVERSATION_SELECT = """
+# An f-string so the excerpt length is the one constant `load_chunk_excerpts`
+# uses. Two literals that agree today are two literals that disagree after one
+# of them is tuned, and this pair would drift silently: the live answer and its
+# own permalink would quote the same passage at two different lengths.
+_CONVERSATION_SELECT = f"""
     SELECT q.id::text, q.question, q.answer_markdown, q.status,
            q.retrieval_plan, q.metrics, q.completed_at, q.limitations,
            q.conversation_id::text,
@@ -1213,7 +1254,11 @@ _CONVERSATION_SELECT = """
                        'sourceTier', s.source_tier,
                        'storySlug', st.slug,
                        'independentSources', COALESCE(st.independent_source_count, 1),
-                       'supportScore', c.support_score
+                       'supportScore', c.support_score,
+                       -- Verbatim, and not through `build_embedding_text`: the
+                       -- header that composes is right for ranking and wrong
+                       -- for a reader checking a quote against its source.
+                       'excerpt', trim(left(ch.body_text, {EXCERPT_CHARS}))
                    )
                    ORDER BY c.citation_no
                ) FILTER (WHERE c.citation_no IS NOT NULL),

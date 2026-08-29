@@ -11,7 +11,14 @@ import { formatDateTime } from "@/lib/datetime";
  * one said 「101 条候选」 and the other 「40 个候选」, which are both true and
  * name different stages. They are one funnel here, with every step named:
  *
- *     召回 101 → 重排 40 → 证据 10 → 引用 4
+ *     稠密 60 ┐
+ *     关键词 40 ├→ 融合 99 → 重排 40 → 证据 10 → 引用 8
+ *     实体+时间 N ┘
+ *
+ * The channels are stacked rather than summed into a single 「召回」. Merging
+ * them hid the argument for hybrid retrieval on the line most people read, and
+ * made recall look like one search feeding the reranker directly — which is
+ * what the first person shown this panel asked about.
  *
  * The summary line is *not* inside the disclosure. Collapsing the whole chain
  * behind a click is the black box this feature exists to remove; forty rows
@@ -105,6 +112,24 @@ const STAGE_LABELS: Record<string, string> = {
 const TIMING_FLOOR = 0.02;
 const TIMING_ROWS = 6;
 
+/**
+ * The retrieval channels, by the names `service.retrieve` writes.
+ *
+ * There are three, not two. `temporal` (or `entity_temporal`, when the question
+ * resolves to known vendors) runs whenever the planner produced a time window,
+ * and the panel had a hard-coded 「双通道召回 稠密 N · 关键词 N」 that read two
+ * keys out of `metrics.channels` and silently dropped whatever else was in
+ * there — while the candidate table beside it displayed `sparse+entity_temporal`
+ * on nearly every row. Rendering the map rather than two of its keys is what
+ * makes a fourth channel visible on the day it is added.
+ */
+const CHANNELS: Record<string, string> = {
+  dense: "稠密",
+  sparse: "关键词",
+  temporal: "时间窗",
+  entity_temporal: "实体+时间",
+};
+
 const QUERY_TYPES: Record<string, string> = {
   recent_updates: "最新动态",
   timeline: "时间线",
@@ -172,6 +197,13 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
   // rerank window were the two that used to be shown side by side as if they
   // were the same quantity.
   const recalled = metrics.fused ?? null;
+  const channels = Object.entries(metrics.channels ?? {})
+    .filter(([, count]) => (count ?? 0) > 0)
+    .map(([key, count]) => ({
+      key,
+      label: CHANNELS[key] ?? key,
+      count: count as number,
+    }));
   const reranked = rows.length || null;
   const evidence = metrics.evidence ?? null;
   const cited = turn.citations.length;
@@ -213,10 +245,27 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
     <details className="funnel">
       <summary className="funnel-line">
         <span className="funnel-steps">
+          {/* The channels, stacked, before anything merges them. Collapsing
+              them into one 「召回 99」 hid the entire argument for hybrid
+              retrieval on the line most people read — and it read as though
+              recall were a single step feeding the reranker directly, which is
+              exactly what the first person to see it asked about. */}
+          {channels.length > 0 && (
+            <>
+              <span className="funnel-fan">
+                {channels.map((c) => (
+                  <span key={c.key} className="funnel-fan-row">
+                    {c.label} <b>{c.count}</b>
+                  </span>
+                ))}
+              </span>
+              <i aria-hidden="true">→</i>
+            </>
+          )}
           {recalled !== null && (
             <>
               <span>
-                召回 <b>{recalled}</b>
+                融合 <b>{recalled}</b>
               </span>
               <i aria-hidden="true">→</i>
             </>
@@ -295,12 +344,25 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
         <section className="funnel-part">
           <h4>关键决策</h4>
           <dl className="funnel-facts">
-            {turn.rewrittenQuestion && (
-              <>
-                <dt>追问改写</dt>
-                <dd>{turn.rewrittenQuestion}</dd>
-              </>
-            )}
+            {/* Always shown, including when nothing was rewritten. 「原样检索」
+                is a fact worth stating: it says the retriever searched exactly
+                what was typed, which is the baseline a reader needs before the
+                other rows mean anything. Rendering the row only on follow-ups
+                made the absence of rewriting indistinguishable from the panel
+                not tracking it. */}
+            <dt>检索用的问题</dt>
+            <dd>
+              {turn.rewrittenQuestion ? (
+                <>
+                  {turn.rewrittenQuestion}
+                  <span className="funnel-hint">
+                    追问已补全上下文，原话是「{turn.question}」
+                  </span>
+                </>
+              ) : (
+                <span className="funnel-plain">原样检索，未改写</span>
+              )}
+            </dd>
             {turn.plan?.query_type && (
               <>
                 <dt>问题类型</dt>
@@ -315,12 +377,15 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
                 ? `${turn.plan.time_range.from.slice(0, 10)} – ${turn.plan.time_range.to.slice(0, 10)}`
                 : "全部时间"}
             </dd>
-            {metrics.channels && (
+            {channels.length > 0 && (
               <>
-                <dt>双通道召回</dt>
+                {/* Counted, not asserted. The heading said 「双通道」 above a
+                    map that routinely held three, because the temporal channel
+                    runs whenever the planner resolved a window. */}
+                <dt>{channels.length} 路召回</dt>
                 <dd>
-                  稠密 {metrics.channels.dense ?? 0} · 关键词{" "}
-                  {metrics.channels.sparse ?? 0} → 融合 {recalled ?? 0}
+                  {channels.map((c) => `${c.label} ${c.count}`).join(" · ")} →
+                  融合 {recalled ?? 0}
                   {sparseOnly > 0 && (
                     <span className="funnel-hint">
                       其中 {sparseOnly} 条只有关键词通道召回到——纯语义检索会把
@@ -373,6 +438,24 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
                 <dd className="funnel-warn">{metrics.degraded.join("、")}</dd>
               </>
             )}
+            {/* Both have been recorded since the feature shipped and displayed
+                nowhere. They are what makes an old answer diagnosable: without
+                them, "why does this six-month-old answer read differently from
+                a fresh one" has no answer except guessing. */}
+            {(turn.model || metrics.prompt_version) && (
+              <>
+                <dt>模型 / 提示词</dt>
+                <dd className="funnel-version">
+                  {[
+                    turn.model,
+                    metrics.prompt_version,
+                    metrics.model_config_version,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </dd>
+              </>
+            )}
           </dl>
         </section>
 
@@ -381,8 +464,8 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
             <h4>
               候选去向
               <span className="funnel-sub">
-                两个通道各自召回 → RRF 融合 → §6 元数据调整 → 交叉编码器重排 →
-                每篇/每信源限流 → 同事件折叠 → 预算截断
+                {channels.length} 路各自召回 → RRF 融合 → §6 元数据调整 →
+                交叉编码器重排 → 每篇/每信源限流 → 同事件折叠 → 预算截断
               </span>
             </h4>
             <CandidateTable rows={inEvidence} />
