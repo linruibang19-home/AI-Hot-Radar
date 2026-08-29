@@ -232,6 +232,17 @@ class Answer:
     # is displayed.
     conversation_id: str | None = None
     rewritten_question: str | None = None
+    # Every candidate that entered the rerank window, with the rank and score it
+    # held in each channel and the reason it did or did not become evidence.
+    #
+    # It used to reach only the permalink: the row was written on every answer
+    # but read back only by the conversation loader, so the panel that had just
+    # produced the answer showed four ticks and nothing else. The explanation
+    # existed and was unreachable at the one moment a reader wants it.
+    #
+    # Filled from `trace.load` rather than from the in-memory recorder, so the
+    # live answer and the permalink serialise through one path and cannot drift.
+    trace: list[dict[str, Any]] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -267,6 +278,7 @@ class Answer:
             "model": self.model,
             "metrics": self.metrics,
             "considered": self.considered,
+            "trace": self.trace,
         }
 
 

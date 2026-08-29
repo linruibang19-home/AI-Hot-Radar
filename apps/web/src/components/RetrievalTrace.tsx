@@ -67,7 +67,18 @@ function score(value: number | null) {
   return value === null ? "" : value.toFixed(4);
 }
 
-export function RetrievalTrace({ rows }: { rows: TraceRow[] }) {
+export function RetrievalTrace({
+  rows,
+  defaultOpen = false,
+}: {
+  rows: TraceRow[];
+  /** Open on the newest answer, closed on the ones above it.
+      The funnel is the answer to "why these passages", so hiding it behind a
+      click on the turn a reader is actually looking at was the black box they
+      complained about. Ten answers deep, ten forty-row tables are a different
+      kind of unreadable — hence only the latest. */
+  defaultOpen?: boolean;
+}) {
   if (!rows.length) return null;
 
   const cited = rows.filter((r) => r.outcome === "cited").length;
@@ -77,7 +88,7 @@ export function RetrievalTrace({ rows }: { rows: TraceRow[] }) {
   const sparseOnly = rows.filter((r) => r.denseRank === null && r.sparseRank !== null).length;
 
   return (
-    <details className="ask-trace trace-panel">
+    <details className="ask-trace trace-panel" open={defaultOpen}>
       <summary className="ask-trace-summary">
         为什么是这几条证据
         <span className="ask-step-detail">{rows.length} 个候选</span>

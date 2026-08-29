@@ -829,6 +829,14 @@ async def answer_question(
                 replayed = cached.query_id
                 if replayed:
                     cached.metrics.setdefault("cache", {})["replayOf"] = replayed
+                    # …but the reader still gets to see it. A replayed answer
+                    # was the hole in the explanation: 126 of 231 stored
+                    # queries had no trace of their own, and a cache hit is
+                    # exactly when "where did this come from?" is hardest to
+                    # answer, because nothing visible happened. The rows belong
+                    # to the original retrieval and are labelled as such by
+                    # `cache.replayOf` sitting beside them.
+                    cached.trace = load_trace(connection, str(replayed))
                 _persist(connection, cached)
                 await _extend_thread(cached, turns, conversation_id)
             return cached
@@ -1159,6 +1167,13 @@ async def answer_question(
             try:
                 persist_trace(connection, uuid.UUID(str(result.query_id)), trace)
                 connection.commit()
+                # Read straight back rather than serialising the recorder. The
+                # permalink already renders `load`'s shape, and building a
+                # second one here is how the live view and the saved view start
+                # disagreeing about the same answer. One indexed read of forty
+                # rows against a request that just spent ten seconds on the
+                # provider is not the cost worth optimising.
+                result.trace = load_trace(connection, str(result.query_id))
             except Exception as exc:  # noqa: BLE001 - see above
                 connection.rollback()
                 logger.warning("retrieval trace not stored: %s", exc)

@@ -82,7 +82,11 @@ export interface AnswerPayload {
     support_dropped?: number;
     cache?: { outcome?: string; similarity?: number | null; replayOf?: string };
   };
-  /** Only the permalink carries this; the thread list does not fetch it. */
+  /** Every candidate that entered the rerank window, with the rank it held in
+      each channel and the reason it did or did not become evidence.
+      Present on a live answer and on the permalink; the thread list still does
+      not fetch it, because twenty threads would pull forty rows each to render
+      something none of them shows. */
   trace?: TraceRow[];
   /** Client-side only: the progress this turn reported while it ran. Kept on
       the turn rather than in one shared slot, so an earlier answer's trace is
@@ -677,7 +681,9 @@ function ChatTurn({
               used to be removed the moment the answer landed, which threw away
               the one artefact showing *how* the answer was reached — the thing
               that distinguishes this from a chat box. */}
-          {turn.stages && turn.stages.length > 0 && <Progress stages={turn.stages} open={false} />}
+          {turn.stages && turn.stages.length > 0 && (
+            <Progress stages={turn.stages} open={isLatest} />
+          )}
 
           <p className="ask-meta">
             {turn.metrics?.total_ms && `耗时 ${(turn.metrics.total_ms / 1000).toFixed(1)}s`}
@@ -696,7 +702,9 @@ function ChatTurn({
             )}
           </p>
 
-          {turn.trace && turn.trace.length > 0 && <RetrievalTrace rows={turn.trace} />}
+          {turn.trace && turn.trace.length > 0 && (
+            <RetrievalTrace rows={turn.trace} defaultOpen={isLatest} />
+          )}
         </div>
       </div>
     </article>
