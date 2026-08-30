@@ -229,9 +229,12 @@ questions:
     expected_query_type: recent_updates
     expected_entities: ["Grok", "xAI"]
     notes: >-
-      顺手挖出一个数据质量问题：xAI 信源把 Grok-2 测试版、Grok-1.5V、B 轮融资这些
-      2024 年的旧稿按 2026-08-02 回填了进来。四条 grade 1 就是这批。留着是有意的——
-      时间窗正确但内容陈旧，正是"日期可信"这个假设该被检验的地方。
+      顺手挖出一个数据质量问题，而且比我最初判断的更系统。我先写的是"xAI 信源把
+      2024 年的旧稿回填成 2026-08-02"，那是错的：不是信源回填，是**我们没抽到发布日期**。
+      xai-news 的 32 条内容 published_at 全为 NULL，而检索按
+      COALESCE(published_at, observed_at) 裁时间窗，于是首见日期顶替了发布日期，
+      旧稿一律显示成"刚发布"。整个 static_listing_to_article 档位 489 条里 488 条如此。
+      四条 grade 1 就是这批。留着是有意的——它们是"日期可信"这个假设的反例。
 
   # 挖出的理由: weak_support · 最低支持度 0.0003
   - id: RAG-GOLD-098
