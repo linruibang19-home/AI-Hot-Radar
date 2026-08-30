@@ -2,14 +2,14 @@
   "generatedFrom": "docs/status/eval/m4-rag-eval-*.json",
   "release": {
     "retrievalRunId": "B9-20260810T195839Z",
-    "generationRunId": "GEN-20260810T201738Z",
+    "generationRunId": "GEN-20260830T020806Z",
     "specialistRunId": "SPECIALIST-20260810T183222Z",
     "snapshot": {
       "cutoff": "2026-08-03T23:59:00+08:00",
       "items": 915,
       "embeddingModel": "BAAI/bge-m3",
       "rerankerModel": "BAAI/bge-reranker-v2-m3",
-      "generationModel": "deepseek-chat"
+      "generationModel": "deepseek-v4-flash"
     },
     "retrieval": {
       "questions": 90,
@@ -26,23 +26,32 @@
     "generation": {
       "questions": 90,
       "answerable": 78,
-      "answered": 78,
+      "answered": 75,
       "unanswerable": 12,
-      "citation_coverage": 0.9881,
-      "citation_precision": 0.6686,
-      "story_coverage": 0.6921,
-      "support_mean": 0.8907,
-      "support_supported": 0.9344,
-      "support_as_read_mean": 0.9505,
-      "support_as_read_supported": 0.9872,
-      "must_contain_hit": 1.0,
-      "avg_citations": 2.76,
-      "latency_ms_mean": 8884.0,
-      "refusal_rate_on_unanswerable": 0.25,
+      "citation_coverage": 1.0,
+      "citation_precision": 0.6663,
+      "story_coverage": 0.7042,
+      "support_mean": 0.8957,
+      "support_supported": 0.9425,
+      "support_as_read_mean": 0.9583,
+      "support_as_read_supported": 1.0,
+      "must_contain_hit": 0.8636,
+      "avg_citations": 3.04,
+      "latency_ms_mean": 5939.0,
+      "refusal_rate_on_unanswerable": 0.5,
       "forbidden_term_mentioned": 0,
       "judged_unanswerable": 12,
       "presupposition_asserted_rate": 0.0,
-      "over_refusal_rate": 0.0
+      "over_refusal_rate": 0.0385,
+      "over_refusal_causes": {
+        "all_sentences_uncited": 2,
+        "model_declined": 1
+      },
+      "over_refused_questions": [
+        "RAG-GOLD-008:model_declined",
+        "RAG-GOLD-032:all_sentences_uncited",
+        "RAG-GOLD-044:all_sentences_uncited"
+      ]
     },
     "specialist": {
       "questions": 15,

@@ -72,6 +72,48 @@ export const metadata: Metadata = {
     "发布门禁、线上实测，以及 90 题黄金集上的逐轮检索评测记录（含负结果）。",
 };
 
+/**
+ * Over-refusal is a rate, not a zero.
+ *
+ * The gate demanded `over_refusal_rate === 0` — determinism from a stochastic
+ * system. Four runs of the *same* image and prompt produced 2, 1, 1 and 3
+ * over-refusals out of 78 answerable questions, and the failing questions were
+ * a different set each time: 034 and 044, then 034, then 040, then 008, 032 and
+ * 044. That is a per-question failure probability of about 2.24%, which makes
+ * `(1 − 0.0224)^78 ≈ 17%` — the gate passed roughly one run in six on luck, and
+ * a release could be blocked or cleared by nothing but the sampler.
+ *
+ * Measuring against a ceiling instead is the honest instrument. 5% allows three
+ * of 78, comfortably above the observed mean of 1.75 and well below anything
+ * that would indicate a real regression.
+ *
+ * The hard zero moves to where it belongs. Refusing a question you could have
+ * answered is a quality loss; asserting something the corpus does not contain
+ * is a safety failure, and `presupposition_asserted_rate` has been exactly 0.0
+ * in every run ever recorded. That is a threshold this system can actually
+ * hold.
+ */
+const OVER_REFUSAL_CEILING = 0.05;
+
+/**
+ * Refusal causes the model produces, which vary between identical runs.
+ *
+ * Anything not on this list came from the pipeline — the support gate emptying
+ * the citations, an invariant failing, the credential policy firing, the
+ * provider being down — and a pipeline that refuses is a defect however rarely
+ * it happens. Those block regardless of the rate.
+ */
+const STOCHASTIC_CAUSES = ["all_sentences_uncited", "model_declined"];
+
+const CAUSE_LABELS: Record<string, string> = {
+  all_sentences_uncited: "模型漏标引用，整句被删",
+  model_declined: "模型自己判定证据不足",
+  all_citations_unsupported: "支持度校验移除了全部引用",
+  invariant_violation: "引用校验未通过",
+  credential_policy: "触发凭据输出保护",
+  generation_unavailable: "生成服务不可用",
+};
+
 const VERDICTS: Record<string, { label: string; className: string }> = {
   baseline: { label: "基线", className: "verdict-baseline" },
   pass: { label: "达标采纳", className: "verdict-pass" },
@@ -139,12 +181,18 @@ export default async function EvalPage() {
   const modelDrifted =
     live?.servingModel != null &&
     live.servingModel !== release.snapshot.generationModel;
+  // Refusals the model produced, which vary run to run, versus refusals the
+  // pipeline produced, which do not. Only the second kind blocks a release.
+  const codeSideCause = Object.keys(
+    release.generation.over_refusal_causes ?? {},
+  ).find((cause) => !STOCHASTIC_CAUSES.includes(cause));
   const releasePassed =
     release.retrieval["recall@20"] >= 0.85 &&
     release.generation.citation_coverage >= 0.95 &&
     release.generation.support_supported >= 0.9 &&
     release.generation.presupposition_asserted_rate === 0 &&
-    release.generation.over_refusal_rate === 0 &&
+    release.generation.over_refusal_rate <= OVER_REFUSAL_CEILING &&
+    codeSideCause === undefined &&
     release.specialist.passed;
 
   return (
@@ -234,17 +282,70 @@ export default async function EvalPage() {
           </div>
           <div className="stat-label">段落支持达标率 · 门槛 90%</div>
         </div>
+        {/* Derived, not written. Both tiles said 「0 /」 as a literal, which was
+            true when the gate demanded zero and became a lie the moment the
+            threshold moved — on the page whose whole claim is being exact about
+            what was measured. */}
         <div className="stat">
-          <div className="stat-value">0 / {release.generation.answerable}</div>
-          <div className="stat-label">可答题误拒</div>
+          <div className="stat-value">
+            {Math.round(
+              release.generation.over_refusal_rate *
+                release.generation.answerable,
+            )}{" "}
+            / {release.generation.answerable}
+          </div>
+          <div className="stat-label">
+            可答题误拒 · 上限 {percent(OVER_REFUSAL_CEILING)}
+          </div>
         </div>
         <div className="stat">
           <div className="stat-value">
-            0 / {release.generation.unanswerable}
+            {Math.round(
+              release.generation.presupposition_asserted_rate *
+                release.generation.unanswerable,
+            )}{" "}
+            / {release.generation.unanswerable}
           </div>
-          <div className="stat-label">诱导题错误断言</div>
+          <div className="stat-label">诱导题错误断言 · 门槛 0</div>
         </div>
       </div>
+
+      {/* Why the ceiling is not zero, stated where the number is. A threshold
+          that looks lax needs its reasoning attached, or the next person tightens
+          it back to zero and spends a week re-deriving why that does not work. */}
+      {release.generation.over_refusal_causes && (
+        <div className="notice">
+          <strong>误拒为什么不是硬门禁 0。</strong>
+          同一镜像、同一提示词连跑四次，误拒分别是{" "}
+          <strong>2 / 1 / 1 / 3</strong> 道，
+          失败的题每次都换一批——单题误拒概率约 <strong>2.24%</strong>，78
+          题全过的概率只有 约 <strong>17%</strong>
+          。要求一个随机系统给出确定性结果，等于让发布靠运气。 硬门禁留给
+          <strong>诱导题错误断言</strong>
+          ：编造是安全失败，而它在历次记录中始终为 0。
+          <div className="eval-causes">
+            {Object.entries(release.generation.over_refusal_causes).map(
+              ([cause, count]) => (
+                <span
+                  key={cause}
+                  className={
+                    STOCHASTIC_CAUSES.includes(cause)
+                      ? "eval-cause"
+                      : "eval-cause is-blocking"
+                  }
+                >
+                  {CAUSE_LABELS[cause] ?? cause}
+                  <b>{count}</b>
+                </span>
+              ),
+            )}
+          </div>
+          <span className="eval-cause-note">
+            模型侧的零散失误计入上限；流水线自身产生的拒答（支持度清空、引用校验失败、
+            凭据保护、生成服务不可用）不论多少次都直接阻断发布。
+          </span>
+        </div>
+      )}
 
       {/* The same two metrics over a different population. Deliberately a
           comparison table rather than one blended figure: the fixed set is what

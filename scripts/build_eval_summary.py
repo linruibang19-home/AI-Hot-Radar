@@ -419,7 +419,11 @@ def build() -> dict[str, Any]:
         )
 
     release_retrieval = _load("m4-rag-eval-B9-FINAL-20260811.json")
-    release_generation = _load("m4-rag-eval-GENERATION-FINAL-20260811.json")
+    # 2026-08-30: re-run on deepseek-v4-flash, the model actually serving. The
+    # 08-11 file measured deepseek-chat and the page went on certifying it for
+    # nineteen days after the switch. Kept on disk — `status/` is an archive —
+    # but no longer the published snapshot.
+    release_generation = _load("m4-rag-eval-GENERATION-FINAL-20260830.json")
     release_specialist = _load("m4-rag-eval-SPECIALIST-20260811.json")
     retrieval_overall = release_retrieval["summary"]["overall"]
     generation_overall = release_generation["summary"]["overall"]

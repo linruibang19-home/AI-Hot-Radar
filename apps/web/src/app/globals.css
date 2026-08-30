@@ -2472,6 +2472,47 @@ summary:focus-visible {
   color: var(--muted);
 }
 
+/* The refusal breakdown, beside the threshold it justifies. Blocking causes are
+   marked because their count is irrelevant — one is enough to fail. */
+.eval-causes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+
+.eval-cause {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+}
+
+.eval-cause b {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.eval-cause.is-blocking {
+  background: color-mix(in srgb, var(--hot) 10%, transparent);
+  color: var(--hot);
+}
+
+.eval-cause.is-blocking b {
+  color: var(--hot);
+}
+
+.eval-cause-note {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  line-height: 1.7;
+}
+
 .eval-section {
   margin-top: 32px;
 }
