@@ -191,6 +191,29 @@ def cmd_usage(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_golden_candidates(args: argparse.Namespace) -> int:
+    """Shortlist real questions worth annotating into the golden set.
+
+    Read-only, and deliberately stops at a shortlist: the annotation it feeds
+    is the one step that must stay human, because a model labelling the set it
+    will be graded on writes the exam and sits it.
+    """
+    from ahr.rag.eval.candidates import mine
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        result = mine(connection, cutoff=args.cutoff, days=args.days, limit=args.limit)
+
+    payload = json.dumps(result, indent=2, ensure_ascii=False)
+    if args.output:
+        Path(args.output).write_text(payload, encoding="utf-8")
+        print(
+            json.dumps({"written": args.output, "by_band": result["by_band"]}, ensure_ascii=False)
+        )
+    else:
+        print(payload)
+    return 0
+
+
 def cmd_heat(args: argparse.Namespace) -> int:
     from ahr.processing.heat import rescore
 
@@ -1369,6 +1392,20 @@ def main(argv: list[str] | None = None) -> int:
     usage = sub.add_parser("usage", help="report recorded LLM token usage")
     usage.add_argument("--days", type=int, default=30)
     usage.set_defaults(func=cmd_usage)
+
+    candidates = sub.add_parser(
+        "golden-candidates",
+        help="shortlist real questions worth annotating into the golden set",
+    )
+    candidates.add_argument(
+        "--cutoff",
+        default="2026-08-03T23:59:00+08:00",
+        help="frozen corpus boundary of the published snapshot",
+    )
+    candidates.add_argument("--days", type=int, default=90)
+    candidates.add_argument("--limit", type=int, default=60)
+    candidates.add_argument("--output")
+    candidates.set_defaults(func=cmd_golden_candidates)
 
     support = sub.add_parser(
         "backfill-support", help="score citations that predate support scoring"
