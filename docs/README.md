@@ -56,6 +56,7 @@
 | [0030](adr/0030-vendor-navigation-uses-auditable-relations.md) | 厂商导航使用可审计关系，不做无依据推断 |
 | [0031](adr/0031-content-chunk-sets-are-versioned.md) | `content_chunk` 以不可变 chunk set 版本化 |
 | [0032](adr/0032-generation-provider-credentials-are-database-backed.md) | 生成供应商地址与密钥入库加密，只接官方兼容端点 |
+| [0033](adr/0033-generation-console-removed-model-stays-database-backed.md) | 删除模型控制台；模型选择留在数据库层，凭证回到环境变量 |
 
 ## `design/` — 开发方案（活文档）
 

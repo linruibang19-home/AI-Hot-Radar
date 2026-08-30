@@ -45,11 +45,21 @@ def _is_tracking_param(key: str) -> bool:
     return lowered in TRACKING_PARAMS or lowered.startswith(TRACKING_PARAM_PREFIXES)
 
 
-def canonicalize_url(url: str) -> str:
+def canonicalize_url(url: str, *, keep_fragment: bool = False) -> str:
     """Return a stable form of `url` for identity comparison.
 
     Raises ValueError when the input is not an absolute http(s) URL, so callers
     fail loudly rather than silently hashing garbage.
+
+    `keep_fragment` is for the one case where the fragment *is* the document:
+    a changelog page is sliced into one entry per heading, and every entry
+    shares the page URL. With the fragment dropped they all hash the same, the
+    unique index on `canonical_url_hash` rejects every one after the first, and
+    the failure is invisible — the run reports SUCCESS, `discovered_count` is
+    the true section count, and one item lands. Every `docs_changelog` source in
+    the registry sat at exactly 1 item for this reason: twelve first-party
+    changelogs (OpenAI, Anthropic ×3, Gemini, Mistral, DeepSeek, Kimi, Baidu,
+    Zhipu) holding 11 documents between them instead of several hundred.
     """
     if not url or not url.strip():
         raise ValueError("empty url")
@@ -77,13 +87,18 @@ def canonicalize_url(url: str) -> str:
     ]
     query = urlencode(sorted(kept))
 
-    # Fragments never identify a distinct server-side document.
-    return urlunsplit((parts.scheme, netloc, path, query, ""))
+    # Fragments do not identify a distinct server-side document — except when
+    # the source's unit of publication is a section of one, which is what
+    # `keep_fragment` says.
+    fragment = parts.fragment if keep_fragment else ""
+    return urlunsplit((parts.scheme, netloc, path, query, fragment))
 
 
-def url_hash(url: str) -> str:
+def url_hash(url: str, *, keep_fragment: bool = False) -> str:
     """SHA-256 of the canonical form, used as `canonical_url_hash`."""
-    return hashlib.sha256(canonicalize_url(url).encode("utf-8")).hexdigest()
+    return hashlib.sha256(
+        canonicalize_url(url, keep_fragment=keep_fragment).encode("utf-8")
+    ).hexdigest()
 
 
 def content_hash(text: str) -> str:

@@ -40,7 +40,7 @@
 | `.github/workflows/` | CI/CD | 分层验证、镜像构建、GHCR 发布与发布门 |
 
 公开产品路由包括 `/`、`/items`、`/hot`、`/stories`、`/topics`、`/reports`、
-`/ask`；工程观测路由包括 `/eval`、`/ops`、`/admin/models`、`/admin/sources`。
+`/ask`；工程观测路由包括 `/eval`、`/ops`、`/admin/sources`。
 这些页面读取同一份 PostgreSQL 已发布事实，但 `/eval` 展示固定评测快照，不能当实时监控。
 
 ## 3. 核心业务交付

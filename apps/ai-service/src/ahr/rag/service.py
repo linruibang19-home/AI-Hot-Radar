@@ -72,6 +72,7 @@ from ahr.rag.planner import plan as build_plan
 from ahr.rag.planner import plan_from_dict
 from ahr.rag.rerank import DEFAULT_TOP_N, RerankClient, RerankUnavailableError
 from ahr.rag.retrieval import (
+    EXCERPT_CHARS,
     KEYWORD_FTS_TOP_K,
     TEMPORAL_SQL_TOP_K,
     VECTOR_PASSAGE_TOP_K,
@@ -80,6 +81,7 @@ from ahr.rag.retrieval import (
     entity_names,
     expand_vendor_aliases,
     expand_vendor_entity_ids,
+    load_chunk_excerpts,
     load_chunk_texts,
     load_item_metadata,
     resolve_query_entities,
@@ -146,6 +148,83 @@ async def _noop_stage(name: str, detail: dict[str, Any]) -> None:
     return None
 
 
+def _latest_window(turns: list[Turn]) -> tuple[date, date] | None:
+    """The range this conversation is currently looking at.
+
+    Newest first, so a follow-up that widens the window sets the scope for the
+    turns after it rather than being overruled by the opening question forever.
+    A turn that resolved no window contributes nothing and is skipped rather
+    than treated as 「all time」 — otherwise one undated follow-up would erase
+    the conversation's scope for every turn after it.
+    """
+    for turn in reversed(turns):
+        if not turn.window:
+            continue
+        try:
+            return (date.fromisoformat(turn.window[0]), date.fromisoformat(turn.window[1]))
+        except (TypeError, ValueError):
+            # A malformed stored range is not worth failing an answer over.
+            continue
+    return None
+
+
+# A sentence that describes what the evidence does *not* contain. Anchored to
+# the start so a factual assertion cannot be smuggled in front of one; the
+# absence of a digit is the second guard, because 「证据里没提到 X，不过 X 是
+# 70B」 is an assertion wearing a scope statement's opening words.
+_SCOPE_RE = re.compile(
+    # An optional 「根据/依据/从…」 preamble, then the evidence noun. Anchoring
+    # straight at the noun missed 「根据现有证据，无法判断 A 和 B 是否一样。」 —
+    # a textbook scope statement that fell through to the generic message. The
+    # preamble is a closed set of prepositions, so nothing assertive fits in
+    # front of it.
+    # The preamble takes no filler: the evidence noun must follow it directly.
+    # Allowing any words between them let 「根据我的知识，证据里没有提到…」 through
+    # — a sentence whose opening states the exact thing this pipeline forbids.
+    r"^(?:(?:根据|依据|按照|从)\s*)?"
+    r"(?:检索(?:到)?的?(?:内容|结果)|现有证据|现有材料|证据|资料|语料)"
+    r"[^。！？]*?(?:未|没有|不包含|缺少|无法判断|无法确认|无法回答)[^。！？]*[。！？]?$"
+)
+_ASSERTION_MARKERS = ("但", "不过", "然而", "实际上", "事实上")
+
+# A digit that *starts* a token is a quantity; a digit inside one is part of a
+# name. 「Mem0」「gemma-4」「v1.96.0-rc.1」 are what these questions are about,
+# and rejecting every sentence containing a digit threw away most real scope
+# statements to catch 「…，不过是 70B」. The lookbehind is the whole rule.
+_QUANTITY_RE = re.compile(r"(?<![A-Za-z0-9.\-])\d")
+
+
+def _scope_statement(dropped: list[str]) -> str | None:
+    """The model's own account of what it could not find, when it is only that.
+
+    Used as a refusal explanation, never as an answer: it is uncited by
+    construction, so it must not reach the page as a claim. What it replaces is
+    a generic sentence that told the reader strictly less than the system knew.
+
+    A candidate is rejected outright if it carries any hedge word or digit —
+    both are how a real assertion rides along inside a sentence that opens like
+    a scope statement.
+    """
+    for sentence in dropped:
+        text = sentence.strip()
+        if not _SCOPE_RE.match(text):
+            continue
+        if any(marker in text for marker in _ASSERTION_MARKERS):
+            continue
+        if _QUANTITY_RE.search(text):
+            continue
+        return text
+    return None
+
+
+def _window_of(answer: Answer) -> tuple[str, str] | None:
+    """This answer's resolved range, as the local ISO dates a `Turn` carries."""
+    time_range = getattr(answer.plan, "time_range", None) if answer.plan else None
+    if time_range is None:
+        return None
+    return (time_range.start.date().isoformat(), time_range.end.date().isoformat())
+
+
 async def _generate(
     llm: LlmClient,
     *,
@@ -200,6 +279,7 @@ async def retrieve(
     trace: RetrievalTrace | None = None,
     query_vector: list[float] | None = None,
     window_override: tuple[date, date] | None = None,
+    inherited_window: tuple[date, date] | None = None,
 ) -> tuple[list[ChunkHit], Any, dict[str, Any]]:
     """The B4 pipeline, returning hits, the frozen plan, and what happened.
 
@@ -220,7 +300,12 @@ async def retrieve(
         await report(name, {"ms": stages[name], **detail})
 
     step = time.monotonic()
-    retrieval_plan = build_plan(question, asked_at=asked_at, window_override=window_override)
+    retrieval_plan = build_plan(
+        question,
+        asked_at=asked_at,
+        window_override=window_override,
+        inherited_window=inherited_window,
+    )
     await mark(
         "plan",
         step,
@@ -315,6 +400,9 @@ async def retrieve(
     route = choose_route(retrieval_plan.query_type)
 
     degraded: list[str] = []
+    # The cross-encoder's best absolute score, kept before `_rank_by_dimensions`
+    # overwrites `.score` with the §6 composite. See `retrieval_confidence`.
+    top_rerank: float | None = None
     step = time.monotonic()
     if reranker is not None and hits:
         candidates = hits[: route.rerank_candidates]
@@ -322,6 +410,7 @@ async def retrieve(
         documents = [texts.get(h.chunk_id, h.title) for h in candidates]
         try:
             scored = await reranker.rerank(question, documents, top_n=DEFAULT_TOP_N)
+            top_rerank = max((score for _, score in scored), default=None)
             reordered = [
                 ChunkHit(
                     chunk_id=candidates[i].chunk_id,
@@ -362,7 +451,13 @@ async def retrieve(
             degraded.append("rerank")
     elif reranker is None:
         degraded.append("rerank")
-    await mark("rerank", step, degraded=bool(degraded), candidates=route.rerank_candidates)
+    await mark(
+        "rerank",
+        step,
+        degraded=bool(degraded),
+        candidates=route.rerank_candidates,
+        top_score=round(top_rerank, 4) if top_rerank is not None else None,
+    )
 
     if trace is not None:
         trace.record_final(hits)
@@ -375,6 +470,25 @@ async def retrieve(
         # unrelated-looking document was cited.
         "aliases": aliases,
         "fused": len(fused),
+        # The cross-encoder's best absolute score for this question. Recorded,
+        # not acted on — see `support.is_weak_retrieval` for why this codebase
+        # makes a signal earn a gate on the golden set first.
+        #
+        # Why it is worth recording at all: nothing upstream of generation has
+        # an absolute quality bar. Dense and sparse are `ORDER BY … LIMIT n`,
+        # RRF fuses on rank and discards the scores, and `apply_boosts`
+        # min-max-normalises what is left, so the worst hit in every result set
+        # becomes 0.0 and the best becomes 1.0 whether or not either is any
+        # good. Ten passages come back for every question; when the corpus
+        # holds nothing, they are the ten least-bad.
+        #
+        # Measured over 15 traced questions annotated on 2026-08-30, this is
+        # the one number that survives that flattening. Below 0.15 it caught 4
+        # of 6 unanswerable questions with 0 of 9 answerable ones misfired,
+        # while top-1 dense similarity sat at 0.53–0.61 for the unanswerable
+        # and 0.55–0.77 for the answerable — overlapping, so the cheap channel
+        # cannot carry this. n=15 is a hypothesis, not a threshold.
+        "retrieval_confidence": round(top_rerank, 4) if top_rerank is not None else None,
         "degraded": degraded,
         "retrieval_ms": int((time.monotonic() - started) * 1000),
         "stages_ms": stages,
@@ -586,6 +700,7 @@ def _replay(payload: dict[str, Any], *, outcome: str, similarity: float | None) 
             story_slug=row.get("storySlug"),
             independent_sources=int(row.get("independentSources") or 1),
             support_score=row.get("supportScore"),
+            excerpt=str(row.get("excerpt") or ""),
         )
         for index, row in enumerate(payload.get("citations") or [])
     ]
@@ -758,12 +873,18 @@ async def answer_question(
         asked = question
         rewritten: str | None = None
         turns: list[Turn] = []
+        # The range this conversation is already looking at. The newest turn
+        # that resolved one wins, so a follow-up that widens the window sets
+        # the scope for the turns after it rather than being overruled by the
+        # first question forever.
+        inherited_window: tuple[date, date] | None = None
         if conversation_id:
             turns = await turns_for(connection, conversation_id)
             standalone, changed = await rewrite(llm, question, turns)
             if changed:
                 rewritten = standalone
                 question = standalone
+            inherited_window = _latest_window(turns)
 
         # Before the cache and before retrieval. A question about the site is
         # not a question the index can answer, and retrieval always returns a
@@ -829,6 +950,14 @@ async def answer_question(
                 replayed = cached.query_id
                 if replayed:
                     cached.metrics.setdefault("cache", {})["replayOf"] = replayed
+                    # …but the reader still gets to see it. A replayed answer
+                    # was the hole in the explanation: 126 of 231 stored
+                    # queries had no trace of their own, and a cache hit is
+                    # exactly when "where did this come from?" is hardest to
+                    # answer, because nothing visible happened. The rows belong
+                    # to the original retrieval and are labelled as such by
+                    # `cache.replayOf` sitting beside them.
+                    cached.trace = load_trace(connection, str(replayed))
                 _persist(connection, cached)
                 await _extend_thread(cached, turns, conversation_id)
             return cached
@@ -843,6 +972,7 @@ async def answer_question(
             trace=trace,
             query_vector=cache_state.vector,
             window_override=window_override,
+            inherited_window=inherited_window,
         )
         metrics["cache"] = cache_state.as_metrics()
         step = time.monotonic()
@@ -902,6 +1032,13 @@ async def answer_question(
             )
         except LlmUnavailableError as exc:
             logger.warning("generation failed: %s", exc)
+            # Labelled, like every other refusal. Without this the evaluation
+            # reported `unrecorded` for all 78 answerable questions during a
+            # provider outage — an `over_refusal_rate` of 1.0 that looks exactly
+            # like a catastrophic quality regression and is a billing problem.
+            # The whole point of `refusal_cause` is that a report never leaves
+            # someone bisecting for a defect that is not there.
+            metrics["refusal_cause"] = "generation_unavailable"
             return Answer(
                 question=question,
                 answer_markdown="",
@@ -1035,7 +1172,7 @@ async def answer_question(
         # citation. Running this before support gating left a real hole: a
         # sentence was grounded at the first check, its only weak citation was
         # then dropped, and the now-uncited sentence reached the page.
-        text, uncited_dropped = drop_uncited_sentences(text)
+        text, uncited_dropped, dropped_sentences = drop_uncited_sentences(text)
         if uncited_dropped:
             referenced = {int(value) for value in re.findall(r"\[(\d+)\]", text)}
             orphaned = {
@@ -1054,6 +1191,56 @@ async def answer_question(
             # not a fallback: §10 forbids letting the model fill the gap from
             # general knowledge.
             refusal_reason = "检索到的内容不足以回答这个问题"
+            # …unless the model already said something more precise.
+            #
+            # Rule 3 asks it to write 「检索到的内容里没有提到 X」 rather than
+            # speculate, and it does. That sentence is a statement about the
+            # *absence* of evidence, so it cannot carry a `[n]` — nothing
+            # supports the claim that nothing supports a claim — and
+            # `drop_uncited_sentences` removes it. The answer then empties and
+            # the reader gets a generic sentence in place of the specific one
+            # the model had written for them.
+            #
+            # It stays a refusal: nothing grounded survived, and publishing the
+            # scope statement as an answer would put an uncited sentence on the
+            # page. Only the explanation changes, which is the part that was
+            # needlessly worse than what the system knew.
+            scope = _scope_statement(dropped_sentences)
+            if scope and not citations:
+                refusal_reason = scope
+            # *Which* of the three ways this happens, recorded separately.
+            #
+            # The sentence above is the same whether the model declined to
+            # answer, whether the support gate removed every citation, or
+            # whether `drop_uncited_sentences` deleted the last surviving
+            # sentence — three unrelated mechanisms wearing one label. Telling
+            # them apart from a finished evaluation report was impossible, so a
+            # regression that moved `over_refusal_rate` by 2.56pt had to be
+            # bisected against git history to find out which stage caused it.
+            #
+            # A refusal reported without its mechanism is a failure the next
+            # person also has to re-derive.
+            #
+            # Ordered upstream-first, and that ordering is the whole
+            # correctness of this label. The support gate runs *before*
+            # `drop_uncited_sentences`, so removing every citation mechanically
+            # makes every sentence uncited a moment later. Checking the later
+            # stage first reported `all_sentences_uncited` for refusals whose
+            # actual cause was the support threshold — a diagnostic that points
+            # at the stage which merely observed the damage.
+            metrics["refusal_cause"] = (
+                "all_citations_unsupported"
+                if weak and not citations
+                else "all_sentences_uncited"
+                if uncited_dropped and not text
+                else "model_declined"
+            )
+            # What was deleted, so the next question — *why* was it uncited —
+            # is answerable from the report too. Bounded: three sentences is
+            # enough to see the shape, and this rides in a metrics blob stored
+            # on every query.
+            if dropped_sentences:
+                metrics["uncited_examples"] = [s[:160] for s in dropped_sentences[:3]]
 
         metrics["stages_ms"]["support"] = int((time.monotonic() - step) * 1000)
         metrics["support"] = summarise(scores, len(citations))
@@ -1064,6 +1251,7 @@ async def answer_question(
             logger.warning("answer failed invariants: %s", violations)
             refused = True
             refusal_reason = "回答未通过引用校验"
+            metrics["refusal_cause"] = "invariant_violation"
             text = ""
             citations = []
             limitations = [*limitations, *violations]
@@ -1089,12 +1277,26 @@ async def answer_question(
             logger.warning("RAG answer blocked by credential output policy: %s", credential_kinds)
             refused = True
             refusal_reason = "回答触发敏感凭据输出保护"
+            metrics["refusal_cause"] = "credential_policy"
             text = ""
             citations = []
             limitations = ["候选答案包含疑似访问凭据，已阻止发布。"]
 
         if dangling:
             limitations.append(f"模型引用了不存在的证据编号：{', '.join(dangling)}")
+
+        # The passage each surviving citation points at, verbatim, so the reader
+        # can check the claim against the source rather than against the model's
+        # own restatement of it. Read after every gate above has had its say —
+        # `check_invariants` and the credential policy can both empty the list,
+        # and loading text for citations about to be discarded is a query for
+        # nothing.
+        if citations:
+            excerpts = load_chunk_excerpts(
+                connection, [citation.chunk_id for citation in citations]
+            )
+            for citation in citations:
+                citation.excerpt = excerpts.get(citation.chunk_id, "")
 
         metrics.update(
             {
@@ -1159,6 +1361,13 @@ async def answer_question(
             try:
                 persist_trace(connection, uuid.UUID(str(result.query_id)), trace)
                 connection.commit()
+                # Read straight back rather than serialising the recorder. The
+                # permalink already renders `load`'s shape, and building a
+                # second one here is how the live view and the saved view start
+                # disagreeing about the same answer. One indexed read of forty
+                # rows against a request that just spent ten seconds on the
+                # provider is not the cost worth optimising.
+                result.trace = load_trace(connection, str(result.query_id))
             except Exception as exc:  # noqa: BLE001 - see above
                 connection.rollback()
                 logger.warning("retrieval trace not stored: %s", exc)
@@ -1181,7 +1390,11 @@ HISTORY_LIMIT = 20
 # One query serves both the history list and a single permalink. They must
 # agree: a conversation that renders one way in the list and another way at its
 # own URL is two features telling the reader different things about one answer.
-_CONVERSATION_SELECT = """
+# An f-string so the excerpt length is the one constant `load_chunk_excerpts`
+# uses. Two literals that agree today are two literals that disagree after one
+# of them is tuned, and this pair would drift silently: the live answer and its
+# own permalink would quote the same passage at two different lengths.
+_CONVERSATION_SELECT = f"""
     SELECT q.id::text, q.question, q.answer_markdown, q.status,
            q.retrieval_plan, q.metrics, q.completed_at, q.limitations,
            q.conversation_id::text,
@@ -1198,7 +1411,11 @@ _CONVERSATION_SELECT = """
                        'sourceTier', s.source_tier,
                        'storySlug', st.slug,
                        'independentSources', COALESCE(st.independent_source_count, 1),
-                       'supportScore', c.support_score
+                       'supportScore', c.support_score,
+                       -- Verbatim, and not through `build_embedding_text`: the
+                       -- header that composes is right for ranking and wrong
+                       -- for a reader checking a quote against its source.
+                       'excerpt', trim(left(ch.body_text, {EXCERPT_CHARS}))
                    )
                    ORDER BY c.citation_no
                ) FILTER (WHERE c.citation_no IS NOT NULL),
@@ -1372,6 +1589,7 @@ async def _extend_thread(answer: Answer, prior: list[Turn], conversation_id: str
         Turn(
             question=issued,
             cited_titles=tuple(c.title for c in answer.citations[:3] if c.title),
+            window=_window_of(answer),
         ),
     )
 

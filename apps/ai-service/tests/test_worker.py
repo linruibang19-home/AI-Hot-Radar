@@ -7,7 +7,7 @@ it refuses to redo, and what order it runs in.
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -26,6 +26,7 @@ class _Cursor:
     def __init__(self, answers: list[Any]) -> None:
         self.answers = answers
         self.queries: list[str] = []
+        self.params: list[tuple[object, ...]] = []
 
     def __enter__(self) -> _Cursor:
         return self
@@ -35,6 +36,7 @@ class _Cursor:
 
     def execute(self, sql: str, params: tuple[object, ...] = ()) -> None:
         self.queries.append(sql)
+        self.params.append(params)
 
     def fetchone(self) -> Any:
         return self.answers.pop(0)
@@ -59,20 +61,66 @@ def test_missing_report_is_stale() -> None:
 def test_report_older_than_the_newest_selection_is_stale() -> None:
     generated = datetime(2026, 8, 2, 10, 0)
     newest_selection = datetime(2026, 8, 2, 18, 0)
-    assert _report_is_stale(_Connection([(generated,), (newest_selection,)]), "daily", "x") is True
+    connection = _Connection([(generated,), (newest_selection,)])
+    assert _report_is_stale(connection, "daily", "2026-08-02") is True
 
 
 def test_report_newer_than_every_selection_is_left_alone() -> None:
     """A fixed interval would otherwise pay for an identical digest every tick."""
     generated = datetime(2026, 8, 2, 18, 0)
     newest_selection = datetime(2026, 8, 2, 10, 0)
-    assert _report_is_stale(_Connection([(generated,), (newest_selection,)]), "daily", "x") is False
+    connection = _Connection([(generated,), (newest_selection,)])
+    assert _report_is_stale(connection, "daily", "2026-08-02") is False
 
 
 def test_no_selections_at_all_is_not_stale() -> None:
     """An empty shortlist must not trigger an endless regeneration loop."""
     generated = datetime(2026, 8, 2, 18, 0)
-    assert _report_is_stale(_Connection([(generated,), (None,)]), "daily", "x") is False
+    connection = _Connection([(generated,), (None,)])
+    assert _report_is_stale(connection, "daily", "2026-08-02") is False
+
+
+def test_freshness_only_looks_at_the_edition_s_own_window() -> None:
+    """The regression that cost 57% of generation spend.
+
+    An unscoped `max(created_at)` made one selection landing today rewrite
+    yesterday's daily as well, every pipeline pass, forever. The window has to
+    reach the query or nothing stops that.
+    """
+    connection = _Connection([(datetime(2026, 8, 2, 18, 0),), (None,)])
+    _report_is_stale(connection, "daily", "2026-08-02")
+
+    freshness_sql, freshness_params = (
+        connection.cursor_obj.queries[1],
+        connection.cursor_obj.params[1],
+    )
+    assert "selected_for_date BETWEEN" in freshness_sql
+    assert freshness_params == (date(2026, 8, 2), date(2026, 8, 2))
+
+
+@pytest.mark.parametrize(
+    ("period", "key", "start", "end"),
+    [
+        ("weekly", "2026-W31", date(2026, 7, 27), date(2026, 8, 2)),
+        ("monthly", "2026-08", date(2026, 8, 1), date(2026, 8, 31)),
+    ],
+)
+def test_freshness_window_matches_the_period(period: str, key: str, start: date, end: date) -> None:
+    """The window must be the same one `build_report` selects items with."""
+    connection = _Connection([(datetime(2026, 8, 2, 18, 0),), (None,)])
+    _report_is_stale(connection, period, key)
+    assert connection.cursor_obj.params[1] == (start, end)
+
+
+def test_a_withdrawal_inside_the_window_makes_the_report_stale() -> None:
+    """Withdrawing an item changes which items the digest covers.
+
+    `created_at` alone cannot see this: the row was created before the report
+    and only its `withdrawn_at` moved, so the query has to consider both.
+    """
+    connection = _Connection([(datetime(2026, 8, 2, 12, 0),), (datetime(2026, 8, 2, 17, 0),)])
+    assert _report_is_stale(connection, "daily", "2026-08-02") is True
+    assert "withdrawn_at" in connection.cursor_obj.queries[1]
 
 
 # --- period selection -----------------------------------------------------
@@ -197,4 +245,5 @@ def test_staleness_boundary_is_strict(delta_hours: int) -> None:
     generated = datetime(2026, 8, 2, 12, 0)
     newest = generated + timedelta(hours=delta_hours)
     expected = delta_hours > 0
-    assert _report_is_stale(_Connection([(generated,), (newest,)]), "daily", "x") is expected
+    connection = _Connection([(generated,), (newest,)])
+    assert _report_is_stale(connection, "daily", "2026-08-02") is expected

@@ -19,7 +19,7 @@ window would silently return the wrong days.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -133,8 +133,59 @@ _EXPLICIT_WINDOWS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"本月|这个月|this month"), "this_month"),
 )
 
-_NUMBERED_DAYS = re.compile(r"(?:过去|近|最近|last|past)\s*(\d{1,3})\s*(?:天|日|days?)")
-_NUMBERED_WEEKS = re.compile(r"(?:过去|近|最近|last|past)\s*(\d{1,2})\s*(?:周|星期|weeks?)")
+# Chinese numerals count as numbers. Requiring digits meant 「最近两周」 missed
+# both numbered patterns and fell through to `_RECENT`, which answers every
+# unqualified 「最近」 with seven days — so a two-week question was silently
+# served one week of evidence and nothing said so.
+_CN_DIGITS = {
+    "零": 0,
+    "一": 1,
+    "两": 2,
+    "二": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5,
+    "六": 6,
+    "七": 7,
+    "八": 8,
+    "九": 9,
+}
+_CN_NUMBER = r"[零一两二三四五六七八九十]{1,3}"
+
+
+def _as_int(text: str) -> int | None:
+    """Read an Arabic or a small Chinese numeral. Returns None for neither."""
+    if text.isdigit():
+        return int(text)
+    if "十" in text:
+        # 十 / 十五 / 二十 / 二十三 — beyond that a reader writes digits.
+        tens, _, units = text.partition("十")
+        value = (_CN_DIGITS.get(tens, 1) if tens else 1) * 10
+        return value + (_CN_DIGITS.get(units, 0) if units else 0)
+    total = 0
+    for character in text:
+        digit = _CN_DIGITS.get(character)
+        if digit is None:
+            return None
+        total = total * 10 + digit
+    return total or None
+
+
+_SPAN_PREFIX = r"(?:过去|近|最近|last|past)"
+_NUMBERED_DAYS = re.compile(rf"{_SPAN_PREFIX}\s*(\d{{1,3}}|{_CN_NUMBER})\s*(?:天|日|days?)")
+_NUMBERED_WEEKS = re.compile(rf"{_SPAN_PREFIX}\s*(\d{{1,2}}|{_CN_NUMBER})\s*(?:周|星期|weeks?)")
+
+# 「今天是几号」 asks what the date is. It is not a constraint on the content,
+# and reading it as one narrowed the window to a single day: measured 2026-08-29,
+# 「今天是几号？最近一周内 deepseek 有什么动态吗」 resolved to 今天, retrieved nothing
+# and was refused, while the same question without the first clause answered
+# from eight sources. Removed before any window is matched, so the rest of the
+# sentence is read on its own.
+_DATE_QUESTION = re.compile(
+    r"今天是?(?:几号|几月几|什么日子|星期几|周几|哪一?天)"
+    r"|今日是?(?:几号|什么日子)"
+    r"|what(?:'s| is) (?:the )?(?:date|day)(?: today| is it)?"
+)
 # "现在/目前/当前" ask about the present as plainly as "最近" does, and were
 # missing: 「现在有什么信源？」 resolved to no window at all, so the question was
 # planned as an explainer, the time filter never ran and `temporal_fit` stayed
@@ -173,53 +224,67 @@ def resolve_time_range(question: str, asked_at: datetime) -> TimeRange | None:
 
     Returns None when the question carries no time sense at all — an explainer
     about how an architecture works should not be restricted to last week.
+
+    When a question carries more than one expression the widest wins, not the
+    first one listed. The list is ordered by specificity so that 上周 is tested
+    before 本周, and returning on the first hit quietly turned that ordering
+    into a priority: 「今天是几号？最近一周内…」 matched 今天 and never reached
+    最近, which is a one-day window over a corpus that publishes a few items a
+    day — reliably empty, and the reader is told there is no evidence. Widening
+    is the safe direction: an extra week of candidates goes through the same
+    reranker, while a window that is too narrow removes the answer before
+    anything can rank it.
     """
     local_now = asked_at.astimezone(DISPLAY_TIMEZONE)
+    question = _DATE_QUESTION.sub(" ", question)
 
+    candidates: list[TimeRange] = []
     for pattern, kind in _EXPLICIT_WINDOWS:
         if not pattern.search(question):
             continue
-        if kind == "today":
-            start, end = _day_bounds(local_now)
-            return TimeRange(start, end, explicit=True, label="今天")
-        if kind == "yesterday":
-            start, end = _day_bounds(local_now - timedelta(days=1))
-            return TimeRange(start, end, explicit=True, label="昨天")
-        if kind in {"this_week", "last_week"}:
-            midnight, _ = _day_bounds(local_now)
-            week_start = midnight - timedelta(days=midnight.weekday())
-            if kind == "last_week":
-                return TimeRange(
-                    week_start - timedelta(days=7), week_start, explicit=True, label="上周"
-                )
-            return TimeRange(
-                week_start, week_start + timedelta(days=7), explicit=True, label="本周"
-            )
-        if kind in {"this_month", "last_month"}:
-            midnight, _ = _day_bounds(local_now)
-            month_start = midnight.replace(day=1)
-            if kind == "last_month":
-                previous_end = month_start
-                previous_start = (month_start - timedelta(days=1)).replace(day=1)
-                return TimeRange(previous_start, previous_end, explicit=True, label="上个月")
-            next_month = (month_start + timedelta(days=32)).replace(day=1)
-            return TimeRange(month_start, next_month, explicit=True, label="本月")
+        found = _explicit_range(kind, local_now)
+        if found is not None:
+            candidates.append(found)
 
     if match := _NUMBERED_WEEKS.search(question):
-        weeks = int(match.group(1))
-        return TimeRange(
-            local_now - timedelta(weeks=weeks), local_now, explicit=True, label=f"最近 {weeks} 周"
-        )
+        weeks = _as_int(match.group(1))
+        if weeks:
+            candidates.append(
+                TimeRange(
+                    local_now - timedelta(weeks=weeks),
+                    local_now,
+                    explicit=True,
+                    label=f"最近 {weeks} 周",
+                )
+            )
 
     if match := _NUMBERED_DAYS.search(question):
-        days = int(match.group(1))
-        return TimeRange(
-            local_now - timedelta(days=days), local_now, explicit=True, label=f"最近 {days} 天"
-        )
+        days = _as_int(match.group(1))
+        if days:
+            candidates.append(
+                TimeRange(
+                    local_now - timedelta(days=days),
+                    local_now,
+                    explicit=True,
+                    label=f"最近 {days} 天",
+                )
+            )
+
+    if candidates:
+        # `max` keeps the first of equal spans, so a single match still resolves
+        # exactly as it did before this function learned to collect them.
+        return max(candidates, key=lambda window: window.end - window.start)
 
     if _RECENT.search(question):
         # §3: "最近" without a span means seven days, and the answer must say so.
         # The window is left implicit so the generator knows to state it.
+        #
+        # Reached only when nothing above named a span, because "最近" is the
+        # absence of one. Collecting it alongside the others and taking the
+        # widest made 「最近 3 天」 resolve to seven: the phrase matches both the
+        # count and this fallback, and seven is wider than three. An explicit
+        # count is the reader being precise, and widening it is not caution —
+        # it is ignoring them.
         return TimeRange(
             local_now - timedelta(days=RECENT_DAYS),
             local_now,
@@ -227,6 +292,34 @@ def resolve_time_range(question: str, asked_at: datetime) -> TimeRange | None:
             label=f"最近 {RECENT_DAYS} 天",
         )
 
+    return None
+
+
+def _explicit_range(kind: str, local_now: datetime) -> TimeRange | None:
+    """The absolute window one named expression stands for."""
+    if kind == "today":
+        start, end = _day_bounds(local_now)
+        return TimeRange(start, end, explicit=True, label="今天")
+    if kind == "yesterday":
+        start, end = _day_bounds(local_now - timedelta(days=1))
+        return TimeRange(start, end, explicit=True, label="昨天")
+    if kind in {"this_week", "last_week"}:
+        midnight, _ = _day_bounds(local_now)
+        week_start = midnight - timedelta(days=midnight.weekday())
+        if kind == "last_week":
+            return TimeRange(
+                week_start - timedelta(days=7), week_start, explicit=True, label="上周"
+            )
+        return TimeRange(week_start, week_start + timedelta(days=7), explicit=True, label="本周")
+    if kind in {"this_month", "last_month"}:
+        midnight, _ = _day_bounds(local_now)
+        month_start = midnight.replace(day=1)
+        if kind == "last_month":
+            previous_end = month_start
+            previous_start = (month_start - timedelta(days=1)).replace(day=1)
+            return TimeRange(previous_start, previous_end, explicit=True, label="上个月")
+        next_month = (month_start + timedelta(days=32)).replace(day=1)
+        return TimeRange(month_start, next_month, explicit=True, label="本月")
     return None
 
 
@@ -257,6 +350,7 @@ def plan(
     *,
     asked_at: datetime | None = None,
     window_override: tuple[date, date] | None = None,
+    inherited_window: tuple[date, date] | None = None,
 ) -> RetrievalPlan:
     """Freeze a plan for this question.
 
@@ -269,6 +363,18 @@ def plan(
     it instead of concluding the system is broken; what shipped let them see it
     and retype the whole question. That is the same shape as citation numbers
     being a guarantee with no path to it.
+
+    `inherited_window` is the range an earlier turn of the same conversation
+    resolved. A follow-up carries its subject forward — that is what the
+    rewriter is for — and carried no time at all: 「最近有什么动态」 resolved a
+    week, then 「那安全漏洞呢」 resolved nothing and searched the whole corpus
+    under a conversation that had announced 08-22 至 08-29. The reader was
+    shown one range and given results from another.
+
+    It ranks below both an explicit range in the follow-up itself and the
+    reader's override, and it is not promoted to a hard filter: the
+    conversation established what the reader is *looking at*, which is weaker
+    evidence than a range they typed.
     """
     moment = asked_at or datetime.now(UTC)
     if moment.tzinfo is None:
@@ -292,6 +398,14 @@ def plan(
             freshness_required=True,
             notes=tuple(notes),
         )
+
+    # Below an explicit range in the follow-up, above the query-type default:
+    # a conversation that has already settled on a week should not have its
+    # third turn silently widened to thirty days.
+    if time_range is None and inherited_window is not None:
+        inherited = range_from_dates(*inherited_window)
+        time_range = replace(inherited, label=f"沿用对话 · {inherited.label}")
+        notes.append("问题未含时间词，沿用本次对话已确定的时间范围")
 
     if time_range and not time_range.explicit:
         notes.append(f"未给出时间跨度，按默认 {RECENT_DAYS} 天检索")

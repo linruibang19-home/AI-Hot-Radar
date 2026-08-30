@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { CONTENT_TYPE_LABELS } from "@/components/ItemCard";
 import { fetchStories, formatStorySources } from "@/lib/api";
+import { heatBadge, showsHeatBadge } from "@/lib/heat";
 
 import type { Metadata } from "next";
 
@@ -49,10 +50,12 @@ export default async function StoriesPage() {
                 </span>
               )}
               {story.locked && <span className="tag">已锁定</span>}
-              <span className="card-heat">
-                <span className="card-heat-dot" aria-hidden="true" />
-                {Math.round(story.heat ?? 0)}
-              </span>
+              {showsHeatBadge(story.heat) && (
+                <span className="card-heat" title="热度">
+                  <span className="card-heat-dot" aria-hidden="true" />
+                  {heatBadge(story.heat)}
+                </span>
+              )}
             </header>
 
             <h2 className="card-title">

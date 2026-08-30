@@ -1,0 +1,493 @@
+# 标注工作表 —— 从真实提问挖出来的候选，已标注，等人复核。
+#
+# ⚠️ 这批 grade 是模型提议的，不是人工判定的。见下面 annotation 块。
+#    复核之前，任何用它算出来的召回率都只能标注为「模型自标」，
+#    不能和 90 题黄金集的历史数字并排放。
+#
+# 挖出 30 题，留下 19 题，剔掉 11 题（原因逐条记在 dropped 里）。
+# 文档列表来自 rag_trace，包含检索看过但丢弃的；标着「快照外」的没有 id 行，
+# 因为评测按 asked_at 裁快照，取不到它们。
+#
+# 校验：ahr golden-validate <本文件>
+
+annotation:
+  # 谁标的。写清楚是因为这决定了数字能怎么用。
+  by: claude-opus-5
+  method: model_assisted
+  reviewed_by: null            # 人工复核后填名字，并把 method 改成 human_verified
+  annotated_at: 2026-08-30
+  # 为什么不是「模型给自己判卷」：被测的是 DeepSeek v4-flash（生成）
+  # 加 bge-m3 / bge-reranker-v2-m3（检索），标注的是另一个模型。不是自评，
+  # 但仍有共性偏差，且只能看见检索捞上来的 top-18——检索从头到尾没碰过的
+  # 相关文档，模型和人一样看不见。所以是「省人力的初稿」，不是「等价于人工」。
+  limits:
+    - 判据只有标题、信源、日期和 110 字摘录，没有通读全文
+    - 漏召无法发现：窗口外的相关文档不在列表里
+    - 19 题里 recent_updates 11 / abstention 6 / timeline 2，没有 comparison
+      / fact_check / explainer——真实流量几乎只问「最近 X 有什么动态」
+
+  dropped:
+    - id: TODO-9783d8fe
+      question: "智谱最近发布了什么？"
+      reason: 与 RAG-GOLD-100 同一个覆盖缺口，三问其一即可，留三道会让同一个失败模式记三次
+    - id: TODO-74fd66ad
+      question: "智谱最近七天发布了哪些新模型？"
+      reason: 同上；且候选里两条 Gemma 量化落在快照外，剩下的没有一条与智谱有关
+    - id: TODO-176f3588
+      question: "最近重置是什么时候"
+      reason: 「重置」没有指代对象，既判不出对也判不出错，不是可用的诱导题
+    - id: TODO-a8291e43
+      question: "最近 Codex 有什么消息？"
+      reason: 与 RAG-GOLD-097 相隔 19 分钟的同义提问
+    - id: TODO-eaefc334
+      question: "codex最近有动态吗"
+      reason: 同上，第三次问 Codex 近况
+    - id: TODO-ee0ae825
+      question: "最近大模型的资讯有什么动态？"
+      reason: 问得太宽，语料里几乎每篇都算相关，标完也分不出系统好坏
+    - id: TODO-1b8cf37c
+      question: "最近 llama.cpp 修复了哪些问题？"
+      reason: 夹在 RAG-GOLD-098（版本枚举）和 RAG-GOLD-108（一周窗口）之间，三道 llama.cpp 太多
+    - id: TODO-385a2638
+      question: "minimax的最近动态"
+      reason: 与 RAG-GOLD-101 相隔 2 分钟的同义提问
+    - id: TODO-a596e8c0
+      question: "它的定价是多少？"
+      reason: 多轮追问，「它」的先行词在上一轮。黄金集结构里没有地方放对话上下文，单独拿出来无法判定
+    - id: TODO-334e7f1c
+      question: "它的参数量呢？"
+      reason: 同上
+    - id: TODO-f2d275ad
+      question: "今天是几号？最接一周内deepseek有什么动态吗"
+      reason: 检索没留下任何候选，且前半句问系统时间、后半句有错字，两个问题混在一句里
+
+category: mixed
+questions:
+
+  # 挖出的理由: weak_support · 最低支持度 0.0001
+  # 稀疏通道把「光标」当成了产品名 Cursor：#18 那条 Qwen 微调模型的摘录里写的是
+  # "A blinking cursor that mocks you"。整条链路没有一篇讲 Cursor 自家的更新。
+  - id: RAG-GOLD-091
+    question: "Cursor 最近有什么产品更新？"
+    asked_at: 2026-08-08T10:02:13.901823+00:00
+    category: abstention
+    answerable: false
+    presupposition: "语料里收录了 Cursor 自家的产品更新记录"
+    relevant_items: []
+    must_not_claim: ["CrewAI", "Langfuse", "Mastra"]
+    expected_query_type: recent_updates
+    expected_entities: ["Cursor"]
+    notes: >-
+      A 型。语料没有 Cursor 官方信源。答案却引了 LiteLLM / Mastra / CrewAI / Langfuse
+      四家的 release，其中 LiteLLM 那条确实含 "Cursor"（它修的是 /cursor/chat/completions
+      的模型名后缀），但那是 LiteLLM 的更新不是 Cursor 的。考的是词形命中不等于实体命中。
+      # [已判无关] LiteLLM v1.97.0-dev.1 · Mastra · CrewAI ×3 · Langfuse v4.5.0
+      # [已判无关] HF Wan_GGUF · HF Qwen3.6-27B（摘录含 "blinking cursor"）
+
+  # 挖出的理由: weak_support · 最低支持度 0.0146
+  - id: RAG-GOLD-092
+    question: "NVIDIA 最近有什么芯片动态？"
+    asked_at: 2026-08-08T08:27:15.441579+00:00
+    category: recent_updates
+    answerable: true
+    relevant_items:
+      # [被引用] #18 Together AI Blog · 2026-08-01 · Together AI 推出 Blackwell GPU 集群，训练速度提升90%
+      - {id: 495e2dd2-d942-4421-afe7-8737baa257d9, grade: 2}
+      # [被引用] #17 Together AI Blog · 2026-08-02 · ThunderKittens 针对 NVIDIA Blackwell GPU 优化并开源新内核
+      - {id: ebcd07c0-70d3-4c7a-bca0-e111c0317ab5, grade: 2}
+      # [被引用] #6 量子位 · 2026-08-07 · AI SSD：大模型推理的存储范式转移（引用 NVIDIA BlueField）
+      - {id: 8fed69b1-e92f-4b51-ad1c-d5b6e1f01177, grade: 1}
+      # [被引用] #1 NVIDIA Generative AI Blog · 2026-08-05 · NVIDIA 与合作伙伴在美国本土建设 AI 基础设施
+      - {id: 178de809-a363-4192-99dc-d1bc37275aa2, grade: 1}
+    must_not_claim: ["Cosmos 3", "NSF"]
+    expected_query_type: recent_updates
+    expected_entities: ["NVIDIA"]
+    notes: >-
+      精确率题。答案引了 10 篇，其中 Cosmos 3（世界模型）、Alpamayo 1.5（VLA 模型）、
+      NSF 区域中心、SAFE 安全指南、NeMo Automodel 五篇跟芯片无关——信源对了、实体对了、
+      但问的是「芯片」这一面。考的是实体命中之后还要不要按方面收敛。
+
+  # 挖出的理由: weak_support · 最低支持度 0.0479
+  - id: RAG-GOLD-093
+    question: "Anthropic 最近发布了什么模型？"
+    asked_at: 2026-08-06T17:34:17.027441+00:00
+    category: recent_updates
+    answerable: true
+    relevant_items:
+      # [被引用] #2 Anthropic Newsroom · 2026-08-01 · Anthropic 发布 Claude Opus 5
+      - {id: 9c831f14-e83a-4e22-b8df-7ba0607b4aaf, grade: 2}
+      # [被引用] #3 Anthropic Newsroom · 2026-08-01 · Anthropic 发布 Claude Sonnet 5
+      - {id: b3fbd248-3163-40ba-8c8f-770bd853bb43, grade: 2}
+      # [被引用] #7 Anthropic Newsroom · 2026-08-01 · Anthropic 恢复 Fable 5
+      - {id: 52c29299-4755-4a91-bfe6-c35cd217342b, grade: 2}
+      # [进证据未引用] #11 Claude Platform Release Notes · 2026-08-01 · Opus 5 发布
+      - {id: bd6716b9-9684-4ae4-a796-31af5c0cd34a, grade: 2}
+    expected_query_type: recent_updates
+    expected_entities: ["Anthropic"]
+    notes: >-
+      15 篇候选里只有 4 篇是「发布了什么模型」。另外 11 篇是 Anthropic 的其他新闻——
+      入侵事故（3 篇）、融资与算力协议（3 篇）、公众提问、Karpathy 用 Opus 5 玩游戏。
+      同一实体、同一时间窗、不同事件类型，考事件维度的收敛。
+
+  # 挖出的理由: weak_support · 最低支持度 0.2441
+  - id: RAG-GOLD-094
+    question: "目前有哪些值得关注的新模型？"
+    asked_at: 2026-08-09T12:17:05.672677+00:00
+    category: recent_updates
+    answerable: true
+    relevant_items:
+      # [被引用] #2 Interconnects AI · 2026-08-02 · 开放模型新动态：Inkling、Hy3、Kimi K3
+      - {id: ac52d6e1-d0b1-4c94-820e-a46f73b595a6, grade: 2}
+      # [进证据未引用] #5 HF · 2026-08-08 · 飞桨发布 PaddleOCR-VL 0.9B
+      - {id: 24d250d7-85d7-4791-9d42-12491c479b34, grade: 2}
+      # [进证据未引用] #6 HF · 2026-08-03 · Liquid AI 发布 LFM2 系列
+      - {id: 0b3de187-e195-47b3-ba29-7a23bff0fc18, grade: 2}
+      # [进证据未引用] #7 HF · 2026-08-04 · NVIDIA 发布 Alpamayo 1.5
+      - {id: c8f6c166-ef17-4dc2-bb22-a6538c447341, grade: 2}
+      # [进证据未引用] #1 HF · 2026-08-06 · MonsterMMORPG 发布 Wan_GGUF 量化模型（第三方重打包，非原始发布）
+      - {id: 91194c59-6ff8-4a4b-87d5-2c9741addca9, grade: 1}
+      # [进证据未引用] #14 Interconnects AI · 2026-06-28 · Zyphra / Cohere / Poolside（六周前，不算"目前"）
+      - {id: d85773ce-2eef-4a50-b14e-14d320ff2f0f, grade: 1}
+    expected_query_type: recent_updates
+    notes: >-
+      开放式问题，没有唯一答案，考的是召回而不是措辞。两条 grade 1 是故意的：
+      第三方量化重打包和六周前的综述都沾边但都不是「目前的新模型」，
+      系统把它们排在原始发布之上就是排序有问题。RAGFlow v0.26.0 不是模型，已删。
+
+  # 挖出的理由: weak_support · 最低支持度 0.0
+  - id: RAG-GOLD-095
+    question: "本周deepseek的最新动态"
+    asked_at: 2026-08-06T16:50:06.303452+00:00
+    category: recent_updates
+    answerable: true
+    relevant_items:
+      # [被引用] #2 量子位 · 2026-08-04 · DeepSeek V4 Flash低价风暴席卷硅谷
+      - {id: d7b271d1-2074-419d-981a-3a35bfc9d726, grade: 2}
+      # [被引用] #1 雷峰网 · 2026-08-04 · 三星收缩中国手机业务；阿里发布Qwen3.8-Max；DeepSeek日处理8万亿Token
+      - {id: 5140c916-40a6-48e5-9a96-f8fcc1a98da0, grade: 2}
+      # [被引用] #3 llama.cpp Releases · 2026-08-04 · b10254 新增 DeepSeek V4 Flash 0731 模板（第三方支持）
+      - {id: 26584561-9d8f-41d1-854b-00a4820a518b, grade: 1}
+      # [被引用] #4 HF · 2026-08-04 · bartowski 发布 DeepSeek-V4-Flash-0731 MXFP4 量化版
+      - {id: 7de3bb19-d570-4266-9967-2c2513447eea, grade: 1}
+      # [被引用] #5 HF · 2026-08-04 · AtomicChat 发布 DeepSeek-V4-Flash GGUF 量化版
+      - {id: 3d7b5ac5-11fb-4a58-b6bf-82d9e0ca6477, grade: 1}
+    expected_query_type: recent_updates
+    expected_entities: ["DeepSeek"]
+    notes: >-
+      这题早于 rag_trace，只能看见被引用的 5 篇，看不到检索丢弃了什么——所以它能测
+      精确率，测不了召回。三条 grade 1 都是「别人围绕 DeepSeek 做的事」而不是
+      DeepSeek 自己的动态，考一手消息与二手支持的分层。
+
+  # 挖出的理由: weak_support · 最低支持度 0.0
+  - id: RAG-GOLD-096
+    question: "最近的kimi的动态"
+    asked_at: 2026-08-04T16:11:58.438311+00:00
+    category: recent_updates
+    answerable: true
+    relevant_items:
+      # [被引用] #3 雷峰网 · 2026-07-31 · Kimi K3疑以Kivine之名现身LMArena
+      - {id: 322c42df-050b-4e97-ba54-eb21571a71af, grade: 2}
+      # [被引用] #7 雷峰网 · 2026-07-31 · Kimi K3开源背后：401位贡献者全档案
+      - {id: 39db5867-b245-4569-86d0-1c1b6ec90808, grade: 2}
+      # [被引用] #2 Hugging Face Blog · 2026-08-01 · Kimi K3 等模型发布与技术教程
+      - {id: 5878504d-1206-45e9-9665-a63eed86460c, grade: 2}
+      # [被引用] #8 Interconnects AI · 2026-08-02 · Inkling、Hy3、Kimi K3 帕累托前沿
+      - {id: ac52d6e1-d0b1-4c94-820e-a46f73b595a6, grade: 2}
+      # [被引用] #4 雷峰网 · 2026-08-04 · 三星/阿里/DeepSeek 综述（含月之暗面杨植麟）
+      - {id: 5140c916-40a6-48e5-9a96-f8fcc1a98da0, grade: 1}
+    expected_query_type: recent_updates
+    expected_entities: ["Kimi"]
+    notes: >-
+      9 篇引用里 4 篇跟 Kimi 无关（两篇 Latent Space 周报、一篇 Qwen3.8-Max、
+      一篇 THE DECODER 阿里）。同为"AI 近况"的宽泛语境，实体约束没生效。
+
+  # 挖出的理由: weak_support · 最低支持度 0.0001
+  - id: RAG-GOLD-097
+    question: "最近grok有什么动态吗"
+    asked_at: 2026-08-04T15:36:19.307950+00:00
+    category: recent_updates
+    answerable: true
+    relevant_items:
+      # [被引用] #1 xAI News · 2026-08-03 · Grok 4.5：最强编码与智能体模型
+      - {id: 75c85058-1799-4981-89c7-5ee06338f50a, grade: 2}
+      # [被引用] #2 xAI News · 2026-08-01 · Grok 4.5 全面登陆多平台并集成 Office
+      - {id: eb142b68-66fc-492d-989a-db7f8b9b9450, grade: 2}
+      # [被引用] #4 xAI News · 2026-08-01 · Grok Voice Think Fast 2.0 语音模型
+      - {id: 6a2dea58-ffb7-4af9-8f82-44f6f549841b, grade: 2}
+      # [被引用] #5 xAI News · 2026-08-01 · Grok Connectors
+      - {id: 52cf9afd-ff22-4ae5-8bfa-0ec86b9edd90, grade: 2}
+      # [被引用] #6 xAI News · 2026-08-01 · Grok Build 编码代理 CLI 早期测试版
+      - {id: 3862d08b-1b48-4a59-9502-2f657dd80cae, grade: 2}
+      # [被引用] #3 xAI News · 2026-08-02 · 免费开放 Grok-2
+      - {id: b184b1cd-c954-4f4f-b8fc-5d47120853d8, grade: 1}
+      # [被引用] #8 xAI News · 2026-08-02 · Grok-2 / Grok-2 mini 测试版（信源回填的旧稿）
+      - {id: d6a6b172-0d11-4f2d-80ee-8201cbe313db, grade: 1}
+      # [被引用] #9 xAI News · 2026-08-02 · Grok-1.5V 多模态模型（信源回填的旧稿）
+      - {id: 5d0b6fc9-b423-4d5c-989f-d8e704285b5b, grade: 1}
+      # [被引用] #10 xAI News · 2026-08-02 · xAI 完成 60 亿美元 B 轮融资（信源回填的旧稿，且非产品动态）
+      - {id: 9b1656bc-2799-4fe4-b9e5-bba5d88b3ca7, grade: 1}
+    expected_query_type: recent_updates
+    expected_entities: ["Grok", "xAI"]
+    notes: >-
+      顺手挖出一个数据质量问题：xAI 信源把 Grok-2 测试版、Grok-1.5V、B 轮融资这些
+      2024 年的旧稿按 2026-08-02 回填了进来。四条 grade 1 就是这批。留着是有意的——
+      时间窗正确但内容陈旧，正是"日期可信"这个假设该被检验的地方。
+
+  # 挖出的理由: weak_support · 最低支持度 0.0003
+  - id: RAG-GOLD-098
+    question: "最近codex又信息吗"
+    asked_at: 2026-08-04T14:45:28.423736+00:00
+    category: recent_updates
+    answerable: true
+    relevant_items:
+      # [被引用] #1 Latent Space · 2026-07-28 · Codex 用户破千万：OpenAI 如何让代理惠及知识工作者
+      - {id: 5b838f96-9d8e-417c-8db0-22a46c699463, grade: 2}
+    expected_query_type: recent_updates
+    expected_entities: ["Codex"]
+    notes: >-
+      原样保留错字（「又信息」＝「有信息」），考的就是错字下实体还认不认得出。
+      8 篇引用里只有 1 篇跟 Codex 有关，其余 7 篇是 Mastra、BAAI、Anthropic 状态页、
+      雷峰网综述——大面积跑偏。只有一条相关文档，召回全或全无，信号很干净。
+
+  # 挖出的理由: weak_support · 最低支持度 0.1142
+  - id: RAG-GOLD-099
+    question: "llama.cpp 最近发布了哪些版本？"
+    asked_at: 2026-08-04T18:01:38.756907+00:00
+    category: recent_updates
+    answerable: true
+    relevant_items:
+      # 全部 10 篇都是 2026-07-31 ~ 08-04 的 llama.cpp Releases，无一例外
+      - {id: d0cff149-7cca-4130-89b3-b9f4ad5c9944, grade: 2}   # b10253
+      - {id: 8c4b9c40-5509-4cbd-9e00-cbc2a2aa72f3, grade: 2}   # b10228
+      - {id: 7a7232f6-5fac-473f-933d-da4f32617cc0, grade: 2}   # b10240
+      - {id: 9840f4e6-3101-4739-b2fc-1d02309b25cc, grade: 2}   # b10218
+      - {id: f1513d17-95b5-4b07-b10e-7eb62311d00f, grade: 2}   # b10238
+      - {id: ab868f90-e76b-4e80-8dda-4c11cd4bb014, grade: 2}   # b10212
+      - {id: 30da78c8-9866-4b9c-84b6-5e6e2b4d2e72, grade: 2}   # b10252
+      - {id: 68d3a703-17f7-4117-824a-22120d067861, grade: 2}   # b10268
+      - {id: fdf9f070-fb90-4d41-8d10-28bf27dd1bfd, grade: 2}   # b10250
+      - {id: 74b76cdf-4516-432a-ab69-fa87cb8ebe4f, grade: 2}   # b10251
+    expected_query_type: recent_updates
+    expected_entities: ["llama.cpp"]
+    notes: >-
+      对照组：10 篇全对，一篇没跑偏。放进来是为了让「全对」在这批新题里有个基准——
+      如果哪次改动连这题都掉了，问题一定在检索侧而不在题目上。
+
+  # 挖出的理由: refused
+  - id: RAG-GOLD-100
+    question: "智谱最近有什么模型发布？"
+    asked_at: 2026-08-10T13:54:23.683499+00:00
+    category: abstention
+    answerable: false
+    presupposition: "语料收录了智谱（Z.ai / GLM）自己发布模型的消息"
+    relevant_items: []
+    must_not_claim: ["Qwen3.6", "PaddleOCR", "Alpamayo"]
+    expected_query_type: recent_updates
+    expected_entities: ["智谱"]
+    notes: >-
+      这题挖出的是采集缺陷，不是检索缺陷，也不是覆盖缺口——我最初判断成"信源库里
+      没有智谱官方源"，那是错的。glm-new-releases 一直配着、enabled、ACTIVE、
+      连续失败 0、最近一次成功 08-28，而库里只有 1 条内容。原因见
+      docs/status/eval/golden-refresh-20260830.md：changelog 的每条都是同一页面的
+      一个 #锚点，而 canonicalize_url 按通用规则丢掉 fragment，于是 26 条发布
+      哈希成同一个 URL，唯一索引留下第一条。GLM-5.1/5.2/5.3/5.3-Flash 全在页面上。
+      提问当时（08-10）语料里确实没有这些文档，所以 answerable: false 对快照成立；
+      修好之后该重跑这题——它很可能变成一道可答题，那本身就是这条修复的验收。
+      候选里唯一沾边的是第三方对 zai-org/GLM-5.2 的量化重打包，能说明 GLM-5.2 存在，
+      但不等于"智谱发布了什么"。因此 must_not_claim 里不放 GLM：合格的拒答会提到它。
+      三道同义提问（08-09 一次、08-10 两次）只留这一道，另两道记在 dropped。
+
+  # 挖出的理由: refused
+  - id: RAG-GOLD-101
+    question: "DeepSeek 在 2026 年 8 月收购 OpenAI 的细节是什么？"
+    asked_at: 2026-08-28T19:26:38.082787+00:00
+    category: abstention
+    answerable: false
+    presupposition: "DeepSeek 在 2026 年 8 月收购了 OpenAI"
+    relevant_items: []
+    must_not_claim: ["DeepSeek 收购 OpenAI", "收购 OpenAI"]
+    expected_query_type: fact_check
+    expected_entities: ["DeepSeek", "OpenAI"]
+    notes: >-
+      B 型，近邻干扰最密的一道。同一时间窗里真实存在三桩收购——OpenAI 收购
+      NextSlide、Stripe 收购 OpenRouter、AMD 收购 Taalas——语料完全够"顺着编"。
+      拒答必须点破前提为假，只说"没有找到"算不够。
+
+  # 挖出的理由: refused
+  - id: RAG-GOLD-102
+    question: "2026 年 8 月这一周 Anthropic 有什么动作？"
+    asked_at: 2026-08-28T19:26:16.617248+00:00
+    category: timeline
+    answerable: true
+    relevant_items:
+      # [预算已满] #17 Simon Willison's Weblog · 2026-08-23 · Anthropic最强模型因成本高采用率低
+      - {id: 95d5952e-d4db-4bc4-b840-cd619bf8c564, grade: 2}
+    expected_query_type: timeline
+    expected_time: {from: 2026-08-22, to: 2026-08-28}
+    expected_entities: ["Anthropic"]
+    notes: >-
+      时间窗题。「这一周」＝08-22~08-28，落在窗内的候选只有 1 篇，而检索捞回来 18 篇，
+      其余全在 08-11~08-19——问的是一周，取的是一个月，且唯一在窗内的那篇被排到
+      第 17 位、因预算已满被丢掉。考时间约束到底有没有参与排序，不只是有没有解析出来。
+
+  # 挖出的理由: new_source · 最低支持度 0.3645
+  - id: RAG-GOLD-103
+    question: "MiniMax 最近有什么动态？"
+    asked_at: 2026-08-10T03:27:32.364521+00:00
+    category: recent_updates
+    answerable: true
+    relevant_items:
+      # [被引用] #1 HF · 2026-08-09 · MiniMax 发布全模态生成系统 H3，支持 2K 视频与原生音频
+      - {id: 205591fb-e29c-41ff-82c2-7d53cddccb5e, grade: 2}
+      # [被引用] #7 HF · 2026-08-06 · MiniMax-H3 GGUF 量化版（第三方）
+      - {id: acd0b88d-52c5-4a39-8561-5fd1315ce1c3, grade: 1}
+      # [同信源超额] #13 HF · 2026-08-07 · MiniMax H3 FP8 量化模型
+      - {id: 91ce7213-77f5-4c84-82de-b67d0cc62c28, grade: 1}
+      # [同信源超额] #14 HF · 2026-08-08 · MiniMax H3 量化版：支持 ComfyUI 多格式
+      - {id: 306fc16f-ea49-4ab6-b3b1-cfd9388fb23f, grade: 1}
+      # [同信源超额] #15 HF · 2026-08-06 · MiniMax H3 GGUF 量化版本
+      - {id: 41808fc0-a388-4918-8b88-0972eccd2197, grade: 1}
+      # [同信源超额] #18 HF · 2026-08-04 · MiniMax-H3 GGUF 量化版，支持文本生成视频
+      - {id: 80463123-a85b-4996-b8ec-e53d954c0266, grade: 1}
+    expected_query_type: recent_updates
+    expected_entities: ["MiniMax"]
+    notes: >-
+      一次原始发布 + 五个第三方量化重打包。考的是同信源上限与故事折叠有没有把
+      五条同质量化压下去、把原始发布顶上来——重打包全部 grade 1 就是这个意思。
+      引用里的 Latent Space 周报和雷峰网综述与 MiniMax 无关，已删。
+
+  # 挖出的理由: new_source · 最低支持度 0.4622
+  - id: RAG-GOLD-104
+    question: "现在有什么信源？"
+    asked_at: 2026-08-09T11:45:15.643181+00:00
+    category: abstention
+    answerable: false
+    presupposition: "语料里记载了本站收录了哪些信源"
+    relevant_items: []
+    must_not_claim: ["llama.cpp"]
+    expected_query_type: explainer
+    notes: >-
+      元问题：问的是系统自己的配置（在 config/sources.yaml 里），不是语料内容。
+      检索捞回来 15 篇全是 llama.cpp Releases，一篇不落。RAG 对新闻语料检索
+      永远答不了这类问题，正确行为是说明它不在可回答范围内。
+
+  # 挖出的理由: new_source · 最低支持度 0.6485
+  - id: RAG-GOLD-105
+    question: "Qwen 系列模型的发布顺序是怎样的？"
+    asked_at: 2026-08-09T12:11:55.776557+00:00
+    category: timeline
+    answerable: true
+    relevant_items:
+      # [被引用] #2 Qwen Model Repository Activity · 2026-01-09 · Qwen3-2507 更新，支持百万级上下文
+      - {id: 1a5577f7-4dc4-4cca-ad42-3332a3616477, grade: 2}
+      # [被引用] #18 THE DECODER · 2026-08-03 · 阿里发布 2.4 万亿参数 Qwen3.8-Max
+      - {id: 6081607a-9e0c-4f31-9a7c-14c9271053e6, grade: 2}
+      # [被引用] #1 Latent Space · 2026-08-07 · 摘录直接写明 Qwen3.8-2.4T-A95B / Qwen3.8-Max 的发布先后
+      - {id: 57cde5a2-e3af-4d35-94f9-461ef1319bf9, grade: 2}
+      # [进证据未引用] #4 Latent Space · 2026-08-04 · Qwen3.8-Max发布：2.4T参数开源模型
+      - {id: 699453fe-e7e9-433e-a12f-4856e953d4bf, grade: 2}
+      # [进证据未引用] #16 量子位 · 2026-08-03 · 阿里发布Qwen3.8-Max
+      - {id: 845e4161-2365-426a-a856-d7a601a0bf09, grade: 2}
+      # [被引用] #6 HF · 2026-08-07 · Red Hat 发布 Qwen3.6-35B-A3B FP8（佐证 Qwen3.6 存在）
+      - {id: 2d736d78-cb27-4c6a-82b1-2a4bbaa4c015, grade: 1}
+      # [被引用] #3 Ahead of AI · 2026-02-25 · 2026年初开源LLM架构综述（含 Qwen 对比）
+      - {id: 2d2d53ec-89f4-4515-b80b-ed23cfe8441e, grade: 1}
+      # [进证据未引用] #9 Interconnects AI · 2026-07-22 · 开放模型综述：Kimi K3、Qwen 3.8
+      - {id: 2fa0bae4-facb-49e9-944c-38ad3c76beeb, grade: 1}
+    expected_query_type: timeline
+    expected_time: no_window
+    expected_entities: ["Qwen"]
+    notes: >-
+      少见的真·timeline 题，而且是这批里唯一一道要求跨半年拼时间线的：证据从
+      2026-01 的 Qwen3-2507 一直排到 2026-08 的 Qwen3.8-Max。expected_time 标成
+      no_window 是有意的——问顺序不等于问最近，把它裁进时间窗反而会漏掉早期证据。
+
+  # 挖出的理由: new_source · 最低支持度 0.6603
+  - id: RAG-GOLD-106
+    question: "最近openai动态"
+    asked_at: 2026-08-30T02:35:23.515566+00:00
+    category: recent_updates
+    answerable: true
+    relevant_items:
+      # [被引用] #1 Latent Space · 2026-08-28 · OpenAI预计2026年底实现AGI，多款AI硬件与模型发布
+      - {id: 52358d91-f2b1-468b-a2cf-19f3c1012955, grade: 2}
+      # [被引用] #2 Latent Space · 2026-08-27 · OpenAI发布Jalapeño推理芯片，性能超越Blackwell
+      - {id: 0eebbc5c-5b3d-4eae-a85e-fe6c821d81cf, grade: 2}
+      # [被引用] #3 OpenAI Java SDK Releases · 2026-08-26 · v4.53.0
+      - {id: 0df28de9-aa52-4b71-ac77-838c2c235913, grade: 1}
+      # [进证据未引用] #4 OpenAI Node SDK Releases · 2026-08-27 · v7.8.0
+      - {id: 260f7fa3-ac40-41fd-957d-7f4354ae3e11, grade: 1}
+      # [进证据未引用] #5 OpenAI Node SDK Releases · 2026-08-27 · v7.7.0
+      - {id: 77045024-f2cf-45e7-9768-a2ada6b5662b, grade: 1}
+      # [进证据未引用] #6 OpenAI Java SDK Releases · 2026-08-27 · v4.54.0
+      - {id: e810622f-eb5c-48aa-bc00-39721a24179d, grade: 1}
+      # [进证据未引用] #7 OpenAI Python SDK Releases · 2026-08-27 · v3.5.0
+      - {id: 3224c539-9279-4eab-a49a-5fae9866a832, grade: 1}
+    expected_query_type: recent_updates
+    expected_entities: ["OpenAI"]
+    notes: >-
+      七条相关里五条是 SDK 版本号更新，且三条讲的是同一件事（function call output ID
+      变可选，在 Node / Java / Python 三个 SDK 各发一次）。用户问"动态"想要的是新闻，
+      不是三份内容相同的 changelog。故事折叠该在这里生效——全给 grade 1 就是留出
+      判据：把它们排到 AGI 时间表和自研芯片之前就是排序错了。
+
+  # 挖出的理由: new_source · 最低支持度 0.6956
+  - id: RAG-GOLD-107
+    question: "这个网站现在收录了多少条内容？"
+    asked_at: 2026-08-09T12:15:10.581708+00:00
+    category: abstention
+    answerable: false
+    presupposition: "语料里记载了本站收录的内容条数"
+    relevant_items: []
+    expected_query_type: explainer
+    notes: >-
+      与 RAG-GOLD-104 同一类：问系统自己的运行状态，答案在数据库计数里而不在语料里。
+      两道都留是有意的——104 问配置、107 问计数，措辞完全不同，一起考能看出拒答
+      是靠识别了"元问题"这个类别，还是只背下了某几个词。
+
+  # 挖出的理由: new_source · 最低支持度 0.7107
+  - id: RAG-GOLD-108
+    question: "最近一周 llama.cpp 修复了哪些问题？"
+    asked_at: 2026-08-30T03:23:05.562311+00:00
+    category: recent_updates
+    answerable: true
+    relevant_items:
+      # [被引用] #1 llama.cpp b10593 · 修复 DeepseekV4 多序列回滚
+      - {id: 6e17be01-1d37-4c65-97c8-8a08a24d3fc2, grade: 2}
+      # [进证据未引用] #7 llama.cpp b10598 · correct resize_algo，修复图像缩放
+      - {id: c32c3501-a507-45f1-bc87-438a1d9c02f4, grade: 2}
+      # [被引用] #3 llama.cpp b10589 · 新增 CUDA POOL_1D（是新增不是修复）
+      - {id: ff317beb-6a54-46a9-a3eb-4667c14c3903, grade: 1}
+      # [被引用] #4 llama.cpp b10590 · 更新 subprocess.h（依赖升级）
+      - {id: ef9df677-d9ab-4067-a5fa-618fcc33a50d, grade: 1}
+      # [被引用] #5 llama.cpp b10594 · 优化 GPU 资源使用（优化）
+      - {id: eb23e130-5bd5-486e-9255-1a9de4466336, grade: 1}
+      # [进证据未引用] #6 llama.cpp b10595 · 新增 LLAMA_SERVER_SLOTS_N_DIFF（新增）
+      - {id: ab2ab414-337e-4581-9668-0156ce632f28, grade: 1}
+      # [被引用] #12 llama.cpp b10599 · 工具解析器迁移至测试目录（重构）
+      - {id: 61eb5ccf-a2ad-45c7-98bf-ebffc5567b87, grade: 1}
+      # [被引用] #15 llama.cpp b10603 · 支持 GLM-4.5-Air MTP（新增）
+      - {id: 49363ac6-0833-465f-9e89-c534fddff17e, grade: 1}
+    expected_query_type: recent_updates
+    expected_time: {from: 2026-08-23, to: 2026-08-30}
+    expected_entities: ["llama.cpp"]
+    notes: >-
+      时间窗全部命中（候选清一色 08-23），所以这题不考时间，考的是"修复"与"新增/
+      优化/重构"分不分得开——只有 2 条真的是 fix，其余 6 条是别的改动类型。
+      与 RAG-GOLD-099 成对：那道全 grade 2 是基准，这道靠 grade 1 记录区分能力。
+
+  # 挖出的理由: new_source · 最低支持度 0.7189
+  - id: RAG-GOLD-109
+    question: "codex近段的额度调整新闻"
+    asked_at: 2026-08-30T03:32:13.560903+00:00
+    category: abstention
+    answerable: false
+    presupposition: "语料收录了 Codex 近期调整额度/配额的消息"
+    relevant_items: []
+    must_not_claim: ["Deepseek", "Sonnet 5"]
+    expected_query_type: recent_updates
+    expected_entities: ["Codex"]
+    notes: >-
+      B 型。Codex 在语料里有（RAG-GOLD-098 那篇），但没有任何一篇讲它的额度调整。
+      答案引的第一篇是"Deepseek 上调 API 价格"——实体错了，只有"涨价"这个方面对上。
+      考的是问题的两个约束（实体 + 方面）必须同时满足，满足一个不算命中。

@@ -191,6 +191,64 @@ def cmd_usage(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_golden_candidates(args: argparse.Namespace) -> int:
+    """Shortlist real questions worth annotating into the golden set.
+
+    Read-only, and deliberately stops at a shortlist: the annotation it feeds
+    is the one step that must stay human, because a model labelling the set it
+    will be graded on writes the exam and sits it.
+    """
+    from ahr.rag.eval.candidates import mine
+    from ahr.rag.eval.golden import load_golden_set
+
+    # Evaluation replays the golden set through the same pipeline and writes it
+    # to the same table. Without this the miner reads the set back to itself.
+    golden = load_golden_set(Path(args.golden), require_full=False)
+    replayed = frozenset(question.question.strip() for question in golden.questions)
+
+    with psycopg.connect(get_settings().database_url) as connection:
+        result = mine(
+            connection,
+            cutoff=args.cutoff,
+            days=args.days,
+            limit=args.limit,
+            exclude_questions=replayed,
+        )
+
+    written: dict[str, Any] = {
+        "by_band": result["by_band"],
+        "golden_replays_skipped": result["golden_replays_skipped"],
+    }
+    payload = json.dumps(result, indent=2, ensure_ascii=False)
+    if args.output:
+        Path(args.output).write_text(payload, encoding="utf-8")
+        written["output"] = args.output
+
+    if args.worksheet:
+        from ahr.rag.eval.worksheet import render
+
+        with psycopg.connect(get_settings().database_url) as connection:
+            sheet = render(connection, result["candidates"], category=args.category)
+        Path(args.worksheet).write_text(sheet, encoding="utf-8")
+        written["worksheet"] = args.worksheet
+        written["questions"] = len(result["candidates"])
+
+    if args.output or args.worksheet:
+        print(json.dumps(written, ensure_ascii=False))
+    else:
+        print(payload)
+    return 0
+
+
+def cmd_golden_validate(args: argparse.Namespace) -> int:
+    """Refuse a half-filled annotation sheet before it becomes a golden file."""
+    from ahr.rag.eval.worksheet import validate
+
+    problems = validate(Path(args.path).read_text(encoding="utf-8"))
+    print(json.dumps({"path": args.path, "problems": problems}, indent=2, ensure_ascii=False))
+    return 1 if problems else 0
+
+
 def cmd_heat(args: argparse.Namespace) -> int:
     from ahr.processing.heat import rescore
 
@@ -1369,6 +1427,36 @@ def main(argv: list[str] | None = None) -> int:
     usage = sub.add_parser("usage", help="report recorded LLM token usage")
     usage.add_argument("--days", type=int, default=30)
     usage.set_defaults(func=cmd_usage)
+
+    candidates = sub.add_parser(
+        "golden-candidates",
+        help="shortlist real questions worth annotating into the golden set",
+    )
+    candidates.add_argument(
+        "--cutoff",
+        default="2026-08-03T23:59:00+08:00",
+        help="frozen corpus boundary of the published snapshot",
+    )
+    candidates.add_argument("--days", type=int, default=90)
+    candidates.add_argument("--limit", type=int, default=60)
+    candidates.add_argument("--output")
+    candidates.add_argument(
+        "--worksheet",
+        help="also write an annotation sheet in golden-set YAML with blank grades",
+    )
+    candidates.add_argument("--category", default="mixed", help="category for the worksheet")
+    candidates.add_argument(
+        "--golden",
+        default="/app/data/golden",
+        help="golden set whose questions are evaluation replays, not real traffic",
+    )
+    candidates.set_defaults(func=cmd_golden_candidates)
+
+    validate = sub.add_parser(
+        "golden-validate", help="check a filled annotation sheet before it becomes a golden file"
+    )
+    validate.add_argument("path")
+    validate.set_defaults(func=cmd_golden_validate)
 
     support = sub.add_parser(
         "backfill-support", help="score citations that predate support scoring"

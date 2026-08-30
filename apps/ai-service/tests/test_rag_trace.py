@@ -189,9 +189,14 @@ def test_nothing_in_the_pipeline_reads_the_trace_back() -> None:
 def test_a_failed_trace_write_does_not_lose_the_answer() -> None:
     source = inspect.getsource(service.answer_question)
     persisted = source.index("persist_trace(")
-    guarded = source[persisted - 400 : persisted + 300]
+    # Bounded by the block's own delimiters rather than by a character count.
+    # A fixed ±300 window broke the moment a comment was added inside the try,
+    # which says nothing about whether the guard is still there.
+    opened = source.rindex("try:", 0, persisted)
+    handled = source.index("retrieval trace not stored", persisted)
+    guarded = source[opened:handled]
 
-    assert "try:" in guarded
+    assert "except" in guarded
     assert "rollback" in guarded
     # And it happens after the answer itself is committed.
     assert source.index("_persist(connection, result)") < persisted

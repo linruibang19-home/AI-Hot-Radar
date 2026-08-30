@@ -272,3 +272,68 @@ def test_boosts_skip_items_without_metadata() -> None:
     assert [hit.chunk_id for hit in boosted] == ["c", "d"]
     assert boosted[0].score == pytest.approx(1.0)
     assert boosted[1].score == pytest.approx(0.0)
+
+
+# --- more than one time expression in one question -------------------------
+#
+# Measured live on 2026-08-29: 「今天是几号？最接一周内 deepseek 有什么动态吗」
+# resolved to 今天, retrieved nothing and was refused, while the same question
+# without the leading clause answered from eight sources. It was the only stored
+# query that ever resolved to 今天, and the only one that came back empty.
+
+
+def test_asking_what_the_date_is_does_not_narrow_the_window() -> None:
+    """「今天是几号」 asks for the date; it says nothing about the content."""
+    window = resolve_time_range("今天是几号？最近一周内 deepseek 有什么动态吗", ASKED_AT)
+    assert window is not None
+    assert window.end - window.start == timedelta(days=7)
+
+
+def test_a_bare_date_question_carries_no_window_of_its_own() -> None:
+    assert resolve_time_range("今天是几号", ASKED_AT) is None
+
+
+def test_today_still_means_today_when_it_is_the_constraint() -> None:
+    """The clause has to be removed only where it is asking for the date."""
+    window = resolve_time_range("今天 deepseek 有什么动态", ASKED_AT)
+    assert window is not None
+    assert window.end - window.start == timedelta(days=1)
+    assert window.label == "今天"
+
+
+def test_the_widest_expression_wins_when_several_are_named() -> None:
+    """Narrowing is the dangerous direction.
+
+    A window that is too wide sends extra candidates through the same reranker;
+    one that is too narrow removes the answer before anything can rank it.
+    """
+    window = resolve_time_range("今天开完会了，最近一周有什么模型发布", ASKED_AT)
+    assert window is not None
+    assert window.end - window.start == timedelta(days=7)
+
+
+def test_an_explicit_count_still_beats_the_vague_fallback() -> None:
+    """「最近」 is the absence of a span, not a span of seven days to compare with.
+
+    Collecting it as a candidate and taking the widest made 「最近 3 天」 resolve
+    to seven, because the phrase matches both the count and the fallback.
+    """
+    window = resolve_time_range("最近 3 天 llama.cpp 修复了什么", ASKED_AT)
+    assert window is not None
+    assert window.end - window.start == timedelta(days=3)
+
+
+@pytest.mark.parametrize(
+    ("question", "days"),
+    [
+        ("最近两周 deepseek 有什么动态", 14),
+        ("最近三十天的开源项目", 30),
+        ("过去十天有什么新模型", 10),
+        ("最近一周内 deepseek 有什么动态吗", 7),
+    ],
+)
+def test_chinese_numerals_count_as_numbers(question: str, days: int) -> None:
+    """Digits-only patterns sent 「最近两周」 to the seven-day fallback in silence."""
+    window = resolve_time_range(question, ASKED_AT)
+    assert window is not None
+    assert window.end - window.start == timedelta(days=days)

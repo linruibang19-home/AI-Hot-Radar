@@ -254,6 +254,40 @@ def load_chunk_texts(connection: Any, chunk_ids: list[str]) -> dict[str, str]:
         }
 
 
+#: How much of a passage a citation preview carries. Long enough to hold the
+#: sentence a claim rests on, short enough to read without leaving the answer.
+EXCERPT_CHARS = 260
+
+
+def load_chunk_excerpts(
+    connection: Any, chunk_ids: list[str], *, chars: int = EXCERPT_CHARS
+) -> dict[str, str]:
+    """Verbatim passage text, for showing a reader what a citation stands on.
+
+    Deliberately *not* `load_chunk_texts`: that one prepends the title, source
+    and date header the bi-encoder saw at index time, which is right for
+    ranking and wrong here — a reader hovering a citation to check a claim
+    would be shown a header this system composed, presented as the source's
+    own words.
+
+    `body_text` is stored verbatim precisely so a citation stays checkable
+    against the original, and this is the read that finally uses that.
+    """
+    if not chunk_ids:
+        return {}
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT id::text, left(body_text, %s)
+              FROM content_chunk
+             WHERE id = ANY(%s::uuid[])
+            """,
+            (chars, chunk_ids),
+        )
+        return {row[0]: (row[1] or "").strip() for row in cursor.fetchall()}
+
+
 def load_item_metadata(connection: Any, item_ids: list[str]) -> dict[str, dict[str, Any]]:
     """Source tier, content type, publication time and §6's two structural flags.
 

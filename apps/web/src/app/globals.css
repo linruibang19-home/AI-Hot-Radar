@@ -1,4 +1,14 @@
 :root {
+  /* This design is light-only — there is no dark palette anywhere in this file,
+     and every surface sets its own colour. Saying so matters anyway: without
+     the declaration the UA falls back to `prefers-color-scheme` for the parts
+     it draws itself, so a reader in dark mode gets a dark scrollbar against a
+     light page, and the mobile browsers that force-darken undeclared documents
+     (common on Android in this site's audience) will invert the whole thing.
+     Verified on desktop Chromium under dark emulation: the page content stays
+     light because the CSS is explicit; this covers what the CSS cannot reach. */
+  color-scheme: light;
+
   --bg: #f6f7f8;
   --surface: #ffffff;
   --border: #e6e7e5;
@@ -17,14 +27,14 @@
      各自往下调，攒出 199 处声明、49 种取值，其中 42 处 ≤11px，最小 9px。中文
      在 12px 以下已经不适合成句阅读，而正文摘要停在 13.5px。
      这八档是全站可用的全部字号，新增层级请复用而不是再引入新值。 */
-  --fs-xs: 12px;    /* 角标、计数、时间戳：不成句的内容 */
-  --fs-sm: 13px;    /* 元信息、次要标注 */
-  --fs-base: 14px;  /* 表格、密集列表 */
-  --fs-md: 15px;    /* 正文：一切成句的中文 */
-  --fs-lg: 16px;    /* 卡片标题、列表主标题 */
-  --fs-xl: 20px;    /* 区块标题 */
-  --fs-2xl: 27px;   /* 页面标题 */
-  --fs-3xl: 40px;   /* 数值大字 */
+  --fs-xs: 12px; /* 角标、计数、时间戳：不成句的内容 */
+  --fs-sm: 13px; /* 元信息、次要标注 */
+  --fs-base: 14px; /* 表格、密集列表 */
+  --fs-md: 15px; /* 正文：一切成句的中文 */
+  --fs-lg: 16px; /* 卡片标题、列表主标题 */
+  --fs-xl: 20px; /* 区块标题 */
+  --fs-2xl: 27px; /* 页面标题 */
+  --fs-3xl: 40px; /* 数值大字 */
 }
 
 * {
@@ -35,8 +45,13 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC",
-    "Microsoft YaHei", sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
   font-size: var(--fs-md);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -75,7 +90,9 @@ a {
    makes the divider lag the pointer. The dragging class is set on <html>. */
 :root:not(.sidebar-dragging) .sidebar,
 :root:not(.sidebar-dragging) .main {
-  transition: width 0.18s ease, margin-left 0.18s ease;
+  transition:
+    width 0.18s ease,
+    margin-left 0.18s ease;
 }
 
 .main-inner {
@@ -120,9 +137,11 @@ a {
    deliberately heavier and darker than the links beneath them. */
 .nav-label {
   font-size: var(--fs-base);
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: 0.12em;
+  font-weight: 800;
+  /* `--text` at 0.12em tracking on a tinted sidebar came out lighter than the
+     links under it, which inverts the hierarchy the heading exists to state. */
+  color: var(--ink);
+  letter-spacing: 0.1em;
   margin: 0 0 10px;
   padding: 0 10px;
 }
@@ -146,7 +165,10 @@ a {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
 }
 
 .nav-icon {
@@ -154,7 +176,9 @@ a {
   height: 17px;
   flex-shrink: 0;
   opacity: 0.85;
-  transition: opacity 0.16s ease, transform 0.16s ease;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 
 .nav-link:hover {
@@ -224,7 +248,6 @@ a {
   }
 }
 
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -268,7 +291,10 @@ a {
   background: var(--border);
   opacity: 0;
   transform: scaleY(0.5);
-  transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    background 0.15s ease;
 }
 
 .sidebar-resizer:hover .sidebar-resizer-grip,
@@ -435,9 +461,15 @@ a {
   margin: 0;
 }
 
+/* The text is small on purpose — it sits beside a heading and must not compete
+   with it — but the *target* does not have to be. Measured at 375px it was
+   21px tall, under the 24px WCAG 2.5.8 asks for, so the padding grows the hit
+   area without changing what the line looks like. */
 .hot-more {
   font-size: var(--fs-sm);
   color: var(--accent);
+  padding: 6px 2px;
+  margin: -6px -2px;
 }
 
 .hot-more:hover {
@@ -665,12 +697,16 @@ a {
   color: var(--muted);
 }
 
+/* The publisher, which is the subject of the card's header row.
+   It was the quietest thing in it — grey, 12px — while three coloured chips
+   beside it shouted. A reader scanning the feed is deciding *who is saying
+   this*; the tags qualify that answer and should not outrank it. */
 .card-source {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--ink);
 }
 
 .card-heat {
@@ -739,22 +775,20 @@ a {
 
 .tag {
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 1px 8px;
-  font-size: var(--fs-xs);
-  color: var(--muted);
 }
 
+/* Two of these still carry meaning worth a tint — a first-party source and an
+   editor's pick — but at the weight of a footnote rather than a banner. */
 .tag-primary {
-  background: var(--accent-soft);
-  border-color: transparent;
-  color: var(--accent-ink);
+  background: transparent;
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: color-mix(in srgb, var(--accent-ink) 78%, transparent);
 }
 
 .tag-curated {
-  background: #fdf6e3;
-  border-color: transparent;
-  color: #8a6d1f;
+  background: transparent;
+  border-color: #e3d5a8;
+  color: #9a7d2f;
 }
 
 /* ---------- topic map ---------- */
@@ -1154,12 +1188,36 @@ summary:focus-visible {
     display: none;
   }
 
+  /* The nav becomes a horizontal strip here, and the scrollbar is hidden
+     because a permanent grey bar under seven pills is noise on a phone.
+     Hiding it without any other cue was the mistake: measured at 375px the
+     strip holds 651px of content in 351px, so 精选 / 全部 AI 动态 / 热点榜 /
+     事件追踪 are visible and AI 日报 / 主题地图 / **AI 问答** are not — the
+     RAG feature this project is built around, reachable only by guessing that
+     the row swipes.
+
+     The mask fades the last 26px so the strip visibly continues. Letting it
+     wrap instead was measured too: it costs 75px of height on every page and
+     puts the 内容 group on three lines, which is worse on an 812px screen
+     than a soft edge. */
   .nav-list {
     display: flex;
     gap: 5px;
     overflow-x: auto;
     padding-bottom: 2px;
     scrollbar-width: none;
+  }
+
+  /* Only the group that actually overflows gets a soft edge: 工程 has three
+     entries and fits, 内容 has seven and does not. Where `:has` is missing the
+     rule simply does not apply, which is today's behaviour. */
+  .nav-list:has(> li:nth-child(6)) {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 calc(100% - 26px),
+      transparent
+    );
+    mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
   }
 
   .nav-list::-webkit-scrollbar {
@@ -1276,7 +1334,10 @@ summary:focus-visible {
   background: var(--surface);
   font-size: var(--fs-base);
   color: var(--muted);
-  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+  transition:
+    border-color 0.16s ease,
+    color 0.16s ease,
+    background 0.16s ease;
 }
 
 .back-link:hover {
@@ -1310,7 +1371,10 @@ summary:focus-visible {
   font-size: var(--fs-md);
   font-weight: 600;
   box-shadow: 0 1px 2px rgb(15 110 92 / 0.2);
-  transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  transition:
+    background 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
 }
 
 .origin-link:hover {
@@ -1383,31 +1447,12 @@ summary:focus-visible {
 }
 
 .ask-examples {
-  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
   margin-bottom: 18px;
 }
 
-.ask-examples-label {
-  font-size: var(--fs-base);
-  color: var(--muted-2);
-}
-
-.ask-example {
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: var(--fs-base);
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-
 .ask-example:hover {
-  border-color: var(--accent);
   color: var(--accent-ink);
 }
 
@@ -1419,73 +1464,54 @@ summary:focus-visible {
   margin-bottom: 18px;
 }
 
-/* Progress while the query runs. p50 is 10.5s and generation alone is 5.7s of
-   it, so the wait is long enough that an undifferentiated spinner reads as a
-   hung page. Naming the stage that is running makes the same wait legible. */
-.ask-progress {
+/* Progress while the query runs — and only while it runs. p50 is 10.5s and
+   generation alone is 5.7s of it, so the wait is long enough that an
+   undifferentiated spinner reads as a hung page.
+
+   This used to be a vertical checklist with circular tick marks that stayed on
+   screen after the answer landed, where it competed with the funnel line for
+   the same job. In flight it is one horizontal row; afterwards it is gone. */
+.live-steps {
   list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.ask-step {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: var(--fs-md);
-  transition: color 0.2s ease;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
 }
 
-.ask-step-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  font-size: var(--fs-xs);
-  line-height: 1;
-  flex-shrink: 0;
+.live-step {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted-2);
+  font-size: var(--fs-sm);
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
 }
 
-.ask-step.is-done {
-  color: var(--ink);
-}
-
-.ask-step.is-done .ask-step-mark {
-  border-color: var(--accent);
+.live-step.is-done {
   color: var(--accent-ink);
+  background: var(--accent-soft);
 }
 
-.ask-step.is-active {
-  color: var(--ink);
-}
-
-.ask-step.is-active .ask-step-mark {
-  border-color: var(--accent);
+.live-step.is-active {
   color: var(--accent-ink);
+  background: var(--accent-soft);
   animation: ask-pulse 1.1s ease-in-out infinite;
-}
-
-.ask-step-detail {
-  color: var(--muted);
-  font-size: var(--fs-base);
 }
 
 @keyframes ask-pulse {
   50% {
-    opacity: 0.35;
+    opacity: 0.4;
   }
 }
 
 /* Respect a reader who has asked the OS for less motion; the step list still
    communicates position without the pulse. */
 @media (prefers-reduced-motion: reduce) {
-  .ask-step.is-active .ask-step-mark {
+  .live-step.is-active {
     animation: none;
   }
 }
@@ -1506,20 +1532,17 @@ summary:focus-visible {
   border-bottom: 1px solid var(--border);
 }
 
+/* Borderless. Seven outlined pills in a row read as seven controls; these are
+   two labels, and one of them opens an editor. */
 .ask-plan-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  padding: 3px 9px;
+  border-radius: 6px;
   font-size: var(--fs-sm);
   color: var(--muted);
   background: var(--bg);
-}
-
-.ask-plan-range {
-  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1539,28 +1562,6 @@ summary:focus-visible {
   margin-bottom: 14px !important;
 }
 
-/* Literal evidence dimensions, kept separate instead of inventing one opaque
-   confidence percentage. This remains a quiet metadata row so it does not
-   compete with the answer or change the existing page hierarchy. */
-.ask-evidence-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  margin-top: 14px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  background: var(--bg);
-  color: var(--muted);
-  font-size: var(--fs-sm);
-  line-height: 1.5;
-}
-
-.ask-evidence-label {
-  color: var(--ink);
-  font-weight: 700;
-}
-
 .ask-points {
   margin: 0 0 14px;
   padding-left: 20px;
@@ -1573,29 +1574,284 @@ summary:focus-visible {
   color: #35352f;
 }
 
-/* The trace, kept after the answer lands rather than discarded. */
-.ask-trace {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  padding: 12px 16px;
-  margin-bottom: 14px;
+/* --- the funnel: one line, opening onto the whole pipeline --- */
+
+/* The line itself is not a disclosure control that hides everything. It states
+   召回 → 重排 → 证据 → 引用 in place, permanently, and opens onto the evidence
+   for those four numbers. Two panels used to split this and disagreed about
+   the candidate count; one funnel cannot. */
+/* Packed left, not spread to the edges.
+   `space-between` put 「全过程」 and 「永久链接」 at opposite ends of a 900px row
+   whose content is 350px wide, so the two controls that belong together sat
+   either side of a gap wider than both. */
+.ask-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
 }
 
-.ask-trace-summary {
+/* Full width in both states. The permalink is inside the summary line now, so
+   nothing has to sit beside the disclosure and the candidate table keeps the
+   whole measure. */
+.funnel {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+/* The whole funnel is one control, so the whole strip is the button.
+   As plain grey text it read as a caption under the answer; a reader looking
+   for 「how did it get this」 had no reason to think the row was pressable. */
+.funnel-line {
+  display: inline-flex;
+  /* Centred, not baseline-aligned. The channel group and 「全过程」 carry their
+     own padded backgrounds; sitting them on the text baseline pushed both
+     boxes below the line and made the strip visibly heavier at the bottom. */
+  align-items: center;
+  flex-wrap: wrap;
+  /* One spacing value. 7px inside the step list against 14px between the
+     other members read as an uneven rhythm across a single row. */
+  gap: 6px 10px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 9px;
+  background: var(--accent-soft);
   cursor: pointer;
-  font-size: var(--fs-md);
-  font-weight: 600;
-  color: var(--ink);
+  font-size: var(--fs-sm);
+  color: var(--accent-ink);
+  list-style: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.ask-trace[open] .ask-trace-summary {
+.funnel-line:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.funnel-line::-webkit-details-marker {
+  display: none;
+}
+
+.funnel-steps {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.funnel-steps b {
+  color: var(--accent-ink);
+  font-weight: 700;
+}
+
+/* The channels as one group on one line.
+   Stacking them vertically did show three inputs converging, and made the row
+   three lines tall while the rest of the funnel stayed on the first — an L
+   shape with the arrows pointing out of the middle of it. Grouping by
+   background says 「these three are one stage」 in a single line instead. */
+.funnel-fan {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 7px;
+  /* Matches `.funnel-more`'s box, so the strip has the same weight at both
+     ends instead of one padded block on the left and bare text on the right. */
+  padding: 3px 10px;
+  border-radius: 6px;
+  /* White against the strip's tint, so the three channels still read as one
+     group now that the strip itself is coloured. */
+  background: var(--surface);
+}
+
+.funnel-fan-row {
+  white-space: nowrap;
+}
+
+.funnel-fan-row + .funnel-fan-row::before {
+  content: "·";
+  margin-right: 7px;
+  color: color-mix(in srgb, var(--accent-ink) 40%, transparent);
+}
+
+.funnel-steps i {
+  color: color-mix(in srgb, var(--accent-ink) 45%, transparent);
+  font-style: normal;
+}
+
+.funnel-aside {
+  font-variant-numeric: tabular-nums;
+}
+
+.funnel-more::after {
+  content: " ▾";
+}
+
+.funnel[open] .funnel-more::after {
+  content: " ▴";
+}
+
+.funnel[open] .funnel-line {
+  margin-bottom: 16px;
+}
+
+.funnel-body {
+  display: grid;
+  gap: 24px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.funnel-part h4 {
+  margin: 0 0 10px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.funnel-sub {
+  display: block;
+  margin-top: 4px;
+  font-weight: 400;
+  color: var(--muted-2);
+  line-height: 1.6;
+}
+
+/* Where the seconds went, to scale. */
+.funnel-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.funnel-seg {
+  min-width: 2px;
+}
+
+/* Shaded by rank, not by stage name: the breakdown is derived from whatever
+   `stages_ms` holds, so a per-stage palette would leave a new stage unpainted.
+   Darkest is the stage that cost the most. */
+.seg-1 {
+  background: var(--accent);
+}
+.seg-2 {
+  background: color-mix(in srgb, var(--accent) 80%, transparent);
+}
+.seg-3 {
+  background: color-mix(in srgb, var(--accent) 62%, transparent);
+}
+.seg-4 {
+  background: color-mix(in srgb, var(--accent) 46%, transparent);
+}
+.seg-5 {
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.seg-6 {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.seg-other {
+  background: var(--border);
+}
+
+.funnel-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+.funnel-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.funnel-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.funnel-legend b {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* What the pipeline decided, as term/value rather than as pills scattered
+   above the answer. */
+.funnel-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 18px;
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+}
+
+.funnel-facts dt {
+  color: var(--muted-2);
+  white-space: nowrap;
+}
+
+.funnel-facts dd {
+  margin: 0;
+  color: var(--text-soft);
+}
+
+.funnel-hint {
+  display: block;
+  color: var(--muted-2);
+}
+
+.funnel-warn {
+  color: var(--hot);
+}
+
+.funnel-all {
+  margin-top: 14px;
+}
+
+.funnel-all > summary {
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  color: var(--accent);
+}
+
+.funnel-all[open] > summary {
   margin-bottom: 12px;
 }
 
-.ask-trace-summary .ask-step-detail {
-  margin-left: 10px;
-  font-weight: 400;
+.funnel-note {
+  margin: 12px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+@media (max-width: 640px) {
+  .funnel-facts {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .funnel-facts dt {
+    margin-top: 8px;
+  }
 }
 
 /* --- conversation history --- */
@@ -1606,26 +1862,13 @@ summary:focus-visible {
   padding-top: 20px;
 }
 
-.ask-history-title {
-  font-size: var(--fs-md);
-  font-weight: 700;
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 10px;
-  cursor: pointer;
-}
-
 .ask-history[open] .ask-history-title {
   margin-bottom: 12px;
 }
 
-/* The count reads as the affordance it is: these two summaries are the only
-   controls that open anything, and at 0.8rem grey-on-white they looked like
-   captions. */
-.ask-history-count,
-.ask-sources-count {
+/* The count reads as the affordance it is: this summary is a control that
+   opens something, and at 0.8rem grey-on-white it looked like a caption. */
+.ask-history-count {
   font-weight: 600;
   font-size: var(--fs-base);
   color: var(--accent-ink);
@@ -1635,37 +1878,142 @@ summary:focus-visible {
   padding: 2px 10px;
 }
 
+/* The three counts inside the button, quieter than its label. */
+.ask-sources-count {
+  font-weight: 400;
+  font-size: var(--fs-sm);
+  color: color-mix(in srgb, var(--accent-ink) 74%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
 /* Collapsed by default at the reader's request: eight citations filled a
    screen. The count stays in the summary so the guarantee — every fact has a
    source — is still visible without expanding. */
+/* A control that looks like one.
+   These were bare summaries whose only cue was a chevron — a heading with an
+   arrow near it, on a page full of headings. Boxed, tinted and outlined in the
+   accent, they read as the two things on an answer you can press, and they
+   size to their content instead of stretching across a 900px row. */
 .ask-sources-title,
 .ask-history-title {
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  font-size: var(--fs-lg);
+  width: fit-content;
+  max-width: 100%;
+  font-size: var(--fs-md);
   font-weight: 700;
-  color: var(--ink);
-  padding: 10px 12px;
-  margin: 0 -12px;
-  border-radius: 10px;
-  transition: background 0.15s ease, color 0.15s ease;
+  color: var(--accent-ink);
+  /* Same box as `.funnel-line` directly below it. These two were 12px apart
+     on the left and 10px apart on the text — the negative margin is left over
+     from when this was a full-width row whose hover tint had to bleed past the
+     card padding, and it survived the row becoming a fit-content button. */
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 9px;
+  background: var(--accent-soft);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .ask-sources-title:hover,
 .ask-history-title:hover {
-  background: var(--accent-soft);
-  color: var(--accent-ink);
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
-/* The disclosure triangle is the only cue that these open, so it gets the
-   accent rather than the browser's default black. */
+/* A chevron of our own, in place of the browser's triangle.
+   The default marker sits at the very start of the line, is styled
+   inconsistently across browsers, and at 13px grey reads as punctuation. These
+   two summaries and the funnel line are the only controls on an answer that
+   open anything, and a reader looking at 「引用来源 8 条 · 来自 4 家信源」 could
+   not tell it was a control at all. */
 .ask-sources-title::marker,
-.ask-history-title::marker {
-  color: var(--accent);
-  font-size: 0.9em;
+.ask-history-title::marker,
+.funnel-line::marker,
+.funnel-all > summary::marker {
+  content: "";
+}
+
+/* Beside the text, not at the far edge of the row.
+   `margin-left: auto` in a 900px summary holding 350px of content flung the
+   chevron 550px away from the words it belongs to, where it read as a stray
+   icon at the page margin rather than as this row's control. */
+.ask-sources-title::after,
+.ask-history-title::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentcolor;
+  border-bottom: 1.5px solid currentcolor;
+  transform: rotate(45deg) translate(-2px, -2px);
+  opacity: 0.55;
+  transition:
+    transform 0.18s ease,
+    opacity 0.15s ease;
+}
+
+.ask-sources[open] > .ask-sources-title::after,
+.ask-history[open] > .ask-history-title::after {
+  transform: rotate(-135deg) translate(-2px, -2px);
+  opacity: 1;
+}
+
+.ask-sources-title:hover::after,
+.ask-history-title:hover::after {
+  opacity: 1;
+}
+
+/* Keyboard users get the same affordance the pointer does. `:focus-visible` on
+   the summary, not `:focus`: clicking one should not leave a ring behind. */
+.ask-sources-title:focus-visible,
+.ask-history-title:focus-visible,
+.funnel-line:focus-visible,
+.funnel-all > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* The funnel line is a control too, and it was the flattest of the three:
+   plain grey text with a small 「全过程」 at the end. */
+/* The words that say what pressing does, filled so they carry the strip. */
+.funnel-more {
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.funnel-line:hover .funnel-more,
+.funnel[open] .funnel-more {
+  background: var(--accent-ink);
+}
+
+.funnel-all > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.funnel-all > summary:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .ask-history-note {
@@ -1740,7 +2088,10 @@ summary:focus-visible {
   line-height: 1;
   cursor: pointer;
   vertical-align: 2px;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .cite-ref:hover,
@@ -1748,6 +2099,88 @@ summary:focus-visible {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+}
+
+/* Hover shows the passage the marker stands on. Checking a claim used to mean
+   clicking through to a list and reading back up; the whole promise of this
+   product is that every fact is checkable, and it should not cost a scroll. */
+.cite-wrap {
+  position: relative;
+  display: inline;
+}
+
+.cite-pop {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: grid;
+  gap: 4px;
+  width: max-content;
+  max-width: min(340px, 74vw);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+  font-size: var(--fs-sm);
+  line-height: 1.6;
+  text-align: left;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.14s ease;
+  pointer-events: none;
+}
+
+.cite-wrap:hover .cite-pop,
+.cite-wrap:focus-within .cite-pop {
+  opacity: 1;
+  visibility: visible;
+}
+
+.cite-pop-title {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cite-pop-meta {
+  color: var(--muted-2);
+}
+
+/* The source's own words, set as a quotation. This is the half that makes the
+   preview worth hovering; the claim below it is the model's restatement, and
+   the two must never look alike. */
+.cite-pop-excerpt {
+  padding-left: 9px;
+  border-left: 2px solid var(--accent);
+  color: var(--text);
+}
+
+.cite-pop-claim {
+  padding-top: 6px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--muted);
+}
+
+.cite-pop-claim em {
+  color: var(--muted-2);
+  font-style: normal;
+}
+
+.ask-source-excerpt {
+  margin: 6px 0 0;
+  padding: 6px 0 6px 10px;
+  border-left: 2px solid var(--accent);
+  color: var(--text-soft);
+  font-size: var(--fs-sm);
+  line-height: 1.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cite-pop {
+    transition: none;
+  }
 }
 
 /* Source tier, the same signal the ranker uses in its §6 boost. A reader
@@ -1760,35 +2193,10 @@ summary:focus-visible {
   white-space: nowrap;
 }
 
-.tier-primary {
-  background: #e7f2ec;
-  color: #1f6b45;
-}
-
-.tier-secondary {
-  background: #eef1f6;
-  color: #46566f;
-}
-
-.tier-expert {
-  background: #f4eee3;
-  color: #7a5a1e;
-}
-
-.tier-community {
-  background: #f2f2f0;
-  color: #5f5f58;
-}
-
 /* M3's event clustering, surfaced where it changes a reader's mind: this is
    not one outlet's word for it. */
 .corroboration-badge {
-  padding: 1px 7px;
-  border-radius: 4px;
-  background: var(--accent-soft);
-  color: var(--accent-ink);
   font-size: var(--fs-xs);
-  font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
 }
@@ -1873,10 +2281,18 @@ summary:focus-visible {
   border-top: 1px solid var(--border);
 }
 
+/* The negative margin from the shared rule is kept deliberately: it is what
+   lets the hover background bleed past the text and read as a row you can
+   press. An earlier `margin: 0 0 10px` here cancelled it, leaving a hover
+   highlight that stopped at the text and looked like a selection artefact. */
 .ask-sources-title {
   font-size: var(--fs-md);
   font-weight: 700;
-  margin: 0 0 10px;
+  margin: 0 0 6px;
+}
+
+.ask-sources[open] > .ask-sources-title {
+  margin-bottom: 10px;
 }
 
 .ask-source-list {
@@ -1896,11 +2312,37 @@ summary:focus-visible {
   border-bottom: none;
 }
 
+.funnel-plain {
+  color: var(--muted-2);
+}
+
+.funnel-version {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--fs-xs);
+}
+
+/* The return leg, so it has to look pressable. It was a static label. */
+.ask-source-no:hover,
+.ask-source-no:focus-visible {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+
 .ask-source-no {
   flex-shrink: 0;
+  align-self: flex-start;
+  padding: 1px 5px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
   color: var(--accent-ink);
   font-weight: 700;
   font-size: var(--fs-md);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .ask-source a {
@@ -1939,9 +2381,14 @@ summary:focus-visible {
   }
 }
 
+/* Inside the funnel strip, so it takes the strip's ink rather than the raw
+   accent — two different greens side by side on one tinted row read as an
+   accident. Underlined on hover, because it is a link and the thing beside it
+   is a button. */
 .ask-permalink {
-  color: var(--accent);
+  color: var(--accent-ink);
   text-decoration: none;
+  text-underline-offset: 3px;
 }
 
 .ask-permalink:hover {
@@ -1953,23 +2400,6 @@ summary:focus-visible {
 /* A funnel read top to bottom, so the survivors are tinted and the eliminated
    are dimmed rather than colour-coded by rule — the rule is in the badge, and
    using colour for it too would make six categories fight for attention. */
-.trace-panel {
-  margin-top: 18px;
-}
-
-.trace-note {
-  font-size: var(--fs-base);
-  color: var(--text-soft);
-  line-height: 1.75;
-  margin: 10px 0 14px;
-}
-
-.trace-legend {
-  margin: 14px 0 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-soft);
-}
-
 .trace-table {
   min-width: 760px;
   font-size: var(--fs-sm);
@@ -2057,6 +2487,97 @@ summary:focus-visible {
 }
 
 /* ---------- evaluation report (T1-2) ---------- */
+
+/* The gate certifying a configuration nobody runs. Styled as an alert rather
+   than as another note: every other line in that panel is a number the reader
+   is invited to trust, and this one says not to. */
+.quality-drift {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-left: 3px solid var(--hot);
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--hot) 7%, transparent);
+  font-size: var(--fs-sm);
+  line-height: 1.8;
+}
+
+.quality-drift code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Ten rounds of retrieval evaluation, folded. They are the argument that the
+   current numbers were earned rather than tuned into place — worth one click,
+   and not worth being the first 300 lines a reader meets. */
+.eval-archive {
+  margin-top: 32px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+
+.eval-archive-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  cursor: pointer;
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.eval-archive[open] .eval-archive-title {
+  margin-bottom: 8px;
+}
+
+.eval-archive-note {
+  font-size: var(--fs-sm);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* The refusal breakdown, beside the threshold it justifies. Blocking causes are
+   marked because their count is irrelevant — one is enough to fail. */
+.eval-causes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+
+.eval-cause {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: var(--fs-sm);
+  color: var(--text-soft);
+}
+
+.eval-cause b {
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.eval-cause.is-blocking {
+  background: color-mix(in srgb, var(--hot) 10%, transparent);
+  color: var(--hot);
+}
+
+.eval-cause.is-blocking b {
+  color: var(--hot);
+}
+
+.eval-cause-note {
+  display: block;
+  font-size: var(--fs-sm);
+  color: var(--muted);
+  line-height: 1.7;
+}
 
 .eval-section {
   margin-top: 32px;
@@ -2234,35 +2755,36 @@ summary:focus-visible {
 
 /* ---------- citation support score (T2-4) ---------- */
 
-.support-badge {
+/* Two states, not a gradient: the evaluation reports a pass rate against a
+   threshold, and a continuous colour ramp would invite reading precision into
+   a number that is a proxy for entailment, not a measurement of it.
+
+   The score itself moved to the tooltip. 「支持度 0.42」 next to every source
+   was a bare float competing with the title beside it, and a reader with no
+   way to calibrate 0.42 gains nothing from seeing it that a mark does not give
+   them — while the engineer who does want it is one hover away. */
+.support-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: var(--fs-xs);
-  padding: 1px 7px;
-  border-radius: 999px;
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* Two states, not a gradient: the evaluation reports a pass rate against a
-   threshold, and a continuous colour ramp would invite reading precision into
-   a number that is a proxy for entailment, not a measurement of it. */
+.support-dot::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+
 .support-ok {
-  background: var(--accent-soft);
-  color: var(--accent-ink);
+  color: var(--accent);
 }
 
 .support-weak {
-  background: #fff4e0;
   color: #9a6400;
-}
-
-/* A cache hit has no pipeline to show, so it says what it is instead of
-   rendering an empty progress list. */
-.ask-cache-hit {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
-  font-size: var(--fs-base);
 }
 
 /* ---------- starter questions ---------- */
@@ -2661,6 +3183,17 @@ summary:focus-visible {
   color: var(--border-strong);
 }
 
+.quality-coverage {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: var(--fs-sm);
+  line-height: 1.8;
+}
+
 .quality-refresh-note {
   margin-top: 10px !important;
   font-size: var(--fs-base);
@@ -2705,7 +3238,6 @@ summary:focus-visible {
   color: var(--accent-ink);
   font-weight: 600;
 }
-
 
 .quality-grid {
   display: grid;
@@ -3530,46 +4062,27 @@ summary:focus-visible {
   }
 }
 
-.ask-examples-label {
-  grid-column: 1 / -1;
-  font-size: var(--fs-base);
-  font-weight: 600;
-  color: var(--muted);
-}
-
-/* Each example says what it demonstrates. A row of bare questions is a
-   convenience; a row that names the property under test is the argument. */
+/* The question, and nothing else. Each example used to carry a subtitle naming
+   the property it demonstrates — four of them, stacked, above a five-line
+   notice explaining the same pipeline. The subtitle is now the `title`: still
+   there for anyone who wants it, silent for everyone else. */
 .ask-example {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   text-align: left;
-  padding: 7px 12px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--surface);
   font-size: var(--fs-base);
   color: var(--text);
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .ask-example:hover {
   border-color: var(--accent);
   background: var(--accent-soft);
-}
-
-.ask-example-shows {
-  font-size: var(--fs-xs);
-  color: var(--muted);
-}
-
-/* --- Phase A: what the reader can now see and change --------------------- */
-
-/* The expansion that made the question answerable. Distinguished from the other
-   plan chips because it says how the question was *read*, not what was asked. */
-.ask-plan-alias {
-  border-style: dashed;
 }
 
 /* Most citations failed the support check. Deliberately not styled as an error:
@@ -3655,17 +4168,6 @@ summary:focus-visible {
   border-radius: 0 4px 4px 0;
 }
 
-/* What a follow-up became. Same rationale as the resolved time window: shown so
-   a wrong reading is diagnosable rather than mysterious. */
-.ask-rewrite {
-  margin: 0 0 0.75rem;
-  padding: 0.5rem 0.85rem;
-  background: var(--surface-muted, #f5f5f4);
-  border-radius: 4px;
-  font-size: var(--fs-base);
-  color: var(--fg-muted, #57534e);
-}
-
 /* Follow-up chips. Placed under the answer where the next question forms, and
    styled as actions rather than as more prose — the reader should be able to
    tell at a glance that these are things to click, not things to read. */
@@ -3693,7 +4195,9 @@ summary:focus-visible {
   font: inherit;
   font-size: var(--fs-base);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .ask-followup:hover {
@@ -3776,34 +4280,49 @@ summary:focus-visible {
   color: var(--ink);
 }
 
+/* Filled, not outlined. A grey-bordered white button on a white header bar is
+   a control you have to go looking for, and this is the way out of a thread
+   that has gone somewhere the reader did not mean to take it. */
 .chat-new {
   flex-shrink: 0;
-  padding: 5px 12px;
-  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
   border-radius: 8px;
-  background: var(--surface);
-  color: var(--accent-ink);
+  background: var(--accent);
+  color: #fff;
   font: inherit;
   font-size: var(--fs-base);
+  font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .chat-new:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
 /* Disabled, not hidden. A control that vanishes when it has nothing to do is
-   one the reader cannot find when it does. */
+   one the reader cannot find when it does — but it must stop advertising
+   itself as the next thing to press. */
 .chat-new:disabled {
+  background: var(--bg);
+  border-color: var(--border);
   color: var(--muted-2);
+  font-weight: 400;
   cursor: default;
 }
 
+/* The header's own 11px, this 20px and the 22px row gap stacked into 42px of
+   nothing between the title bar and the first message — taller than a line of
+   the answer itself. The gap belongs *between* turns, not above the first one. */
 .chat-log {
   flex: 1;
-  padding: 20px 22px 8px;
+  padding: 12px 22px 8px;
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -3815,30 +4334,20 @@ summary:focus-visible {
   border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
   border-radius: 14px;
   background:
-    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--accent) 9%, transparent), transparent 42%),
-    linear-gradient(145deg, color-mix(in srgb, var(--accent-soft) 52%, var(--surface)), var(--surface));
-}
-
-.chat-empty-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--accent-ink);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.chat-empty-kicker::before {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--accent);
-  content: "";
+    radial-gradient(
+      circle at 100% 0,
+      color-mix(in srgb, var(--accent) 9%, transparent),
+      transparent 42%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--accent-soft) 52%, var(--surface)),
+      var(--surface)
+    );
 }
 
 .chat-empty-title {
-  margin: 8px 0 5px;
+  margin: 0 0 6px;
   color: var(--ink);
   font-size: clamp(1.25rem, 2vw, 1.5rem);
   line-height: 1.3;
@@ -3850,29 +4359,6 @@ summary:focus-visible {
   color: var(--muted);
   font-size: var(--fs-md);
   line-height: 1.7;
-}
-
-.chat-trust {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin: 14px 0 18px;
-  padding: 0;
-  list-style: none;
-  color: var(--muted);
-  font-size: var(--fs-base);
-}
-
-.chat-trust li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.chat-trust li::before {
-  content: "✓";
-  color: var(--accent-ink);
-  font-weight: 700;
 }
 
 .chat-turn {
@@ -3920,7 +4406,11 @@ summary:focus-visible {
 /* The question, as the reader typed it. Kept visually distinct from the answer
    so a long transcript can be skimmed by question alone. */
 .chat-bubble {
-  padding: 9px 14px;
+  /* 21px, not 14: the bubble and the answer card start at the same x, but the
+     card insets its text by 20px of padding plus a 1px border. Matching that
+     puts the question and the answer to it on one column instead of seven
+     pixels apart. */
+  padding: 9px 21px;
   border-radius: 12px 12px 12px 4px;
   background: var(--accent-soft);
   color: var(--ink);
@@ -4035,10 +4525,6 @@ summary:focus-visible {
     padding: 18px;
   }
 
-  .chat-trust {
-    gap: 7px 12px;
-  }
-
   .ask-examples {
     grid-template-columns: 1fr;
   }
@@ -4146,12 +4632,16 @@ summary:focus-visible {
   font-weight: 500;
 }
 
+/* Qualifiers, not headlines.
+   Filled chips at 14px next to a 12px grey publisher name made the metadata
+   the loudest thing on the card. These say what *kind* of item it is; the
+   publisher says whose it is, and that is the one a reader scans for. */
 .tag {
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  padding: 5px 11px;
-  color: var(--accent-ink);
-  font-size: var(--fs-base);
+  background: transparent;
+  padding: 3px 9px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
   white-space: nowrap;
 }
 

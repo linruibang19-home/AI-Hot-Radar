@@ -335,14 +335,14 @@ AI-Hot-Radar/
 │  ├─ app/page.tsx                      精选首页
 │  ├─ app/{items,stories,topics,vendors}/  动态、事件、主题、厂商
 │  ├─ app/{reports,ask}/                报告阅读订阅、RAG 问答与 SSE 流式 UI
-│  ├─ app/{eval,ops,admin}/             质量门禁、运行状态、模型配置与信源后台
+│  ├─ app/{eval,ops,admin}/             质量门禁、运行状态与信源后台
 │  ├─ app/api/                          同源代理：浏览器不直连后端，密钥不进浏览器
 │  └─ components/ lib/                  复用组件与取数封装
 │
 ├─ apps/core-api/src/main/java/…/coreapi/   Spring Boot（65 文件）
 │  ├─ content/                          公共读 API（内容、热点、Story、主题、厂商）
 │  ├─ subscription/                     双确认订阅、到期扫描、SMTP 投递、幂等记录
-│  ├─ admin/                            RBAC 过滤器、审计、幂等键、报告发布、模型配置
+│  ├─ admin/                            RBAC 过滤器、审计、幂等键、报告发布、信源管理
 │  ├─ cache/                            Redis 读缓存边界
 │  └─ observability/ health/            运行指标与健康检查
 │

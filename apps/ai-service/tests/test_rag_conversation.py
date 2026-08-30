@@ -85,7 +85,12 @@ def test_the_rewriter_never_sees_a_previous_answer() -> None:
     assert "ci.title" in source
 
     fields = {f for f in Turn.__dataclass_fields__}
-    assert fields == {"question", "cited_titles"}
+    # `window` joined these two deliberately and is the same kind of thing: a
+    # fact the *plan* recorded, not something the model said. A follow-up that
+    # names no time inherits it, so the third turn of a conversation stops
+    # searching all time under a heading announcing one week.
+    assert fields == {"question", "cited_titles", "window"}
+    assert "time_range" in source
 
 
 def test_rewriting_happens_before_retrieval_not_in_the_prompt() -> None:
@@ -196,7 +201,7 @@ async def test_a_cold_transcript_falls_back_and_warms_itself(monkeypatch) -> Non
     the next turn does not pay it again."""
     cache = _Cache()
     monkeypatch.setattr(conversation, "cache_client", lambda: cache)
-    db = _Db([("Kimi K3 用的是什么量化格式？", ["Kimi K3 模型概览"])])
+    db = _Db([("Kimi K3 用的是什么量化格式？", None, None, ["Kimi K3 模型概览"])])
 
     turns = await conversation.turns_for(db, _THREAD)
 
@@ -211,7 +216,7 @@ async def test_an_empty_thread_is_cached_rather_than_re_queried(monkeypatch) -> 
     first question, which is the most common case there is."""
     cache = _Cache({f"ahr:rag:v1:thread:{_THREAD}": "[]"})
     monkeypatch.setattr(conversation, "cache_client", lambda: cache)
-    db = _Db([("should not be read", [])])
+    db = _Db([("should not be read", None, None, [])])
 
     assert await conversation.turns_for(db, _THREAD) == []
     assert db.queries == []
@@ -225,7 +230,7 @@ async def test_a_broken_cache_degrades_to_the_database(monkeypatch) -> None:
             raise RuntimeError("connection reset")
 
     monkeypatch.setattr(conversation, "cache_client", _Broken)
-    db = _Db([("Kimi K3 用的是什么量化格式？", ["Kimi K3 模型概览"])])
+    db = _Db([("Kimi K3 用的是什么量化格式？", None, None, ["Kimi K3 模型概览"])])
 
     turns = await conversation.turns_for(db, _THREAD)
     assert [t.question for t in turns] == ["Kimi K3 用的是什么量化格式？"]
@@ -271,7 +276,10 @@ def test_the_cache_cannot_launder_an_answer_into_the_next_query() -> None:
     assert "c.title" in source
 
     stored = inspect.getsource(conversation._as_row)
-    assert set(Turn.__dataclass_fields__) == {"question", "cited_titles"}
+    # The window is the third thing, and it passes the same test: it comes from
+    # the frozen retrieval plan, which is a decision this system made and
+    # recorded, never a sentence the model produced.
+    assert set(Turn.__dataclass_fields__) == {"question", "cited_titles", "window"}
     assert "answer" not in stored
 
 

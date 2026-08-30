@@ -119,7 +119,6 @@ const SECTIONS: { label: string; entries: NavEntry[] }[] = [
     entries: [
       { href: "/eval", label: "RAG 质量", icon: "eval" },
       { href: "/ops", label: "运行状态", icon: "ops" },
-      { href: "/admin/models", label: "模型配置", icon: "admin" },
       { href: "/admin/sources", label: "信源后台", icon: "admin" },
     ],
   },

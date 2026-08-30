@@ -139,8 +139,11 @@ def persist_document(
     with identical content.
     """
     stats = stats or PersistStats()
-    canonical = canonicalize_url(item.candidate_url)
-    canonical_hash = url_hash(canonical)
+    # A changelog entry is a section of a page, so its `#anchor` is its identity
+    # rather than decoration. See `canonicalize_url`.
+    keep_fragment = source.profile == "docs_changelog"
+    canonical = canonicalize_url(item.candidate_url, keep_fragment=keep_fragment)
+    canonical_hash = url_hash(canonical, keep_fragment=keep_fragment)
     content_type = (
         raw_content_type or ("text/html" if item.requires_fetch else "application/json")
     ).split(";", 1)[0][:200]

@@ -50,3 +50,47 @@ def test_content_hash_ignores_whitespace_reflow() -> None:
 
 def test_content_hash_detects_real_change() -> None:
     assert content_hash("hello world") != content_hash("hello worlds")
+
+
+# --- Fragments as identity (2026-08-30) -----------------------------------
+#
+# Dropping the fragment is right for articles and wrong for a changelog, where
+# every entry is a section of one page and the `#anchor` is the only thing
+# telling them apart. With it dropped they all hashed the same and the unique
+# index on `canonical_url_hash` rejected every one after the first — silently,
+# because the run still reported SUCCESS with the true section count discovered.
+# All twelve `docs_changelog` sources sat at exactly one item; the cursors said
+# 406 sections had been seen.
+
+
+def test_the_fragment_is_dropped_by_default() -> None:
+    """Unchanged for articles: a fragment does not identify a distinct
+    server-side document, and this is the overwhelmingly common case."""
+    assert canonicalize_url("https://example.com/a#section") == "https://example.com/a"
+
+
+def test_the_fragment_is_kept_when_it_is_the_document() -> None:
+    assert (
+        canonicalize_url("https://example.com/changelog#v2", keep_fragment=True)
+        == "https://example.com/changelog#v2"
+    )
+
+
+def test_changelog_sections_hash_apart_only_with_the_fragment() -> None:
+    """The exact failure: two entries of one changelog page."""
+    one = "https://docs.example.com/updates#2026-08-26-glm-5-3-flash"
+    two = "https://docs.example.com/updates#2026-06-16-glm-5-2"
+
+    assert url_hash(one) == url_hash(two)
+    assert url_hash(one, keep_fragment=True) != url_hash(two, keep_fragment=True)
+
+
+def test_only_the_changelog_profile_keeps_fragments() -> None:
+    """Scoped at the one call site that persists, so the general rule stays
+    general. Widening it would make `?utm=` sibling links look like documents."""
+    import inspect
+
+    from ahr.ingestion import repository
+
+    source = inspect.getsource(repository.persist_document)
+    assert 'keep_fragment = source.profile == "docs_changelog"' in source

@@ -171,7 +171,7 @@ def test_percentage_and_two_prices_must_be_separate_after_audit() -> None:
 
 
 def test_uncited_sentences_are_removed_without_borrowing_a_source() -> None:
-    cleaned, removed = drop_uncited_sentences(
+    cleaned, removed, _ = drop_uncited_sentences(
         "无引用概括。事实 A。[1] 事实 B[2]。\n\n- 邻近但无引用。\n- 可核对事实。[2]"
     )
     assert cleaned == "事实 A。[1] 事实 B[2]。\n\n- 可核对事实。[2]"
@@ -179,7 +179,7 @@ def test_uncited_sentences_are_removed_without_borrowing_a_source() -> None:
 
 
 def test_all_uncited_prose_becomes_empty_for_fail_closed_refusal() -> None:
-    cleaned, removed = drop_uncited_sentences("检索结果里没有直接答案。\n- 只有邻近事实。")
+    cleaned, removed, _ = drop_uncited_sentences("检索结果里没有直接答案。\n- 只有邻近事实。")
     assert cleaned == ""
     assert removed == 2
 

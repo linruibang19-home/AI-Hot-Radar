@@ -16,8 +16,11 @@ Story、主题和报告优先 Server Component/SSR；筛选、订阅弹窗、多
 | `/ask` / `/ask/{id}` | 提问、多轮、答案和证据解释 | RAG 实时执行/持久化记录 |
 | `/eval` | RAG 发布门、逐轮实验 | 固定评测快照，不自动漂移 |
 | `/ops` | 延迟、token、模型、估算成本 | 动态运行聚合 |
-| `/admin/models` | 生成模型版本与白名单切换 | 读公开，写受 OPERATOR 保护 |
 | `/admin/sources` | 信源运行快照与刷新语义 | Scheduler 写入的当前数据库 |
+
+`/admin/models` 曾经存在，2026-08-29 删除。生成模型仍由数据库单行配置决定，只是没有写入
+界面了 —— 理由见 [ADR-0033](../adr/0033-generation-console-removed-model-stays-database-backed.md)。
+被问到时值得主动讲：砍掉一个没验证通过的写入面，比留着它更能说明边界感。
 
 ## 为什么 SSR
 

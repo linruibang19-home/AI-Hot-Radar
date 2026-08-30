@@ -294,3 +294,54 @@ def test_the_flag_never_becomes_a_refusal() -> None:
         if "weak_retrieval" in line:
             assert "refused" not in line, line
             assert "refusal_reason" not in line, line
+
+
+def test_the_cross_encoder_s_best_absolute_score_is_recorded() -> None:
+    """Nothing upstream of generation has an absolute quality bar: the channels
+    are `ORDER BY … LIMIT n`, RRF fuses on rank and drops the scores, and
+    `apply_boosts` min-max-normalises the remainder so the worst hit is always
+    0.0. Ten passages come back for every question; when the corpus holds
+    nothing about it, they are the ten least-bad. This is the one number that
+    survives the flattening, so it is worth keeping even before it earns a
+    gate."""
+    from ahr.rag import service
+
+    source = inspect.getsource(service)
+    assert '"retrieval_confidence"' in source
+
+
+def test_confidence_is_read_from_the_reranker_not_from_the_ranked_hits() -> None:
+    """`_rank_by_dimensions` and `_rank_by_recency` overwrite `.score` with §6's
+    composite. Taking the maximum afterwards would record the boost stack rather
+    than the cross-encoder's judgement of the question."""
+    from ahr.rag import service
+
+    source = inspect.getsource(service.retrieve)
+    take = next(line for line in source.splitlines() if "top_rerank = " in line)
+    assert "scored" in take, take
+    assert take.index("top_rerank") < source.index("_rank_by_dimensions")
+
+
+def test_confidence_is_absent_rather_than_zero_when_the_reranker_is_down() -> None:
+    """A reranker outage measures nothing. Recording 0.0 would be a verdict —
+    and the lowest possible one — about evidence nobody scored."""
+    from ahr.rag import service
+
+    source = inspect.getsource(service.retrieve)
+    assert "top_rerank: float | None = None" in source
+    assert "round(top_rerank, 4) if top_rerank is not None else None" in source
+
+
+def test_confidence_gates_nothing_yet() -> None:
+    """Same rule as `is_weak_retrieval`, for the same reason. n=15 traced
+    questions is a hypothesis: below 0.15 it caught 4 of 6 unanswerable
+    questions and misfired on 0 of 9 answerable ones — but the highest score in
+    the whole sample, 0.9800, belongs to 「DeepSeek 收购 OpenAI」, a false
+    premise the corpus is full of adjacent evidence for. A relevance floor
+    cannot see a false premise, so it must not be sold as abstention."""
+    from ahr.rag import service
+
+    source = inspect.getsource(service)
+    for line in source.splitlines():
+        if "retrieval_confidence" in line or "top_rerank" in line:
+            assert not any(op in line for op in ("< 0.", "<= 0.", "> 0.", ">= 0.")), line

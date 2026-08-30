@@ -96,9 +96,10 @@ V021 历史答案修复、V026 chunk set 版本化。完整算法背景见 `docs
 ## 5. 管理、权限与模型配置
 
 Java `admin/` 是管理事实边界：`AdminAuthFilter` 认证，`AdminPrincipal/Role` 表达权限，
-`AdminIdempotency` 防重复动作，`AdminAudit` 留审计。模型切换由
-`GenerationModelController/Service` 写 PostgreSQL；Web `admin/models/` 只允许白名单型号，
-不读取或显示密钥。信源页通过 `SourceHealthController` 读取 `SourceRepository` 的数据库快照；
+`AdminIdempotency` 防重复动作，`AdminAudit` 留审计。生成模型不在这里 —— 它是
+`generation_model_config` 里的一行，由 Python 侧 `build_client_from_env` 读取，没有写入界面
+（[ADR-0033](adr/0033-generation-console-removed-model-stays-database-backed.md)）。
+信源页通过 `SourceHealthController` 读取 `SourceRepository` 的数据库快照；
 运营写请求经 `SourceAdminController` 做确认/权限语义，再由 Repository 修改调度事实并写审计。
 
 Core API 采用按业务域组织、域内分层，而不是四个全局技术目录。Story 的调用链是

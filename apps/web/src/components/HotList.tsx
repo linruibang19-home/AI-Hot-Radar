@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { HotItem } from "@/lib/api";
+import { heatBadge, showsHeatBadge } from "@/lib/heat";
 
 /**
  * The 当前热点 panel.
@@ -43,9 +44,13 @@ export function HotList({
             <Link className="hot-title" href={`/items/${item.id}`}>
               {item.title}
             </Link>
-            <span className="hot-score">
-              {Math.round(item.heat)} <span className="hot-score-unit">热度</span>
-            </span>
+            {/* The rank on the left already says which is hotter, so a row
+                reading "3 … 0 热度" only contradicts itself. */}
+            {showsHeatBadge(item.heat) && (
+              <span className="hot-score">
+                {heatBadge(item.heat)} <span className="hot-score-unit">热度</span>
+              </span>
+            )}
           </li>
         ))}
       </ol>
