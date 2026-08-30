@@ -3183,6 +3183,17 @@ summary:focus-visible {
   color: var(--border-strong);
 }
 
+.quality-coverage {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: var(--fs-sm);
+  line-height: 1.8;
+}
+
 .quality-refresh-note {
   margin-top: 10px !important;
   font-size: var(--fs-base);

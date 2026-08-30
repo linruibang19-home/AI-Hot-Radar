@@ -51,7 +51,13 @@ interface LiveQuality {
   servingModels: { model: string; calls: number }[];
 }
 
-async function loadLive(): Promise<LiveQuality | null> {
+/** The gate's numbers, plus how much of today's corpus they were measured on. */
+interface LiveState {
+  quality: LiveQuality;
+  corpusItems: number;
+}
+
+async function loadLive(): Promise<LiveState | null> {
   // The rounds render without it. A stats outage must not take down the record
   // of how retrieval got here.
   try {
@@ -60,7 +66,9 @@ async function loadLive(): Promise<LiveQuality | null> {
     });
     if (!response.ok) return null;
     const body = await response.json();
-    return (body.quality as LiveQuality) ?? null;
+    const quality = body.quality as LiveQuality | undefined;
+    if (!quality) return null;
+    return { quality, corpusItems: Number(body.corpus?.items ?? 0) };
   } catch {
     return null;
   }
@@ -171,7 +179,15 @@ function delta(current?: number | null, previous?: number | null) {
 
 export default async function EvalPage() {
   const { rounds, extra, goldenQuestions, ragas, release } = summary;
-  const live = await loadLive();
+  const state = await loadLive();
+  const live = state?.quality ?? null;
+  // What share of today's corpus the frozen snapshot never sees. Derived on
+  // every request, so it falls on its own as the corpus grows — which is
+  // exactly the signal that the question set is due for a refresh.
+  const uncovered =
+    state && state.corpusItems > 0
+      ? Math.max(0, 1 - release.snapshot.items / state.corpusItems)
+      : null;
   const last = rounds[rounds.length - 1];
   const first = rounds[0];
   // The snapshot vouches for a named model. Nothing checked it against the one
@@ -238,6 +254,19 @@ export default async function EvalPage() {
             <span>{release.snapshot.generationModel}</span>
           </div>
         </div>
+        {/* How much of today's corpus the frozen set never sees. The panel said
+            「915 条内容」 and stopped there, so a reader could not tell that the
+            number had become a third of the library. It falls on its own as
+            ingestion continues, which is the refresh signal. */}
+        {uncovered !== null && state && (
+          <p className="quality-coverage">
+            这 {release.snapshot.items} 条是标注当时的语料。全库现在有{" "}
+            <strong>{state.corpusItems.toLocaleString()}</strong> 条，
+            <strong>{percent(uncovered)}</strong> 从未参与过评测——门禁能证明
+            <strong>检索与引用机制没退步</strong>
+            ，不能证明新语料上的回答是对的。 那一半由下面的线上实测覆盖。
+          </p>
+        )}
         {modelDrifted && (
           <p className="quality-drift" role="alert">
             <strong>快照与线上不一致。</strong>
