@@ -1594,15 +1594,32 @@ summary:focus-visible {
   min-width: 0;
 }
 
+/* The whole funnel is one control, so the whole strip is the button.
+   As plain grey text it read as a caption under the answer; a reader looking
+   for 「how did it get this」 had no reason to think the row was pressable. */
 .funnel-line {
-  display: flex;
+  display: inline-flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 6px 14px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 9px;
+  background: var(--accent-soft);
   cursor: pointer;
   font-size: var(--fs-sm);
-  color: var(--muted);
+  color: var(--accent-ink);
   list-style: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.funnel-line:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .funnel-line::-webkit-details-marker {
@@ -1617,8 +1634,8 @@ summary:focus-visible {
 }
 
 .funnel-steps b {
-  color: var(--text);
-  font-weight: 600;
+  color: var(--accent-ink);
+  font-weight: 700;
 }
 
 /* The channels as one group on one line.
@@ -1633,7 +1650,9 @@ summary:focus-visible {
   gap: 2px 7px;
   padding: 2px 8px;
   border-radius: 6px;
-  background: var(--bg);
+  /* White against the strip's tint, so the three channels still read as one
+     group now that the strip itself is coloured. */
+  background: var(--surface);
 }
 
 .funnel-fan-row {
@@ -1643,20 +1662,16 @@ summary:focus-visible {
 .funnel-fan-row + .funnel-fan-row::before {
   content: "·";
   margin-right: 7px;
-  color: var(--muted-2);
+  color: color-mix(in srgb, var(--accent-ink) 40%, transparent);
 }
 
 .funnel-steps i {
-  color: var(--muted-2);
+  color: color-mix(in srgb, var(--accent-ink) 45%, transparent);
   font-style: normal;
 }
 
 .funnel-aside {
   font-variant-numeric: tabular-nums;
-}
-
-.funnel-more {
-  color: var(--accent);
 }
 
 .funnel-more::after {
@@ -1847,41 +1862,48 @@ summary:focus-visible {
   padding: 2px 10px;
 }
 
-/* Not a pill. This one absorbed the whole 「证据概览」 block — 「4 条 · 4 家信源
-   · 4/4 通过支持度校验」 — and three facts inside an accent-bordered capsule
-   would shout louder than the answer above it. */
+/* The three counts inside the button, quieter than its label. */
 .ask-sources-count {
   font-weight: 400;
   font-size: var(--fs-sm);
-  color: var(--muted);
+  color: color-mix(in srgb, var(--accent-ink) 74%, transparent);
   font-variant-numeric: tabular-nums;
 }
 
 /* Collapsed by default at the reader's request: eight citations filled a
    screen. The count stays in the summary so the guarantee — every fact has a
    source — is still visible without expanding. */
+/* A control that looks like one.
+   These were bare summaries whose only cue was a chevron — a heading with an
+   arrow near it, on a page full of headings. Boxed, tinted and outlined in the
+   accent, they read as the two things on an answer you can press, and they
+   size to their content instead of stretching across a 900px row. */
 .ask-sources-title,
 .ask-history-title {
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
-  font-size: var(--fs-lg);
+  width: fit-content;
+  max-width: 100%;
+  font-size: var(--fs-md);
   font-weight: 700;
-  color: var(--ink);
-  padding: 10px 12px;
-  margin: 0 -12px;
-  border-radius: 10px;
+  color: var(--accent-ink);
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  border-radius: 9px;
+  background: var(--accent-soft);
   transition:
     background 0.15s ease,
-    color 0.15s ease;
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .ask-sources-title:hover,
 .ask-history-title:hover {
-  background: var(--accent-soft);
-  color: var(--accent-ink);
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 /* A chevron of our own, in place of the browser's triangle.
@@ -1939,22 +1961,21 @@ summary:focus-visible {
 
 /* The funnel line is a control too, and it was the flattest of the three:
    plain grey text with a small 「全过程」 at the end. */
-.funnel-line:hover {
-  color: var(--text-soft);
+/* The words that say what pressing does, filled so they carry the strip. */
+.funnel-more {
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .funnel-line:hover .funnel-more,
 .funnel[open] .funnel-more {
-  background: var(--accent-soft);
-  color: var(--accent-ink);
-}
-
-.funnel-more {
-  padding: 3px 9px;
-  border-radius: 6px;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
+  background: var(--accent-ink);
 }
 
 .funnel-all > summary {
@@ -2340,9 +2361,14 @@ summary:focus-visible {
   }
 }
 
+/* Inside the funnel strip, so it takes the strip's ink rather than the raw
+   accent — two different greens side by side on one tinted row read as an
+   accident. Underlined on hover, because it is a link and the thing beside it
+   is a button. */
 .ask-permalink {
-  color: var(--accent);
+  color: var(--accent-ink);
   text-decoration: none;
+  text-underline-offset: 3px;
 }
 
 .ask-permalink:hover {
@@ -4223,30 +4249,40 @@ summary:focus-visible {
   color: var(--ink);
 }
 
+/* Filled, not outlined. A grey-bordered white button on a white header bar is
+   a control you have to go looking for, and this is the way out of a thread
+   that has gone somewhere the reader did not mean to take it. */
 .chat-new {
   flex-shrink: 0;
-  padding: 5px 12px;
-  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border: 1px solid var(--accent);
   border-radius: 8px;
-  background: var(--surface);
-  color: var(--accent-ink);
+  background: var(--accent);
+  color: #fff;
   font: inherit;
   font-size: var(--fs-base);
+  font-weight: 600;
   cursor: pointer;
   transition:
+    background 0.15s ease,
     border-color 0.15s ease,
-    background 0.15s ease;
+    box-shadow 0.15s ease;
 }
 
 .chat-new:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: var(--accent-soft);
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 32%, transparent);
 }
 
 /* Disabled, not hidden. A control that vanishes when it has nothing to do is
-   one the reader cannot find when it does. */
+   one the reader cannot find when it does — but it must stop advertising
+   itself as the next thing to press. */
 .chat-new:disabled {
+  background: var(--bg);
+  border-color: var(--border);
   color: var(--muted-2);
+  font-weight: 400;
   cursor: default;
 }
 
