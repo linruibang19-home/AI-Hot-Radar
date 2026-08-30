@@ -49,9 +49,7 @@ def test_the_pipeline_asks_the_adapter_rather_than_checking_its_class() -> None:
     assert 'getattr(adapter, "cursor_for_committed", None)' in source
     # Comments stripped: the comment above the fix names the branch it replaced,
     # and matching against it would fail on the explanation rather than the code.
-    code = "\n".join(
-        line for line in source.splitlines() if not line.lstrip().startswith("#")
-    )
+    code = "\n".join(line for line in source.splitlines() if not line.lstrip().startswith("#"))
     assert "isinstance(adapter, HtmlListingAdapter)" not in code
 
 

@@ -10,7 +10,7 @@ never be able to retrieve it.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from ahr.rag.eval.golden import CATEGORIES
 from ahr.rag.eval.worksheet import render, validate
@@ -20,7 +20,7 @@ class _Cursor:
     def __init__(self, rows: list[tuple]) -> None:
         self._rows = rows
 
-    def __enter__(self) -> "_Cursor":
+    def __enter__(self) -> _Cursor:
         return self
 
     def __exit__(self, *_: object) -> None:
@@ -47,7 +47,7 @@ def _row(item_id: str, *, after: bool, outcome: str = "cited", rank: int = 1) ->
         item_id,
         "某个模型发布了",
         "Hugging Face",
-        datetime(2026, 8, 18, tzinfo=timezone.utc),
+        datetime(2026, 8, 18, tzinfo=UTC),
         outcome,
         rank,
         rank,
@@ -140,7 +140,7 @@ def test_an_unanswerable_question_needs_a_presupposition() -> None:
     """It is what the abstention judge reads. Without it the question grades as
     answerable-with-no-evidence, a much weaker test."""
     problems = validate(
-        '\nquestions:\n  - id: RAG-GOLD-091\n    category: abstention\n'
+        "\nquestions:\n  - id: RAG-GOLD-091\n    category: abstention\n"
         '    answerable: false\n    notes: "x"\n'
     )
     assert any("presupposition" in p for p in problems)
@@ -151,7 +151,7 @@ def test_must_not_claim_is_not_demanded() -> None:
     an annotator to invent a forbidden string, and a wrong one is worse than
     none: it fails answers that correctly name the thing while denying it."""
     problems = validate(
-        '\nquestions:\n  - id: RAG-GOLD-091\n    category: abstention\n'
+        "\nquestions:\n  - id: RAG-GOLD-091\n    category: abstention\n"
         '    answerable: false\n    presupposition: "x"\n    notes: "y"\n'
     )
     assert problems == []
@@ -159,7 +159,7 @@ def test_must_not_claim_is_not_demanded() -> None:
 
 def test_an_unknown_category_is_refused() -> None:
     problems = validate(
-        '\nquestions:\n  - id: RAG-GOLD-091\n    category: 杂项\n'
+        "\nquestions:\n  - id: RAG-GOLD-091\n    category: 杂项\n"
         '    answerable: true\n    notes: "x"\n'
     )
     assert any("不在" in p for p in problems)

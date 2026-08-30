@@ -168,9 +168,7 @@ def render(connection: Any, candidates: list[dict[str, Any]], *, category: str) 
     ]
 
     for candidate in candidates:
-        documents, traced = _documents(
-            connection, candidate["query_id"], candidate["asked_at"]
-        )
+        documents, traced = _documents(connection, candidate["query_id"], candidate["asked_at"])
         lines.append("")
         lines.append(
             f"  # 挖出的理由: {candidate['band']}"
@@ -196,7 +194,9 @@ def render(connection: Any, candidates: list[dict[str, Any]], *, category: str) 
         if not documents:
             lines.append("      # 检索没有留下任何候选——这题多半应当 answerable: false")
         elif all(d["after_snapshot"] for d in documents):
-            lines.append("      # 候选全部落在快照外——这题标不了，应当 answerable: false 或整题删掉")
+            lines.append(
+                "      # 候选全部落在快照外——这题标不了，应当 answerable: false 或整题删掉"
+            )
         for document in documents:
             rank = document["rerank_rank"] or document["fused_rank"] or "—"
             outside = document["after_snapshot"]

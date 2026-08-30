@@ -242,14 +242,15 @@ class DocsChangelogAdapter:
         Sections already seen before this run stay seen — they are not new work,
         and re-offering them would make the page churn forever.
         """
-        stored = {item.attributes.get("section_hash") for item in batch.items
-                  if item.external_id in set(committed)}
+        stored = {
+            item.attributes.get("section_hash")
+            for item in batch.items
+            if item.external_id in set(committed)
+        }
         seen_before = set((previous.extra or {}).get("section_hashes", [])) if previous else set()
         kept = [
             digest
             for digest in (next_cursor.extra or {}).get("section_hashes", [])
             if digest in stored or digest in seen_before
         ]
-        return replace(
-            next_cursor, extra={**(next_cursor.extra or {}), "section_hashes": kept}
-        )
+        return replace(next_cursor, extra={**(next_cursor.extra or {}), "section_hashes": kept})
