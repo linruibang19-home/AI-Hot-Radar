@@ -197,9 +197,20 @@ class DocsChangelogAdapter:
                     # Identity is the heading, not the hash: an edited section
                     # must update the existing item rather than create a new one.
                     external_id=f"{source.id}#{slug}",
-                    candidate_url=f"{source.discovery_url}#{anchor}"
-                    if anchor
-                    else source.discovery_url,
+                    # The same slug, not `anchor`. Falling back to the bare page
+                    # URL here put every anchorless heading on one canonical URL
+                    # and the unique index rejected all but the first — the very
+                    # failure `keep_fragment` exists to prevent, reintroduced
+                    # for the headings that slugify to nothing. Seen in
+                    # production on `baidu-qianfan-changelog`, whose Chinese
+                    # headings carry no ASCII, colliding with the pre-fix
+                    # `#0` item that still holds the bare URL.
+                    #
+                    # A hashed fragment does not scroll to the section the way a
+                    # real anchor does. That is the accepted cost: a link that
+                    # lands on the right page beats a document that cannot be
+                    # stored at all.
+                    candidate_url=f"{source.discovery_url}#{slug}",
                     title_hint=heading,
                     published_at_hint=parse_heading_date(heading),
                     body_markdown=body,
