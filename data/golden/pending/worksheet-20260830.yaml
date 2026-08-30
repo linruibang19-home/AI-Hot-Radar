@@ -1,0 +1,1046 @@
+# 标注工作表 —— 从真实提问挖出来的候选，尚未标注。
+#
+# 每题按下面三步填：
+#   1. answerable: 语料里是否真的答得出来。答不出就改成 false，
+#      并补 presupposition（这题预设了什么）和 must_not_claim（不许出现的词）。
+#   2. 每个候选文档把 grade: ? 改成 2（强相关）或 1（弱相关）；
+#      不相关的整行删掉。全删光说明这题不可答。
+#   3. notes 写这题考的是什么——将来的人靠它判断题目还成不成立。
+#
+# 文档列表来自 rag_trace，包含检索看过但丢弃的。漏标的相关文档就藏在
+# 「未进证据」那几行里；只看被引用的，就只能给系统点头。
+#
+# 校验：ahr golden-validate <本文件>。留着 ? 会直接失败。
+
+category: mixed
+questions:
+
+  # 挖出的理由: weak_support · 最低支持度 0.0001
+  - id: TODO-aca4cd14
+    question: "Cursor 最近有什么产品更新？"
+    asked_at: 2026-08-08T10:02:13.901823+00:00
+    answerable: true
+    relevant_items:
+      # [被引用] #1 LiteLLM Releases · 2026-08-05 · LiteLLM v1.97.0-dev.1 发布：Docker 镜像签名验证及多项功能更新
+      #   * feat(proxy): resolve Cursor thinking/fast model-name suffixes on /cursor/chat/completions by @mateo-berri in
+      - {id: 68837e63-a2e7-4d0e-b841-33c0ee9764f4, grade: ?}
+      # [被引用] #2 Mastra Releases · 2026-08-06 · Mastra 发布更新：声明式工作流持久化与实验评估增强
+      #   ([#20453](https://github.com/mastra-ai/mastra/pull/20453)) import { CommandPaletteDialog } from "@mastra/playg
+      - {id: d1eb61ec-e3a8-4365-9eea-09fa9cadc115, grade: ?}
+      # [被引用] #3 CrewAI Releases · 2026-08-07 · CrewAI 发布 1.15.13 版本，修复多项 bug 和安全漏洞
+      #   @Vidit-Ostwal, @joaomdmoura, @lucasgomide, @theCyberTech
+      - {id: d757280f-d122-4606-b05c-6785af020ba2, grade: ?}
+      # [进证据未引用] #5 Hugging Face New and Trending Models · 2026-08-06 · MonsterMMORPG 发布 Wan_GGUF 量化模型
+      #   [Full Stable Diffusion SD & XL Fine Tuning Tutorial With OneTrainer On Windows & Cloud - Zero To Hero](https:/
+      - {id: 91194c59-6ff8-4a4b-87d5-2c9741addca9, grade: ?}
+      # [被引用] #8 Langfuse Releases · 2026-08-06 · Langfuse v4.5.0 发布：新增提示词批量导入导出与 Agent 静默模式
+      #   * chore(pricing): gpt-5.4/5.5 large-context tiers, sonnet-4.5 and gemini-3.5-flash-lite fixes by @langfuse-bot
+      - {id: be2e6c77-5376-4a42-920b-b92d0434d021, grade: ?}
+      # [进证据未引用] #14 CrewAI Releases · 2026-08-05 · CrewAI 发布 1.15.12：新增 URL 读取工具并统一脚手架命令
+      #   - Bump Flow canary on release - Add URLReadTool for reading arbitrary URLs - Add app metadata to platform acti
+      - {id: c59e83fb-dc20-483c-8b31-53f514c62db0, grade: ?}
+      # [进证据未引用] #16 CrewAI Releases · 2026-08-05 · CrewAI 发布 1.15.11 版本：新增功能与安全修复
+      #   @PawanThakurIBM, @Vidit-Ostwal, @gabemilani, @joaomdmoura, @lorenzejay, @lucasgomide, @theCyberTech
+      - {id: 577884de-158f-43b9-8173-39c43c77defa, grade: ?}
+      # [进证据未引用] #18 Hugging Face New and Trending Models · 2026-08-05 · Qwen3.6-27B 多阶段微调模型突破 ARC-C 700 分
+      #   Look at what you’ve got. A blinking cursor that mocks you like a silent, judgmental asshole. 🖤🌈 I, on the othe
+      - {id: 0849d4f4-4800-4f59-8c35-c6c7eab0a754, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0081
+  - id: TODO-9783d8fe
+    question: "智谱最近发布了什么？"
+    asked_at: 2026-08-09T14:21:23.775971+00:00
+    answerable: true
+    relevant_items:
+      # [进证据未引用] #1 Mastra Releases · 2026-08-06 · Mastra 发布更新：声明式工作流持久化与实验评估增强
+      #   - Fixed observability exporters to read toolCallId from span attributes (with metadata fallback). Braintrust T
+      - {id: d1eb61ec-e3a8-4365-9eea-09fa9cadc115, grade: ?}
+      # [进证据未引用] #2 THE DECODER · 2026-08-09 · DeepMind 发布 WeatherNext Cyclones，同时预测气旋路径与强度
+      #   Deepmind has made all of this publicly available, releasing the code and weights for both WeatherNext 2 and We
+      - {id: 810da24d-17ce-4fe2-b413-89470b902c73, grade: ?}
+      # [进证据未引用] #4 PydanticAI Releases · 2026-08-08 · PydanticAI v2.27.0 发布：新增 Snowflake Cortex 支持与多项修复
+      #   <!-- Release notes generated using configuration in .github/release.yml at main -->
+      - {id: f493e151-26b7-41b7-a806-e9db1f502105, grade: ?}
+      # [进证据未引用] #5 PydanticAI Releases · 2026-08-06 · PydanticAI v2.25.0 发布：新增 xAI 搜索选项并修复多项问题
+      #   <!-- Release notes generated using configuration in .github/release.yml at main -->
+      - {id: 13eb9176-c99f-4d81-8fb2-7745ec264fa2, grade: ?}
+      # [进证据未引用] #8 Hugging Face New and Trending Models · 2026-08-08 · 飞桨发布 PaddleOCR-VL：0.9B 超紧凑多语言文档解析模型
+      #   **🔥 Official Website**: [Baidu AI Studio](https://aistudio.baidu.com/paddleocr) | **📝 arXiv**: [Technical Repo
+      - {id: 24d250d7-85d7-4791-9d42-12491c479b34, grade: ?}
+      # [进证据未引用] #10 LiteLLM Releases · 2026-08-08 · LiteLLM v1.97.0-rc.1 发布：镜像签名验证与多项修复
+      #   * fix(guardrails): chunk oversized Bedrock ApplyGuardrail requests instead of failing by @yucheng-berri in htt
+      - {id: bf8da8b9-52b8-474e-89fe-4fa1430b0059, grade: ?}
+      # [进证据未引用] #12 Latent Space · 2026-08-07 · AMD收购Taalas，Meta与OpenAI发布新模型和工具
+      #   - Benchmarks continue to specialize into domain reasoning rather than generic QA. Elicit introduced BioDecisio
+      - {id: 57cde5a2-e3af-4d35-94f9-461ef1319bf9, grade: ?}
+      # [进证据未引用] #14 Latent Space · 2026-08-05 · Megakernels 争议与多模型发布：AI 新闻综述
+      #   - NVIDIA and Mistral both leaned into deployable specialization: @JensenHuang introduced Alpamayo 2 Super for 
+      - {id: 98a2ee7f-3100-42c7-8a77-02f82dce664a, grade: ?}
+      # [被引用] #15 雷峰网 AI科技评论 · 2026-08-04 · 三星收缩中国手机业务；阿里发布Qwen3.8-Max；DeepSeek日处理8万亿Token
+      #   8月3日，阿里“千问办公”开启公测，个人和企业用户均可通过“千问办公”官网体验。目前，“千问办公”已初步打通钉钉，未来将连接企业真实数据流和工作流。据了解，“千问办公”未来还将上线独立App端并推出国际版，实现多端联动，
+      - {id: 5140c916-40a6-48e5-9a96-f8fcc1a98da0, grade: ?}
+      # [进证据未引用] #16 Latent Space · 2026-08-04 · Qwen3.8-Max发布：2.4T参数开源模型，主打编码与多模态智能体
+      #   - Kimi K3 and harness sensitivity: K3 continued to post strong downstream and infra results. RSIBench-Data rep
+      - {id: 699453fe-e7e9-433e-a12f-4856e953d4bf, grade: ?}
+      # [预算已满] #18 LiteLLM Releases · 2026-08-03 · LiteLLM v1.96.0-rc.1 发布：镜像签名验证与多项修复
+      #   * fix(mcp): annotate connected-app reachability on the gateway connect page by @tin-berri in https://github.co
+      - {id: 25a1b8ec-f1d6-44c4-a391-ecdfa80d033e, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0146
+  - id: TODO-0b38319d
+    question: "NVIDIA 最近有什么芯片动态？"
+    asked_at: 2026-08-08T08:27:15.441579+00:00
+    answerable: true
+    relevant_items:
+      # [被引用] #1 NVIDIA Generative AI Blog · 2026-08-05 · NVIDIA 与合作伙伴在美国本土建设 AI 基础设施
+      #   Updated Aug. 5 (originally published July 1) America is a nation of builders. For 250 years, America has built
+      - {id: 178de809-a363-4192-99dc-d1bc37275aa2, grade: ?}
+      # [被引用] #3 NVIDIA Generative AI Blog · 2026-08-06 · NVIDIA 发布 Cosmos 3 开放世界模型，推动物理 AI 发展
+      #   Editor’s note: This post is part of Into the Omniverse, a series focused on how developers, 3D practitioners a
+      - {id: b5037387-a074-4c49-b7c5-ca463105fabc, grade: ?}
+      # [被引用] #5 Hugging Face New and Trending Models · 2026-08-04 · NVIDIA发布Alpamayo 1.5：面向自动驾驶的100亿参数推理VLA模型
+      #   **Acceleration Engine:** PyTorch, Hugging Face Transformers **Test Hardware:** - Minimum: 1 GPU with 24GB+ VRA
+      - {id: c8f6c166-ef17-4dc2-bb22-a6538c447341, grade: ?}
+      # [被引用] #6 量子位 · 2026-08-07 · AI SSD：大模型推理的存储范式转移
+      #   [5] NVIDIA, “Scaling Agentic AI Factories Through Extreme Co-Design with NVIDIA BlueField,” 2026. [6] 英韧科技，“从N
+      - {id: 8fed69b1-e92f-4b51-ad1c-d5b6e1f01177, grade: ?}
+      # [被引用] #12 Latent Space · 2026-08-03 · 推理工程大师课：Baseten解析AI推理优化前沿
+      #   Ali [00:54:40]: Yeah, they do And with training, it’s more of like a math. Like you can run the math- Yeah and
+      - {id: 0e6d1ba1-3178-4bb5-b77f-b224e15ca248, grade: ?}
+      # [被引用] #13 NVIDIA Generative AI Blog · 2026-08-04 · NVIDIA 加入 NSF 区域 AI 中心计划，推动全美 AI 研究与教育
+      #   NVIDIA is participating in the U.S. National Science Foundation’s (NSF) State and Regional Artificial Intellig
+      - {id: 71914a67-7c44-4ea7-bb90-3dc0189546dd, grade: ?}
+      # [被引用] #15 NVIDIA Generative AI Blog · 2026-08-04 · 开放安全 AI 联盟提出 SAFE 指南，强化代理式 AI 网络安全
+      #   Members of the Open Secure AI Alliance — now more than 120 organizations strong — are developing new guideline
+      - {id: 57c21a47-c006-47bf-b725-9e803fc106fb, grade: ?}
+      # [被引用] #16 Hugging Face Blog · 2026-08-03 · NVIDIA与Hugging Face合作推出NeMo Automodel，简化扩散模型分布式微调
+      #   Diffusion models power some of the most exciting open-source releases of the last two years — such as FLUX.1-d
+      - {id: d6ab6c2f-c315-4f48-8eeb-863d6c4d6a84, grade: ?}
+      # [被引用] #17 Together AI Blog · 2026-08-02 · ThunderKittens 针对 NVIDIA Blackwell GPU 优化并开源新内核
+      #   At Together AI, we have been investing in the ThunderKittens framework - a software library that we developed 
+      - {id: ebcd07c0-70d3-4c7a-bca0-e111c0317ab5, grade: ?}
+      # [被引用] #18 Together AI Blog · 2026-08-01 · Together AI 推出 Blackwell GPU 集群，训练速度提升90%
+      #   To take advantage of Blackwell’s hardware features, Together AI leverages open-source frameworks such as NVIDI
+      - {id: 495e2dd2-d942-4421-afe7-8737baa257d9, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0296
+  - id: TODO-126d113a
+    question: "LiteLLM 的 rc 版本和 dev 版本有什么不同？"
+    asked_at: 2026-08-30T01:38:59.734650+00:00
+    answerable: true
+    relevant_items:
+      # [进证据未引用] #1 LiteLLM Releases · 2026-08-03 · LiteLLM v1.96.0-rc.1 发布：镜像签名验证与多项修复
+      #   **Full Changelog**: https://github.com/BerriAI/litellm/compare/v1.96.0-dev.2...v1.96.0-rc.1
+      - {id: 25a1b8ec-f1d6-44c4-a391-ecdfa80d033e, grade: ?}
+      # [被引用] #2 LiteLLM Releases · 2026-07-31 · LiteLLM v1.95.0-rc.2 发布：镜像签名验证与多项更新
+      #   * feat(team): add RESTful PATCH /team/{team_id} with JSON merge patch semantics by @yuneng-berri in https://gi
+      - {id: 5d479427-ac8c-4af9-b7c2-34c2d150aec0, grade: ?}
+      # [同信源超额] #5 LiteLLM Releases · 2026-08-16 · LiteLLM v1.98.0-rc.1 发布：镜像签名验证与多项改进
+      #   * refactor(ui): move MCP permission panels onto shadcn primitives by @yuneng-berri in https://github.com/Berri
+      - {id: 4ba92708-90f5-4ba6-8cdb-be9ba320b412, grade: ?}
+      # [同信源超额] #11 LiteLLM Releases · 2026-08-05 · LiteLLM v1.97.0-dev.1 发布：Docker 镜像签名验证及多项功能更新
+      #   * @hMED22 made their first contribution in https://github.com/BerriAI/litellm/pull/34971 **Full Changelog**: h
+      - {id: 68837e63-a2e7-4d0e-b841-33c0ee9764f4, grade: ?}
+      # [同信源超额] #13 LiteLLM Releases · 2026-08-01 · LiteLLM v1.95.0-rc.3 发布：镜像签名验证与多项修复
+      #   * test(e2e): unblock the ui suite, fix the mcp registration race, park two known product bugs by @mubashir1osm
+      - {id: 28264453-79df-474b-8d90-e70201bf6ec4, grade: ?}
+      # [同信源超额] #15 LiteLLM Releases · 2026-08-23 · LiteLLM v1.99.0-rc.1 发布：镜像签名验证及多项修复
+      #   * @uuzzrm made their first contribution in https://github.com/BerriAI/litellm/pull/36580 * @sailikhithk made t
+      - {id: e1969dea-a774-4069-90e0-d461be97ae6f, grade: ?}
+      # [同信源超额] #16 LiteLLM Releases · 2026-08-21 · LiteLLM v1.99.0-dev.2 发布：镜像签名验证与多项修复
+      #   * fix(ui): make inline styles and code blocks follow the theme by @yuneng-berri in https://github.com/BerriAI/
+      - {id: cb328f5f-eb5c-4d5c-863b-c8303e119ca6, grade: ?}
+      # [同信源超额] #17 LiteLLM Releases · 2026-07-31 · LiteLLM v1.96.0-dev.1 发布：Docker 镜像签名验证及多项修复
+      #   * @Harsh23Kashyap made their first contribution in https://github.com/BerriAI/litellm/pull/33008 * @ljogeiger 
+      - {id: b012b1e8-70ff-49d1-9b19-b41f5f0ef35c, grade: ?}
+      # [同信源超额] #18 LiteLLM Releases · 2026-08-19 · LiteLLM v1.99.0-dev.1 发布：Docker 镜像签名验证及多项修复
+      #   * test(ui): cover the edit project modal's required-field validation by @yuneng-berri in https://github.com/Be
+      - {id: 6cebb2c7-54aa-445e-a4c8-8b9a856a77b6, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0479
+  - id: TODO-f887ce88
+    question: "Anthropic 最近发布了什么模型？"
+    asked_at: 2026-08-06T17:34:17.027441+00:00
+    answerable: true
+    relevant_items:
+      # [进证据未引用] #1 雷峰网 AI科技评论 · 2026-08-06 · Jeff Dean离职创业，路演PPT曝光34位创始人，谷歌系人才主导AI行业
+      #   这位没有完成常规大学教育的天才，在 18 岁时因觉得“留在教室会阻碍研究速度”而果断从多伦多大学数学系辍学。他凭借将冰冷数学公式化为绝美视觉彩绘的个人博客 colah.github.io 轰动硅谷，成为无数巨头的入行教案
+      - {id: ff2bc6ad-b457-40a8-b3d7-2b7c515469fd, grade: ?}
+      # [被引用] #2 Anthropic Newsroom · 2026-08-01 · Anthropic 发布 Claude Opus 5，性能提升且成本减半
+      #   Biology. Since Opus 5 has a similar suite of safeguards to Opus 4.8, it is now our most capable generally avai
+      - {id: 9c831f14-e83a-4e22-b8df-7ba0607b4aaf, grade: ?}
+      # [被引用] #3 Anthropic Newsroom · 2026-08-01 · Anthropic 发布 Claude Sonnet 5，性能接近 Opus 且价格更低
+      #   Introducing Claude Sonnet 5 Claude Sonnet 5 is built to be the most agentic Sonnet model yet. It can make plan
+      - {id: b3fbd248-3163-40ba-8c8f-770bd853bb43, grade: ?}
+      # [进证据未引用] #5 The Verge AI · 2026-08-03 · 阿里巴巴发布Qwen3.8-Max，挑战美国AI主导地位
+      #   Chinese tech giant Alibaba released what it says is its largest and “most capable AI model to date,” claiming 
+      - {id: 1418aaf4-7fe3-4f2e-85c3-d574c617a75e, grade: ?}
+      # [被引用] #6 The Verge AI · 2026-07-31 · Anthropic 称 Claude 模型意外入侵真实公司系统
+      #   Anthropic just realized several of its Claude AI models hacked into the systems of three different organizatio
+      - {id: 0c0ba9c9-a7bf-4953-b78b-2e974cd1db22, grade: ?}
+      # [被引用] #7 Anthropic Newsroom · 2026-08-01 · Anthropic 恢复 Fable 5 并推动越狱严重性行业框架
+      #   - Pre‑release government access and evaluation. For models that materially advance the capability frontier in 
+      - {id: 52c29299-4755-4a91-bfe6-c35cd217342b, grade: ?}
+      # [被引用] #9 Ars Technica AI · 2026-07-31 · Anthropic 披露 Claude 模型在测试中入侵三家真实公司
+      #   Anthropic said its Claude-based security models gained unauthorized access to the sensitive production environ
+      - {id: 21545cf0-05a2-4f4b-84f7-62a90ac40f59, grade: ?}
+      # [进证据未引用] #10 Hugging Face Blog · 2026-08-02 · J-Space：又一个LLM读心术？
+      #   No activation intervention can answer that question without additional philosophical commitments. A strict fun
+      - {id: e29b253f-a3ca-4a1e-b509-12d050dc5cf6, grade: ?}
+      # [进证据未引用] #11 Claude Platform Release Notes · 2026-08-01 · Claude 平台更新：Opus 5 发布、合规 API 扩展及代理功能增强
+      #   We've deprecated fast mode for Claude Opus 4.6, with removal approximately 30 days after launch. Migrate to fa
+      - {id: bd6716b9-9684-4ae4-a796-31af5c0cd34a, grade: ?}
+      # [进证据未引用] #12 量子位 · 2026-08-01 · Anthropic模型测试失控：Claude闯入真实互联网引发三起事故
+      #   Anthropic模型，也失控了。。。 14万次测试翻旧账 梦瑶 发自 凹非寺 量子位 | 公众号 QbitAI 好啊好啊，AI大厂的安全测试，这波是快把真实互联网测成筛子了…… 刚围观完OpenAI的AI Agent逃
+      - {id: 9d08777a-a00d-455e-9b0a-14c5a7396922, grade: ?}
+      # [预算已满] #13 TechCrunch AI · 2026-08-04 · Anthropic 与 AI 云初创 Volta 签署 100 亿美元协议
+      #   Anthropic has been on a cloud partnership spree in recent months, and its latest move is reportedly a $10 bill
+      - {id: 9d756bea-9a97-4b2b-9477-64fa96933a6f, grade: ?}
+      # [预算已满] #15 LangChain Releases · 2026-08-05 · LangChain Anthropic 1.5.4 发布：修复工具模式与新增用户属性
+      #   Changes since langchain-anthropic==1.5.3 release(anthropic): 1.5.4 (#39277) fix(anthropic): handle tool schema
+      - {id: 6541169b-0852-4978-9c97-c3b4d74a0d5a, grade: ?}
+      # [预算已满] #16 THE DECODER · 2026-08-03 · Karpathy 用 Claude Opus 5 将《指环王》段落转化为 3D 场景，探索 AI 游戏生
+      #   Unicorn, pelican, Middle-earth: OpenAI co-founder Karpathy is looking for the next AI vibe test Key Points - A
+      - {id: 69a8d5e3-6454-436b-9b9f-49ae06e77be7, grade: ?}
+      # [预算已满] #17 Anthropic Newsroom · 2026-08-01 · Anthropic 邀请公众提出 AI 难题并承诺公开回应
+      #   Inviting hard questions Who decides the rules for AI? Can AI give my children a better future? Does AI make th
+      - {id: 23d195a7-6d14-48e6-8a2b-2ed160c9a9b7, grade: ?}
+      # [预算已满] #18 THE DECODER · 2026-08-04 · 谷歌联手博通摩根士丹利为Anthropic提供350亿美元TPU融资
+      #   Google moves billions in Anthropic chip risk off its balance sheet Key Points - Google has set up an elaborate
+      - {id: 45ecd7a1-eb8b-458b-bd3e-2155bf6fc9e7, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.2187
+  - id: TODO-176f3588
+    question: "最近重置是什么时候"
+    asked_at: 2026-08-10T05:50:14.392575+00:00
+    answerable: true
+    relevant_items:
+      # [进证据未引用] #1 Hugging Face New and Trending Models · 2026-08-03 · gemma-4-A4B-98e-v7-coderx-it GGUF 量化发布，性能超越 Qwen2.5-
+      #   **Every tier in this repo has been re-uploaded with corrected metadata** — the rollout completed 2026-07-30 an
+      - {id: 7ac2adaa-c561-4526-9966-dfeaf6328627, grade: ?}
+      # [进证据未引用] #2 InfoQ AI ML and Data Engineering · 2026-08-08 · OpenAI 性能团队负责人谈 AI 加速下的 ChatGPT 性能挑战
+      #   Some of you might be familiar with this benchmark from DX, where basically they study a few companies, got som
+      - {id: 01ca1e60-4901-4e9f-a652-84693de10cf9, grade: ?}
+      # [进证据未引用] #3 Simon Willison's Weblog · 2026-08-09 · Claude Opus 5 系统提示词披露出口管制事件处理方式
+      #   9th August 2026 Claude Fable 5 and Claude Mythos 5 were first released on June 9, 2026. On June 12, 2026, Anth
+      - {id: 1ecc6bc0-293c-49af-8b05-38d507ad173d, grade: ?}
+      # [进证据未引用] #4 TechCrunch AI · 2026-08-09 · Anthropic 将 Claude Code 自动模式设为默认
+      #   Programming with Claude Code will soon require even less human oversight, as Anthropic says it’s making auto m
+      - {id: 1484038f-03d3-4598-b4f0-2f92b353d96a, grade: ?}
+      # [进证据未引用] #5 ChatGPT and Codex Changelog · 2026-08-06 · ChatGPT 和 Codex 发布多项错误修复
+      #   Redact secrets and complete bearer tokens from displayed commands and replayed conversation history. (#36893, 
+      - {id: 04a60519-1625-4cc9-9e42-8853082f01cc, grade: ?}
+      # [进证据未引用] #6 LiteLLM Releases · 2026-08-08 · LiteLLM v1.94.2 发布：Docker 镜像签名验证与修复
+      #   * chore(release): backport #35835, #35844 to stable/1.94.x and cut 1.94.2 by @yuneng-berri in https://github.c
+      - {id: 309d9b9e-0d4f-452d-81d5-1be4f9fc7d32, grade: ?}
+      # [被引用] #7 Cloudflare AI Blog · 2026-08-04 · Cloudflare 利用 AI 强制执行工程标准
+      #   Since the beginning of May 2026, almost 600 unique open specs have been reviewed. Including reruns triggered o
+      - {id: 92442a3f-75f2-46d6-be75-28dded7e9941, grade: ?}
+      # [进证据未引用] #8 Anthropic TypeScript SDK Releases · 2026-08-07 · Anthropic TypeScript SDK v0.116.0 发布
+      #   * **api:** remove retired Claude Opus 4.1 models ([11b685c](https://github.com/anthropics/anthropic-sdk-typesc
+      - {id: 882484ee-7b73-4e1e-8f54-a04fe45ccdb9, grade: ?}
+      # [进证据未引用] #9 CrewAI Releases · 2026-08-07 · CrewAI 发布 1.15.13 版本，修复多项 bug 和安全漏洞
+      #   - Fix preservation of provider on LiteLLM-routed models. - Harden brittle LLM event-bus mocks. - Fix underrepo
+      - {id: d757280f-d122-4606-b05c-6785af020ba2, grade: ?}
+      # [进证据未引用] #10 LangGraph Releases · 2026-08-07 · LangGraph checkpoint 4.2.0 发布：修复与新增功能
+      #   Changes since checkpoint==4.1.1 * release(checkpoint): 4.2.0 (#8563) * fix(checkpoint): collect writes at plai
+      - {id: d2b53cf4-a7a6-40f1-b23c-88fd7660231e, grade: ?}
+      # [预算已满] #11 Anthropic Python SDK Releases · 2026-08-07 · Anthropic Python SDK v0.121.0 发布：新增会话预算与工具变更支持
+      #   * **api:** remove retired Claude Opus 4.1 models ([5352a33](https://github.com/anthropics/anthropic-sdk-python
+      - {id: 00f219a5-57c3-42bb-ae06-6b415329ed54, grade: ?}
+      # [预算已满] #12 Anthropic Java SDK Releases · 2026-08-07 · Anthropic Java SDK v2.53.0 发布，新增会话预算与技能自动加载
+      #   * **api:** remove retired Claude Opus 4.1 models ([003af97](https://github.com/anthropics/anthropic-sdk-java/c
+      - {id: d8837686-980a-4f51-96e8-4d27344a1a5d, grade: ?}
+      # [预算已满] #13 InfoQ AI ML and Data Engineering · 2026-08-07 · Spotify 用编码代理 Honk 持续重写全部代码库
+      #   Transcript Aleksandar Mitic: I'm Alex, this is Jo. This is our talk, "Rewriting All of Spotify's Codebase All 
+      - {id: 4a676448-70cc-44a4-9218-898f028a2f7b, grade: ?}
+      # [预算已满] #14 Mastra Releases · 2026-08-06 · Mastra 发布更新：声明式工作流持久化与实验评估增强
+      #   ([#20160](https://github.com/mastra-ai/mastra/pull/20160)) - Fixed `RegexFilterProcessor` leaving part of a ma
+      - {id: d1eb61ec-e3a8-4365-9eea-09fa9cadc115, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.2253
+  - id: TODO-74fd66ad
+    question: "智谱最近七天发布了哪些新模型？"
+    asked_at: 2026-08-10T13:50:17.140144+00:00
+    answerable: true
+    relevant_items:
+      # [进证据未引用] #1 Hugging Face New and Trending Models · 2026-08-18 · rahul7star 发布 Gemma 4 等模型的 GGUF 量化版本及技术解析
+      #   model-iLlama-3.1-Nemotron-Nano-4B-v1.1-heretic-quality.gguf
+      - {id: 8242ae25-0757-4d63-9de0-d087f37a74a3, grade: ?}
+      # [进证据未引用] #3 Hugging Face New and Trending Models · 2026-08-13 · Red Hat 发布 Gemma 4 12B NVFP4 量化模型
+      #   </details>
+      - {id: ae7d2615-9138-4534-8e94-476e40e08b87, grade: ?}
+      # [进证据未引用] #4 Latent Space · 2026-08-07 · AMD收购Taalas，Meta与OpenAI发布新模型和工具
+      #   - Benchmarks continue to specialize into domain reasoning rather than generic QA. Elicit introduced BioDecisio
+      - {id: 57cde5a2-e3af-4d35-94f9-461ef1319bf9, grade: ?}
+      # [进证据未引用] #5 PydanticAI Releases · 2026-08-08 · PydanticAI v2.27.0 发布：新增 Snowflake Cortex 支持与多项修复
+      #   <!-- Release notes generated using configuration in .github/release.yml at main -->
+      - {id: f493e151-26b7-41b7-a806-e9db1f502105, grade: ?}
+      # [同信源超额] #6 Hugging Face New and Trending Models · 2026-08-07 · Red Hat 发布 Qwen3.6-35B-A3B FP8 量化模型
+      #   This release delivers substantial upgrades, particularly in - **Agentic Coding:** the model now handles fronte
+      - {id: 2d736d78-cb27-4c6a-82b1-2a4bbaa4c015, grade: ?}
+      # [进证据未引用] #10 量子位 · 2026-08-08 · OpenAI推迟发布最强模型Astra，因网络安全风险
+      #   都学坏了！奥特曼亲手封锁最强模型Astra，重蹈Mythos覆辙 唉，赶紧整完快点发布吧。。。 Jay 发自 凹非寺 量子位 | 公众号 QbitAI 不er，闹呢？ 刚刚，奥特曼发文，宣布推迟最强模型Astra的发布。
+      - {id: 5226d76f-60b4-4fc2-b50c-df053c7a5038, grade: ?}
+      # [进证据未引用] #11 Latent Space · 2026-08-08 · 多智能体消息传递成趋势：OpenAI安全事件与Claude Code新功能引发关注
+      #   Top tweets (by engagement) - OpenAI Astra preparedness announcement: OpenAI’s statement that Astra is being tr
+      - {id: 55ea6237-7f90-4929-a481-a7362db90342, grade: ?}
+      # [同信源超额] #13 Hugging Face New and Trending Models · 2026-08-06 · MonsterMMORPG 发布 Wan_GGUF 量化模型
+      #   --- ---
+      - {id: 91194c59-6ff8-4a4b-87d5-2c9741addca9, grade: ?}
+      # [进证据未引用] #14 Mastra Releases · 2026-08-06 · Mastra 发布更新：声明式工作流持久化与实验评估增强
+      #   - Fixed observability exporters to read toolCallId from span attributes (with metadata fallback). Braintrust T
+      - {id: d1eb61ec-e3a8-4365-9eea-09fa9cadc115, grade: ?}
+      # [同信源超额] #15 Latent Space · 2026-08-05 · Megakernels 争议与多模型发布：AI 新闻综述
+      #   - NVIDIA and Mistral both leaned into deployable specialization: @JensenHuang introduced Alpamayo 2 Super for 
+      - {id: 98a2ee7f-3100-42c7-8a77-02f82dce664a, grade: ?}
+      # [同信源超额] #16 Hugging Face New and Trending Models · 2026-08-05 · Qwen3.6-27B 多阶段微调模型突破 ARC-C 700 分
+      #   This release delivers substantial upgrades, particularly in - **Agentic Coding:** the model now handles fronte
+      - {id: 0849d4f4-4800-4f59-8c35-c6c7eab0a754, grade: ?}
+      # [同信源超额] #17 Hugging Face New and Trending Models · 2026-08-04 · NVIDIA发布Alpamayo 1.5：面向自动驾驶的100亿参数推理VLA模型
+      #   Alpamayo 1.5 is a significant update to NVIDIA’s open 10B-parameter chain-of-thought reasoning VLA model, desi
+      - {id: c8f6c166-ef17-4dc2-bb22-a6538c447341, grade: ?}
+      # [同信源超额] #18 Latent Space · 2026-08-04 · Qwen3.8-Max发布：2.4T参数开源模型，主打编码与多模态智能体
+      #   - Kimi K3 and harness sensitivity: K3 continued to post strong downstream and infra results. RSIBench-Data rep
+      - {id: 699453fe-e7e9-433e-a12f-4856e953d4bf, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.2441
+  - id: TODO-59f4236a
+    question: "目前有哪些值得关注的新模型？"
+    asked_at: 2026-08-09T12:17:05.672677+00:00
+    answerable: true
+    relevant_items:
+      # [进证据未引用] #1 Hugging Face New and Trending Models · 2026-08-06 · MonsterMMORPG 发布 Wan_GGUF 量化模型
+      #   [![image](https://img.shields.io/discord/772774097734074388?label=Discord&logo=discord)](https://discord.com/s
+      - {id: 91194c59-6ff8-4a4b-87d5-2c9741addca9, grade: ?}
+      # [被引用] #2 Interconnects AI · 2026-08-02 · 开放模型新动态：Inkling、Hy3、Kimi K3 等展示帕累托前沿价值
+      #   - LongCat-2.0 by meituan-longcat: The Chinese DoorDash is back again. This time, the company released another 
+      - {id: ac52d6e1-d0b1-4c94-820e-a46f73b595a6, grade: ?}
+      # [进证据未引用] #5 Hugging Face New and Trending Models · 2026-08-08 · 飞桨发布 PaddleOCR-VL：0.9B 超紧凑多语言文档解析模型
+      #   [![repo](https://img.shields.io/github/stars/PaddlePaddle/PaddleOCR?color=ccf)](https://github.com/PaddlePaddl
+      - {id: 24d250d7-85d7-4791-9d42-12491c479b34, grade: ?}
+      # [进证据未引用] #6 Hugging Face New and Trending Models · 2026-08-03 · Liquid AI发布LFM2系列混合模型，主打边缘AI部署
+      #   ![image/png](https://cdn-uploads.huggingface.co/production/uploads/61b8e2ba285851687028d395/KoKcsXUOnkvz2dwZ99
+      - {id: 0b3de187-e195-47b3-ba29-7a23bff0fc18, grade: ?}
+      # [进证据未引用] #7 Hugging Face New and Trending Models · 2026-08-04 · NVIDIA发布Alpamayo 1.5：面向自动驾驶的100亿参数推理VLA模型
+      #   [**Code**](https://github.com/NVlabs/alpamayo1.5) | [**Alpamayo Overview**](https://www.nvidia.com/en-us/solut
+      - {id: c8f6c166-ef17-4dc2-bb22-a6538c447341, grade: ?}
+      # [进证据未引用] #8 Hugging Face New and Trending Models · 2026-08-13 · Red Hat 发布 Gemma 4 12B NVFP4 量化模型
+      #   </details>
+      - {id: ae7d2615-9138-4534-8e94-476e40e08b87, grade: ?}
+      # [进证据未引用] #9 Hugging Face New and Trending Models · 2026-08-18 · rahul7star 发布 Gemma 4 等模型的 GGUF 量化版本及技术解析
+      #   model-iLlama-3.1-Nemotron-Nano-4B-v1.1-heretic-quality.gguf
+      - {id: 8242ae25-0757-4d63-9de0-d087f37a74a3, grade: ?}
+      # [进证据未引用] #14 Interconnects AI · 2026-06-28 · 开源生态多元化：Zyphra、Cohere、Poolside 等推动模型发布新趋势
+      #   Latest open artifacts (#22): Zyphra, Cohere, and Poolside are expanding the breadth of the ecosystem An assess
+      - {id: d85773ce-2eef-4a50-b14e-14d320ff2f0f, grade: ?}
+      # [进证据未引用] #18 RAGFlow Releases · 2026-06-11 · RAGFlow v0.26.0 发布：新增多模型提供商支持与数据源连接器
+      #   - Four new SiliconFlow models [#15383](https://github.com/infiniflow/ragflow/pull/15383) - MiniMax-M3 model [#
+      - {id: 3d87a38a-699e-421c-8be4-098c4e73cc81, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.2488
+  - id: TODO-1a7e8fb5
+    question: "gemma-4 的 coder 和 coderx 两个量化版有什么区别？"
+    asked_at: 2026-08-07T16:14:21.715141+00:00
+    answerable: true
+    relevant_items:
+      # [被引用] #1 Hugging Face New and Trending Models · 2026-08-03 · gemma-4-A4B-98e-v7-coderx-it GGUF 量化发布，性能超越 Qwen2.5-
+      #   The 9 canonical benches + MultiPL-E-100, all on the **identical** llama.cpp **Q6_K** / greedy recipe (reasonin
+      - {id: 7ac2adaa-c561-4526-9966-dfeaf6328627, grade: ?}
+      # [被引用] #8 Hugging Face New and Trending Models · 2026-08-03 · gemma-4-A4B-98e-v6-coder-it-GGUF：修复智能体循环的量化模型发布
+      #   **Coder-specialized 14–22B:** | Model | Params | HE | HE+ | LCB (version) | Source | |---|---|---:|---:|---|--
+      - {id: 079902db-175f-4bd3-93ad-05ef686fb4ed, grade: ?}
+      # [进证据未引用] #14 Hugging Face New and Trending Models · 2026-08-18 · rahul7star 发布 Gemma 4 等模型的 GGUF 量化版本及技术解析
+      #   Gemma 12B FABLE CODER Addition gemma-4-12B-coder-fable5-composer2.5-v1.gguf - Python coder Agent | Model Range
+      - {id: 8242ae25-0757-4d63-9de0-d087f37a74a3, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0
+  - id: TODO-f2d06830
+    question: "Qwen4-Ultra 的参数量是多少？"
+    asked_at: 2026-08-04T05:12:33.295456+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 THE DECODER · 2026-08-03 · 阿里发布2.4万亿参数Qwen3.8-Max，主打长期自主任务
+      #   Subscribe to THE DECODER for ad-free reading, a weekly AI newsletter, our exclusive "AI Radar" frontier report
+      - {id: 6081607a-9e0c-4f31-9a7c-14c9271053e6, grade: ?}
+      # [被引用] #2 Latent Space · 2026-08-04 · Qwen3.8-Max发布：2.4T参数开源模型，主打编码与多模态智能体
+      #   - Qwen3.8-Max release: Alibaba’s announcement of a 2.4T flagship with open weights next week was the biggest t
+      - {id: 699453fe-e7e9-433e-a12f-4856e953d4bf, grade: ?}
+      # [被引用] #3 量子位 · 2026-08-03 · 阿里发布Qwen3.8-Max，性能直逼Claude且价格低廉
+      #   刚刚，阿里Qwen3.8-Max来了！冲进全球第一梯队，模型表现直逼Claude 编程、专业工作、长程任务、多模态分析统统梭哈 梦瑶 发自 凹非寺 量子位 | 公众号 QbitAI 不er？你告诉我现在搁哪儿还有便宜还好
+      - {id: 845e4161-2365-426a-a856-d7a601a0bf09, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0
+  - id: TODO-90eaa110
+    question: "本周deepseek的最新动态"
+    asked_at: 2026-08-06T16:50:06.303452+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 雷峰网 AI科技评论 · 2026-08-04 · 三星收缩中国手机业务；阿里发布Qwen3.8-Max；DeepSeek日处理8万亿Token
+      #   而杨植麟与谷歌合作发表的XLNet相关论文，刷新了多项基准，在论文发布时，苹果公司一位高管联系博导，询问他的入职意向。博导告知该高管，杨植麟已决定回中国创业。该高管随即表示，苹果在北京设有办公室，如果杨植麟有意向，随时可
+      - {id: 5140c916-40a6-48e5-9a96-f8fcc1a98da0, grade: ?}
+      # [被引用] #2 量子位 · 2026-08-04 · DeepSeek V4 Flash低价风暴席卷硅谷，海外平台争相补贴
+      #   DeepSeek低价风暴打服硅谷！海外平台争相倒贴V4 Flash 那还说啥了梁圣，我订阅费全给你就是了呗 Jay 发自 凹非寺 量子位 | 公众号 QbitAI DeepSeek V4 Flash的价格风暴，还在继续。
+      - {id: d7b271d1-2074-419d-981a-3a35bfc9d726, grade: ?}
+      # [被引用] #3 llama.cpp Releases · 2026-08-04 · llama.cpp b10254 发布：新增 DeepSeek V4 Flash 0731 模板
+      #   Official references: https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash/blob/main/encoding/encoding_dsv4.py 
+      - {id: 26584561-9d8f-41d1-854b-00a4820a518b, grade: ?}
+      # [被引用] #4 Hugging Face New and Trending Models · 2026-08-04 · bartowski 发布 DeepSeek-V4-Flash-0731 的 MXFP4 量化版 GGUF
+      #   No prompt format found
+      - {id: 7de3bb19-d570-4266-9967-2c2513447eea, grade: ?}
+      # [被引用] #5 Hugging Face New and Trending Models · 2026-08-04 · AtomicChat 发布 DeepSeek-V4-Flash GGUF 量化版，质量对比领先
+      #   DeepSeek V4 is supported by upstream llama.cpp — no PR checkout and no patching. Build from `master`: ```bash 
+      - {id: 3d7b5ac5-11fb-4a58-b6bf-82d9e0ca6477, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0
+  - id: TODO-0854608a
+    question: "最近的kimi的动态"
+    asked_at: 2026-08-04T16:11:58.438311+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 Latent Space · 2026-07-29 · 前沿实验室员工联名呼吁放缓AI发展，HuggingFace披露机器速度攻击
+      #   - World Labs/SceniX is making the “worlds that train robots” thesis concrete: Fei-Fei Li’s announcement introd
+      - {id: a3e3f006-f7b7-40b6-9514-66f9e5076cea, grade: ?}
+      # [被引用] #2 Hugging Face Blog · 2026-08-01 · Hugging Face 博客新文章：Kimi K3 等模型发布与技术教程
+      #   NEW Articles from Team or Enterprise organizations will get promoted to the main section. Kimi K3 Model Overvi
+      - {id: 5878504d-1206-45e9-9665-a63eed86460c, grade: ?}
+      # [被引用] #3 雷峰网 AI科技评论 · 2026-07-31 · Kimi K3疑以Kivine之名现身LMArena，百万上下文引热议
+      #   0 作者丨郑佳美、樊天骄 编辑丨马晓宁 7 月 15 日，一款名为 Kivine 的匿名模型突然出现在 LMArena。雷峰网 按照正常流程，它本应该只是众多匿名测试模型中的一个，等待用户通过盲测判断能力高低。但这一次情
+      - {id: 322c42df-050b-4e97-ba54-eb21571a71af, grade: ?}
+      # [被引用] #4 雷峰网 AI科技评论 · 2026-08-04 · 三星收缩中国手机业务；阿里发布Qwen3.8-Max；DeepSeek日处理8万亿Token
+      #   8月3日，阿里“千问办公”开启公测，个人和企业用户均可通过“千问办公”官网体验。目前，“千问办公”已初步打通钉钉，未来将连接企业真实数据流和工作流。据了解，“千问办公”未来还将上线独立App端并推出国际版，实现多端联动，
+      - {id: 5140c916-40a6-48e5-9a96-f8fcc1a98da0, grade: ?}
+      # [被引用] #5 Latent Space · 2026-07-29 · AI进军金融业：AIE NYC开放，代理安全引热议
+      #   Agents, Harnesses, and Benchmarks: Real-World Evaluation Is Getting More Sophisticated - Recursive self-improv
+      - {id: 108cb017-a5c4-44b4-a5ec-74057b90eb87, grade: ?}
+      # [被引用] #6 Latent Space · 2026-08-04 · Qwen3.8-Max发布：2.4T参数开源模型，主打编码与多模态智能体
+      #   - The announcement of Qwen3.8-27B may be just as consequential as the flagship, because it is the tier likelie
+      - {id: 699453fe-e7e9-433e-a12f-4856e953d4bf, grade: ?}
+      # [被引用] #7 雷峰网 AI科技评论 · 2026-07-31 · Kimi K3开源背后：401位贡献者全档案，月之暗面人才团队首次亮相
+      #   2016 年，张宇韬与杨植麟共同创立“循环智能”，随后，他与杨植麟共同创立“月之暗面”。如果说杨植麟是月之暗面的“领航员”，那么张宇韬就是那个负责把“智能”这艘巨轮动力系统调校到极致的首席工程师。 Kimi 能够在长文本
+      - {id: 39db5867-b245-4569-86d0-1c1b6ec90808, grade: ?}
+      # [被引用] #8 Interconnects AI · 2026-08-02 · 开放模型新动态：Inkling、Hy3、Kimi K3 等展示帕累托前沿价值
+      #   Latest open artifacts (#23): Laguna S2.1, Inkling, & Kimi K3 show the utility of open models on the Pareto fro
+      - {id: ac52d6e1-d0b1-4c94-820e-a46f73b595a6, grade: ?}
+      # [被引用] #9 THE DECODER · 2026-08-03 · 阿里发布2.4万亿参数Qwen3.8-Max，主打长期自主任务
+      #   For multimodal tasks, Qwen3.8-Max can process documents with over 200 pages and videos longer than 100 hours, 
+      - {id: 6081607a-9e0c-4f31-9a7c-14c9271053e6, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0001
+  - id: TODO-2497b21b
+    question: "Cloudflare 最近在 AI 方面有什么新动作？"
+    asked_at: 2026-08-04T09:05:38.433121+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 Cloudflare AI Blog · 2026-08-03 · Cloudflare 推出 @cloudflare/computer：为代理提供虚拟计算机
+      #   The most capable agents have something simple in common: they are given their own computer to work with. Codin
+      - {id: a8afca1b-cd51-44e2-bb78-229bc3ecfc27, grade: ?}
+      # [被引用] #2 Cloudflare AI Blog · 2026-08-02 · Cloudflare 推出 Agents Week，聚焦代理原生云基础设施
+      #   This week is Agents Week. As we started thinking about and planning the week, we wrestled with a broader quest
+      - {id: 938d9ada-25bf-4c98-99e3-b11795f84a02, grade: ?}
+      # [被引用] #3 Latent Space · 2026-08-04 · Qwen3.8-Max发布：2.4T参数开源模型，主打编码与多模态智能体
+      #   - Kimi K3 and harness sensitivity: K3 continued to post strong downstream and infra results. RSIBench-Data rep
+      - {id: 699453fe-e7e9-433e-a12f-4856e953d4bf, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0001
+  - id: TODO-90ef1b0c
+    question: "最近grok有什么动态吗"
+    asked_at: 2026-08-04T15:36:19.307950+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 xAI News · 2026-08-03 · xAI 发布 Grok 4.5：最强编码与智能体模型
+      #   Grok 4.5 is SpaceXAI's smartest model built for coding, agentic tasks, and knowledge work. Today, we're launch
+      - {id: 75c85058-1799-4981-89c7-5ee06338f50a, grade: ?}
+      # [被引用] #2 xAI News · 2026-08-01 · xAI 发布 Grok 4.5，全面登陆多平台并集成 Office
+      #   Grok 4.5, our most intelligent model yet, is now on grok.com, X, iOS, and Android. Grok 4.5 now powers Grok wh
+      - {id: eb142b68-66fc-492d-989a-db7f8b9b9450, grade: ?}
+      # [被引用] #3 xAI News · 2026-08-02 · xAI 免费开放 Grok-2 并推出新功能与 API 更新
+      #   Grok is now faster, sharper, and has improved multilingual support. It is available to everyone on the 𝕏 platf
+      - {id: b184b1cd-c954-4f4f-b8fc-5d47120853d8, grade: ?}
+      # [被引用] #4 xAI News · 2026-08-01 · xAI 发布 Grok Voice Think Fast 2.0 语音模型
+      #   Introducing our most capable speech-to-speech voice model. Today, we're announcing Grok Voice Think Fast 2.0, 
+      - {id: 6a2dea58-ffb7-4af9-8f82-44f6f549841b, grade: ?}
+      # [被引用] #5 xAI News · 2026-08-01 · xAI 推出 Grok Connectors，深度集成常用应用并支持自定义 MCP
+      #   Today, we're excited to launch Connectors — deep integrations that bring the apps you use every day directly i
+      - {id: 52cf9afd-ff22-4ae5-8bfa-0ec86b9edd90, grade: ?}
+      # [被引用] #6 xAI News · 2026-08-01 · xAI 推出 Grok Build 编码代理 CLI 早期测试版
+      #   Now in early beta for all SuperGrok and X Premium Plus subscribers — Grok Build is a new coding agent that run
+      - {id: 3862d08b-1b48-4a59-9502-2f657dd80cae, grade: ?}
+      # [被引用] #7 Latent Space · 2026-07-29 · 前沿实验室员工联名呼吁放缓AI发展，HuggingFace披露机器速度攻击
+      #   - World Labs/SceniX is making the “worlds that train robots” thesis concrete: Fei-Fei Li’s announcement introd
+      - {id: a3e3f006-f7b7-40b6-9514-66f9e5076cea, grade: ?}
+      # [被引用] #8 xAI News · 2026-08-02 · xAI 发布 Grok-2 和 Grok-2 mini 测试版，性能超越 GPT-4-Turbo
+      #   We are also releasing Grok-2 and Grok-2 mini to developers through our new enterprise API platform later this 
+      - {id: d6a6b172-0d11-4f2d-80ee-8201cbe313db, grade: ?}
+      # [被引用] #9 xAI News · 2026-08-02 · xAI 发布多模态模型 Grok-1.5V 及 RealWorldQA 基准
+      #   Connecting the digital and physical worlds with our first multimodal model. Introducing Grok-1.5V, our first-g
+      - {id: 5d0b6fc9-b423-4d5c-989f-d8e704285b5b, grade: ?}
+      # [被引用] #10 xAI News · 2026-08-02 · xAI 完成 60 亿美元 B 轮融资
+      #   xAI is pleased to announce our series B funding round of $6 billion. xAI is pleased to announce... Our Series 
+      - {id: 9b1656bc-2799-4fe4-b9e5-bba5d88b3ca7, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0003
+  - id: TODO-9396e4bd
+    question: "最近codex又信息吗"
+    asked_at: 2026-08-04T14:45:28.423736+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 Latent Space · 2026-07-28 · Codex 用户破千万：OpenAI 如何让代理惠及知识工作者
+      #   Akshay Nathan [00:40:41]: Yeah. I have a funny anecdote about this. Like, recently gearing up to this launch, 
+      - {id: 5b838f96-9d8e-417c-8db0-22a46c699463, grade: ?}
+      # [被引用] #2 Mastra Releases · 2026-07-30 · Mastra 更新：AgentController 聊天频道与 MongoDB 混合检索
+      #   - Added exact metadata filtering to message history queries across Memory APIs and supported storage providers
+      - {id: 9948b442-fbb5-4483-b65c-3bcabf807e77, grade: ?}
+      # [被引用] #3 BAAI Community · 2026-08-01 · BAAI 发布生产级企业 RAG 系统
+      #   Graphs that teach > graphs that impress. Turn any code into an interactive knowledge graph you can explore, se
+      - {id: c6824b5b-adf2-4140-ab9d-c79840eec600, grade: ?}
+      # [被引用] #4 雷峰网 AI科技评论 · 2026-08-04 · 三星收缩中国手机业务；阿里发布Qwen3.8-Max；DeepSeek日处理8万亿Token
+      #   据悉，该问题的根源在于苹果长期鼓励员工将个人 Apple ID 与公司提供的 iCloud 存储空间绑定。苹果为员工提供了 2TB 的 iCloud 空间，并允许其与现有的个人存储套餐合并。这种安排导致部分工作文件存放在
+      - {id: 5140c916-40a6-48e5-9a96-f8fcc1a98da0, grade: ?}
+      # [被引用] #5 Claude Platform Release Notes · 2026-08-01 · Claude 平台更新：Opus 5 发布、合规 API 扩展及代理功能增强
+      #   Search result content blocks are now generally available on Amazon Bedrock. Learn more in Search results. We'v
+      - {id: bd6716b9-9684-4ae4-a796-31af5c0cd34a, grade: ?}
+      # [被引用] #6 Anthropic Status History · 2026-08-04 · Claude Sonnet 5 错误已解决
+      #   Monitoring A fix has been implemented and we are monitoring the results. Investigating We are currently invest
+      - {id: 98c0470f-5f25-4184-a35d-814618c69ac4, grade: ?}
+      # [被引用] #7 Anthropic Status History · 2026-08-04 · Claude Sonnet 5 出现错误率升高，Anthropic 正在调查
+      #   Elevated errors on Claude Sonnet 5 Resolved This incident has been resolved. Monitoring A fix has been impleme
+      - {id: d2026ed2-63e5-485b-9c1a-e7385ff7f12c, grade: ?}
+      # [被引用] #8 雷峰网 AI科技评论 · 2026-07-31 · Claude共享对话被谷歌收录，隐私泄露引发争议
+      #   0 作者丨樊天骄 编辑丨郑佳美 2026 年 7 月 26 日，一名 Reddit 用户在社区发帖称，使用谷歌站点检索语法 site:claude.ai/share，就能批量调出成千上万条 Claude 用户的共享对话记
+      - {id: 59f7e8e8-6eae-49b3-a337-1894451f8bda, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0003
+  - id: TODO-a8291e43
+    question: "最近 Codex 有什么消息？"
+    asked_at: 2026-08-04T15:04:52.133902+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 Latent Space · 2026-07-28 · Codex 用户破千万：OpenAI 如何让代理惠及知识工作者
+      #   Akshay Nathan [00:40:41]: Yeah. I have a funny anecdote about this. Like, recently gearing up to this launch, 
+      - {id: 5b838f96-9d8e-417c-8db0-22a46c699463, grade: ?}
+      # [被引用] #2 THE DECODER · 2026-08-01 · AI编码代理可现代化研究软件但无法判断科学正确性
+      #   AI coding agents can modernize research software but can't judge if the science is right A field report from O
+      - {id: cdde8113-4728-4384-b9e2-2202b673d532, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0015
+  - id: TODO-91bb32b2
+    question: "使用 MXFP4 量化的是哪个模型？"
+    asked_at: 2026-08-04T05:26:31.125064+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 Hugging Face Blog · 2026-08-01 · Kimi K3 模型概览：2.8T 参数与 MXFP4 量化
+      #   Kimi K3 Model Overview: 2.8T Parameters, MXFP4 Quantization, and What the Open Weights Mean for the Community 
+      - {id: 1a71f88c-c3de-44f8-8863-c6b2a39dc579, grade: ?}
+      # [被引用] #2 vLLM Releases · 2026-06-29 · vLLM v0.24.0 发布：新增 MiniMax-M3 与 DiffusionGemma 支持
+      #   This release features 571 commits from 256 contributors (77 new)! * **MiniMax-M3**: Added support for the new 
+      - {id: 47ef1f38-83fc-4680-95e4-c490a1e1e9b0, grade: ?}
+      # [被引用] #3 SGLang Releases · 2026-05-05 · SGLang v0.5.11 发布：CUDA 13 升级、推测解码 V2 默认启用，新增多模型支持
+      #   * GPTQ / AWQ 4-bit quantization on CPU: #22685 * `gemma4_rmsnorm_cpu` kernel: #22842 * Qwen3.5 model optimizat
+      - {id: defb1566-f600-41b6-ba42-a19f98b52cf0, grade: ?}
+      # [被引用] #4 vLLM Releases · 2026-05-29 · vLLM v0.22.0 发布：DeepSeek V4 成熟化与性能大幅提升
+      #   * **MXFP4**: linear layers + compressed-tensors integration (#41664), CPU W4A16 MoE (#41922), XPU mxfp8 MoE (#
+      - {id: e7bc2e5a-6fd4-4f0a-93a4-823095cb5f84, grade: ?}
+      # [被引用] #5 Tencent Hunyuan Repository Activity · 2025-07-08 · 腾讯开源Hunyuan-A13B MoE模型，130亿激活参数性能卓越
+      #   We used our own [AngelSlim](https://github.com/Tencent/AngelSlim) compression tool to produce FP8 and INT4 qua
+      - {id: 0d6a75b4-997a-4073-9c2e-80c6e2a74961, grade: ?}
+      # [被引用] #6 Hugging Face New and Trending Models · 2026-08-03 · gemma-4-A4B-98e-v6-coder-it-GGUF：修复智能体循环的量化模型发布
+      #   All quants use imatrix with [calibration data v5](https://gist.github.com/bartowski1182/82ae9b520227f57d79ba04
+      - {id: 079902db-175f-4bd3-93ad-05ef686fb4ed, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0466
+  - id: TODO-de4f0398
+    question: "Anthropic 因为那三起事故被罚了多少钱？"
+    asked_at: 2026-08-04T05:12:43.295262+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 量子位 · 2026-08-01 · Anthropic模型测试失控：Claude闯入真实互联网引发三起事故
+      #   Anthropic模型，也失控了。。。 14万次测试翻旧账 梦瑶 发自 凹非寺 量子位 | 公众号 QbitAI 好啊好啊，AI大厂的安全测试，这波是快把真实互联网测成筛子了…… 刚围观完OpenAI的AI Agent逃
+      - {id: 9d08777a-a00d-455e-9b0a-14c5a7396922, grade: ?}
+      # [被引用] #3 Simon Willison's Weblog · 2026-07-30 · Anthropic 披露 Claude 在评估中引发三起真实网络安全事件
+      #   30th July 2026 - Link Blog Investigating three real-world incidents in our cybersecurity evaluations (via) It 
+      - {id: 03316b32-69de-4188-98cc-70cf580fcfb6, grade: ?}
+      # [被引用] #4 The Verge AI · 2026-07-31 · Anthropic 称 Claude 模型意外入侵真实公司系统
+      #   Anthropic just realized several of its Claude AI models hacked into the systems of three different organizatio
+      - {id: 0c0ba9c9-a7bf-4953-b78b-2e974cd1db22, grade: ?}
+      # [被引用] #5 Ars Technica AI · 2026-07-31 · Anthropic 披露 Claude 模型在测试中入侵三家真实公司
+      #   Anthropic said its Claude-based security models gained unauthorized access to the sensitive production environ
+      - {id: 21545cf0-05a2-4f4b-84f7-62a90ac40f59, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.0853
+  - id: TODO-ee0ae825
+    question: "最近大模型的资讯有什么动态？"
+    asked_at: 2026-08-04T15:42:21.946286+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 雷峰网 AI科技评论 · 2026-08-04 · 阿里发布Qwen3.8，海外平台当日接入潮
+      #   0 8月3日，阿里巴巴正式发布新一代基座大模型Qwen3.8，编程与Agent能力大幅提升，整体性能位居全球大模型第一梯队。发布当日，OpenRouter、OpenCode、Hermes Agent、Command Co
+      - {id: 4b84415a-3dce-4f6e-a35d-69ab1ade4028, grade: ?}
+      # [被引用] #2 Interconnects AI · 2026-08-02 · 开放模型新动态：Inkling、Hy3、Kimi K3 等展示帕累托前沿价值
+      #   - LongCat-2.0 by meituan-longcat: The Chinese DoorDash is back again. This time, the company released another 
+      - {id: ac52d6e1-d0b1-4c94-820e-a46f73b595a6, grade: ?}
+      # [被引用] #3 雷峰网 AI科技评论 · 2026-07-31 · Kimi K3疑以Kivine之名现身LMArena，百万上下文引热议
+      #   对于普通消费者来说，等待几十分钟生成一次答案显然难以接受。但对于科研、软件开发、企业分析等专业领域，如果模型能够完成过去需要数小时人工投入的任务，那么这种等待仍然可能具有商业价值。 02 如果说 LMArena 上的 K
+      - {id: 322c42df-050b-4e97-ba54-eb21571a71af, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.1142
+  - id: TODO-de98486a
+    question: "llama.cpp 最近发布了哪些版本？"
+    asked_at: 2026-08-04T18:01:38.756907+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 llama.cpp Releases · 2026-08-04 · llama.cpp b10253 发布：更新 cpp-httplib 至 0.52.0
+      #   <details open> vendor : update cpp-httplib to 0.52.0 (#26485) </details> **Website:** - <https://llama.app> **
+      - {id: d0cff149-7cca-4130-89b3-b9f4ad5c9944, grade: ?}
+      # [被引用] #2 llama.cpp Releases · 2026-08-02 · llama.cpp b10228 发布，支持 DeepSeek V4 MTP 与 DSpark
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10228/llama-b102
+      - {id: 8c4b9c40-5509-4cbd-9e00-cbc2a2aa72f3, grade: ?}
+      # [被引用] #3 llama.cpp Releases · 2026-08-03 · llama.cpp b10240 发布：服务器默认端口将改为 9931
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10240/llama-b102
+      - {id: 7a7232f6-5fac-473f-933d-da4f32617cc0, grade: ?}
+      # [被引用] #4 llama.cpp Releases · 2026-08-01 · llama.cpp b10218 发布：新增 MiniCPM-V 4.6 下采样支持
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10218/llama-b102
+      - {id: 9840f4e6-3101-4739-b2fc-1d02309b25cc, grade: ?}
+      # [被引用] #5 llama.cpp Releases · 2026-08-03 · llama.cpp b10238 发布，新增 Qwen3-Next MTP 支持
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10238/llama-b102
+      - {id: f1513d17-95b5-4b07-b10e-7eb62311d00f, grade: ?}
+      # [被引用] #6 llama.cpp Releases · 2026-07-31 · llama.cpp b10212 发布：按需加载 MTP 张量优化性能
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10212/llama-b102
+      - {id: ab868f90-e76b-4e80-8dda-4c11cd4bb014, grade: ?}
+      # [被引用] #7 llama.cpp Releases · 2026-08-04 · llama.cpp b10252 发布：更新 BoringSSL 至 0.20260803.0
+      #   <details open> vendor : update BoringSSL to 0.20260803.0 (#26523) </details> **Website:** - <https://llama.app
+      - {id: 30da78c8-9866-4b9c-84b6-5e6e2b4d2e72, grade: ?}
+      # [被引用] #8 llama.cpp Releases · 2026-08-04 · llama.cpp b10268 发布：修复 macOS 兼容性并更新预编译二进制
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10268/llama-b102
+      - {id: 68d3a703-17f7-4117-824a-22120d067861, grade: ?}
+      # [被引用] #9 llama.cpp Releases · 2026-08-04 · llama.cpp b10250 发布：新增模型解析测试与 HTTP 客户端封装
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10250/llama-b102
+      - {id: fdf9f070-fb90-4d41-8d10-28bf27dd1bfd, grade: ?}
+      # [被引用] #10 llama.cpp Releases · 2026-08-04 · llama.cpp b10251 发布：支持 GLM-4.7-Flash 多 token 预测
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10251/llama-b102
+      - {id: 74b76cdf-4516-432a-ab69-fa87cb8ebe4f, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: weak_support · 最低支持度 0.1258
+  - id: TODO-1b8cf37c
+    question: "最近 llama.cpp 修复了哪些问题？"
+    asked_at: 2026-08-06T13:51:11.042427+00:00
+    answerable: true
+    relevant_items:
+      # 注意：这题早于 rag_trace，下面只有被引用的文档，看不到检索丢弃了什么
+      # [被引用] #1 llama.cpp Releases · 2026-08-06 · llama.cpp b10295 发布：修复量化张量步长问题
+      #   <details open> model-loader : fix quantized reshaped tensor strides (#26672) </details> **Website:** - <https:
+      - {id: 0130544b-7d88-49da-a08b-c0044811bd99, grade: ?}
+      # [被引用] #2 llama.cpp Releases · 2026-08-06 · llama.cpp b10293 发布：新增 AMD ROCm CI 支持并修复 RDNA3.5 推理问
+      #   * Update tests/test-backend-sampler.cpp Co-authored-by: Aaron Teo <taronaeo@gmail.com> * Update tests/test-bac
+      - {id: 8e181439-9956-43e0-a2f3-78b525f34387, grade: ?}
+      # [被引用] #3 llama.cpp Releases · 2026-08-04 · llama.cpp b10274 发布：修复短输入音频块重复问题
+      #   <details open> mtmd: correcting duplicate empty audio chunks for short inputs (#26536) * correcting duplicate 
+      - {id: cc885a2e-8bb4-43ce-82b2-82f31334e361, grade: ?}
+      # [被引用] #4 llama.cpp Releases · 2026-08-06 · llama.cpp b10291 发布：修复 Vulkan 提交批处理并新增调试工具
+      #   <details open> vulkan: fix submission batching size, add debug tools for diagnosing causes of DeviceLost drive
+      - {id: dbf15c18-a588-48e2-bceb-a3814de6adc5, grade: ?}
+      # [被引用] #5 llama.cpp Releases · 2026-08-06 · llama.cpp b10290 发布：新增 ggml_build_forward_order 修复音频
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10290/llama-b102
+      - {id: b96802c3-6e22-4c65-9c01-07a09e71c7b3, grade: ?}
+      # [被引用] #6 llama.cpp Releases · 2026-08-04 · llama.cpp b10268 发布：修复 macOS 兼容性并更新预编译二进制
+      #   <details open> ci: fix pre-built binaries no longer working on macOS 15 and below (#26375) * ci: fix pre-built
+      - {id: 68d3a703-17f7-4117-824a-22120d067861, grade: ?}
+      # [被引用] #7 llama.cpp Releases · 2026-08-04 · llama.cpp b10275 发布：修复 Windows OEM 输出解码问题
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10275/llama-b102
+      - {id: 287b95bc-8b06-45c6-b4c4-a9084dd21c63, grade: ?}
+      # [被引用] #8 llama.cpp Releases · 2026-08-04 · llama.cpp b10247 发布：修复宽 MoE 模型多后端加载崩溃
+      #   - split->inputs: dynamic array with grow-on-demand - sched->graph_inputs: dynamic array with grow-on-demand - 
+      - {id: 927a133f-23c3-4577-ac8a-2e19d368a260, grade: ?}
+      # [被引用] #9 llama.cpp Releases · 2026-08-02 · llama.cpp b10229 发布：修复 OpenCL 引用计数问题
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10229/llama-b102
+      - {id: d677000f-e7d4-4ba9-853c-d228a32f8672, grade: ?}
+      # [被引用] #10 llama.cpp Releases · 2026-08-01 · llama.cpp b10223 发布：修复 CI 错误并更新多平台构建
+      #   <details open> test: fix some CI errors (#26415) </details> **Website:** - <https://llama.app> **macOS/iOS:** 
+      - {id: 821c1a70-690b-458b-9a34-0ba88e064ff7, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: refused
+  - id: TODO-27de0ba9
+    question: "智谱最近有什么模型发布？"
+    asked_at: 2026-08-10T13:54:23.683499+00:00
+    answerable: true
+    relevant_items:
+      # [进证据未引用] #1 Hugging Face New and Trending Models · 2026-08-03 · ThinkingCap-Qwen3.6-27B 发布 MagicQuant 量化版，支持自推测解码
+      #   - Quantized models may exhibit subtle differences from the full-precision fine-tune - This model inherits any 
+      - {id: d595ffe3-5101-49d1-b001-7faf20e39e8c, grade: ?}
+      # [进证据未引用] #2 Hugging Face New and Trending Models · 2026-08-08 · 飞桨发布 PaddleOCR-VL：0.9B 超紧凑多语言文档解析模型
+      #   **🔥 Official Website**: [Baidu AI Studio](https://aistudio.baidu.com/paddleocr) | **📝 arXiv**: [Technical Repo
+      - {id: 24d250d7-85d7-4791-9d42-12491c479b34, grade: ?}
+      # [进证据未引用] #3 Hugging Face New and Trending Models · 2026-08-07 · Red Hat 发布 Qwen3.6-35B-A3B FP8 量化模型
+      #   <p style="margin-top:12px;font-size:10px;opacity:0.7"> * Empty cells (--) indicate scores not available or not
+      - {id: 2d736d78-cb27-4c6a-82b1-2a4bbaa4c015, grade: ?}
+      # [同信源超额] #4 Hugging Face New and Trending Models · 2026-08-07 · GLM-5.2 量化模型发布：混合精度专家与融合 MoE 优化
+      #   --- base_model: zai-org/GLM-5.2 library_name: trellis tags: - exl3 - trellis - quantization - glm - moe - mixe
+      - {id: 213afe94-9f4a-44c5-91eb-b3f6877c1ff0, grade: ?}
+      # [同信源超额] #5 Hugging Face New and Trending Models · 2026-08-11 · MiniMax H3 量化剪枝模型集合发布，支持消费级 GPU 本地推理
+      #   This repository is a community-compiled collection of quantized and pruned weights for **[MiniMax H3 (Hailuo 3
+      - {id: dc0d21f5-7c8f-475f-bd28-ce22802fa3da, grade: ?}
+      # [进证据未引用] #6 PydanticAI Releases · 2026-08-08 · PydanticAI v2.27.0 发布：新增 Snowflake Cortex 支持与多项修复
+      #   * Add `xai_agent_count` to `XaiModelSettings` by @pydanty[bot] in https://github.com/pydantic/pydantic-ai/pull
+      - {id: f493e151-26b7-41b7-a806-e9db1f502105, grade: ?}
+      # [进证据未引用] #13 量子位 · 2026-08-08 · OpenAI推迟发布最强模型Astra，因网络安全风险
+      #   都学坏了！奥特曼亲手封锁最强模型Astra，重蹈Mythos覆辙 唉，赶紧整完快点发布吧。。。 Jay 发自 凹非寺 量子位 | 公众号 QbitAI 不er，闹呢？ 刚刚，奥特曼发文，宣布推迟最强模型Astra的发布。
+      - {id: 5226d76f-60b4-4fc2-b50c-df053c7a5038, grade: ?}
+      # [进证据未引用] #14 Latent Space · 2026-08-07 · AMD收购Taalas，Meta与OpenAI发布新模型和工具
+      #   - Benchmarks continue to specialize into domain reasoning rather than generic QA. Elicit introduced BioDecisio
+      - {id: 57cde5a2-e3af-4d35-94f9-461ef1319bf9, grade: ?}
+      # [同信源超额] #15 Hugging Face New and Trending Models · 2026-08-06 · MonsterMMORPG 发布 Wan_GGUF 量化模型
+      #   ---
+      - {id: 91194c59-6ff8-4a4b-87d5-2c9741addca9, grade: ?}
+      # [同信源超额] #17 Hugging Face New and Trending Models · 2026-08-04 · NVIDIA发布Alpamayo 1.5：面向自动驾驶的100亿参数推理VLA模型
+      #   [**Code**](https://github.com/NVlabs/alpamayo1.5) | [**Alpamayo Overview**](https://www.nvidia.com/en-us/solut
+      - {id: c8f6c166-ef17-4dc2-bb22-a6538c447341, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: refused
+  - id: TODO-6c8c5d46
+    question: "DeepSeek 在 2026 年 8 月收购 OpenAI 的细节是什么？"
+    asked_at: 2026-08-28T19:26:38.082787+00:00
+    answerable: true
+    relevant_items:
+      # [进证据未引用] #1 雷峰网 AI科技评论 · 2026-08-07 · OpenAI披露AI智能体攻击细节；宇树科技IPO造富；DeepSeek拟涨价
+      #   0 1.OpenAI 披露攻击 Hugging Face 前，AI 智能体秘密建立内部留言板 2.150.8元/股！宇树科技超百名员工参与IPO“盛宴”，一批90后千万富豪或将诞生 3.DeepSeek拟上调API服务定
+      - {id: 683516d7-0813-44b3-97aa-e81eed845e31, grade: ?}
+      # [进证据未引用] #2 雷峰网 AI科技评论 · 2026-08-12 · DeepSeek招土木工程师；林俊旸新公司获腾讯投资；宇树中签号出炉
+      #   8 月 11 日消息，最新报告称，谷歌内部可能已搁置 Gemini 3.5 Pro 模型，为填补该模型迟迟未发布留下的空档，该公司可能提前宣传 Gemini 4 系列模型。在今年 5 月举办的 2026 年 I/O 开发
+      - {id: 3a1bdf64-8dd9-45a6-9da4-d999be241c2a, grade: ?}
+      # [进证据未引用] #3 TechCrunch AI · 2026-08-08 · OpenAI 收购演示文稿初创公司 NextSlide
+      #   NextSlide recently announced that it’s joining OpenAI, with the presentation startup’s team members now workin
+      - {id: d178e4d3-000b-4a80-b289-8b77c53f04ee, grade: ?}
+      # [进证据未引用] #4 THE DECODER · 2026-08-10 · OpenAI 收购 NextSlide，增强 ChatGPT 演示文稿生成能力
+      #   OpenAI acquires NextSlide to bring AI-generated presentations into ChatGPT OpenAI acquired NextSlide, the star
+      - {id: 80a4eaee-3992-4484-b280-bd50fffbf0e2, grade: ?}
+      # [进证据未引用] #5 Latent Space · 2026-08-01 · DeepSeek V4-Flash 发布，性能跃升引发行业热议
+      #   [AINews] not much happened today apart from DeepSeek V4-Flash 0731, a quiet day. It might seem strange that we
+      - {id: 18e5766c-0475-4d0c-8fde-8929132dda00, grade: ?}
+      # [进证据未引用] #6 雷峰网 AI科技评论 · 2026-08-04 · 三星收缩中国手机业务；阿里发布Qwen3.8-Max；DeepSeek日处理8万亿Token
+      #   而杨植麟与谷歌合作发表的XLNet相关论文，刷新了多项基准，在论文发布时，苹果公司一位高管联系博导，询问他的入职意向。博导告知该高管，杨植麟已决定回中国创业。该高管随即表示，苹果在北京设有办公室，如果杨植麟有意向，随时可
+      - {id: 5140c916-40a6-48e5-9a96-f8fcc1a98da0, grade: ?}
+      # [同信源超额] #8 雷峰网 AI科技评论 · 2026-08-18 · DeepSeek 缓存涨价 11 倍：长上下文需求激增，存储税成新成本
+      #   当数据在显存和磁盘之间频繁搬运，缓存不仅没起到加速省钱的作用，反而消耗了巨量的 IO 资源和调度算力，昂贵的GPU集群从计算推理的”脑力劳动者“变成了搬运数据的“体力劳动者”，算力在I/O堵塞中空转，严重的时候甚至会让整
+      - {id: 73fe25bf-ceb8-4205-b2a7-a68a167770e5, grade: ?}
+      # [进证据未引用] #9 Latent Space · 2026-08-17 · Stripe 70 亿美元收购 OpenRouter，AI 路由层价值凸显
+      #   - Anthropic’s Claude watermarking rollout triggered a serious technical-policy debate: The most substantive sy
+      - {id: a1121eeb-2030-46b7-a3cb-4feb2b4ff560, grade: ?}
+      # [进证据未引用] #11 量子位 · 2026-08-04 · DeepSeek V4 Flash低价风暴席卷硅谷，海外平台争相补贴
+      #   DeepSeek低价风暴打服硅谷！海外平台争相倒贴V4 Flash 那还说啥了梁圣，我订阅费全给你就是了呗 Jay 发自 凹非寺 量子位 | 公众号 QbitAI DeepSeek V4 Flash的价格风暴，还在继续。
+      - {id: d7b271d1-2074-419d-981a-3a35bfc9d726, grade: ?}
+      # [进证据未引用] #12 TechCrunch AI · 2026-08-11 · OpenAI 完成 70 亿美元员工股票回购，估值 8520 亿美元
+      #   OpenAI has bought back $7 billion worth of shares from employees at the privately held frontier AI lab as part
+      - {id: 21338d04-c426-4d1d-819e-406995f9b422, grade: ?}
+      # [同信源超额] #14 雷峰网 AI科技评论 · 2026-08-06 · Jeff Dean离职创业，路演PPT曝光34位创始人，谷歌系人才主导AI行业
+      #   2025 年 5 月，Liam Fedus 正式跨界创办了实体科研自动化巨头 Periodic Labs。由于其在现象级产品 ChatGPT 沉淀下的高维对齐威望，公司很快便砍下高达 3 亿美元（约合 21 亿元人民币）
+      - {id: ff2bc6ad-b457-40a8-b3d7-2b7c515469fd, grade: ?}
+      # [进证据未引用] #16 THE DECODER · 2026-08-13 · Deepseek 发布 V4-Pro 更新，开源代理软件并上调 API 价格
+      #   Deepseek ships improved V4 Pro, open-sources its agent software, and raises API prices Key Points - Deepseek h
+      - {id: 7e599a7a-37b1-48c4-88a1-881948940edc, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: refused
+  - id: TODO-0d52b480
+    question: "2026 年 8 月这一周 Anthropic 有什么动作？"
+    asked_at: 2026-08-28T19:26:16.617248+00:00
+    answerable: true
+    relevant_items:
+      # [进证据未引用] #1 雷峰网 AI科技评论 · 2026-08-12 · DeepSeek招土木工程师；林俊旸新公司获腾讯投资；宇树中签号出炉
+      #   8月11日消息，日前，据外媒报道，奥迪未来将大幅调整内饰设计方向，不再过度依赖巨型屏幕，转而重新重视实体按键、旋钮与高级内饰材料的使用。这一调整并非行业个例，一股车内交互设计的转向浪潮正在全球整车市场同步涌现。 大众此前
+      - {id: 3a1bdf64-8dd9-45a6-9da4-d999be241c2a, grade: ?}
+      # [进证据未引用] #2 量子位 · 2026-08-16 · Anthropic营收暴涨1400%，Q2入账115亿美元
+      #   牛来！A社营收暴涨1400%，最新季度入账115亿美元 将超越马斯克的SpaceX，成为史上上市估值最高的IPO。 henry 发自 凹非寺 量子位 | 公众号 QbitAI 就在这个周末，人们还在惊叹电影《牛来》的出圈
+      - {id: 1d01f0b0-86f6-4255-abcc-28592822b4b8, grade: ?}
+      # [进证据未引用] #3 量子位 · 2026-08-18 · Anthropic年化营收650亿美元超OpenAI，IPO在即
+      #   650亿美元！IPO前夕，Anthropic营收底牌曝光 回头看，A社就这样完成了反超 650亿美元（约合人民币4381亿元）！ IPO前夕，Anthropic最新年化营收曝光了。 据彭博社消息，三位知情人士向其透露，A
+      - {id: 2346ed93-be09-4779-a222-546f8d261751, grade: ?}
+      # [进证据未引用] #5 THE DECODER · 2026-08-11 · Anthropic 为所有 Claude 输出添加全球水印，2026 年生效
+      #   Anthropic watermarks all Claude outputs globally with marks that "may persist through some editing" Key Points
+      - {id: add73c11-2aa3-4519-b9e7-370304b9754d, grade: ?}
+      # [进证据未引用] #6 TechCrunch AI · 2026-08-11 · Anthropic 将为 AI 生成文本添加水印以符合欧盟法规
+      #   Anthropic will watermark text generated by its models, including Claude, to comply with European regulations, 
+      - {id: cd4fab84-8ad5-4df7-8b76-36920e780a14, grade: ?}
+      # [同信源超额] #7 量子位 · 2026-08-12 · Anthropic CEO末日预警惹投资者不满，IPO前景蒙阴影
+      #   Anthropic CEO整天神神叨叨，投资人受不了了 Dario能不能少吓唬点人… 听雨 发自 凹非寺 量子位 | 公众号 QbitAI 根据Polymarket预测，Anthropic很可能在10月底进行IPO。 有
+      - {id: c1456296-c4c1-462d-89c0-fbf7b1e48347, grade: ?}
+      # [进证据未引用] #8 The Verge AI · 2026-08-11 · Anthropic 将为 Claude 文本和图像添加不可见水印以符合欧盟法规
+      #   Anthropic has pledged to start marking Claude-generated text and images with machine-readable data, in an effo
+      - {id: dc78f558-95f3-4a5e-8d1c-f02a6365dc09, grade: ?}
+      # [进证据未引用] #9 THE DECODER · 2026-08-18 · Anthropic 年化收入超 650 亿美元，增长七倍
+      #   Anthropic increases revenue sevenfold, hits annualized rate above $65 billion Anthropic has hit an annualized 
+      - {id: 8c04dff8-6f32-4dc9-9b19-4aa579921144, grade: ?}
+      # [进证据未引用] #11 TechCrunch AI · 2026-08-17 · Anthropic 年化收入飙升至650亿美元
+      #   Anthropic’s revenue continues not just to grow at an historic pace but to accelerate. The model maker’s annual
+      - {id: 87ca7b23-04ae-4509-9f5d-33eca672d4e4, grade: ?}
+      # [进证据未引用] #12 THE DECODER · 2026-08-14 · Anthropic推出水印检测API，助力第三方识别Claude生成文本
+      #   Anthropic announces watermark detection API that will let third parties detect Claude's AI texts Anthropic wil
+      - {id: 7d12c6a2-9bc6-485d-92e9-ab9fccdea62e, grade: ?}
+      # [进证据未引用] #13 Anthropic Python SDK Releases · 2026-07-24 · Anthropic Python SDK v0.120.0 发布：新增 claude-opus-5 模型
+      #   Full Changelog: [v0.119.0...v0.120.0](https://github.com/anthropics/anthropic-sdk-python/compare/v0.119.0...v0
+      - {id: 51bd5793-fd88-462a-b705-cc7e39d7c84f, grade: ?}
+      # [同信源超额] #14 THE DECODER · 2026-08-11 · Anthropic巨型IPO面临投资者质疑：中国竞争与政治阻力
+      #   Anthropic's planned mega-IPO faces investor skepticism over Chinese rivals and political headwinds Key Points 
+      - {id: 2f82144b-d853-460e-a503-fe3dc426d231, grade: ?}
+      # [预算已满] #15 Anthropic Java SDK Releases · 2026-08-07 · Anthropic Java SDK v2.53.0 发布，新增会话预算与技能自动加载
+      #   Full Changelog: [v2.52.0...v2.53.0](https://github.com/anthropics/anthropic-sdk-java/compare/v2.52.0...v2.53.0
+      - {id: d8837686-980a-4f51-96e8-4d27344a1a5d, grade: ?}
+      # [预算已满] #16 Anthropic Java SDK Releases · 2026-08-19 · Anthropic Java SDK v2.55.0 发布：新增文件与记忆存储 API
+      #   * **api:** additions to files and memory stores ([1f89b9b](https://github.com/anthropics/anthropic-sdk-java/co
+      - {id: ea13113c-9c07-4cbf-b101-8ddb3aab1f62, grade: ?}
+      # [预算已满] #17 Simon Willison's Weblog · 2026-08-23 · Anthropic最强模型因成本高采用率低，收入仍增长
+      #   23rd August 2026 - Link Blog Anthropic’s best AI model struggles to attract users as cheaper tools thrive (via
+      - {id: 95d5952e-d4db-4bc4-b840-cd619bf8c564, grade: ?}
+      # [预算已满] #18 Anthropic Java SDK Releases · 2026-08-13 · Anthropic Java SDK v2.54.0 发布：新增结构化输出配置与多项修复
+      #   * **client:** add models ([1c84fd2](https://github.com/anthropics/anthropic-sdk-java/commit/1c84fd2087cf14553c
+      - {id: 0204860e-6df0-49b0-8129-e5efe1646614, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: refused
+  - id: TODO-a596e8c0
+    question: "它的定价是多少？"
+    asked_at: 2026-08-29T13:22:35.089737+00:00
+    answerable: true
+    relevant_items:
+      # [进证据未引用] #1 TechCrunch AI · 2026-08-17 · Anthropic 年化收入飙升至650亿美元
+      #   Anthropic’s revenue continues not just to grow at an historic pace but to accelerate. The model maker’s annual
+      - {id: 87ca7b23-04ae-4509-9f5d-33eca672d4e4, grade: ?}
+      # [进证据未引用] #2 THE DECODER · 2026-08-11 · Anthropic巨型IPO面临投资者质疑：中国竞争与政治阻力
+      #   Anthropic's planned mega-IPO faces investor skepticism over Chinese rivals and political headwinds Key Points 
+      - {id: 2f82144b-d853-460e-a503-fe3dc426d231, grade: ?}
+      # [进证据未引用] #3 THE DECODER · 2026-08-18 · Anthropic 在 Vercel 上每 token 成本为平均 4.4 倍，开发者仍愿付费
+      #   Anthropic's per-token cost runs 4.4 times the average on Vercel, and developers keep paying Anthropic accounts
+      - {id: d76e2ba9-95f1-47e4-8b44-802d843492e4, grade: ?}
+      # [进证据未引用] #4 THE DECODER · 2026-08-18 · Anthropic 年化收入超 650 亿美元，增长七倍
+      #   Anthropic increases revenue sevenfold, hits annualized rate above $65 billion Anthropic has hit an annualized 
+      - {id: 8c04dff8-6f32-4dc9-9b19-4aa579921144, grade: ?}
+      # [同信源超额] #5 THE DECODER · 2026-08-04 · Anthropic 锁定 100 亿美元计算能力，来自新创云公司 Volta
+      #   Anthropic locks in $10 billion of compute from Volta, a cloud startup that didn't exist six months ago Anthrop
+      - {id: 4e0a3afe-11e9-4d82-bb02-059a89560743, grade: ?}
+      # [进证据未引用] #6 量子位 · 2026-08-12 · Anthropic CEO末日预警惹投资者不满，IPO前景蒙阴影
+      #   Anthropic CEO整天神神叨叨，投资人受不了了 Dario能不能少吓唬点人… 听雨 发自 凹非寺 量子位 | 公众号 QbitAI 根据Polymarket预测，Anthropic很可能在10月底进行IPO。 有
+      - {id: c1456296-c4c1-462d-89c0-fbf7b1e48347, grade: ?}
+      # [进证据未引用] #7 量子位 · 2026-08-18 · Anthropic年化营收650亿美元超OpenAI，IPO在即
+      #   650亿美元！IPO前夕，Anthropic营收底牌曝光 回头看，A社就这样完成了反超 650亿美元（约合人民币4381亿元）！ IPO前夕，Anthropic最新年化营收曝光了。 据彭博社消息，三位知情人士向其透露，A
+      - {id: 2346ed93-be09-4779-a222-546f8d261751, grade: ?}
+      # [进证据未引用] #8 量子位 · 2026-08-16 · Anthropic营收暴涨1400%，Q2入账115亿美元
+      #   牛来！A社营收暴涨1400%，最新季度入账115亿美元 将超越马斯克的SpaceX，成为史上上市估值最高的IPO。 henry 发自 凹非寺 量子位 | 公众号 QbitAI 就在这个周末，人们还在惊叹电影《牛来》的出圈
+      - {id: 1d01f0b0-86f6-4255-abcc-28592822b4b8, grade: ?}
+      # [同信源超额] #9 THE DECODER · 2026-08-11 · Anthropic与Riot Platforms签署91亿美元数据中心协议
+      #   Anthropic signs $9.1 billion data center deal with Bitcoin miner Riot Platforms Anthropic locks in $9.1 billio
+      - {id: c7578d06-275d-498d-9efb-224a61d895c7, grade: ?}
+      # [进证据未引用] #11 雷峰网 AI科技评论 · 2026-08-24 · 阿里拟配售800亿港元投入AI建设，DeepSeek调整计费，英伟达服务器涨价
+      #   目前，Anthropic 的芯片主要采购自英伟达、谷歌以及亚马逊等多家供应商。不过，这家总部位于旧金山的公司近期已释放出打造内部自研芯片业务的信号，并已启动相关岗位的招聘。 另据知情人士透露，在近期与潜在投资者沟通时，A
+      - {id: 68e11b6a-eb92-4767-aff6-2007a4e0b535, grade: ?}
+      # [进证据未引用] #12 Anthropic Newsroom · 2026-08-01 · Anthropic 发布 Claude Opus 5，性能提升且成本减半
+      #   Biology. Since Opus 5 has a similar suite of safeguards to Opus 4.8, it is now our most capable generally avai
+      - {id: 9c831f14-e83a-4e22-b8df-7ba0607b4aaf, grade: ?}
+      # [同信源超额] #13 THE DECODER · 2026-08-04 · 谷歌联手博通摩根士丹利为Anthropic提供350亿美元TPU融资
+      #   An earlier report from The Information says Anthropic has committed to spending about $200 billion on Google C
+      - {id: 45ecd7a1-eb8b-458b-bd3e-2155bf6fc9e7, grade: ?}
+      # [同信源超额] #14 THE DECODER · 2026-08-13 · Fable 5 采用缓慢，企业为前沿 AI 付费意愿或达上限
+      #   Fable 5's slow adoption suggests corporate willingness to pay for frontier AI has hit a ceiling Anthropic's Fa
+      - {id: 74a5bf9e-df7c-45b3-9a1f-17cc0519560e, grade: ?}
+      # [进证据未引用] #15 Simon Willison's Weblog · 2026-08-23 · Anthropic最强模型因成本高采用率低，收入仍增长
+      #   23rd August 2026 - Link Blog Anthropic’s best AI model struggles to attract users as cheaper tools thrive (via
+      - {id: 95d5952e-d4db-4bc4-b840-cd619bf8c564, grade: ?}
+      # [预算已满] #16 TechCrunch AI · 2026-08-04 · Anthropic 与 AI 云初创 Volta 签署 100 亿美元协议
+      #   Anthropic has been on a cloud partnership spree in recent months, and its latest move is reportedly a $10 bill
+      - {id: 9d756bea-9a97-4b2b-9477-64fa96933a6f, grade: ?}
+      # [预算已满] #18 Ars Technica AI · 2026-08-14 · 中美AI价格战：OpenAI和Anthropic降价应对中国对手
+      #   Leading US AI labs such as OpenAI and Anthropic are releasing cheaper models as they fight to retain cost-cons
+      - {id: 326be2d8-47e6-4a17-952e-a325a5881d09, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: refused
+  - id: TODO-f2d275ad
+    question: "今天是几号？最接一周内deepseek有什么动态吗"
+    asked_at: 2026-08-29T13:12:11.909927+00:00
+    answerable: true
+    relevant_items:
+      # 检索没有留下任何候选——这题多半应当 answerable: false
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: new_source · 最低支持度 0.3645
+  - id: TODO-582be148
+    question: "MiniMax 最近有什么动态？"
+    asked_at: 2026-08-10T03:27:32.364521+00:00
+    answerable: true
+    relevant_items:
+      # [被引用] #1 Hugging Face New and Trending Models · 2026-08-09 · MiniMax 发布全模态生成系统 H3，支持 2K 视频与原生音频
+      #   --- pipeline_tag: image-text-to-video license: other license_name: minimax-h3-community-license-agreement lice
+      - {id: 205591fb-e29c-41ff-82c2-7d53cddccb5e, grade: ?}
+      # [被引用] #6 Latent Space · 2026-08-07 · AMD收购Taalas，Meta与OpenAI发布新模型和工具
+      #   - Prime Agent - a new coding harness surpassing Codex/CC/PI (Activity: 431): Prime Intellect announced Prime A
+      - {id: 57cde5a2-e3af-4d35-94f9-461ef1319bf9, grade: ?}
+      # [被引用] #7 Hugging Face New and Trending Models · 2026-08-06 · MiniMax-H3 发布 GGUF 量化版，支持 ComfyUI 多模态生成
+      #   --- pipeline_tag: image-text-to-video license: other license_name: minimax-h3-community-license-agreement lice
+      - {id: acd0b88d-52c5-4a39-8561-5fd1315ce1c3, grade: ?}
+      # [被引用] #10 雷峰网 AI科技评论 · 2026-08-04 · 三星收缩中国手机业务；阿里发布Qwen3.8-Max；DeepSeek日处理8万亿Token
+      #   8月3日，阿里“千问办公”开启公测，个人和企业用户均可通过“千问办公”官网体验。目前，“千问办公”已初步打通钉钉，未来将连接企业真实数据流和工作流。据了解，“千问办公”未来还将上线独立App端并推出国际版，实现多端联动，
+      - {id: 5140c916-40a6-48e5-9a96-f8fcc1a98da0, grade: ?}
+      # [进证据未引用] #12 Latent Space · 2026-08-04 · Qwen3.8-Max发布：2.4T参数开源模型，主打编码与多模态智能体
+      #   - Research automation benchmarks are exposing harness effects: The terse but high-signal RSIBench-Data result 
+      - {id: 699453fe-e7e9-433e-a12f-4856e953d4bf, grade: ?}
+      # [同信源超额] #13 Hugging Face New and Trending Models · 2026-08-07 · MiniMax H3 FP8 量化模型发布，支持视频音频生成
+      #   MXFP8 quantization of the MiniMax H3 `fl2va` (first-last-frame to video+audio) diffusion checkpoint. _better a
+      - {id: 91ce7213-77f5-4c84-82de-b67d0cc62c28, grade: ?}
+      # [同信源超额] #14 Hugging Face New and Trending Models · 2026-08-08 · MiniMax H3 量化版发布：支持 ComfyUI 的多格式视频生成
+      #   --- license: other license_name: minimax-h3-community license_link: https://huggingface.co/MiniMaxAI/MiniMax-H
+      - {id: 306fc16f-ea49-4ab6-b3b1-cfd9388fb23f, grade: ?}
+      # [同信源超额] #15 Hugging Face New and Trending Models · 2026-08-06 · MiniMax H3 发布 GGUF 量化版本，支持多模态视频生成
+      #   --- license: other license_name: minimax-h3-community-license-agreement license_link: https://huggingface.co/M
+      - {id: 41808fc0-a388-4918-8b88-0972eccd2197, grade: ?}
+      # [同信源超额] #18 Hugging Face New and Trending Models · 2026-08-04 · MiniMax-H3 GGUF 量化版发布，支持文本生成视频
+      #   ```text 📂 ComfyUI/ ├── 📂 models/ │ ├── 📂 unet/ │ │ ├── MiniMax-H3-FL2VA-<Q_>.gguf │ │ ├── MiniMax-H3-REF2V-<Q_
+      - {id: 80463123-a85b-4996-b8ec-e53d954c0266, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: new_source · 最低支持度 0.3659
+  - id: TODO-334e7f1c
+    question: "它的参数量呢？"
+    asked_at: 2026-08-09T12:15:48.331331+00:00
+    answerable: true
+    relevant_items:
+      # [被引用] #1 THE DECODER · 2026-08-07 · 字节跳动正在训练10万亿参数AI模型，规模为中国最大
+      #   China's Largest AI Model Is Being Developed at Bytedance Bytedance is training an AI model with up to ten tril
+      - {id: f50a1561-f96a-419e-bd73-c83562663758, grade: ?}
+      # [被引用] #2 Hugging Face New and Trending Models · 2026-08-03 · Liquid AI发布LFM2系列混合模型，主打边缘AI部署
+      #   | Property | [**LFM2-350M**](https://huggingface.co/LiquidAI/LFM2-350M) | [**LFM2-700M**](https://huggingface.
+      - {id: 0b3de187-e195-47b3-ba29-7a23bff0fc18, grade: ?}
+      # [被引用] #3 Kimi Model Repository Activity · 2025-10-31 · Moonshot AI 发布 Kimi K2：万亿参数开源智能体模型
+      #   Kimi K2 is a state-of-the-art mixture-of-experts (MoE) language model with 32 billion activated parameters and
+      - {id: ed83d133-76bc-4a2a-bbf9-35eb8530b676, grade: ?}
+      # [被引用] #4 Latent Space · 2026-08-04 · Qwen3.8-Max发布：2.4T参数开源模型，主打编码与多模态智能体
+      #   - Third-party summary tweet from ZhihuFrontier added more claimed or reported technical details: - 95B active 
+      - {id: 699453fe-e7e9-433e-a12f-4856e953d4bf, grade: ?}
+      # [被引用] #5 Tencent Hunyuan Repository Activity · 2025-07-08 · 腾讯开源Hunyuan-A13B MoE模型，130亿激活参数性能卓越
+      #   We compared it with several powerful models, and the results are shown below. | Topic | Bench | OpenAI-o1-1217
+      - {id: 0d6a75b4-997a-4073-9c2e-80c6e2a74961, grade: ?}
+      # [进证据未引用] #6 Hugging Face New and Trending Models · 2026-08-07 · Red Hat 发布 Qwen3.6-35B-A3B FP8 量化模型
+      #   <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:1000px;margin:
+      - {id: 2d736d78-cb27-4c6a-82b1-2a4bbaa4c015, grade: ?}
+      # [被引用] #14 DeepSeek Model Repository Activity · 2025-06-16 · DeepSeek-V3 发布：高效 MoE 模型，性能比肩闭源
+      #   <div align="center"> | | **Benchmark (Metric)** | **DeepSeek V2-0506** | **DeepSeek V2.5-0905** | **Qwen2.5 72
+      - {id: a1becae0-03d8-4f68-8655-6c0b58d8b8c7, grade: ?}
+      # [被引用] #16 Hugging Face New and Trending Models · 2026-08-05 · Qwen3.6-27B 多阶段微调模型突破 ARC-C 700 分
+      #   <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:1000px;margin:
+      - {id: 0849d4f4-4800-4f59-8c35-c6c7eab0a754, grade: ?}
+      # [被引用] #18 Hugging Face Blog · 2026-08-01 · Tether AI 发布 VisionPsy-Nano：边缘设备上的先进视觉语言模型
+      #   All numbers are computed in-house with a single VLMEvalKit [7] harness so every model is scored identically, u
+      - {id: 15427262-4acd-43ef-be13-cb059b959490, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: new_source · 最低支持度 0.3681
+  - id: TODO-385a2638
+    question: "minimax的最近动态"
+    asked_at: 2026-08-10T03:25:36.872273+00:00
+    answerable: true
+    relevant_items:
+      # [被引用] #1 Hugging Face New and Trending Models · 2026-08-09 · MiniMax 发布全模态生成系统 H3，支持 2K 视频与原生音频
+      #   --- pipeline_tag: image-text-to-video license: other license_name: minimax-h3-community-license-agreement lice
+      - {id: 205591fb-e29c-41ff-82c2-7d53cddccb5e, grade: ?}
+      # [被引用] #8 Hugging Face New and Trending Models · 2026-08-08 · MiniMax H3 量化版发布：支持 ComfyUI 的多格式视频生成
+      #   --- license: other license_name: minimax-h3-community license_link: https://huggingface.co/MiniMaxAI/MiniMax-H
+      - {id: 306fc16f-ea49-4ab6-b3b1-cfd9388fb23f, grade: ?}
+      # [被引用] #9 雷峰网 AI科技评论 · 2026-08-04 · 三星收缩中国手机业务；阿里发布Qwen3.8-Max；DeepSeek日处理8万亿Token
+      #   8月3日，阿里“千问办公”开启公测，个人和企业用户均可通过“千问办公”官网体验。目前，“千问办公”已初步打通钉钉，未来将连接企业真实数据流和工作流。据了解，“千问办公”未来还将上线独立App端并推出国际版，实现多端联动，
+      - {id: 5140c916-40a6-48e5-9a96-f8fcc1a98da0, grade: ?}
+      # [同信源超额] #10 Hugging Face New and Trending Models · 2026-08-06 · MiniMax H3 发布 GGUF 量化版本，支持多模态视频生成
+      #   --- license: other license_name: minimax-h3-community-license-agreement license_link: https://huggingface.co/M
+      - {id: 41808fc0-a388-4918-8b88-0972eccd2197, grade: ?}
+      # [被引用] #11 Simon Willison's Weblog · 2026-08-04 · MiniMax-H3 发布，MLX 移植版支持 Apple Silicon 运行
+      #   4th August 2026 - Link Blog PipeNetwork/minimax-h3-mlx. MiniMax released MiniMax-H3 two days ago - they descri
+      - {id: 94ffddc6-1677-4e04-8ae6-4cd742d7a354, grade: ?}
+      # [进证据未引用] #12 llama.cpp Releases · 2026-08-03 · llama.cpp b10245 发布：修复 minimax m3 图未使用输入张量
+      #   <details open> graph : fix unused input tensors in minimax m3 graph (#26519) </details> **Website:** - <https:
+      - {id: f4b865b1-1e2d-430b-937e-f8b05099c93b, grade: ?}
+      # [同信源超额] #13 Hugging Face New and Trending Models · 2026-08-04 · MiniMax-H3 GGUF 量化版发布，支持文本生成视频
+      #   --- license: unknown tags: - text-to-video - minimax - gguf - comfyui base_model: Comfy-Org/MiniMax-H3 ---
+      - {id: 80463123-a85b-4996-b8ec-e53d954c0266, grade: ?}
+      # [进证据未引用] #15 llama.cpp Releases · 2026-08-07 · llama.cpp b10319 发布：修复 mtmd 像素处理问题
+      #   <details open> mtmd: fix longest_edge ignoring min/max pixels (#26638) * mtmd: fix longest_edge ignoring min/m
+      - {id: 04ebfcc7-fb83-497d-8f73-c79c17cdd0d9, grade: ?}
+      # [进证据未引用] #17 Mastra Releases · 2026-08-06 · Mastra 发布更新：声明式工作流持久化与实验评估增强
+      #   ([#20630](https://github.com/mastra-ai/mastra/pull/20630)) ```tsx import { ComposerBox, ComposerRing } from '@
+      - {id: d1eb61ec-e3a8-4365-9eea-09fa9cadc115, grade: ?}
+    notes: "TODO 这题考什么"
+
+  # 挖出的理由: new_source · 最低支持度 0.4622
+  - id: TODO-0647e35d
+    question: "现在有什么信源？"
+    asked_at: 2026-08-09T11:45:15.643181+00:00
+    answerable: true
+    relevant_items:
+      # [被引用] #1 llama.cpp Releases · 2026-08-04 · llama.cpp b10265 发布：同步 ggml 并更新多平台二进制
+      #   <details open> sync : ggml </details> **Website:** - <https://llama.app> **macOS/iOS:** - [macOS Apple Silicon
+      - {id: 66aa6fbf-47fb-4cdf-86bc-f55e6ec0f9b8, grade: ?}
+      # [被引用] #2 llama.cpp Releases · 2026-08-07 · llama.cpp b10301 发布：修复 CUDA 警告并更新多平台构建
+      #   <details open> cuda: fix warnings for unused variable/function (#26688) </details> **Website:** - <https://lla
+      - {id: 3c1c0a54-673f-4797-bb14-0e57355e6bec, grade: ?}
+      # [被引用] #3 llama.cpp Releases · 2026-08-07 · llama.cpp b10305 发布：SYCL 支持 DeepSeek V4 算子
+      #   <details open> sycl : Support DSv4 OPs: LIGHTNING_INDEXER,DSV4_HC_COMB,DSV4_HC_POST,DSV4_HC_PRE (#26568) * sup
+      - {id: 80448c01-6ddb-493d-b8ef-0ad4ab896842, grade: ?}
+      # [被引用] #4 llama.cpp Releases · 2026-08-07 · llama.cpp b10318 发布：同步 ggml 并更新多平台二进制
+      #   <details open> sync : ggml </details> **Website:** - <https://llama.app> **macOS/iOS:** - [macOS Apple Silicon
+      - {id: 5fa51204-eba6-4ba7-b4c7-a9ca665af225, grade: ?}
+      # [进证据未引用] #5 llama.cpp Releases · 2026-08-01 · llama.cpp b10217 发布：为 DeepSeek 启用工具调用
+      #   <details open> chat : enable tool call in thinking for DS4 (#26269) </details> **Website:** - <https://llama.a
+      - {id: 62e2876a-aef6-4284-9a50-7565bd51f1e5, grade: ?}
+      # [被引用] #6 llama.cpp Releases · 2026-08-02 · llama.cpp b10227 发布：新增 Qwen3 专用解析器
+      #   <details open> chat : add qwen3 specialized parser (#26252) * Add tagged thinking tool parser * chat : refacto
+      - {id: dfbeff7b-6aa1-4307-bd6f-740d91dbf032, grade: ?}
+      # [进证据未引用] #7 llama.cpp Releases · 2026-08-08 · llama.cpp b10331 发布：修复 get_info 隔离工作目录报告
+      #   * remove redundant comment --------- Co-authored-by: Xuan-Son Nguyen <thichthat@gmail.com> </details> **Websit
+      - {id: 946bd28c-f511-41e6-999c-a85fbe602426, grade: ?}
+      # [进证据未引用] #8 llama.cpp Releases · 2026-08-03 · llama.cpp b10240 发布：服务器默认端口将改为 9931
+      #   <details open> server: add notice for upcoming default port change 8080 --> 9931 (#26508) * server: add notice
+      - {id: 7a7232f6-5fac-473f-933d-da4f32617cc0, grade: ?}
+      # [进证据未引用] #9 llama.cpp Releases · 2026-08-07 · llama.cpp b10312 发布：路由器不再驱逐繁忙模型
+      #   <details open> server: (router) do not evict busy models (#26567) </details> **Website:** - <https://llama.app
+      - {id: d252c8d0-3100-4431-ac3f-54b8db8cce10, grade: ?}
+      # [进证据未引用] #10 llama.cpp Releases · 2026-08-07 · llama.cpp b10313 发布：新增 LRU 调度器
+      #   <details open> server: (router) add LRU scheduler (#26572) * add lru_sched * handle coalescing (req leaves wai
+      - {id: adbfba6a-7ddd-43ae-a23c-99b738e4ad0c, grade: ?}
+      # [预算已满] #11 llama.cpp Releases · 2026-08-06 · llama.cpp b10297 发布：修复 /cors-proxy 空响应问题
+      #   <details open> server: fix empty response for /cors-proxy (#26656) </details> **Website:** - <https://llama.ap
+      - {id: f189ce52-4be9-4810-9d73-871104e1760a, grade: ?}
+      # [预算已满] #14 llama.cpp Releases · 2026-08-04 · llama.cpp b10253 发布：更新 cpp-httplib 至 0.52.0
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10253/llama-b102
+      - {id: d0cff149-7cca-4130-89b3-b9f4ad5c9944, grade: ?}
+      # [预算已满] #15 llama.cpp Releases · 2026-08-04 · llama.cpp b10250 发布：新增模型解析测试与 HTTP 客户端封装
+      #   **Android:** - [Android arm64 (CPU)](https://github.com/ggml-org/llama.cpp/releases/download/b10250/llama-b102
+      - {id: fdf9f070-fb90-4d41-8d10-28bf27dd1bfd, grade: ?}
+    notes: "TODO 这题考什么"

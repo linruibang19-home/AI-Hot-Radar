@@ -51,6 +51,9 @@ class Candidate:
     #: Lowest support score among the answer's citations. None when unscored.
     worst_support: float | None
     citations: int
+    #: Whether the retrieval funnel was recorded. Without it the sheet can only
+    #: show what was cited, so these sort last within their band.
+    has_trace: bool = True
     #: Documents the pipeline actually used, as a starting point for the
     #: annotator — deliberately *not* called `relevant_items`. Whether they are
     #: relevant is the judgement being asked for, and pre-filling that field
@@ -66,6 +69,7 @@ class Candidate:
             "asked_at": self.asked_at,
             "worst_support": self.worst_support,
             "citations": self.citations,
+            "has_trace": self.has_trace,
             "sources": self.sources,
             "retrieved": self.retrieved,
         }
@@ -85,7 +89,13 @@ _SELECT = """
            min(c.support_score) AS worst,
            count(c.*) AS citations,
            array_remove(array_agg(DISTINCT s.name), NULL) AS sources,
-           bool_or(COALESCE(ci.published_at, ci.observed_at) > %(cutoff)s) AS uses_new
+           bool_or(COALESCE(ci.published_at, ci.observed_at) > %(cutoff)s) AS uses_new,
+           -- Whether the retrieval funnel was recorded for this question.
+           -- `rag_trace` only began writing on 2026-08-06, and a candidate
+           -- without it gives the annotator the cited documents and nothing
+           -- else — no view of what the ranker looked at and dropped, which is
+           -- where a missed relevant document hides.
+           EXISTS (SELECT 1 FROM rag_trace t WHERE t.rag_query_id = q.id) AS has_trace
       FROM rag_query q
       LEFT JOIN rag_citation c ON c.rag_query_id = q.id
       LEFT JOIN content_chunk ch ON ch.id = c.content_chunk_id
@@ -133,7 +143,7 @@ def mine(connection: Any, *, cutoff: str, days: int = 90, limit: int = 60) -> di
         _SELECT + " ORDER BY min(c.support_score) NULLS LAST",
         {"cutoff": cutoff, "days": days},
     )
-    for query_id, question, asked, worst, citations, sources, uses_new in rows:
+    for query_id, question, asked, worst, citations, sources, uses_new, has_trace in rows:
         band = _band(query_id in refused_ids, int(citations or 0), worst, bool(uses_new))
         if band is None or question in seen:
             continue
@@ -146,13 +156,22 @@ def mine(connection: Any, *, cutoff: str, days: int = 90, limit: int = 60) -> di
                 asked_at=asked.isoformat() if asked else None,
                 worst_support=round(float(worst), 4) if worst is not None else None,
                 citations=int(citations or 0),
+                has_trace=bool(has_trace),
                 sources=sorted(sources or []),
             )
         )
 
     order = {band: index for index, band in enumerate(BANDS)}
+    # Band first, then traced questions ahead of untraced ones, then weakest
+    # support. Sorting on support alone put the oldest queries at the top —
+    # they predate `rag_trace`, so the sheet offered the annotator an empty
+    # document list on every one of the first three questions.
     picked.sort(
-        key=lambda c: (order[c.band], c.worst_support if c.worst_support is not None else 1)
+        key=lambda c: (
+            order[c.band],
+            not c.has_trace,
+            c.worst_support if c.worst_support is not None else 1,
+        )
     )
     shortlist = picked[:limit]
 
@@ -162,6 +181,7 @@ def mine(connection: Any, *, cutoff: str, days: int = 90, limit: int = 60) -> di
         "support_threshold": SUPPORT_THRESHOLD,
         "distinct_questions": len(seen),
         "by_band": {band: sum(1 for c in picked if c.band == band) for band in BANDS},
+        "without_trace": sum(1 for c in picked if not c.has_trace),
         "candidates": [c.as_dict() for c in shortlist],
         "note": (
             "候选清单，不是黄金集。每一条仍需人工标注 relevant_items；"

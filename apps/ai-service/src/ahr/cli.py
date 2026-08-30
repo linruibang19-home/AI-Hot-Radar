@@ -203,15 +203,35 @@ def cmd_golden_candidates(args: argparse.Namespace) -> int:
     with psycopg.connect(get_settings().database_url) as connection:
         result = mine(connection, cutoff=args.cutoff, days=args.days, limit=args.limit)
 
+    written: dict[str, Any] = {"by_band": result["by_band"]}
     payload = json.dumps(result, indent=2, ensure_ascii=False)
     if args.output:
         Path(args.output).write_text(payload, encoding="utf-8")
-        print(
-            json.dumps({"written": args.output, "by_band": result["by_band"]}, ensure_ascii=False)
-        )
+        written["output"] = args.output
+
+    if args.worksheet:
+        from ahr.rag.eval.worksheet import render
+
+        with psycopg.connect(get_settings().database_url) as connection:
+            sheet = render(connection, result["candidates"], category=args.category)
+        Path(args.worksheet).write_text(sheet, encoding="utf-8")
+        written["worksheet"] = args.worksheet
+        written["questions"] = len(result["candidates"])
+
+    if args.output or args.worksheet:
+        print(json.dumps(written, ensure_ascii=False))
     else:
         print(payload)
     return 0
+
+
+def cmd_golden_validate(args: argparse.Namespace) -> int:
+    """Refuse a half-filled annotation sheet before it becomes a golden file."""
+    from ahr.rag.eval.worksheet import validate
+
+    problems = validate(Path(args.path).read_text(encoding="utf-8"))
+    print(json.dumps({"path": args.path, "problems": problems}, indent=2, ensure_ascii=False))
+    return 1 if problems else 0
 
 
 def cmd_heat(args: argparse.Namespace) -> int:
@@ -1405,7 +1425,18 @@ def main(argv: list[str] | None = None) -> int:
     candidates.add_argument("--days", type=int, default=90)
     candidates.add_argument("--limit", type=int, default=60)
     candidates.add_argument("--output")
+    candidates.add_argument(
+        "--worksheet",
+        help="also write an annotation sheet in golden-set YAML with blank grades",
+    )
+    candidates.add_argument("--category", default="mixed", help="category for the worksheet")
     candidates.set_defaults(func=cmd_golden_candidates)
+
+    validate = sub.add_parser(
+        "golden-validate", help="check a filled annotation sheet before it becomes a golden file"
+    )
+    validate.add_argument("path")
+    validate.set_defaults(func=cmd_golden_validate)
 
     support = sub.add_parser(
         "backfill-support", help="score citations that predate support scoring"
