@@ -92,6 +92,13 @@ export interface AnswerPayload {
         number, and the one the old two-panel layout printed as 「101 条候选」
         next to a table headed 「40 个候选」. */
     fused?: number;
+    /** The cross-encoder's best absolute score — the only place in the pipeline
+        where "is any of this actually relevant" survives. Everything upstream
+        ranks: the channels are `LIMIT n`, RRF fuses on rank alone, and the
+        boost pass min-max-normalises, so the worst candidate is always 0.0
+        whether or not it is any good. `null` when the reranker was degraded:
+        absent, not zero — nobody scored it. */
+    retrieval_confidence?: number | null;
     /** How many each channel returned, before fusion deduplicated them.
         An open map, not `{dense, sparse}`: there is a third channel
         (`temporal` / `entity_temporal`) whenever the planner resolved a window,

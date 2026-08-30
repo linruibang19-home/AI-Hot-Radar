@@ -439,6 +439,25 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
                 <dd>{rescued} 条候选的排名被交叉编码器提前</dd>
               </>
             )}
+            {/* The only absolute quality number in the pipeline. Everything
+                before it is a ranking: the channels are LIMIT n, RRF fuses on
+                rank and drops the scores, and the boost pass min-max-normalises
+                what is left, so the worst candidate is always 0.0. Ten passages
+                come back for every question — this is the row that says whether
+                they are ten good ones or ten least-bad ones. */}
+            {metrics.retrieval_confidence != null && (
+              <>
+                <dt>最强证据得分</dt>
+                <dd>
+                  {metrics.retrieval_confidence.toFixed(3)}
+                  <span className="funnel-hint">
+                    交叉编码器对最佳候选的绝对打分。低分意味着语料里可能没有能回答
+                    这个问题的内容——但它测的是相关性，不是真假：前提为假的问题反而
+                    容易拿高分。
+                  </span>
+                </dd>
+              </>
+            )}
             {metrics.support_dropped ? (
               <>
                 <dt>支持度校验</dt>

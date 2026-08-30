@@ -400,6 +400,9 @@ async def retrieve(
     route = choose_route(retrieval_plan.query_type)
 
     degraded: list[str] = []
+    # The cross-encoder's best absolute score, kept before `_rank_by_dimensions`
+    # overwrites `.score` with the §6 composite. See `retrieval_confidence`.
+    top_rerank: float | None = None
     step = time.monotonic()
     if reranker is not None and hits:
         candidates = hits[: route.rerank_candidates]
@@ -407,6 +410,7 @@ async def retrieve(
         documents = [texts.get(h.chunk_id, h.title) for h in candidates]
         try:
             scored = await reranker.rerank(question, documents, top_n=DEFAULT_TOP_N)
+            top_rerank = max((score for _, score in scored), default=None)
             reordered = [
                 ChunkHit(
                     chunk_id=candidates[i].chunk_id,
@@ -447,7 +451,13 @@ async def retrieve(
             degraded.append("rerank")
     elif reranker is None:
         degraded.append("rerank")
-    await mark("rerank", step, degraded=bool(degraded), candidates=route.rerank_candidates)
+    await mark(
+        "rerank",
+        step,
+        degraded=bool(degraded),
+        candidates=route.rerank_candidates,
+        top_score=round(top_rerank, 4) if top_rerank is not None else None,
+    )
 
     if trace is not None:
         trace.record_final(hits)
@@ -460,6 +470,25 @@ async def retrieve(
         # unrelated-looking document was cited.
         "aliases": aliases,
         "fused": len(fused),
+        # The cross-encoder's best absolute score for this question. Recorded,
+        # not acted on — see `support.is_weak_retrieval` for why this codebase
+        # makes a signal earn a gate on the golden set first.
+        #
+        # Why it is worth recording at all: nothing upstream of generation has
+        # an absolute quality bar. Dense and sparse are `ORDER BY … LIMIT n`,
+        # RRF fuses on rank and discards the scores, and `apply_boosts`
+        # min-max-normalises what is left, so the worst hit in every result set
+        # becomes 0.0 and the best becomes 1.0 whether or not either is any
+        # good. Ten passages come back for every question; when the corpus
+        # holds nothing, they are the ten least-bad.
+        #
+        # Measured over 15 traced questions annotated on 2026-08-30, this is
+        # the one number that survives that flattening. Below 0.15 it caught 4
+        # of 6 unanswerable questions with 0 of 9 answerable ones misfired,
+        # while top-1 dense similarity sat at 0.53–0.61 for the unanswerable
+        # and 0.55–0.77 for the answerable — overlapping, so the cheap channel
+        # cannot carry this. n=15 is a hypothesis, not a threshold.
+        "retrieval_confidence": round(top_rerank, 4) if top_rerank is not None else None,
         "degraded": degraded,
         "retrieval_ms": int((time.monotonic() - started) * 1000),
         "stages_ms": stages,
