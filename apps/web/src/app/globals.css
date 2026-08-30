@@ -137,9 +137,11 @@ a {
    deliberately heavier and darker than the links beneath them. */
 .nav-label {
   font-size: var(--fs-base);
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: 0.12em;
+  font-weight: 800;
+  /* `--text` at 0.12em tracking on a tinted sidebar came out lighter than the
+     links under it, which inverts the hierarchy the heading exists to state. */
+  color: var(--ink);
+  letter-spacing: 0.1em;
   margin: 0 0 10px;
   padding: 0 10px;
 }
@@ -695,12 +697,16 @@ a {
   color: var(--muted);
 }
 
+/* The publisher, which is the subject of the card's header row.
+   It was the quietest thing in it — grey, 12px — while three coloured chips
+   beside it shouted. A reader scanning the feed is deciding *who is saying
+   this*; the tags qualify that answer and should not outrank it. */
 .card-source {
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--ink);
 }
 
 .card-heat {
@@ -771,16 +777,18 @@ a {
   border: 1px solid var(--border);
 }
 
+/* Two of these still carry meaning worth a tint — a first-party source and an
+   editor's pick — but at the weight of a footnote rather than a banner. */
 .tag-primary {
-  background: var(--accent-soft);
-  border-color: transparent;
-  color: var(--accent-ink);
+  background: transparent;
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: color-mix(in srgb, var(--accent-ink) 78%, transparent);
 }
 
 .tag-curated {
-  background: #fdf6e3;
-  border-color: transparent;
-  color: #8a6d1f;
+  background: transparent;
+  border-color: #e3d5a8;
+  color: #9a7d2f;
 }
 
 /* ---------- topic map ---------- */
@@ -1599,12 +1607,17 @@ summary:focus-visible {
    for 「how did it get this」 had no reason to think the row was pressable. */
 .funnel-line {
   display: inline-flex;
-  align-items: baseline;
+  /* Centred, not baseline-aligned. The channel group and 「全过程」 carry their
+     own padded backgrounds; sitting them on the text baseline pushed both
+     boxes below the line and made the strip visibly heavier at the bottom. */
+  align-items: center;
   flex-wrap: wrap;
-  gap: 6px 14px;
+  /* One spacing value. 7px inside the step list against 14px between the
+     other members read as an uneven rhythm across a single row. */
+  gap: 6px 10px;
   width: fit-content;
   max-width: 100%;
-  padding: 8px 14px;
+  padding: 7px 12px;
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   border-radius: 9px;
   background: var(--accent-soft);
@@ -1628,8 +1641,9 @@ summary:focus-visible {
 
 .funnel-steps {
   display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1646,9 +1660,11 @@ summary:focus-visible {
 .funnel-fan {
   display: inline-flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   gap: 2px 7px;
-  padding: 2px 8px;
+  /* Matches `.funnel-more`'s box, so the strip has the same weight at both
+     ends instead of one padded block on the left and bare text on the right. */
+  padding: 3px 10px;
   border-radius: 6px;
   /* White against the strip's tint, so the three channels still read as one
      group now that the strip itself is coloured. */
@@ -4597,12 +4613,16 @@ summary:focus-visible {
   font-weight: 500;
 }
 
+/* Qualifiers, not headlines.
+   Filled chips at 14px next to a 12px grey publisher name made the metadata
+   the loudest thing on the card. These say what *kind* of item it is; the
+   publisher says whose it is, and that is the one a reader scans for. */
 .tag {
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  padding: 5px 11px;
-  color: var(--accent-ink);
-  font-size: var(--fs-base);
+  background: transparent;
+  padding: 3px 9px;
+  color: var(--muted);
+  font-size: var(--fs-sm);
   white-space: nowrap;
 }
 
