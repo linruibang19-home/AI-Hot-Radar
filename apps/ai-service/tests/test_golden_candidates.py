@@ -95,6 +95,32 @@ def test_retrieved_documents_are_not_offered_as_the_answer() -> None:
     assert "候选清单，不是黄金集" in result_note
 
 
+def test_the_golden_set_s_own_replays_are_not_mined_as_new_traffic() -> None:
+    """Every evaluation run pushes the 90 questions through the pipeline and
+    writes them to `rag_query` — 71 of 247 rows. Left in, the miner reads the
+    set back to itself: six of the first thirty shortlisted were already
+    annotated, two of them abstention questions whose low support score was the
+    system refusing correctly."""
+    source = inspect.getsource(candidates.mine)
+    assert "exclude_questions" in source
+    assert "question.strip() in exclude_questions" in source or (
+        "question.strip()" in source and "exclude_questions" in source
+    )
+    # Reported, not silently dropped: a shortlist that shrank because the week
+    # was quiet and one that shrank because it was all replays look identical.
+    assert "golden_replays_skipped" in source
+
+
+def test_the_command_feeds_the_miner_the_real_golden_set() -> None:
+    """Hardcoding the exclusions, or defaulting them to empty, would let the
+    contamination back in the moment a question is added to the set."""
+    from ahr import cli
+
+    source = inspect.getsource(cli.cmd_golden_candidates)
+    assert "load_golden_set" in source
+    assert "exclude_questions=replayed" in source
+
+
 def test_mining_never_writes() -> None:
     """It reads traffic to propose work. A miner that could edit the golden set
     is a miner that can quietly grade its own homework."""

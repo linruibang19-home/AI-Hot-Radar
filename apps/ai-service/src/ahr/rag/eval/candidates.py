@@ -12,6 +12,14 @@ verdict attached — a citation the cross-encoder scored below the support
 threshold is a passage the pipeline itself judged too weak for the sentence it
 was attached to. Those are the hard cases, already labelled, for free.
 
+**`rag_query` is not all real traffic.** Every evaluation run replays the 90
+questions through the same pipeline and writes them to the same table: 71 of
+247 rows, 29%. Left in, the miner reads the golden set back to itself and
+proposes annotating questions that are already annotated — six of the first
+thirty shortlisted, two of them abstention questions whose low support score
+was the system refusing correctly. `exclude_questions` takes them out, and the
+count is reported rather than dropped silently.
+
 **What this produces is a shortlist, not a golden set.** Every candidate still
 needs a human to mark which documents are genuinely relevant. That step is not
 automatable here: asking the model to annotate the set it will be graded on
@@ -119,12 +127,23 @@ def _band(status_refused: bool, citations: int, worst: float | None, uses_new: b
     return None
 
 
-def mine(connection: Any, *, cutoff: str, days: int = 90, limit: int = 60) -> dict[str, Any]:
+def mine(
+    connection: Any,
+    *,
+    cutoff: str,
+    days: int = 90,
+    limit: int = 60,
+    exclude_questions: frozenset[str] = frozenset(),
+) -> dict[str, Any]:
     """Rank real questions by how much annotating them would teach.
 
     `cutoff` is the frozen corpus boundary from the published snapshot, so
     `new_source` means "evidence the golden set structurally cannot contain"
     rather than "recent".
+
+    `exclude_questions` is the golden set's own question text. Evaluation runs
+    write to `rag_query` like anything else, so without it the shortlist fills
+    up with questions that already have annotations.
     """
     refused_ids = {
         row[0]
@@ -138,12 +157,16 @@ def mine(connection: Any, *, cutoff: str, days: int = 90, limit: int = 60) -> di
 
     seen: set[str] = set()
     picked: list[Candidate] = []
+    replays = 0
     rows = _rows(
         connection,
         _SELECT + " ORDER BY min(c.support_score) NULLS LAST",
         {"cutoff": cutoff, "days": days},
     )
     for query_id, question, asked, worst, citations, sources, uses_new, has_trace in rows:
+        if question.strip() in exclude_questions:
+            replays += 1
+            continue
         band = _band(query_id in refused_ids, int(citations or 0), worst, bool(uses_new))
         if band is None or question in seen:
             continue
@@ -182,6 +205,9 @@ def mine(connection: Any, *, cutoff: str, days: int = 90, limit: int = 60) -> di
         "distinct_questions": len(seen),
         "by_band": {band: sum(1 for c in picked if c.band == band) for band in BANDS},
         "without_trace": sum(1 for c in picked if not c.has_trace),
+        #: Evaluation replays of the golden set, skipped. Reported because a
+        #: shortlist that quietly shrank is indistinguishable from a quiet week.
+        "golden_replays_skipped": replays,
         "candidates": [c.as_dict() for c in shortlist],
         "note": (
             "候选清单，不是黄金集。每一条仍需人工标注 relevant_items；"

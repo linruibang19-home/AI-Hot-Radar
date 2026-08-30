@@ -199,11 +199,26 @@ def cmd_golden_candidates(args: argparse.Namespace) -> int:
     will be graded on writes the exam and sits it.
     """
     from ahr.rag.eval.candidates import mine
+    from ahr.rag.eval.golden import load_golden_set
+
+    # Evaluation replays the golden set through the same pipeline and writes it
+    # to the same table. Without this the miner reads the set back to itself.
+    golden = load_golden_set(Path(args.golden), require_full=False)
+    replayed = frozenset(question.question.strip() for question in golden.questions)
 
     with psycopg.connect(get_settings().database_url) as connection:
-        result = mine(connection, cutoff=args.cutoff, days=args.days, limit=args.limit)
+        result = mine(
+            connection,
+            cutoff=args.cutoff,
+            days=args.days,
+            limit=args.limit,
+            exclude_questions=replayed,
+        )
 
-    written: dict[str, Any] = {"by_band": result["by_band"]}
+    written: dict[str, Any] = {
+        "by_band": result["by_band"],
+        "golden_replays_skipped": result["golden_replays_skipped"],
+    }
     payload = json.dumps(result, indent=2, ensure_ascii=False)
     if args.output:
         Path(args.output).write_text(payload, encoding="utf-8")
@@ -1430,6 +1445,11 @@ def main(argv: list[str] | None = None) -> int:
         help="also write an annotation sheet in golden-set YAML with blank grades",
     )
     candidates.add_argument("--category", default="mixed", help="category for the worksheet")
+    candidates.add_argument(
+        "--golden",
+        default="/app/data/golden",
+        help="golden set whose questions are evaluation replays, not real traffic",
+    )
     candidates.set_defaults(func=cmd_golden_candidates)
 
     validate = sub.add_parser(

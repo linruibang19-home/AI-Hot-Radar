@@ -15,11 +15,22 @@ Grades follow the existing files: 2 for strongly relevant, 1 for weak, and the
 line deleted when the document does not belong. Every grade starts as `?` so an
 unfinished sheet fails validation instead of silently annotating everything as
 irrelevant.
+
+**A document dated after `asked_at` is shown but cannot be graded.** Evaluation
+clamps retrieval to the corpus as it stood when the question was asked, so such
+an item is unreachable and annotating it relevant would book a permanent recall
+miss. They appear here because a feed can revise `published_at` forward long
+after the item was first observed — 109 trace rows across real traffic — which
+makes the date in a trace row today later than the date it carried at query
+time. Listed as comments with no `id` line, so the funnel stays visible and the
+mistake is impossible to make.
 """
 
 from __future__ import annotations
 
 from typing import Any
+
+from ahr.rag.eval.golden import CATEGORIES
 
 #: Trace rows carry the whole rerank window. More than this and the sheet stops
 #: being something a person will actually read to the bottom.
@@ -46,7 +57,8 @@ _TRACE = """
            t.outcome,
            t.fused_rank,
            t.rerank_rank,
-           left(regexp_replace(ch.body_text, '\\s+', ' ', 'g'), %(chars)s)
+           left(regexp_replace(ch.body_text, '\\s+', ' ', 'g'), %(chars)s),
+           COALESCE(ci.published_at, ci.observed_at) > %(asked_at)s
       FROM rag_trace t
       JOIN content_chunk ch ON ch.id = t.content_chunk_id
       LEFT JOIN content_revision cr ON cr.id = ch.content_revision_id
@@ -75,7 +87,8 @@ _CITED = """
            'cited',
            NULL::int,
            c.citation_no,
-           left(regexp_replace(ch.body_text, '\\s+', ' ', 'g'), %(chars)s)
+           left(regexp_replace(ch.body_text, '\\s+', ' ', 'g'), %(chars)s),
+           COALESCE(ci.published_at, ci.observed_at) > %(asked_at)s
       FROM rag_citation c
       JOIN content_chunk ch ON ch.id = c.content_chunk_id
       LEFT JOIN content_revision cr ON cr.id = ch.content_revision_id
@@ -87,9 +100,14 @@ _CITED = """
 """
 
 
-def _documents(connection: Any, query_id: str) -> tuple[list[dict[str, Any]], bool]:
+def _documents(connection: Any, query_id: str, asked_at: Any) -> tuple[list[dict[str, Any]], bool]:
     """Documents to judge, and whether they came from the full funnel."""
-    params = {"query_id": query_id, "limit": MAX_DOCUMENTS, "chars": EXCERPT_CHARS}
+    params = {
+        "query_id": query_id,
+        "limit": MAX_DOCUMENTS,
+        "chars": EXCERPT_CHARS,
+        "asked_at": asked_at,
+    }
     with connection.cursor() as cursor:
         cursor.execute(_TRACE, params)
         rows = cursor.fetchall()
@@ -102,7 +120,7 @@ def _documents(connection: Any, query_id: str) -> tuple[list[dict[str, Any]], bo
 
     seen: set[str] = set()
     documents: list[dict[str, Any]] = []
-    for item_id, title, source, published, outcome, fused, rerank, excerpt in rows:
+    for item_id, title, source, published, outcome, fused, rerank, excerpt, after in rows:
         # One row per *document*: the trace is per passage, and a document with
         # three passages in the window is still one relevance judgement.
         if item_id in seen:
@@ -118,6 +136,7 @@ def _documents(connection: Any, query_id: str) -> tuple[list[dict[str, Any]], bo
                 "fused_rank": fused,
                 "rerank_rank": rerank,
                 "excerpt": " ".join((excerpt or "").split()),
+                "after_snapshot": bool(after),
             }
         )
     return documents, traced
@@ -128,7 +147,8 @@ def render(connection: Any, candidates: list[dict[str, Any]], *, category: str) 
     lines = [
         "# 标注工作表 —— 从真实提问挖出来的候选，尚未标注。",
         "#",
-        "# 每题按下面三步填：",
+        "# 每题按下面四步填：",
+        "#   0. category: 这题属于哪一类。data/golden/ 按类分文件，拆分要靠它。",
         "#   1. answerable: 语料里是否真的答得出来。答不出就改成 false，",
         "#      并补 presupposition（这题预设了什么）和 must_not_claim（不许出现的词）。",
         "#   2. 每个候选文档把 grade: ? 改成 2（强相关）或 1（弱相关）；",
@@ -138,6 +158,9 @@ def render(connection: Any, candidates: list[dict[str, Any]], *, category: str) 
         "# 文档列表来自 rag_trace，包含检索看过但丢弃的。漏标的相关文档就藏在",
         "# 「未进证据」那几行里；只看被引用的，就只能给系统点头。",
         "#",
+        "# 标着「快照外」的文档没有 id 行，标不了：评测按 asked_at 裁快照，",
+        "# 发布时间晚于提问时间的文档取不到，标成相关就是记一笔永远追不回的漏召。",
+        "#",
         "# 校验：ahr golden-validate <本文件>。留着 ? 会直接失败。",
         "",
         f"category: {category}",
@@ -145,7 +168,9 @@ def render(connection: Any, candidates: list[dict[str, Any]], *, category: str) 
     ]
 
     for candidate in candidates:
-        documents, traced = _documents(connection, candidate["query_id"])
+        documents, traced = _documents(
+            connection, candidate["query_id"], candidate["asked_at"]
+        )
         lines.append("")
         lines.append(
             f"  # 挖出的理由: {candidate['band']}"
@@ -158,6 +183,7 @@ def render(connection: Any, candidates: list[dict[str, Any]], *, category: str) 
         lines.append(f"  - id: TODO-{candidate['query_id'][:8]}")
         lines.append(f'    question: "{_escape(candidate["question"])}"')
         lines.append(f"    asked_at: {candidate['asked_at']}")
+        lines.append(f"    category: ?  # {'/'.join(CATEGORIES)}")
         lines.append("    answerable: true")
         lines.append("    relevant_items:")
         if not traced and documents:
@@ -169,14 +195,23 @@ def render(connection: Any, candidates: list[dict[str, Any]], *, category: str) 
             )
         if not documents:
             lines.append("      # 检索没有留下任何候选——这题多半应当 answerable: false")
+        elif all(d["after_snapshot"] for d in documents):
+            lines.append("      # 候选全部落在快照外——这题标不了，应当 answerable: false 或整题删掉")
         for document in documents:
             rank = document["rerank_rank"] or document["fused_rank"] or "—"
+            outside = document["after_snapshot"]
             lines.append(
-                f"      # [{document['outcome']}] #{rank} {document['source']}"
-                f" · {document['published']} · {document['title'][:52]}"
+                f"      # [{document['outcome']}{'·快照外' if outside else ''}] #{rank}"
+                f" {document['source']} · {document['published']} · {document['title'][:52]}"
             )
             if document["excerpt"]:
                 lines.append(f"      #   {document['excerpt'][:110]}")
+            if outside:
+                # No `id` line on purpose. The row stays visible because it is
+                # part of what the funnel saw, but grading it would annotate a
+                # document the evaluation is structurally unable to retrieve.
+                lines.append("      #   ↑ 发布时间晚于提问时间，评测取不到，故不给 id 行")
+                continue
             lines.append(f"      - {{id: {document['id']}, grade: ?}}")
         lines.append('    notes: "TODO 这题考什么"')
 
@@ -191,7 +226,16 @@ def validate(text: str) -> list[str]:
     and the unfinished state is the one this most needs to catch. Returns an
     empty list when the sheet is ready to move into `data/golden/`.
     """
+    import re
+
     problems: list[str] = []
+
+    # Everything below is scoped to the questions. The header carries an
+    # `annotation:` block whose `dropped:` list records candidates that were
+    # rejected rather than annotated, and those keep their mined `TODO-` id on
+    # purpose — it is the only handle on a question that never became one.
+    body = re.split(r"^questions:\s*$", text, maxsplit=1, flags=re.MULTILINE)
+    text = body[1] if len(body) > 1 else text
 
     unfilled = text.count("grade: ?")
     if unfilled:
@@ -205,18 +249,24 @@ def validate(text: str) -> list[str]:
     if todo_notes:
         problems.append(f"{todo_notes} 道题的 notes 还没写")
 
-    # An unanswerable question needs the two fields the abstention scorer reads;
-    # without them it grades as answerable-with-no-evidence, which is a
-    # different and much weaker test.
-    import re
-
     for block in re.split(r"\n  - id: ", text)[1:]:
-        if "answerable: false" not in block:
-            continue
         identifier = block.split("\n", 1)[0].strip()
-        if "presupposition:" not in block:
+
+        # Each question carries its own category: the sheet is mixed, and
+        # `data/golden/` is keyed by category per file, so this is the
+        # annotation the split needs. `must_not_claim` is deliberately *not*
+        # required — RAG-GOLD-077 and 080 are well-formed without it, and
+        # demanding it would push an annotator to invent a forbidden string.
+        category = re.search(r"\n    category: (\S+)", block)
+        if category is None:
+            problems.append(f"{identifier}: 缺 category")
+        elif category.group(1) not in CATEGORIES:
+            problems.append(f"{identifier}: category {category.group(1)} 不在 {CATEGORIES}")
+
+        # An unanswerable question needs the field the abstention judge reads;
+        # without it the question grades as answerable-with-no-evidence, which
+        # is a different and much weaker test.
+        if "answerable: false" in block and "presupposition:" not in block:
             problems.append(f"{identifier}: answerable false 但缺 presupposition")
-        if "must_not_claim:" not in block:
-            problems.append(f"{identifier}: answerable false 但缺 must_not_claim")
 
     return problems
