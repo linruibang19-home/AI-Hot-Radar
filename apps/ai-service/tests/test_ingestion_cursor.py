@@ -129,3 +129,62 @@ def test_the_listing_adapter_keeps_committed_ids_and_history() -> None:
     )
 
     assert cursor.extra["seen_ids"] == ["new-1", "old-1"]
+
+
+# --- anchorless headings (2026-08-31) --------------------------------------
+
+
+def test_a_heading_with_no_ascii_still_gets_its_own_url() -> None:
+    """Chinese-only headings slugify to the empty string. Falling back to the
+    bare page URL put every one of them on the same `canonical_url_hash`, and
+    the unique index rejected all but the first — the same failure
+    `keep_fragment` exists to prevent, reintroduced through the back door.
+    Caught in production on `baidu-qianfan-changelog`.
+    """
+    import asyncio
+    from dataclasses import dataclass
+
+    from ahr.ingestion.models import SourceConfig
+
+    markdown = (
+        '<Update label="公告" description="第一条中文公告">正文一</Update>\n'
+        '<Update label="通知" description="第二条中文通知">正文二</Update>\n'
+    )
+
+    @dataclass
+    class _Response:
+        status_code: int = 200
+        not_modified: bool = False
+        etag: str | None = None
+        last_modified: str | None = None
+        headers: dict[str, str] = None  # type: ignore[assignment]
+
+        def text(self) -> str:
+            return markdown
+
+    class _Fetcher:
+        async def fetch(self, url: str, **_: object) -> _Response:
+            return _Response(headers={"content-type": "text/markdown"})
+
+    source = SourceConfig(
+        id="probe",
+        name="Probe",
+        organization="Probe",
+        profile="docs_changelog",
+        tier="primary",
+        priority="P0",
+        content_access="full_release_text",
+        verification="page_confirmed",
+        enabled=True,
+        discovery_url="https://example.com/updates.md",
+    )
+    batch = asyncio.run(DocsChangelogAdapter(_Fetcher()).discover(source))
+
+    urls = [item.candidate_url for item in batch.items]
+    assert len(batch.items) == 2
+    assert len(set(urls)) == 2, urls
+    # Never the bare page URL: that is the one value guaranteed to collide.
+    assert source.discovery_url not in urls
+    # And the fragment matches the id, so the two cannot drift apart.
+    for item in batch.items:
+        assert item.candidate_url.endswith("#" + item.external_id.split("#", 1)[1])
