@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -79,6 +80,37 @@ def parse_heading_date(heading: str) -> datetime | None:
     return None
 
 
+# Docs sites increasingly serve the same page as Markdown for machine readers,
+# and there the releases survive as MDX components instead of being flattened
+# into prose. Zhipu's 新品发布 page is the case that forced this: as HTML,
+# trafilatura returns one section titled 「公告通知」 out of a 2.2MB page, so the
+# source produced exactly one item and stayed there. The `.md` twin keeps every
+# release as `<Update label="2026-08-26" description="GLM-5.3-Flash …">`, which
+# carries the date the HTML rendering loses.
+_MDX_UPDATE_RE = re.compile(
+    r"<Update\b[^>]*\blabel=\"([^\"]+)\"[^>]*\bdescription=\"([^\"]*)\"[^>]*>(.*?)</Update>",
+    re.DOTALL,
+)
+_MDX_TAG_RE = re.compile(r"</?[A-Z][A-Za-z0-9]*\b[^>]*>")
+
+
+def split_mdx_updates(markdown: str) -> list[tuple[str, str]]:
+    """Split MDX `<Update label=… description=…>` blocks into (heading, body).
+
+    The heading is `label description` so `parse_heading_date` finds the date
+    where it already looks, rather than growing a second date path.
+    """
+    sections: list[tuple[str, str]] = []
+    for match in _MDX_UPDATE_RE.finditer(markdown):
+        label, description, body = match.group(1), match.group(2), match.group(3)
+        heading = f"{label} {description}".strip()
+        body = _MDX_TAG_RE.sub("", body)
+        body = "\n".join(line.strip() for line in body.splitlines() if line.strip())
+        if heading and body:
+            sections.append((heading, body))
+    return sections
+
+
 def split_sections(document_xml: str) -> list[tuple[str, str]]:
     """Split trafilatura XML into (heading, body) pairs.
 
@@ -124,31 +156,47 @@ class DocsChangelogAdapter:
         if response.not_modified:
             return DiscoveryBatch.unchanged(cursor)
 
-        html = response.text()
-        document_xml = trafilatura.extract(
-            html, include_comments=False, include_tables=True, output_format="xml"
-        )
-        if not document_xml:
-            raise ParseFailedError(f"no extractable content at {source.discovery_url}")
+        body_text = response.text()
+        content_type = (response.headers.get("content-type") or "").lower()
+        is_markdown = "markdown" in content_type or source.discovery_url.endswith(".md")
 
-        page_hash = hashlib.sha256(document_xml.encode("utf-8")).hexdigest()
+        if is_markdown:
+            # Nothing to extract: the response *is* the document.
+            document = body_text
+            sections = split_mdx_updates(body_text)
+        else:
+            document = trafilatura.extract(
+                body_text, include_comments=False, include_tables=True, output_format="xml"
+            )
+            if not document:
+                raise ParseFailedError(f"no extractable content at {source.discovery_url}")
+            sections = split_sections(document)
+
+        page_hash = hashlib.sha256(document.encode("utf-8")).hexdigest()
         seen_hashes = set((cursor.extra or {}).get("section_hashes", []))
 
         items: list[DiscoveredDocument] = []
         new_hashes: list[str] = []
 
-        for index, (heading, body) in enumerate(split_sections(document_xml)):
+        for heading, body in sections:
             section_hash = hashlib.sha256(f"{heading}\n{body}".encode()).hexdigest()
             new_hashes.append(section_hash)
             if section_hash in seen_hashes:
                 continue
 
             anchor = re.sub(r"[^a-z0-9]+", "-", heading.lower()).strip("-")[:60]
+            # A heading with no ASCII — every Chinese-only one — slugifies to the
+            # empty string, and the old fallback was the loop index. That makes
+            # identity positional: one release added at the top of the page
+            # renumbers every section below it, and the whole changelog
+            # re-ingests as new items. Hash the heading instead, so identity
+            # tracks the heading exactly as the comment below promises.
+            slug = anchor or hashlib.sha256(heading.encode("utf-8")).hexdigest()[:16]
             items.append(
                 DiscoveredDocument(
                     # Identity is the heading, not the hash: an edited section
                     # must update the existing item rather than create a new one.
-                    external_id=f"{source.id}#{anchor or index}",
+                    external_id=f"{source.id}#{slug}",
                     candidate_url=f"{source.discovery_url}#{anchor}"
                     if anchor
                     else source.discovery_url,
@@ -172,4 +220,36 @@ class DocsChangelogAdapter:
             ),
             http_status=response.status_code,
             empty_reason="NO_CHANGED_SECTIONS" if not items else None,
+        )
+
+    def cursor_for_committed(
+        self,
+        next_cursor: SourceCursor,
+        *,
+        batch: DiscoveryBatch,
+        committed: list[str],
+        previous: SourceCursor | None,
+    ) -> SourceCursor:
+        """Mark as seen only the sections that were actually stored.
+
+        `discover` returns every section on the page; the pipeline ingests
+        `batch.items[:max_documents]` — five, by default. Saving all of the
+        hashes therefore retired sections that were never fetched. DeepSeek's
+        changelog parsed 21 sections, stored one, and buried twenty: every poll
+        afterwards was a SUCCESS that discovered nothing, and the source sat
+        green in the console with a single item behind it.
+
+        Sections already seen before this run stay seen — they are not new work,
+        and re-offering them would make the page churn forever.
+        """
+        stored = {item.attributes.get("section_hash") for item in batch.items
+                  if item.external_id in set(committed)}
+        seen_before = set((previous.extra or {}).get("section_hashes", [])) if previous else set()
+        kept = [
+            digest
+            for digest in (next_cursor.extra or {}).get("section_hashes", [])
+            if digest in stored or digest in seen_before
+        ]
+        return replace(
+            next_cursor, extra={**(next_cursor.extra or {}), "section_hashes": kept}
         )

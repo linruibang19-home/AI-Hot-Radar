@@ -285,10 +285,16 @@ questions:
     expected_query_type: recent_updates
     expected_entities: ["智谱"]
     notes: >-
-      这题挖出的是信源覆盖缺口，不是检索缺陷：信源库里没有智谱/Z.ai 的官方源。
-      候选里唯一沾边的是一条第三方对 zai-org/GLM-5.2 的量化重打包——它能说明
-      GLM-5.2 存在，但不等于"智谱发布了什么"，正确回答应当说明这个区别。
-      因此 must_not_claim 里不放 GLM：合格的拒答会提到它。
+      这题挖出的是采集缺陷，不是检索缺陷，也不是覆盖缺口——我最初判断成"信源库里
+      没有智谱官方源"，那是错的。glm-new-releases 一直配着、enabled、ACTIVE、
+      连续失败 0、最近一次成功 08-28，而库里只有 1 条内容。原因见
+      docs/status/eval/golden-refresh-20260830.md：changelog 的每条都是同一页面的
+      一个 #锚点，而 canonicalize_url 按通用规则丢掉 fragment，于是 26 条发布
+      哈希成同一个 URL，唯一索引留下第一条。GLM-5.1/5.2/5.3/5.3-Flash 全在页面上。
+      提问当时（08-10）语料里确实没有这些文档，所以 answerable: false 对快照成立；
+      修好之后该重跑这题——它很可能变成一道可答题，那本身就是这条修复的验收。
+      候选里唯一沾边的是第三方对 zai-org/GLM-5.2 的量化重打包，能说明 GLM-5.2 存在，
+      但不等于"智谱发布了什么"。因此 must_not_claim 里不放 GLM：合格的拒答会提到它。
       三道同义提问（08-09 一次、08-10 两次）只留这一道，另两道记在 dropped。
 
   # 挖出的理由: refused

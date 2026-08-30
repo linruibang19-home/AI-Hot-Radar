@@ -1,5 +1,5 @@
 schema_version: 2
-registry_version: "2026-08-30.1"
+registry_version: "2026-08-30.2"
 project: AI Hot Radar
 
 # This registry separates discovery from document acquisition. A source is not
@@ -134,13 +134,23 @@ sources:
 
   # 2. Chinese model vendors, official platforms, and research communities
   - {id: deepseek-api-changelog, name: DeepSeek API Changelog, organization: DeepSeek, group: official_cn, region: cn, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://api-docs.deepseek.com/zh-cn/updates/", content_access: full_release_text, verification: page_confirmed, enabled: true}
-  - {id: qwen-research, name: Qwen Research, organization: Alibaba Qwen, group: official_cn, region: cn, tier: primary, priority: P0, profile: static_listing_to_article, discovery_url: "https://qwen.ai/research", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  # Client-rendered: 90KB of HTML with zero <a> tags and four characters of text
+  # ("Qwen"). Crawled green for weeks — SUCCESS, HTTP 200, 0 discovered, 0 items
+  # — because an empty listing is indistinguishable from a quiet week. Not a
+  # config problem; it needs a renderer or a different URL. `qwen-legacy-blog`
+  # below covers the same publisher over Atom, so nothing is lost by parking it.
+  - {id: qwen-research, name: Qwen Research, organization: Alibaba Qwen, group: official_cn, region: cn, tier: primary, priority: P0, profile: static_listing_to_article, discovery_url: "https://qwen.ai/research", content_access: full_article_extract, verification: adapter_required, enabled: false}
   # Was pointed at the blog's HTML index, which is a listing page the extractor
   # never got articles out of — PROBING with 0 items. The same site publishes a
   # 44-entry Atom feed at `index.xml`; a protocol beats a parser.
   - {id: qwen-legacy-blog, name: Qwen Technical Blog, organization: Alibaba Qwen, group: official_cn, region: cn, tier: primary, priority: P1, profile: rss_to_article, homepage_url: "https://qwenlm.github.io/blog/", discovery_url: "https://qwenlm.github.io/blog/index.xml", content_access: full_article_extract, verification: protocol_guaranteed, enabled: true}
   - {id: kimi-platform-changelog, name: Kimi Open Platform Changelog, organization: Moonshot AI, group: official_cn, region: cn, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://platform.kimi.com/blog/posts/changelog", content_access: full_release_text, verification: page_confirmed, enabled: true}
-  - {id: glm-new-releases, name: GLM New Releases, organization: Zhipu AI, group: official_cn, region: cn, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://docs.bigmodel.cn/cn/update/new-releases", content_access: full_release_text, verification: page_confirmed, enabled: true}
+  # The HTML page is 2.2MB of framework around 6KB of text, and trafilatura
+  # returns one section from it — 「公告通知」 — so this source held exactly one
+  # item while GLM-5.1, 5.2, 5.3 and 5.3-Flash all shipped. The site serves the
+  # same page as Markdown for machine readers, where every release survives as
+  # `<Update label="2026-08-26" description="…">`: dated, titled, separable.
+  - {id: glm-new-releases, name: GLM New Releases, organization: Zhipu AI, group: official_cn, region: cn, tier: primary, priority: P0, profile: docs_changelog, discovery_url: "https://docs.bigmodel.cn/cn/update/new-releases.md", content_access: full_release_text, verification: protocol_guaranteed, enabled: true}
   - {id: baidu-qianfan-changelog, name: Baidu Qianfan Changelog, organization: Baidu, group: official_cn, region: cn, tier: primary, priority: P1, profile: docs_changelog, discovery_url: "https://cloud.baidu.com/doc/qianfan/s/Mmh8l4qwj", content_access: full_release_text, verification: page_confirmed, enabled: true}
   - {id: bytedance-seed-research, name: ByteDance Seed Research, organization: ByteDance Seed, group: official_cn, region: cn, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://seed.bytedance.com/sitemap.xml", content_access: full_article_extract, verification: page_confirmed, enabled: true}
   - {id: baai-community, name: BAAI Community, organization: Beijing Academy of Artificial Intelligence, group: research_cn, region: cn, tier: primary, priority: P1, profile: static_listing_to_article, discovery_url: "https://hub.baai.ac.cn/", content_access: full_article_extract, verification: page_confirmed, enabled: true}

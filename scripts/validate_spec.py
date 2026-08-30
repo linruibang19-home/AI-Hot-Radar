@@ -45,7 +45,9 @@ def main() -> int:
     source_ids = [source.get("id") for source in sources]
     duplicate_ids = [key for key, value in Counter(source_ids).items() if value > 1]
 
-    require(len(sources) == 143, f"expected 143 sources, got {len(sources)}", errors)
+    # 2026-08-30: 143 -> 151，中文信源扩容（+8）。这个数字是防止误删的哨兵，
+    # 不是目标值；每次有意增删信源都要连它一起改，否则门禁会把扩容报成失败。
+    require(len(sources) == 151, f"expected 151 sources, got {len(sources)}", errors)
     require(not duplicate_ids, f"duplicate source ids: {duplicate_ids}", errors)
     require(all(source.get("profile") in profiles for source in sources), "unknown profile reference", errors)
     require(all(not source.get("enabled") for source in sources if source.get("verification") == "restricted"), "restricted source enabled", errors)

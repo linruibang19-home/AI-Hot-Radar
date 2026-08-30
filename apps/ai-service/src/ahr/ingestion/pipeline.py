@@ -306,20 +306,24 @@ async def ingest_source(
         http_status=batch.http_status,
     )
     # Cursor last: only content that actually committed is treated as seen.
+    #
+    # The rule is asked of the adapter rather than switched on its class here.
+    # As an `isinstance(adapter, HtmlListingAdapter)` branch it held for exactly
+    # one of the seven adapters, and `docs_changelog` — which also carries a
+    # seen-set — quietly failed it: `discover` returns every section it parsed,
+    # the loop above ingests `batch.items[:max_documents]`, and the cursor was
+    # then saved with *all* of the hashes. DeepSeek's changelog parsed 21
+    # sections, one was stored, and the other twenty went behind the cursor
+    # permanently. Every poll since reported SUCCESS with 0 discovered.
     if batch.next_cursor and not batch.not_modified:
         next_cursor = batch.next_cursor
-        if isinstance(adapter, HtmlListingAdapter):
-            # Listing discovery cannot know whether article acquisition and
-            # persistence succeeded. Rebuild its seen set from committed
-            # documents so a failed page is retried on the next poll rather
-            # than silently disappearing behind the cursor.
-            previous_seen = list((cursor_state.extra or {}).get("seen_ids", []))
-            next_cursor = replace(
+        narrow = getattr(adapter, "cursor_for_committed", None)
+        if narrow is not None:
+            next_cursor = narrow(
                 next_cursor,
-                extra={
-                    **(next_cursor.extra or {}),
-                    "seen_ids": (committed_external_ids + previous_seen)[:400],
-                },
+                batch=batch,
+                committed=committed_external_ids,
+                previous=cursor_state,
             )
         save_cursor(connection, source.id, next_cursor)
     update_source_state(connection, source.id, state=result.state)

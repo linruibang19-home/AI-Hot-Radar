@@ -68,9 +68,9 @@ RAG-GOLD-002 / 034 / 044 / 048 / 076 / 079。其中 076「Qwen4-Ultra 的参数�
 
 ## 挖出来的东西
 
-- **信源覆盖缺口**：信源库里没有智谱 / Z.ai 的官方源。三道同义提问
+- **智谱答不出来**（当时判断为覆盖缺口，**是错的**，见下节）。三道同义提问
   （08-09 一次、08-10 两次）都答不出来，唯一沾边的是第三方对 GLM-5.2 的量化重打包。
-  留 RAG-GOLD-100 一道记这个缺口。
+  留 RAG-GOLD-100 一道记这个失败。
 - **词形命中不等于实体命中**：「Cursor 最近有什么产品更新？」引了 LiteLLM /
   Mastra / CrewAI / Langfuse，另有一条 Qwen 微调模型的摘录写着
   "A blinking cursor that mocks you"——稀疏通道匹配的是「光标」这个名词。
@@ -133,6 +133,80 @@ RAG-GOLD-002 / 034 / 044 / 048 / 076 / 079。其中 076「Qwen4-Ultra 的参数�
 不设阈值的理由和 `support.is_weak_retrieval` 一样，也和本会话前面那次教训一样：
 n=15 是假设不是阈值，误拒率是这个系统最贵的指标，
 真正有资格定这个数的是第三步的双轨评测。
+
+## 修正：智谱那题不是覆盖缺口，是采集缺陷（同日追加）
+
+我上面写「信源库里没有智谱 / Z.ai 的官方源」，**这是错的**。去查配置才发现
+`glm-new-releases` 一直配着、`enabled`、`ACTIVE`、连续失败 0、最近一次成功 08-28
+——**而库里只有 1 条内容**。
+
+顺着查下去挖出两个缺陷，第二个把整个 `docs_changelog` 档位废掉了。
+
+### 缺陷 A：游标把没入库的东西记成已见
+
+`pipeline.py` 保存游标那段的注释一直写着「only content that actually committed
+is treated as seen」，实现却是 `isinstance(adapter, HtmlListingAdapter)` ——
+**七个适配器里只对一个成立**。`docs_changelog` 同样带 seen-set，却不在其中：
+`discover` 返回整页解析出的全部段落，主循环只取 `batch.items[:max_documents]`
+（默认 5），游标却把**全部**哈希存了回去。DeepSeek 的 changelog 解析出 21 段、
+入库 1 段、另外 20 段永久沉到游标后面。此后每次轮询都是 SUCCESS + discovered 0。
+
+改成由适配器自己回答 `cursor_for_committed(...)`，两个带 seen-set 的适配器各实现一份。
+
+### 缺陷 B：fragment 被当成装饰丢掉，而它就是身份
+
+`canonicalize_url` 里那行注释说「Fragments never identify a distinct server-side
+document」——对文章成立，对 changelog 不成立：每条都是同一页面的一个 `#锚点`。
+丢掉 fragment 之后 26 条发布哈希成同一个 URL，`content_item_canonical_url_hash_key`
+唯一索引留下第一条、拒绝其余全部。而失败是静默的：`UniqueViolation` 被
+「一篇坏页面不能拖垮整轮」的 `except Exception` 吞掉，run 依然 SUCCESS，
+`discovered_count` 还是真实段落数。
+
+**12 个 `docs_changelog` 信源，每个恰好 1 条内容**，游标合计声称见过 406 段。
+
+改法：`canonicalize_url(url, keep_fragment=True)`，只在 `persist_document` 里
+按 `source.profile == "docs_changelog"` 打开，通用规则不动。
+
+### 缺陷 C：智谱页面本身抽不出来（顺带）
+
+`docs.bigmodel.cn` 的 HTML 是 2.2MB 框架包着 6KB 文字，trafilatura 只还回一段
+「公告通知」。同站为机器读者提供了 `.md` 版，每条发布是
+`<Update label="2026-08-26" description="GLM-5.3-Flash 原生多模态模型上线">`
+——带日期、带标题、可切分。改指 `.md` 并让适配器识别 MDX `<Update>` 块，
+切出 **26 条发布，26 条都有发布日期**。
+
+顺手修掉一个潜伏问题：纯中文标题 slug 化后是空串，旧代码回退到循环下标，
+于是页面顶部加一条新发布就会让下面每一条改名重新入库。改成对标题取哈希。
+
+### 结果
+
+| | 修复前 | 修复后 |
+|---|---|---|
+| `docs_changelog` 全档位内容数 | 11 | **325** |
+| gemini-api-changelog | 1 | 60 |
+| anthropic-app-release-notes | 1 | 53 |
+| mistral-changelog | 1 | 50 |
+| openai-deprecations | 1 | 44 |
+| glm-new-releases | 1 | 27（26 条带日期） |
+| deepseek-api-changelog | 1 | 14 |
+
+还没修好的三个：`anthropic-api-release-notes`、`openai-codex-changelog` 仍是 1 条，
+`anthropic-claude-code-changelog` 是 0 条 —— 另一种原因，待查。
+`mistral` / `openai-api-changelog` / `deepseek` 有内容但 `published_at` 全空：
+它们的标题只有版本号没有日期，按规格不许编造日期，所以只有 `observed_at`。
+
+### 这对 RAG-GOLD-100 的影响
+
+提问发生在 08-10，当时语料里确实没有这些文档，所以 `answerable: false`
+对那个快照成立。但**理由要改**，而且修好之后该重跑这题——它很可能变成可答题，
+那本身就是这条修复的验收。工作表里的 notes 已经改过。
+
+### 还欠一个信号
+
+`qwen-research` 至今是纯 SPA（90KB HTML、0 个 `<a>`、4 个字），已停用。
+但它「SUCCESS + HTTP 200 + discovered 0 + 0 条内容」绿了好几周没人发现，
+和上面两个缺陷是同一个形状：**连续多次 discovered 0 不该算健康**。
+这个信号还没做。
 
 ## 下一步
 

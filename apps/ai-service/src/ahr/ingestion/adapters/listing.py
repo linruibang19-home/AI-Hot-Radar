@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import replace
 from datetime import datetime
 from html import unescape
 from typing import Any
@@ -274,4 +275,24 @@ class HtmlListingAdapter:
             ),
             http_status=response.status_code,
             empty_reason=None if items else ("NO_NEW_ARTICLES" if candidates else "NO_LINKS_FOUND"),
+        )
+
+    def cursor_for_committed(
+        self,
+        next_cursor: SourceCursor,
+        *,
+        batch: DiscoveryBatch,
+        committed: list[str],
+        previous: SourceCursor | None,
+    ) -> SourceCursor:
+        """Keep only what was stored in the seen set.
+
+        Discovery here cannot know whether article acquisition and persistence
+        succeeded, so a page that failed to fetch must be retried on the next
+        poll rather than disappearing behind the cursor.
+        """
+        previous_seen = list((previous.extra or {}).get("seen_ids", [])) if previous else []
+        return replace(
+            next_cursor,
+            extra={**(next_cursor.extra or {}), "seen_ids": (committed + previous_seen)[:400]},
         )
