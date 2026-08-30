@@ -696,15 +696,12 @@ function ChatTurn({
               of is stated once here — including the timings, which now come
               from the answer's own `stages_ms` rather than from progress
               events a permalink never receives. */}
+          {/* The permalink lives on the funnel's own summary line now — see
+              `AnswerTrace`. Kept out here it had to sit either beside a
+              shrunken disclosure or below the whole open panel, and the second
+              put it a screen and a half from the control that moved it. */}
           <div className="ask-foot">
             <AnswerTrace turn={turn} />
-            {/* Addressable. The id has always been returned with the answer;
-                until there was a route that read it back it pointed nowhere. */}
-            {turn.queryId && (
-              <a className="ask-permalink" href={`/ask/${turn.queryId}`}>
-                永久链接
-              </a>
-            )}
           </div>
         </div>
       </div>

@@ -239,7 +239,27 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
   // four stages made it.
   const other = Math.max(0, totalMs - named.reduce((sum, t) => sum + t.ms, 0));
 
-  if (!rows.length && !totalMs) return null;
+  // The permalink rides on the summary line rather than beside the panel.
+  // Outside it, the layout had to choose: shrink the disclosure so the link sits
+  // next to it and the candidate table loses its width, or give the disclosure
+  // the row and let the link wrap *below the whole open panel* — measured at
+  // 1572px down, a screen and a half from the control that moved it. On the
+  // line, it is in the same place in both states.
+  const permalink = turn.queryId ? (
+    <a
+      className="ask-permalink"
+      href={`/ask/${turn.queryId}`}
+      // A link inside a `<summary>` still toggles the disclosure on the way up.
+      onClick={(event) => event.stopPropagation()}
+    >
+      永久链接
+    </a>
+  ) : null;
+
+  if (!rows.length && !totalMs) {
+    // No funnel to show, but the answer is still addressable.
+    return permalink;
+  }
 
   return (
     <details className="funnel">
@@ -300,6 +320,7 @@ export function AnswerTrace({ turn }: { turn: AnswerPayload }) {
               : null}
         </span>
         <span className="funnel-more">全过程</span>
+        {permalink}
       </summary>
 
       <div className="funnel-body">

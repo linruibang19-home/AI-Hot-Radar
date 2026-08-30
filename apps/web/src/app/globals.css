@@ -1572,18 +1572,25 @@ summary:focus-visible {
    召回 → 重排 → 证据 → 引用 in place, permanently, and opens onto the evidence
    for those four numbers. Two panels used to split this and disagreed about
    the candidate count; one funnel cannot. */
+/* Packed left, not spread to the edges.
+   `space-between` put 「全过程」 and 「永久链接」 at opposite ends of a 900px row
+   whose content is 350px wide, so the two controls that belong together sat
+   either side of a gap wider than both. */
 .ask-foot {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 6px 14px;
   margin-top: 18px;
   padding-top: 12px;
   border-top: 1px solid var(--border-soft);
 }
 
+/* Full width in both states. The permalink is inside the summary line now, so
+   nothing has to sit beside the disclosure and the candidate table keeps the
+   whole measure. */
 .funnel {
-  flex: 1;
+  flex: 1 1 100%;
   min-width: 0;
 }
 
@@ -1614,18 +1621,29 @@ summary:focus-visible {
   font-weight: 600;
 }
 
-/* The channels, stacked, so the line shows three arrows converging on one
-   fusion step rather than a single 「召回」 that reads as one search. */
+/* The channels as one group on one line.
+   Stacking them vertically did show three inputs converging, and made the row
+   three lines tall while the rest of the funnel stayed on the first — an L
+   shape with the arrows pointing out of the middle of it. Grouping by
+   background says 「these three are one stage」 in a single line instead. */
 .funnel-fan {
-  display: inline-grid;
-  gap: 1px;
-  padding: 3px 9px;
-  border-left: 2px solid var(--border);
-  line-height: 1.5;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 7px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--bg);
 }
 
 .funnel-fan-row {
   white-space: nowrap;
+}
+
+.funnel-fan-row + .funnel-fan-row::before {
+  content: "·";
+  margin-right: 7px;
+  color: var(--muted-2);
 }
 
 .funnel-steps i {
@@ -1638,7 +1656,6 @@ summary:focus-visible {
 }
 
 .funnel-more {
-  margin-left: auto;
   color: var(--accent);
 }
 
@@ -1880,12 +1897,15 @@ summary:focus-visible {
   content: "";
 }
 
+/* Beside the text, not at the far edge of the row.
+   `margin-left: auto` in a 900px summary holding 350px of content flung the
+   chevron 550px away from the words it belongs to, where it read as a stray
+   icon at the page margin rather than as this row's control. */
 .ask-sources-title::after,
 .ask-history-title::after {
   content: "";
   width: 7px;
   height: 7px;
-  margin-left: auto;
   border-right: 1.5px solid currentcolor;
   border-bottom: 1.5px solid currentcolor;
   transform: rotate(45deg) translate(-2px, -2px);
@@ -4230,9 +4250,12 @@ summary:focus-visible {
   cursor: default;
 }
 
+/* The header's own 11px, this 20px and the 22px row gap stacked into 42px of
+   nothing between the title bar and the first message — taller than a line of
+   the answer itself. The gap belongs *between* turns, not above the first one. */
 .chat-log {
   flex: 1;
-  padding: 20px 22px 8px;
+  padding: 12px 22px 8px;
   display: flex;
   flex-direction: column;
   gap: 22px;
