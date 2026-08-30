@@ -113,6 +113,8 @@ def cost_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
 
     operations = []
     total = 0.0
+    serving = 0.0
+    evaluation = 0.0
     snapshot_calls = 0
     for row in rows:
         prompt, completion, cached = int(row[3] or 0), int(row[4] or 0), int(row[5] or 0)
@@ -128,6 +130,15 @@ def cost_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
         )
         estimate = _cost(prompt, completion, cached, row_rates)
         total += estimate
+        # Evaluation is not what the product costs to run. The page already
+        # said so in prose — 「离线 RAG 评测与线上问答分开统计，不再把测试预算
+        # 算成用户流量」 — above a headline that summed both anyway: ¥46.63 of
+        # which ¥19.11 was test runs. A total nobody can act on is worse than
+        # two numbers that mean different things.
+        if str(row[0]).endswith("_eval"):
+            evaluation += estimate
+        else:
+            serving += estimate
         if has_snapshot:
             snapshot_calls += int(row[2])
         operations.append(
@@ -155,6 +166,9 @@ def cost_summary(connection: Any, *, days: int = 30) -> dict[str, Any]:
         "legacyCalls": sum(item["calls"] for item in operations) - snapshot_calls,
         "operations": operations,
         "totalEstimatedCny": round(total, 4),
+        # What the product cost to serve, and what measuring it cost, apart.
+        "servingCny": round(serving, 4),
+        "evaluationCny": round(evaluation, 4),
     }
 
 

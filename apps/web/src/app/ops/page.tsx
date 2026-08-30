@@ -14,7 +14,8 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "运行状态",
-  description: "真实运行数据：provider 上报的 token、按配置价目表估算的成本、线上 p50/p95。",
+  description:
+    "真实运行数据：provider 上报的 token、按配置价目表估算的成本、线上 p50/p95。",
 };
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,11 @@ interface Stats {
       rateSource: "model_snapshot" | "legacy_fallback";
     }[];
     totalEstimatedCny: number;
+    /** Split apart deliberately: evaluation is what measuring the product
+        cost, not what running it cost, and a headline that adds them is a
+        number nobody can act on. */
+    servingCny: number;
+    evaluationCny: number;
   };
   latency: {
     days: number;
@@ -135,7 +141,13 @@ const OUTCOMES: Record<string, string> = {
 
 /** The stages that leave the machine. Everything else is local SQL.
     `support` is a reranker call per citation, issued concurrently. */
-const EXTERNAL = new Set(["embed", "rerank", "generate", "numeric_audit", "support"]);
+const EXTERNAL = new Set([
+  "embed",
+  "rerank",
+  "generate",
+  "numeric_audit",
+  "support",
+]);
 
 const SLO_LABELS = {
   ok: "达标",
@@ -145,7 +157,9 @@ const SLO_LABELS = {
 
 async function load(): Promise<Stats | null> {
   try {
-    const response = await fetch(`${AI_SERVICE_URL}/rag/stats?days=30`, { cache: "no-store" });
+    const response = await fetch(`${AI_SERVICE_URL}/rag/stats?days=30`, {
+      cache: "no-store",
+    });
     if (!response.ok) return null;
     return (await response.json()) as Stats;
   } catch {
@@ -221,7 +235,10 @@ export default async function OpsPage() {
         <p className="page-subtitle">近 {cost.days} 天的调用量、延迟与成本</p>
       </header>
 
-      <section className="quality-hero" aria-labelledby="operations-conclusion-title">
+      <section
+        className="quality-hero"
+        aria-labelledby="operations-conclusion-title"
+      >
         <div className="quality-hero-head">
           <div>
             <div className="eyebrow">OPERATIONS CONCLUSION</div>
@@ -236,16 +253,22 @@ export default async function OpsPage() {
           </span>
         </div>
         <p>
-          外部嵌入、重排、生成与支持度审计占中位请求约 {percent(externalShare)}；
-          当前最慢 p95 阶段是 {STAGES[slowestStage.stage] ?? slowestStage.stage}（
-          {ms(slowestStage.p95Ms)}）。优化优先级应放在供应商往返、超时和降级，不是本地 SQL 微调。
+          外部嵌入、重排、生成与支持度审计占中位请求约 {percent(externalShare)}
+          ； 当前最慢 p95 阶段是{" "}
+          {STAGES[slowestStage.stage] ?? slowestStage.stage}（
+          {ms(slowestStage.p95Ms)}
+          ）。优化优先级应放在供应商往返、超时和降级，不是本地 SQL 微调。
         </p>
       </section>
 
       <div className="stat-row">
         <div className="stat">
-          <div className="stat-value">¥{cost.totalEstimatedCny.toFixed(2)}</div>
-          <div className="stat-label">估算总成本</div>
+          <div className="stat-value">¥{cost.servingCny.toFixed(2)}</div>
+          <div className="stat-label">产品运行成本 · 近 {cost.days} 天</div>
+        </div>
+        <div className="stat">
+          <div className="stat-value">¥{cost.evaluationCny.toFixed(2)}</div>
+          <div className="stat-label">评测成本 · 不计入运行</div>
         </div>
         <div className="stat">
           <div className="stat-value">{latency.queries}</div>
@@ -274,8 +297,9 @@ export default async function OpsPage() {
             <h3>成本最大的操作</h3>
             <p>
               {OPERATIONS[biggestCost.operation] ?? biggestCost.operation}：¥
-              {biggestCost.estimatedCny.toFixed(2)} / {biggestCost.calls.toLocaleString()} 次。
-              离线 RAG 评测与线上问答分开统计，不再把测试预算算成用户流量。
+              {biggestCost.estimatedCny.toFixed(2)} /{" "}
+              {biggestCost.calls.toLocaleString()} 次。 离线 RAG
+              评测与线上问答分开统计，不再把测试预算算成用户流量。
             </p>
           </div>
         </article>
@@ -285,8 +309,8 @@ export default async function OpsPage() {
             <h3>价格可追溯覆盖</h3>
             <p>
               {cost.snapshotCalls.toLocaleString()} 次使用调用时模型价目快照；
-              {cost.legacyCalls.toLocaleString()} 次旧记录只能使用历史 fallback。旧金额只适合看趋势，
-              不能当供应商账单。
+              {cost.legacyCalls.toLocaleString()} 次旧记录只能使用历史
+              fallback。旧金额只适合看趋势， 不能当供应商账单。
             </p>
           </div>
         </article>
@@ -295,7 +319,8 @@ export default async function OpsPage() {
           <div>
             <h3>建议动作</h3>
             <p>
-              保持 SiliconFlow 嵌入/重排不变；生成模型记录在数据库的单行配置里，换模型后新调用
+              保持 SiliconFlow
+              嵌入/重排不变；生成模型记录在数据库的单行配置里，换模型后新调用
               会带上新的价目快照，与旧模型的成本、延迟和质量可以直接比较。
             </p>
           </div>
@@ -304,10 +329,12 @@ export default async function OpsPage() {
 
       <div className="notice">
         <strong>金额是价目估算，不是供应商账单；token 与延迟是实测。</strong>
-        V024 之后每次生成都会保存模型、配置版本和当时的输入/缓存/输出单价，后续改价不会
-        篡改历史。更早的 {cost.legacyCalls.toLocaleString()} 次调用没有价目快照，仍按 fallback
-        （输入 ¥{cost.rates.input}/M · 缓存 ¥{cost.rates.cached_input}/M · 输出 ¥
-        {cost.rates.output}/M）回算，并在下表逐行标记。
+        V024
+        之后每次生成都会保存模型、配置版本和当时的输入/缓存/输出单价，后续改价不会
+        篡改历史。更早的 {cost.legacyCalls.toLocaleString()}{" "}
+        次调用没有价目快照，仍按 fallback （输入 ¥{cost.rates.input}/M · 缓存 ¥
+        {cost.rates.cached_input}/M · 输出 ¥{cost.rates.output}
+        /M）回算，并在下表逐行标记。
       </div>
 
       <section className="eval-section">
@@ -331,11 +358,15 @@ export default async function OpsPage() {
               {cost.operations.map((row) => (
                 <tr key={`${row.operation}-${row.model}`}>
                   <td>
-                    <strong>{OPERATIONS[row.operation] ?? row.operation}</strong>
+                    <strong>
+                      {OPERATIONS[row.operation] ?? row.operation}
+                    </strong>
                     <div className="eval-meta">{row.model}</div>
                   </td>
                   <td className="eval-num">{row.calls.toLocaleString()}</td>
-                  <td className="eval-num">{row.promptTokens.toLocaleString()}</td>
+                  <td className="eval-num">
+                    {row.promptTokens.toLocaleString()}
+                  </td>
                   <td className="eval-num">
                     {row.cachedTokens.toLocaleString()}
                     <div className="eval-delta">
@@ -346,20 +377,27 @@ export default async function OpsPage() {
                       </span>
                     </div>
                   </td>
-                  <td className="eval-num">{row.completionTokens.toLocaleString()}</td>
+                  <td className="eval-num">
+                    {row.completionTokens.toLocaleString()}
+                  </td>
                   <td className="eval-num">{ms(row.avgLatencyMs)}</td>
                   <td className="eval-num">¥{row.estimatedCny.toFixed(2)}</td>
                   <td className="eval-num">¥{row.cnyPerCall.toFixed(4)}</td>
                   <td>
                     <span
                       className={`state ${
-                        row.rateSource === "model_snapshot" ? "verdict-pass" : "verdict-mixed"
+                        row.rateSource === "model_snapshot"
+                          ? "verdict-pass"
+                          : "verdict-mixed"
                       }`}
                     >
-                      {row.rateSource === "model_snapshot" ? "调用时快照" : "历史 fallback"}
+                      {row.rateSource === "model_snapshot"
+                        ? "调用时快照"
+                        : "历史 fallback"}
                     </span>
                     <div className="eval-meta">
-                      ¥{row.rates.input}/M · ¥{row.rates.cached_input}/M · ¥{row.rates.output}/M
+                      ¥{row.rates.input}/M · ¥{row.rates.cached_input}/M · ¥
+                      {row.rates.output}/M
                     </div>
                   </td>
                 </tr>
@@ -368,8 +406,8 @@ export default async function OpsPage() {
           </table>
         </div>
         <p className="eval-note">
-          命中缓存的输入 token 按更低费率计价，且它<strong>包含在</strong>输入 token 内——
-          两者都按全价算会把缓存记成花钱而不是省钱。
+          命中缓存的输入 token 按更低费率计价，且它<strong>包含在</strong>输入
+          token 内—— 两者都按全价算会把缓存记成花钱而不是省钱。
         </p>
       </section>
 
@@ -377,9 +415,10 @@ export default async function OpsPage() {
         <h2 className="section-title">延迟去了哪里</h2>
         <div className="notice">
           外部 API 往返（嵌入 / 重排 / 生成 / 支持度审计）占 p50 的{" "}
-          <strong>{(externalShare * 100).toFixed(1)}%</strong>，本地检索、融合、父块展开合计{" "}
-          <strong>{ms(localMs)}</strong>。 直接后果：<strong>想压延迟只能动网络侧</strong>，
-          优化本地 SQL 一毫秒也省不下来；反过来，任何「多算几路」的本地实验成本可以忽略。
+          <strong>{(externalShare * 100).toFixed(1)}%</strong>
+          ，本地检索、融合、父块展开合计 <strong>{ms(localMs)}</strong>。
+          直接后果：<strong>想压延迟只能动网络侧</strong>， 优化本地 SQL
+          一毫秒也省不下来；反过来，任何「多算几路」的本地实验成本可以忽略。
         </div>
         <div className="table-scroll">
           <table className="table eval-table">
@@ -405,10 +444,14 @@ export default async function OpsPage() {
                   <td className="eval-num">{ms(stage.p50Ms)}</td>
                   <td className="eval-num">
                     {ms(stage.p95Ms)} / {ms(stage.sloP95Ms)}
-                    <div className="eval-delta">{SLO_LABELS[stage.sloStatus]}</div>
+                    <div className="eval-delta">
+                      {SLO_LABELS[stage.sloStatus]}
+                    </div>
                   </td>
                   <td className="eval-num">{ms(stage.p99Ms)}</td>
-                  <td className="eval-num">{(stage.shareOfP50 * 100).toFixed(1)}%</td>
+                  <td className="eval-num">
+                    {(stage.shareOfP50 * 100).toFixed(1)}%
+                  </td>
                   <td>
                     <span
                       className={`state ${EXTERNAL.has(stage.stage) ? "verdict-mixed" : "verdict-none"}`}
@@ -422,12 +465,13 @@ export default async function OpsPage() {
           </table>
         </div>
         <p className="eval-note">
-          阶段样本数可以少于问答总数：重排在 reranker 不可用时会被跳过并记为降级，
-          把缺席当成 0 毫秒平均进去，会报出一次从未发生的提速。
+          阶段样本数可以少于问答总数：重排在 reranker
+          不可用时会被跳过并记为降级， 把缺席当成 0
+          毫秒平均进去，会报出一次从未发生的提速。
           <br />
-          比例是<strong>先按每次请求算、再取中位数</strong>，不是「阶段 p50 ÷ 总 p50」。
-          后者拿两个不同样本群的中位数相除——支持度打分只在有引用的 36 次请求上计时，
-          生成在全部 151 次上——却把它们当成同一个整体的切片，
+          比例是<strong>先按每次请求算、再取中位数</strong>，不是「阶段 p50 ÷ 总
+          p50」。 后者拿两个不同样本群的中位数相除——支持度打分只在有引用的 36
+          次请求上计时， 生成在全部 151 次上——却把它们当成同一个整体的切片，
           结果是几项加起来 <strong>122.7%</strong>。现在每一格单独成立：
           「在中位数的那次请求里，这个阶段占了多少」。
         </p>
@@ -439,11 +483,15 @@ export default async function OpsPage() {
         <h2 className="section-title">缓存</h2>
         <div className="stat-row">
           <div className="stat">
-            <div className="stat-value">{(cache.hitRate * 100).toFixed(0)}%</div>
+            <div className="stat-value">
+              {(cache.hitRate * 100).toFixed(0)}%
+            </div>
             <div className="stat-label">答案命中率</div>
           </div>
           <div className="stat">
-            <div className="stat-value">{(cache.embeddingHitRate * 100).toFixed(0)}%</div>
+            <div className="stat-value">
+              {(cache.embeddingHitRate * 100).toFixed(0)}%
+            </div>
             <div className="stat-label">嵌入命中率</div>
           </div>
           <div className="stat">
@@ -464,19 +512,23 @@ export default async function OpsPage() {
           </div>
         </div>
         <div className="notice">
-          <strong>资讯语料不能无脑上语义缓存</strong>（ADR-0017）。三条约束：答案键里含<strong>语料指纹</strong>，且指纹粒度由 planner 的
-          `freshness_required` 决定——「最新动态 / 时间线」绑定到精确语料状态，
-          其余按天；近邻阈值取 <strong>{cache.threshold}</strong> 而不是常见的 0.85，
-          因为「DeepSeek 发布了什么」与「OpenAI 发布了什么」在嵌入空间里很近，
-          阈值放松的后果是<strong>自信地回答另一家公司</strong>；
-          <strong>拒答永不缓存</strong>，因为它的含义是「语料里还没有」。
-          答案 TTL {Math.round(cache.answerTtlSeconds / 60)} 分钟。
+          <strong>资讯语料不能无脑上语义缓存</strong>
+          （ADR-0017）。三条约束：答案键里含<strong>语料指纹</strong>
+          ，且指纹粒度由 planner 的 `freshness_required` 决定——「最新动态 /
+          时间线」绑定到精确语料状态， 其余按天；近邻阈值取{" "}
+          <strong>{cache.threshold}</strong> 而不是常见的 0.85， 因为「DeepSeek
+          发布了什么」与「OpenAI 发布了什么」在嵌入空间里很近， 阈值放松的后果是
+          <strong>自信地回答另一家公司</strong>；<strong>拒答永不缓存</strong>
+          ，因为它的含义是「语料里还没有」。 答案 TTL{" "}
+          {Math.round(cache.answerTtlSeconds / 60)} 分钟。
         </div>
         {cache.hitRate === 0 && (cache.counts.miss ?? 0) > 0 && (
           <p className="eval-note">
-            答案命中率 0% 是<strong>设计结果，不是缓存坏了</strong>：键里含语料指纹，
-            而采集每 120 秒写一次，所以时间型问题几乎必然未命中——这正是它该有的行为。
-            对照之下嵌入命中率 {(cache.embeddingHitRate * 100).toFixed(0)}% 是真的在省钱：
+            答案命中率 0% 是<strong>设计结果，不是缓存坏了</strong>
+            ：键里含语料指纹， 而采集每 120
+            秒写一次，所以时间型问题几乎必然未命中——这正是它该有的行为。
+            对照之下嵌入命中率 {(cache.embeddingHitRate * 100).toFixed(0)}%
+            是真的在省钱：
             嵌入是纯函数，同一段文字永远得到同一个向量，没有新鲜度可言。
           </p>
         )}
@@ -487,26 +539,35 @@ export default async function OpsPage() {
       <section className="eval-section">
         <h2 className="section-title">线上检索行为</h2>
         <p className="eval-note" style={{ marginTop: 0 }}>
-          近 {retrieval.days} 天 {retrieval.queries} 次真实提问、{retrieval.candidates}{" "}
-          个候选的聚合。<strong>90 题黄金集回答不了这一节</strong>——那是事先选定的固定样本，
+          近 {retrieval.days} 天 {retrieval.queries} 次真实提问、
+          {retrieval.candidates} 个候选的聚合。
+          <strong>90 题黄金集回答不了这一节</strong>——那是事先选定的固定样本，
           这里是总体。
         </p>
 
         <div className="stat-row">
           <div className="stat">
-            <div className="stat-value">{retrieval.citedByChannel.dense_only ?? 0}</div>
+            <div className="stat-value">
+              {retrieval.citedByChannel.dense_only ?? 0}
+            </div>
             <div className="stat-label">仅稠密通道找到</div>
           </div>
           <div className="stat">
-            <div className="stat-value">{retrieval.citedByChannel.sparse_only ?? 0}</div>
+            <div className="stat-value">
+              {retrieval.citedByChannel.sparse_only ?? 0}
+            </div>
             <div className="stat-label">仅关键词通道找到</div>
           </div>
           <div className="stat">
-            <div className="stat-value">{retrieval.citedByChannel.both ?? 0}</div>
+            <div className="stat-value">
+              {retrieval.citedByChannel.both ?? 0}
+            </div>
             <div className="stat-label">两个通道都找到</div>
           </div>
           <div className="stat">
-            <div className="stat-value">{retrieval.citedFusedRankMedian ?? "—"}</div>
+            <div className="stat-value">
+              {retrieval.citedFusedRankMedian ?? "—"}
+            </div>
             <div className="stat-label">被引证据融合名次中位数</div>
           </div>
           <div className="stat">
@@ -518,19 +579,22 @@ export default async function OpsPage() {
         <div className="notice">
           {(retrieval.citedByChannel.sparse_only ?? 0) === 0 ? (
             <>
-              <strong>一条不好看的实测结果，照登。</strong> 混合检索的理由一直是那道 NVFP4
-              题——正确答案稠密 #14、关键词 #1、融合 #3。那是真的，但它是<strong>一道题</strong>。
-              在这 {retrieval.queries} 次真实提问产生的{" "}
+              <strong>一条不好看的实测结果，照登。</strong>{" "}
+              混合检索的理由一直是那道 NVFP4 题——正确答案稠密 #14、关键词
+              #1、融合 #3。那是真的，但它是<strong>一道题</strong>。 在这{" "}
+              {retrieval.queries} 次真实提问产生的{" "}
               {(retrieval.citedByChannel.dense_only ?? 0) +
                 (retrieval.citedByChannel.both ?? 0)}{" "}
-              条被引证据里，关键词通道<strong>没有一次</strong>是唯一找到它的那个通道。
-              这与 B13 的结论一致：稠密通道一直在兜底。
+              条被引证据里，关键词通道<strong>没有一次</strong>
+              是唯一找到它的那个通道。 这与 B13 的结论一致：稠密通道一直在兜底。
               轶事不是比率——这一节存在的意义就是把它变成比率，哪怕数字难看。
             </>
           ) : (
             <>
               被引证据中有{" "}
-              <strong>{((retrieval.sparseOnlyShare ?? 0) * 100).toFixed(1)}%</strong>{" "}
+              <strong>
+                {((retrieval.sparseOnlyShare ?? 0) * 100).toFixed(1)}%
+              </strong>{" "}
               只有关键词通道找到。这是混合检索在真实流量上的收益率，而不是一道示例题。
             </>
           )}
@@ -581,7 +645,10 @@ export default async function OpsPage() {
           </div>
           <div className="stat">
             <div className="stat-value">
-              {corpus.chunks ? ((corpus.embedded / corpus.chunks) * 100).toFixed(0) : 0}%
+              {corpus.chunks
+                ? ((corpus.embedded / corpus.chunks) * 100).toFixed(0)
+                : 0}
+              %
             </div>
             <div className="stat-label">已向量化</div>
           </div>
@@ -590,7 +657,9 @@ export default async function OpsPage() {
             <div className="stat-label">ACTIVE 信源</div>
           </div>
           <div className="stat">
-            <div className="stat-value">{corpus.citations.toLocaleString()}</div>
+            <div className="stat-value">
+              {corpus.citations.toLocaleString()}
+            </div>
             <div className="stat-label">已生成引用</div>
           </div>
           <div className="stat">
