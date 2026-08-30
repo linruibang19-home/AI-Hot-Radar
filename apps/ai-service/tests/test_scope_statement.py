@@ -38,11 +38,36 @@ def test_a_hedge_word_disqualifies_the_sentence() -> None:
     assert _scope_statement(["证据中未提到该模型，但它已经发布。"]) is None
 
 
-def test_a_digit_disqualifies_the_sentence() -> None:
-    """A scope statement asserting a number is not a scope statement. The guard
-    is deliberately blunt: it also rejects 「没有提到 gemma-4 的区别」 and falls
-    back to the generic message, which is the safe direction to fail."""
+def test_a_quantity_disqualifies_the_sentence() -> None:
+    """A scope statement asserting a number is not a scope statement."""
     assert _scope_statement(["证据中未提到该模型，参数量 70B。"]) is None
+    assert _scope_statement(["证据里没有提到延迟，约 20.8B 总参数。"]) is None
+
+
+def test_a_digit_inside_a_name_is_not_a_quantity() -> None:
+    """The first version rejected any sentence containing a digit and threw
+    away most real scope statements to catch one smuggled number: these
+    questions are *about* 「Mem0」「gemma-4」「v1.96.0-rc.1」. A digit that starts
+    a token is a quantity; a digit inside one is part of a name."""
+    for sentence in (
+        "根据现有证据，无法判断 Mem0 的 Node SDK 和 Python SDK 这次更新的内容是否一样。",
+        "检索到的内容里没有提到 gemma-4 的 coder 和 coderx 两个量化版的具体区别。",
+        "证据仅列出了 v1.96.0-rc.1 的发布说明，未对两者进行对比。",
+    ):
+        assert _scope_statement([sentence]) == sentence
+
+
+def test_an_outside_knowledge_preamble_is_rejected() -> None:
+    """「根据我的知识，证据里没有提到这一点」 opens by stating the one thing this
+    pipeline forbids. The preamble takes no filler words for exactly this."""
+    assert _scope_statement(["根据我的知识，证据里没有提到这一点。"]) is None
+
+
+def test_the_evidence_noun_may_carry_a_preposition() -> None:
+    """Anchoring straight at the noun missed 「根据现有证据，无法判断…」 — a
+    textbook scope statement that fell through to the generic message."""
+    sentence = "依据检索结果，没有找到相关说明。"
+    assert _scope_statement([sentence]) == sentence
 
 
 def test_an_assertion_before_the_scope_clause_is_rejected() -> None:

@@ -173,10 +173,25 @@ def _latest_window(turns: list[Turn]) -> tuple[date, date] | None:
 # absence of a digit is the second guard, because 「证据里没提到 X，不过 X 是
 # 70B」 is an assertion wearing a scope statement's opening words.
 _SCOPE_RE = re.compile(
-    r"^(?:检索(?:到)?的?(?:内容|结果)|证据|资料|语料|现有材料)"
-    r"[^。！？]*?(?:未|没有|不包含|缺少)[^。！？]*[。！？]?$"
+    # An optional 「根据/依据/从…」 preamble, then the evidence noun. Anchoring
+    # straight at the noun missed 「根据现有证据，无法判断 A 和 B 是否一样。」 —
+    # a textbook scope statement that fell through to the generic message. The
+    # preamble is a closed set of prepositions, so nothing assertive fits in
+    # front of it.
+    # The preamble takes no filler: the evidence noun must follow it directly.
+    # Allowing any words between them let 「根据我的知识，证据里没有提到…」 through
+    # — a sentence whose opening states the exact thing this pipeline forbids.
+    r"^(?:(?:根据|依据|按照|从)\s*)?"
+    r"(?:检索(?:到)?的?(?:内容|结果)|现有证据|现有材料|证据|资料|语料)"
+    r"[^。！？]*?(?:未|没有|不包含|缺少|无法判断|无法确认|无法回答)[^。！？]*[。！？]?$"
 )
 _ASSERTION_MARKERS = ("但", "不过", "然而", "实际上", "事实上")
+
+# A digit that *starts* a token is a quantity; a digit inside one is part of a
+# name. 「Mem0」「gemma-4」「v1.96.0-rc.1」 are what these questions are about,
+# and rejecting every sentence containing a digit threw away most real scope
+# statements to catch 「…，不过是 70B」. The lookbehind is the whole rule.
+_QUANTITY_RE = re.compile(r"(?<![A-Za-z0-9.\-])\d")
 
 
 def _scope_statement(dropped: list[str]) -> str | None:
@@ -196,7 +211,7 @@ def _scope_statement(dropped: list[str]) -> str | None:
             continue
         if any(marker in text for marker in _ASSERTION_MARKERS):
             continue
-        if any(character.isdigit() for character in text):
+        if _QUANTITY_RE.search(text):
             continue
         return text
     return None
