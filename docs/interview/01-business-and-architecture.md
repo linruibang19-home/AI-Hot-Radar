@@ -84,7 +84,7 @@ flowchart TB
 | 当前不引入 | 当前理由 | 重新评估触发条件 |
 |---|---|---|
 | Kafka/RabbitMQ | 没有高积压或独立消费者扩缩容证据 | 持续 backlog、延迟超 SLO、重放需求 |
-| 独立向量库 | 8k 级分块且强依赖 SQL 时间/实体过滤 | 单库 Recall/延迟/容量无法满足 |
+| 独立向量库 | 2.5w 级分块，pgvector HNSW 余量充足，且强依赖 SQL 时间/实体过滤 | 单库 Recall/延迟/容量无法满足 |
 | Elasticsearch | PostgreSQL FTS + CJK 已满足当前搜索 | 复杂聚合、吞吐或检索质量有量化缺口 |
 | Kubernetes | 单机 2C4G、服务副本少 | 多节点、自动扩缩、故障域与团队需求出现 |
 | GraphRAG/RAPTOR | 当前问题主要是时效与事件，不是图社区/长文跨章 | 多跳或跨章节集持续失败且实验显著收益 |
