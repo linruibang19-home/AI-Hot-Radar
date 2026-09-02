@@ -22,7 +22,7 @@ RAG。以不可变镜像部署于 2C4G 单机，HTTPS、邮件订阅、RBAC/审�
 
 - 设计配置化多信源增量采集管线（登记 151 源 / 允许调度 139），统一 Feed/API/HTML/GitHub/arXiv
   五类发现方式与 canonical 全文回源，落地 SSRF 防护、限速、幂等版本与按连续失败推进的信源
-  状态机；PostgreSQL 为唯一事实源，生产 4113 篇内容、21504 个向量分块。
+  状态机；PostgreSQL 为唯一事实源，生产 4600+ 篇内容、2.4 万+ 向量分块。
 - 构建 pgvector HNSW + PostgreSQL FTS/CJK + 时间/实体约束的三路混合检索，经 RRF 融合、
   bge cross-encoder 重排、同源配额与事件折叠、父块扩展和服务端引用绑定；固定 90 题发布集
   Recall@20 89.9%、MRR 0.861，生成侧引用覆盖 98.8%、段落支持度 93.4%、诱导题错误断言 0/12。
