@@ -25,6 +25,7 @@
 | 14 | [`14-agent-rag-interview-drill.md`](14-agent-rag-interview-drill.md) | Agent、记忆、Prompt、工具调用和 RAG 如何被深挖？ |
 | 15 | [`15-performance-load-testing-interview.md`](15-performance-load-testing-interview.md) | QPS、P95、数据库、Redis、Java 与 Python 怎样实测？ |
 | 16 | [`16-backend-layering-runtime-interview.md`](16-backend-layering-runtime-interview.md) | 业务域分层、FastAPI、JVM、Redis 与部署如何被追问？ |
+| 17 | [`17-resume-glossary.md`](17-resume-glossary.md) | 简历上每个术语一句话怎么解释？哪些该删？**投简历前念一遍** |
 
 补充材料：[`../interview-guide.md`](../archive/interview/interview-guide-20260812.md) 是已冻结的早期深挖稿，内容已迁入
 工程手册和本目录；[`../status/history/project-status.md`](../status/history/project-status.md) 是累计历史，不用于
