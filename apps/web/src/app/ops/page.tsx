@@ -284,15 +284,25 @@ export default async function OpsPage() {
         与旧模型的成本、延迟和质量可以直接比较。
       </p>
 
-      <div className="notice">
-        <strong>金额是价目估算，不是供应商账单；token 与延迟是实测。</strong>
-        V024
-        之后每次生成都会保存模型、配置版本和当时的输入/缓存/输出单价，后续改价不会
-        篡改历史。更早的 {cost.legacyCalls.toLocaleString()}{" "}
-        次调用没有价目快照，仍按 fallback （输入 ¥{cost.rates.input}/M · 缓存 ¥
-        {cost.rates.cached_input}/M · 输出 ¥{cost.rates.output}
-        /M）回算，并在下表逐行标记。
-      </div>
+      {/* Methodology, folded. It explains how the numbers above were
+          computed — needed to trust them, not needed to read them. */}
+      <details className="quality-method">
+        <summary>金额是怎么算的</summary>
+        <div className="quality-method-body">
+          <p>
+            <strong>金额是价目估算，不是供应商账单；token 与延迟是实测。</strong>
+            V024 之后每次生成都会保存模型、配置版本和当时的输入/缓存/输出单价，
+            后续改价不会篡改历史。更早的{" "}
+            {cost.legacyCalls.toLocaleString()} 次调用没有价目快照，仍按 fallback
+            （输入 ¥{cost.rates.input}/M · 缓存 ¥{cost.rates.cached_input}/M ·
+            输出 ¥{cost.rates.output}/M）回算，并在下表逐行标记。
+          </p>
+          <p>
+            命中缓存的输入 token 按更低费率计价，且它<strong>包含在</strong>
+            输入 token 内——两者都按全价算会把缓存记成花钱而不是省钱。
+          </p>
+        </div>
+      </details>
 
       <section className="eval-section">
         <h2 className="section-title">按操作分解</h2>
@@ -362,10 +372,6 @@ export default async function OpsPage() {
             </tbody>
           </table>
         </div>
-        <p className="eval-note">
-          命中缓存的输入 token 按更低费率计价，且它<strong>包含在</strong>输入
-          token 内—— 两者都按全价算会把缓存记成花钱而不是省钱。
-        </p>
       </section>
 
       <section className="eval-section">
@@ -421,17 +427,23 @@ export default async function OpsPage() {
             </tbody>
           </table>
         </div>
-        <p className="eval-note">
-          阶段样本数可以少于问答总数：重排在 reranker
-          不可用时会被跳过并记为降级， 把缺席当成 0
-          毫秒平均进去，会报出一次从未发生的提速。
-          <br />
-          比例是<strong>先按每次请求算、再取中位数</strong>，不是「阶段 p50 ÷ 总
-          p50」。 后者拿两个不同样本群的中位数相除——支持度打分只在有引用的 36
-          次请求上计时， 生成在全部 151 次上——却把它们当成同一个整体的切片，
-          结果是几项加起来 <strong>122.7%</strong>。现在每一格单独成立：
-          「在中位数的那次请求里，这个阶段占了多少」。
-        </p>
+        <details className="quality-method">
+          <summary>阶段占比是怎么算的</summary>
+          <div className="quality-method-body">
+            <p>
+              阶段样本数可以少于问答总数：重排在 reranker
+              不可用时会被跳过并记为降级，把缺席当成 0
+              毫秒平均进去，会报出一次从未发生的提速。
+            </p>
+            <p>
+              比例是<strong>先按每次请求算、再取中位数</strong>，不是「阶段 p50 ÷
+              总 p50」。后者拿两个不同样本群的中位数相除——支持度打分只在有引用的
+              请求上计时，生成在全部请求上——却把它们当成同一个整体的切片，
+              结果是几项加起来 <strong>122.7%</strong>。现在每一格单独成立：
+              「在中位数的那次请求里，这个阶段占了多少」。
+            </p>
+          </div>
+        </details>
       </section>
 
       {/* The cache is the only component here that can be *wrong* rather than
@@ -468,7 +480,13 @@ export default async function OpsPage() {
             <div className="stat-label">近邻索引条目</div>
           </div>
         </div>
-        <div className="notice">
+        {/* Folded: three design constraints behind the cache keys. The
+            「0% 是设计结果」 note below stays visible — a reader looking at
+            a 0% tile needs it right there, or they read it as broken. */}
+        <details className="quality-method">
+          <summary>语义缓存的三条约束（ADR-0017）</summary>
+          <div className="quality-method-body">
+            <p>
           <strong>资讯语料不能无脑上语义缓存</strong>
           （ADR-0017）。三条约束：答案键里含<strong>语料指纹</strong>
           ，且指纹粒度由 planner 的 `freshness_required` 决定——「最新动态 /
@@ -478,7 +496,9 @@ export default async function OpsPage() {
           <strong>自信地回答另一家公司</strong>；<strong>拒答永不缓存</strong>
           ，因为它的含义是「语料里还没有」。 答案 TTL{" "}
           {Math.round(cache.answerTtlSeconds / 60)} 分钟。
-        </div>
+        </p>
+          </div>
+        </details>
         {cache.hitRate === 0 && (cache.counts.miss ?? 0) > 0 && (
           <p className="eval-note">
             答案命中率 0% 是<strong>设计结果，不是缓存坏了</strong>
