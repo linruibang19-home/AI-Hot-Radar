@@ -197,23 +197,6 @@ export default async function OpsPage() {
     .filter((s) => !EXTERNAL.has(s.stage))
     .reduce((sum, s) => sum + s.p50Ms, 0);
   const externalShare = latency.p50Ms ? externalMs / (externalMs + localMs) : 0;
-  const biggestCost = cost.operations.reduce(
-    (highest, row) => (row.estimatedCny > highest.estimatedCny ? row : highest),
-    cost.operations[0] ?? {
-      operation: "—",
-      model: "—",
-      calls: 0,
-      promptTokens: 0,
-      completionTokens: 0,
-      cachedTokens: 0,
-      failed: 0,
-      avgLatencyMs: 0,
-      estimatedCny: 0,
-      cnyPerCall: 0,
-      rates: {},
-      rateSource: "legacy_fallback" as const,
-    },
-  );
   const slowestStage = latency.stages.reduce(
     (slowest, stage) => (stage.p95Ms > slowest.p95Ms ? stage : slowest),
     latency.stages[0] ?? {
@@ -290,42 +273,16 @@ export default async function OpsPage() {
         </div>
       </div>
 
-      <div className="quality-grid">
-        <article className="quality-card">
-          <span className="quality-card-index">01</span>
-          <div>
-            <h3>成本最大的操作</h3>
-            <p>
-              {OPERATIONS[biggestCost.operation] ?? biggestCost.operation}：¥
-              {biggestCost.estimatedCny.toFixed(2)} /{" "}
-              {biggestCost.calls.toLocaleString()} 次。 离线 RAG
-              评测与线上问答分开统计，不再把测试预算算成用户流量。
-            </p>
-          </div>
-        </article>
-        <article className="quality-card">
-          <span className="quality-card-index">02</span>
-          <div>
-            <h3>价格可追溯覆盖</h3>
-            <p>
-              {cost.snapshotCalls.toLocaleString()} 次使用调用时模型价目快照；
-              {cost.legacyCalls.toLocaleString()} 次旧记录只能使用历史
-              fallback。旧金额只适合看趋势， 不能当供应商账单。
-            </p>
-          </div>
-        </article>
-        <article className="quality-card quality-card-action">
-          <span className="quality-card-index">03</span>
-          <div>
-            <h3>建议动作</h3>
-            <p>
-              保持 SiliconFlow
-              嵌入/重排不变；生成模型记录在数据库的单行配置里，换模型后新调用
-              会带上新的价目快照，与旧模型的成本、延迟和质量可以直接比较。
-            </p>
-          </div>
-        </article>
-      </div>
+      {/* Was three numbered cards. 01 restated the cost table below it and 02
+          restated the pricing notice directly beneath — the same sentence about
+          1,952 legacy calls appeared twice on one screen. 03 was the only one
+          carrying something the tables could not: what to do next. The 01/02/03
+          numbering implied a sequence these parallel claims never had. */}
+      <p className="ops-takeaway">
+        <strong>下一步：</strong>保持 SiliconFlow 嵌入/重排不变；生成模型记录在
+        数据库的单行配置里，换模型后新调用会带上新的价目快照，
+        与旧模型的成本、延迟和质量可以直接比较。
+      </p>
 
       <div className="notice">
         <strong>金额是价目估算，不是供应商账单；token 与延迟是实测。</strong>
