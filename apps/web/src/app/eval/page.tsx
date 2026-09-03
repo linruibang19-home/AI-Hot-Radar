@@ -234,12 +234,9 @@ export default async function EvalPage() {
             {releasePassed ? "可发布" : "需阻断"}
           </span>
         </div>
-        <p>
-          这不是主观评分：主检索、90 题生成与中文厂商噪声专项分别绑定到可追溯
-          run。
-          自动引用精度受稀疏标注影响，只作诊断；发布正确性采用段落支持门与人工
-          P0 审计。
-        </p>
+        {/* One line, not a paragraph. What a reader needs before the numbers
+            mean anything is the corpus date and the models — the rest of the
+            methodology moved into the disclosure below the tiles. */}
         <div className="quality-snapshot" aria-label="当前发布评测快照">
           <div>
             <strong>静态发布评测</strong>
@@ -279,17 +276,35 @@ export default async function EvalPage() {
             <strong>这块门禁不能代表线上正在跑的配置</strong>。
           </p>
         )}
-        <p className="quality-refresh-note">
-          这块快照不会随线上提问变化，这是评测的定义：题集、语料、判据三者固定，轮次之间才可比。
-          切换模型、提示词、切块或检索策略后，必须重跑固定黄金集并发布新快照。
-          真实提问下的表现见下一节；请求成本与延迟见 <a href="/ops">运行状态</a>
-          。
-        </p>
-        <div className="quality-run-ids">
-          <code>{release.retrievalRunId}</code>
-          <code>{release.generationRunId}</code>
-          <code>{release.specialistRunId}</code>
-        </div>
+        {/* Folded, not deleted. Eight blocks stood between the headline and the
+            numbers, every one of them a paragraph defending the number that
+            followed it — the signature of a page that answered each "what does
+            this mean?" by appending prose instead of by making the number
+            legible. Everything a sceptic needs is still one click away; the
+            reader who wants the verdict now gets it without scrolling. */}
+        <details className="quality-method">
+          <summary>这些数字是怎么来的</summary>
+          <div className="quality-method-body">
+            <p>
+              这不是主观评分：主检索、90 题生成与中文厂商噪声专项分别绑定到可追溯
+              run。
+              自动引用精度受稀疏标注影响，只作诊断；发布正确性采用段落支持门与人工
+              P0 审计。
+            </p>
+            <p>
+              <strong>这块快照不会随线上提问变化，这是评测的定义</strong>
+              ：题集、语料、判据三者固定，轮次之间才可比。
+              切换模型、提示词、切块或检索策略后，必须重跑固定黄金集并发布新快照。
+              真实提问下的表现见下一节；请求成本与延迟见{" "}
+              <a href="/ops">运行状态</a>。
+            </p>
+            <div className="quality-run-ids">
+              <code>{release.retrievalRunId}</code>
+              <code>{release.generationRunId}</code>
+              <code>{release.specialistRunId}</code>
+            </div>
+          </div>
+        </details>
       </section>
 
       <div className="stat-row">
@@ -480,54 +495,16 @@ export default async function EvalPage() {
         </section>
       )}
 
-      <div className="quality-grid">
-        <article className="quality-card">
-          <span className="quality-card-index">01</span>
-          <div>
-            <h3>检索覆盖已达标</h3>
-            <p>
-              主集 Recall@20 {percent(release.retrieval["recall@20"])}；15
-              题中文厂商专项在加入 真实近邻噪声后仍为{" "}
-              {percent(release.specialist.noiseRecall20)}，没有用第二次查询冒充
-              A/B。
-            </p>
-          </div>
-        </article>
-        <article className="quality-card">
-          <span className="quality-card-index">02</span>
-          <div>
-            <h3>回答出口有硬门</h3>
-            {/* Derived, never written down. This sentence used to end with
-                「可答题误拒与诱导题错误断言都为 0」—— true for the 2026-08-11
-                batch, hardcoded, and still on the page when the tile directly
-                above it read 3 / 78. A page that contradicts itself on one
-                screen costs more credibility than the number it was hiding. */}
-            <p>
-              模型引用不能直接下发；服务端绑定原文、移除弱支持句并处理假前提。
-              诱导题错误断言{" "}
-              {Math.round(
-                release.generation.presupposition_asserted_rate *
-                  release.generation.unanswerable,
-              )}{" "}
-              / {release.generation.unanswerable}
-              ，是这里唯一的零容忍项；可答题误拒{" "}
-              {percent(release.generation.over_refusal_rate)} 走上限而非硬门，
-              原因见上。
-            </p>
-          </div>
-        </article>
-        <article className="quality-card quality-card-risk">
-          <span className="quality-card-index">03</span>
-          <div>
-            <h3>上线后仍要持续观察</h3>
-            <p>
-              噪声结论目前只有 15
-              题专项样本；每次切换生成模型后必须重跑生成回归。 自动 citation
-              precision 不能替代人工高风险数字审计。
-            </p>
-          </div>
-        </article>
-      </div>
+      {/* Was three numbered cards. Two of them restated the tiles directly
+          above — Recall@20 and the two generation gates — and numbering 01/02/03
+          implied a sequence that did not exist; they are parallel claims, not
+          steps. What survives is the only card that said something the numbers
+          could not: what these numbers still do not cover. */}
+      <p className="quality-limits">
+        <strong>这些数字没覆盖到的：</strong>
+        中文厂商噪声结论目前只有 15 题专项样本；每次切换生成模型后必须重跑生成回归；
+        自动引用精度不能替代人工高风险数字审计。
+      </p>
 
       {/* Folded, not deleted.
           These four sections were 300 of the page's 400 lines and everything a
