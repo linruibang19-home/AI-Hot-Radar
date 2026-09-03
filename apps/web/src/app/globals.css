@@ -3281,6 +3281,18 @@ summary:focus-visible {
 /* Was a 「03 上线后仍要持续观察」 card in a three-up grid. The other two cards
    restated the tiles above them, and the numbering implied a sequence these
    parallel claims never had. */
+/* The one recommendation that survived the card grid on /ops. Accent-tinted
+   rather than warning-tinted: it is an action, not a caveat. */
+.ops-takeaway {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+}
+
 .quality-limits {
   margin: 0 0 20px;
   padding: 12px 14px;
