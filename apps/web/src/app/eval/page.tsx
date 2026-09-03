@@ -497,9 +497,22 @@ export default async function EvalPage() {
           <span className="quality-card-index">02</span>
           <div>
             <h3>回答出口有硬门</h3>
+            {/* Derived, never written down. This sentence used to end with
+                「可答题误拒与诱导题错误断言都为 0」—— true for the 2026-08-11
+                batch, hardcoded, and still on the page when the tile directly
+                above it read 3 / 78. A page that contradicts itself on one
+                screen costs more credibility than the number it was hiding. */}
             <p>
               模型引用不能直接下发；服务端绑定原文、移除弱支持句并处理假前提。
-              90 题中可答题误拒与诱导题错误断言都为 0。
+              诱导题错误断言{" "}
+              {Math.round(
+                release.generation.presupposition_asserted_rate *
+                  release.generation.unanswerable,
+              )}{" "}
+              / {release.generation.unanswerable}
+              ，是这里唯一的零容忍项；可答题误拒{" "}
+              {percent(release.generation.over_refusal_rate)} 走上限而非硬门，
+              原因见上。
             </p>
           </div>
         </article>
