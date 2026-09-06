@@ -12,6 +12,7 @@ would quarantine a healthy source.
 from __future__ import annotations
 
 from calendar import timegm
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -117,6 +118,15 @@ class RssAtomAdapter:
                 )
             )
 
+        # Oldest first, so a truncated batch is a *prefix* of the backlog and the
+        # watermark can advance over exactly what was stored. Newest-first plus
+        # `batch.items[:max_documents]` is what stranded 1100 OpenAI articles:
+        # the five newest were taken, the watermark jumped to the newest entry,
+        # and every older one was then filtered out forever. Feeds in steady
+        # state carry a handful of entries, so the order change is invisible
+        # there; it only matters while draining a backlog.
+        items.sort(key=lambda item: (item.published_at_hint is None, item.published_at_hint))
+
         empty_reason = None
         if not items:
             empty_reason = "NO_NEW_ENTRIES" if feed.entries else "FEED_EMPTY"
@@ -131,3 +141,39 @@ class RssAtomAdapter:
             http_status=response.status_code,
             empty_reason=empty_reason,
         )
+
+    def cursor_for_committed(
+        self,
+        next_cursor: SourceCursor,
+        *,
+        batch: DiscoveryBatch,
+        committed: list[str],
+        previous: SourceCursor | None,
+    ) -> SourceCursor:
+        """Advance the watermark only across entries that were actually stored.
+
+        `discover` reports the newest entry it *saw*; the pipeline stores at most
+        `max_documents` of them. Saving the seen-watermark therefore retires
+        work that never happened — `openai-news` discovered 1105 entries on
+        2026-08-01, stored none, and reported `SUCCESS` with 0 discovered on
+        every poll for the next 37 days while holding 0 items.
+
+        With the batch ordered oldest-first, the committed items form a prefix,
+        so the newest committed timestamp is a safe boundary: everything at or
+        below it is stored, everything above is still offered next run.
+        """
+        stored = set(committed)
+        times = [
+            item.published_at_hint
+            for item in batch.items
+            if item.external_id in stored and item.published_at_hint is not None
+        ]
+        previous_mark = previous.newest_entry_time if previous else None
+        if not times:
+            # Nothing stored: leave the boundary exactly where it was.
+            return replace(next_cursor, newest_entry_time=previous_mark)
+
+        advanced = max(times)
+        if previous_mark and previous_mark > advanced:
+            advanced = previous_mark
+        return replace(next_cursor, newest_entry_time=advanced)

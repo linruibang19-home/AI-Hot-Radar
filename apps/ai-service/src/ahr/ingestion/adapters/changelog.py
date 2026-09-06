@@ -111,6 +111,30 @@ def split_mdx_updates(markdown: str) -> list[tuple[str, str]]:
     return sections
 
 
+#: `## 2.1.263` — the ordinary shape of a hand-maintained CHANGELOG.md. Level 1
+#: is the document title ("Changelog"), so splitting starts at level 2.
+_MD_HEADING_RE = re.compile(r"^(#{2,3})\s+(.+?)\s*$", re.MULTILINE)
+
+
+def split_markdown_headings(markdown: str) -> list[tuple[str, str]]:
+    """Split a plain Markdown changelog into (heading, body) pairs.
+
+    The MDX split above only matches documentation sites that wrap each release
+    in a component. A repository's own `CHANGELOG.md` is just headings — Claude
+    Code's has 388 of them — and without this the markdown path returned nothing
+    and the source sat at zero items.
+    """
+    matches = list(_MD_HEADING_RE.finditer(markdown))
+    sections: list[tuple[str, str]] = []
+    for index, match in enumerate(matches):
+        heading = match.group(2).strip()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(markdown)
+        body = markdown[match.end() : end].strip()
+        if heading and body:
+            sections.append((heading, body))
+    return sections
+
+
 def split_sections(document_xml: str) -> list[tuple[str, str]]:
     """Split trafilatura XML into (heading, body) pairs.
 
@@ -161,9 +185,11 @@ class DocsChangelogAdapter:
         is_markdown = "markdown" in content_type or source.discovery_url.endswith(".md")
 
         if is_markdown:
-            # Nothing to extract: the response *is* the document.
+            # Nothing to extract: the response *is* the document. MDX components
+            # first because they carry a date the heading usually lacks; plain
+            # headings are the fallback for a repository's own CHANGELOG.md.
             document = body_text
-            sections = split_mdx_updates(body_text)
+            sections = split_mdx_updates(body_text) or split_markdown_headings(body_text)
         else:
             document = trafilatura.extract(
                 body_text, include_comments=False, include_tables=True, output_format="xml"

@@ -66,6 +66,20 @@ def arxiv_item() -> DiscoveredDocument:
     )
 
 
+def by_url(batch, suffix: str):
+    """Pick an entry by URL rather than by position.
+
+    These assertions are about what each entry carries, not about where it sits
+    in the batch. Indexing by 0 quietly coupled them to feed order, so they all
+    broke when the adapter started emitting oldest-first to make the watermark
+    safe under truncation.
+    """
+    for item in batch.items:
+        if item.candidate_url.endswith(suffix):
+            return item
+    raise AssertionError(f"no entry ending in {suffix!r}: {[i.candidate_url for i in batch.items]}")
+
+
 async def test_discovers_entries(make_fetcher, fixture_bytes) -> None:
     body = fixture_bytes("sample_feed.xml")
 
@@ -76,7 +90,7 @@ async def test_discovers_entries(make_fetcher, fixture_bytes) -> None:
         batch = await RssAtomAdapter(fetcher).discover(feed_source())
 
     assert len(batch.items) == 3
-    assert batch.items[0].external_id == "post-2"
+    assert {item.external_id for item in batch.items} >= {"post-2"}
     # Every discovered entry still needs its article fetched.
     assert all(item.requires_fetch for item in batch.items)
 
@@ -91,7 +105,7 @@ async def test_feed_summary_is_never_body_text(make_fetcher, fixture_bytes) -> N
     async with make_fetcher(handler) as fetcher:
         batch = await RssAtomAdapter(fetcher).discover(feed_source())
 
-    item = batch.items[0]
+    item = by_url(batch, "/blog/second")
     assert item.discovery_summary is not None
     assert "teaser" in item.discovery_summary
     assert item.body_markdown is None
@@ -136,7 +150,7 @@ async def test_tracking_params_are_stripped_from_candidate_url(make_fetcher, fix
     async with make_fetcher(handler) as fetcher:
         batch = await RssAtomAdapter(fetcher).discover(feed_source())
 
-    assert batch.items[0].candidate_url == "https://example.com/blog/second"
+    assert by_url(batch, "/blog/second").candidate_url == "https://example.com/blog/second"
 
 
 async def test_missing_guid_falls_back_to_link_hash(make_fetcher, fixture_bytes) -> None:
@@ -148,7 +162,7 @@ async def test_missing_guid_falls_back_to_link_hash(make_fetcher, fixture_bytes)
     async with make_fetcher(handler) as fetcher:
         batch = await RssAtomAdapter(fetcher).discover(feed_source())
 
-    no_guid = batch.items[2]
+    no_guid = by_url(batch, "/blog/no-guid")
     assert no_guid.external_id == url_hash("https://example.com/blog/no-guid")
 
 
@@ -284,3 +298,75 @@ async def test_arxiv_invalid_pdf_is_a_parse_failure(make_fetcher) -> None:
             await ArxivPaperAdapter(fetcher, rate_limit_seconds=0).acquire(
                 arxiv_item(), source_id="arxiv-cs-ai"
             )
+
+
+# --- 水位线不得超出实际入库（2026-09-07）---------------------------------
+#
+# `openai-news` 上线首轮发现 1105 条、入库 0 条，游标却记下了"看见过的最新条目"。
+# 此后每一轮都被 `published <= newest_entry_time` 过滤成 0，而 crawl_run 仍报
+# SUCCESS + HTTP 200。这个 P0 一手源就这样空了 37 天，没有任何监控发现。
+
+
+async def test_entries_come_out_oldest_first(make_fetcher, fixture_bytes) -> None:
+    """截断取的是 batch.items[:max_documents]，所以批次必须是"待办的前缀"。
+
+    最新在前 + 截断 = 只做最新几条、水位线却跳到最新，剩下的永远被过滤掉。
+    """
+    body = fixture_bytes("sample_feed.xml")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body)
+
+    async with make_fetcher(handler) as fetcher:
+        batch = await RssAtomAdapter(fetcher).discover(feed_source())
+
+    times = [item.published_at_hint for item in batch.items if item.published_at_hint]
+    assert times == sorted(times), f"批次不是从旧到新: {times}"
+
+
+async def test_watermark_only_covers_what_was_stored(make_fetcher, fixture_bytes) -> None:
+    """入库了几条，水位线就只能推到第几条。"""
+    body = fixture_bytes("sample_feed.xml")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body)
+
+    async with make_fetcher(handler) as fetcher:
+        adapter = RssAtomAdapter(fetcher)
+        batch = await adapter.discover(feed_source())
+
+    oldest = batch.items[0]
+    cursor = adapter.cursor_for_committed(
+        batch.next_cursor,
+        batch=batch,
+        committed=[oldest.external_id],
+        previous=SourceCursor(),
+    )
+
+    # 只入库了最旧那条，水位线就停在它，其余仍会在下一轮被提供。
+    assert cursor.newest_entry_time == oldest.published_at_hint
+    newer = [
+        i
+        for i in batch.items
+        if i.published_at_hint and i.published_at_hint > oldest.published_at_hint
+    ]
+    assert newer, "样例 feed 至少要有一条更新的条目，否则这个断言测不到东西"
+
+
+async def test_a_run_that_stored_nothing_leaves_the_watermark_alone(
+    make_fetcher, fixture_bytes
+) -> None:
+    """一条都没入库时，绝不能推进水位线——这正是 openai-news 空了 37 天的原因。"""
+    body = fixture_bytes("sample_feed.xml")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=body)
+
+    async with make_fetcher(handler) as fetcher:
+        adapter = RssAtomAdapter(fetcher)
+        batch = await adapter.discover(feed_source())
+        cursor = adapter.cursor_for_committed(
+            batch.next_cursor, batch=batch, committed=[], previous=SourceCursor()
+        )
+
+    assert cursor.newest_entry_time is None
