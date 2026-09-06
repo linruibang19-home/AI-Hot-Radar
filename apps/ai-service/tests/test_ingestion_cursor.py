@@ -188,3 +188,20 @@ def test_a_heading_with_no_ascii_still_gets_its_own_url() -> None:
     # And the fragment matches the id, so the two cannot drift apart.
     for item in batch.items:
         assert item.candidate_url.endswith("#" + item.external_id.split("#", 1)[1])
+
+
+def test_a_plain_markdown_changelog_splits_on_headings() -> None:
+    """MDX components only exist on documentation sites. A repository's own
+    CHANGELOG.md is just `## 2.1.263` headings — Claude Code's has 388 — and
+    without a fallback the markdown path returned nothing and the source held
+    zero items."""
+    from ahr.ingestion.adapters.changelog import split_markdown_headings
+
+    sections = split_markdown_headings(
+        "# Changelog\n\n## 2.1.263\n\n- 修了一个东西\n\n## 2.1.262\n\n- 另一个\n"
+    )
+
+    assert [heading for heading, _ in sections] == ["2.1.263", "2.1.262"]
+    assert "修了一个东西" in sections[0][1]
+    # The document title is level 1 and must not become an entry of its own.
+    assert "Changelog" not in [heading for heading, _ in sections]
