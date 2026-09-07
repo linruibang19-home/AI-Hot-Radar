@@ -70,3 +70,59 @@ def next_state_after_failure(
         return "QUARANTINED"
 
     return "DEGRADED"
+
+
+# A source that has been polled successfully for this long and has still never
+# stored a single document is not quiet — it is broken.
+NEVER_PRODUCED_AFTER = timedelta(days=3)
+
+#: How many successful polls must have happened in that window before the
+#: verdict is fair. A source configured yesterday with a 6-hour interval has not
+#: had a real chance yet.
+NEVER_PRODUCED_MIN_POLLS = 12
+
+_STALLED = """
+    SELECT s.id,
+           s.priority,
+           count(cr.id) FILTER (WHERE cr.status = 'SUCCESS') AS successes,
+           min(cr.started_at) FILTER (WHERE cr.status = 'SUCCESS') AS first_success
+      FROM source s
+      JOIN crawl_run cr ON cr.source_id = s.id
+     WHERE s.configured_enabled
+       AND NOT EXISTS (SELECT 1 FROM content_item ci WHERE ci.source_id = s.id)
+     GROUP BY s.id, s.priority
+    HAVING count(cr.id) FILTER (WHERE cr.status = 'SUCCESS') >= %(min_polls)s
+       AND min(cr.started_at) FILTER (WHERE cr.status = 'SUCCESS') <= %(cutoff)s
+     ORDER BY s.priority, s.id
+"""
+
+
+def stalled_sources(connection: object, *, now: datetime) -> list[dict[str, object]]:
+    """Sources that poll successfully and have never produced a document.
+
+    This is the signal that was missing when `openai-news` — a P0 first-party
+    feed — sat at zero items for 37 days. Every conventional check was green:
+    `status = SUCCESS`, `HTTP 200`, `consecutive_failures = 0`, empty error log.
+    The one number that told the truth, `discovered_count = 0` on every run, was
+    indistinguishable from a quiet week and so nothing looked at it.
+
+    **Deliberately narrow.** "No new content lately" would fire on genuinely
+    slow publishers and on `github_repo_activity`, where one living document per
+    repository is the design rather than a fault. "Polled successfully for days
+    and never stored anything" has no honest explanation.
+    """
+    cutoff = now - NEVER_PRODUCED_AFTER
+    with connection.cursor() as cursor:  # type: ignore[attr-defined]
+        cursor.execute(_STALLED, {"min_polls": NEVER_PRODUCED_MIN_POLLS, "cutoff": cutoff})
+        rows = cursor.fetchall()
+
+    return [
+        {
+            "source_id": row[0],
+            "priority": row[1],
+            "successful_polls": int(row[2]),
+            "polling_since": row[3].isoformat() if row[3] else None,
+            "days": round((now - row[3]).total_seconds() / 86400, 1) if row[3] else None,
+        }
+        for row in rows
+    ]

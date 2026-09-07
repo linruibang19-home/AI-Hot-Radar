@@ -72,3 +72,37 @@ async def ready(response: Response) -> HealthStatus:
         service=settings.service_name,
         checks=checks,
     )
+
+
+class SourceHealth(BaseModel):
+    status: Literal["ok", "stalled"]
+    stalled: list[dict[str, object]]
+
+
+@router.get("/health/sources", response_model=SourceHealth)
+def source_health(response: Response) -> SourceHealth:
+    """Sources that poll successfully and have never produced a document.
+
+    Separate from `/health/ready` on purpose: this must never restart a
+    container. A broken feed is an operator's problem, not a reason to cycle a
+    healthy process. It returns 503 only so a polling monitor can treat it as a
+    failing check without parsing the body.
+
+    Exists because `openai-news` sat at zero items for 37 days while every
+    conventional signal stayed green. See `ingestion/health.py::stalled_sources`.
+    """
+    from datetime import UTC, datetime
+
+    from ahr.ingestion.health import stalled_sources
+
+    settings = get_settings()
+    try:
+        with psycopg.connect(settings.database_url, connect_timeout=5) as conn:
+            stalled = stalled_sources(conn, now=datetime.now(UTC))
+    except Exception as exc:  # a probe must not raise
+        response.status_code = 503
+        return SourceHealth(status="stalled", stalled=[{"error": type(exc).__name__}])
+
+    if stalled:
+        response.status_code = 503
+    return SourceHealth(status="stalled" if stalled else "ok", stalled=stalled)
