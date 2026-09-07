@@ -39,7 +39,22 @@ TARGETS = {
     "core-api": "http://core-api:8080/health/ready",
     "ai-service": "http://ai-service:8000/health/ready",
     "web": "http://web:3000/health",
+    # Not a liveness probe. A source that polls successfully for days and has
+    # never stored a document is broken, and nothing else here can see it:
+    # `openai-news` held zero items for 37 days while every check above stayed
+    # green. 503 when any source is in that state, and the body names them.
+    "sources": "http://ai-service:8000/health/sources",
 }
+
+
+def _stalled_detail(body: bytes) -> str:
+    """Name the sources rather than making an operator go and look."""
+    try:
+        rows = json.loads(body).get("stalled") or []
+        ids = [str(row.get("source_id")) for row in rows if row.get("source_id")]
+    except (ValueError, AttributeError):
+        return "stalled"
+    return ("stalled: " + ", ".join(ids[:6]) + (" …" if len(ids) > 6 else "")) if ids else "stalled"
 
 
 def check_url(name: str, url: str, *, timeout: float = 5.0) -> Check:
@@ -48,6 +63,12 @@ def check_url(name: str, url: str, *, timeout: float = 5.0) -> Check:
             if response.status != 200:
                 return Check(name, False, f"http_{response.status}")
             return Check(name, True, "ok")
+    except urllib.error.HTTPError as exc:
+        # `/health/sources` answers 503 *with a body* naming what is stalled.
+        # urllib raises on 503, so the body has to be read from the exception.
+        if name == "sources" and exc.code == 503:
+            return Check(name, False, _stalled_detail(exc.read()))
+        return Check(name, False, f"http_{exc.code}")
     except (OSError, urllib.error.URLError, TimeoutError) as exc:
         return Check(name, False, type(exc).__name__)
 
