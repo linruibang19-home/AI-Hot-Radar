@@ -31,4 +31,5 @@
 | [../archive/development/m4-rag-implementation.md](../archive/development/m4-rag-implementation.md) | M4 RAG 全流程实现方案 | 已冻结归档 |
 | [../archive/development/m4-rag-evaluation.md](../archive/development/m4-rag-evaluation.md) | 黄金集、指标与发布门禁 | 已冻结归档 |
 | [m5-deployment.md](current/m5-deployment.md) | 首次生产部署、安全、备份与回滚方案 | 历史设计；当前流程转入 runbook |
-| [m5-first-deploy-checklist.md](current/m5-first-deploy-checklist.md) | 首次部署步骤、危险边界与迁移检查表 | 历史检查表；不得复制旧标签执行 |
+| [m5-first-deploy-checklist.md](current/m5-first-deploy-checklist.md) | 首次部署步骤与危险边界 | 历史检查表；不得复制旧标签执行 |
+| [server-migration-runbook.md](current/server-migration-runbook.md) | 换服务器的执行顺序、数据迁移与切换窗口 | 现行；含实测基线，换机后需回填 |

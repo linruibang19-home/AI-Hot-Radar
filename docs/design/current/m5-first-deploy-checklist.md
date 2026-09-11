@@ -347,30 +347,17 @@ BACKUP_FILE=/backups/<文件名>.dump docker compose \
 
 ## 14. 搬家：租期到期前要做的事
 
-租来的机器是有期限的（这次 40 天，且卖家说不能续）。到期时**盘会一起消失**。
+**完整步骤见 [`server-migration-runbook.md`](server-migration-runbook.md)。**
 
-**唯一重建不了的是语料。** 1580 条内容是连续采集好几天攒下来的，而且每一条都花过
-LLM 加工的钱；代码几分钟就能重新拉起来，语料不能。
+这一节原先写的内容已经不对了，2026-09-12 移除：它说改 Cloudflare 的 A 记录（我们
+从来没有过 Cloudflare，A 记录直指源站）、用 `root@` 和 `~/ai-hot-radar`（实际是
+`deploy@` 和 `/opt/ai-hot-radar`）、按 1580 条语料估算（现在 5371 条）。
+最危险的是它**只讲了拷数据库**——而数据库里的供应商密钥是用 `.env` 里的
+`LLM_CREDENTIAL_MASTER_KEY` 加密的，只恢复数据库不带这把钥匙，
+**恢复过程会全程成功，直到第一次调用模型才发现密钥解不开**。
 
-`backup` 容器每天都在 `pg_dump`，但**转储就存在这台机器的盘上**——它和数据库一起消失。
-所以到期前必须拷走：
-
-```bash
-scp root@<旧IP>:~/ai-hot-radar/infra/compose/backups/*.dump ./
-```
-
-新机器上恢复：
-
-```bash
-scp ./ai_hot_radar-*.dump root@<新IP>:~/ai-hot-radar/infra/compose/backups/
-```
-
-```bash
-docker compose -f infra/compose/docker-compose.prod.yml exec -T postgres   pg_restore -U $POSTGRES_USER -d $POSTGRES_DB --clean --if-exists /backups/<文件名>.dump
-```
-
-**域名不用动。** 改 Cloudflare 的 A 记录指向新 IP 就行，几分钟生效——
-面试官手里的链接一直有效，这正是当初坚持要域名而不是 IP 的原因。
+**域名不用动**这一条仍然成立：改 A 记录指向新 IP，TTL 600 秒生效，
+面试官手里的链接一直有效——这正是当初坚持要域名而不是 IP 的原因。
 
 如果之后要换成**大陆节点 + 备案**：**别等到期才开始**。备案要 1–3 周，
 而备案核验不要求域名当时解析到大陆 IP，所以可以**一边让香港这台继续服务、一边备案**，

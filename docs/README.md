@@ -70,6 +70,7 @@
 | [m4-rag-evaluation.md](archive/development/m4-rag-evaluation.md) | 90 题黄金集、指标含义与发布门禁 |
 | [m5-deployment.md](design/current/m5-deployment.md) | 单机生产部署、安全与恢复设计 |
 | [m5-first-deploy-checklist.md](design/current/m5-first-deploy-checklist.md) | 首次部署逐步检查表与危险操作边界 |
+| [server-migration-runbook.md](design/current/server-migration-runbook.md) | 换服务器：迁什么、什么顺序、切换窗口多长 |
 
 ## `status/` — 运行状态与验收证据
 
