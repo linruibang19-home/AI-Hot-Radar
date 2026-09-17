@@ -5,8 +5,8 @@
 > **数据必须在切 DNS 之前恢复完**（第 4 节 → 第 5 节），
 > **DNS 必须在起容器之前切**（第 5 节内部，否则 Caddy 签不到证书）。
 >
-> 现状基线（2026-09-11 实查）：`47.242.229.41`（AS45102 阿里云香港）、
-> 10 个容器、数据库 1433 MB、最近一份转储 529 MB、DNS TTL **600 秒**、
+> 现状基线（2026-09-17 实查）：`47.242.229.41`（AS45102 阿里云香港）、
+> 10 个容器、数据库 1642 MB、最近一份转储 599 MB、DNS TTL **600 秒**、
 > **没有 CDN**（`Via: 1.1 Caddy`，A 记录直指源站）。
 
 ---
@@ -19,10 +19,10 @@
 |---|---|---|
 | 代码 | `git clone` | 不用迁 |
 | 三张业务镜像 | 从 GHCR 拉 | 不用迁 |
-| **PostgreSQL 数据** | **重建不了**——5371 条内容是连续采集攒的，每条都花过 LLM 加工的钱 | **必须迁** |
+| **PostgreSQL 数据** | **重建不了**——7026 条内容是连续采集攒的，每条都花过 LLM 加工的钱 | **必须迁** |
 | **`infra/compose/.env`** | **重建不了**——见下 | **必须迁** |
 | TLS 证书（`caddy_data`） | Caddy 会重新申请 | 不用迁 |
-| `backups/` 3.7 GB | 本机 `D:\Backups\AI Hot Radar` 已有副本 | 不用迁 |
+| `backups/` 4.4 GB | 本机 `D:\Backups\AI Hot Radar` 已有副本 | 不用迁 |
 
 ### `.env` 里有一把丢了就没救的钥匙
 
@@ -65,7 +65,7 @@ ssh -i ~/.ssh/ai_hot_radar_deploy_ed25519 deploy@47.242.229.41 \
 它会自己写 `.sha256` 旁文件，并且先 `pg_dump` 到 `.partial`、`pg_restore --list` 过了才改名——
 所以目录里出现的 `.dump` 一定是完整的。
 
-③ **在服务器上先验，再下载**——先验能省掉一次 529 MB 的无效传输。
+③ **在服务器上先验，再下载**——先验能省掉一次 600 MB 的无效传输。
 仓库里已经有现成的演练服务，不用手搓：
 
 ```bash
@@ -91,10 +91,14 @@ scp -i ~/.ssh/ai_hot_radar_deploy_ed25519 deploy@47.242.229.41:~/check.sh "D:/Ba
 
 ```bash
 ssh -i ~/.ssh/ai_hot_radar_deploy_ed25519 deploy@47.242.229.41 \
-  "cd /opt/ai-hot-radar && docker compose --env-file infra/compose/.env -f infra/compose/docker-compose.prod.yml exec -T postgres psql -U ai_hot_radar -d ai_hot_radar -c 'SELECT status, count(*) FROM source GROUP BY status ORDER BY 2 DESC;'"
+  "cd /opt/ai-hot-radar && docker compose --env-file infra/compose/.env -f infra/compose/docker-compose.prod.yml exec -T postgres psql -U ai_hot_radar -d ai_hot_radar -c 'SELECT runtime_state, count(*) FROM source GROUP BY runtime_state ORDER BY 2 DESC;'"
 ```
 
-> 基线参考（2026-09-11）：ACTIVE 128 / QUARANTINED 5 / PROBING 2 / RATE_LIMITED 1 / METADATA_ONLY 1。
+> 列名是 `runtime_state`，不是 `status`——手册初版写错过，迁移当天会直接报
+> `column "status" does not exist`。
+>
+> 基线参考（2026-09-17 实查）：ACTIVE 129 / CONFIGURED 11 / QUARANTINED 6 /
+> METADATA_ONLY 2 / PROBING 2 / RATE_LIMITED 1，合计 151。
 
 > `.env` 里全是明文密钥。拷到本机之后不要提交进 git，也不要放进会同步到云盘的目录。
 
@@ -336,7 +340,7 @@ DNS 改回 `47.242.229.41`，600 秒生效。**这也是第 7 节第 ④ 条要�
 | 第 1 节 备份 + 校验 | 30–60 分钟 | 旧机正常服务 |
 | 第 2 节 ASN 测试 | 2 分钟 | 旧机正常服务 |
 | 第 3 节 新机准备 | 30 分钟 | 旧机正常服务 |
-| 第 4 节 恢复数据 | 15–25 分钟（529 MB） | 旧机正常服务 |
+| 第 4 节 恢复数据 | 15–25 分钟（约 600 MB） | 旧机正常服务 |
 | **第 5 节 切 DNS** | **10 分钟窗口** | **唯一有影响的一步** |
 | 第 6–7 节 验证收尾 | 30 分钟 | 新机已在服务 |
 
