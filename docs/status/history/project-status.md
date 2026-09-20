@@ -228,7 +228,7 @@ Compose smoke 通过。邮件订阅和定时调度不在本卡，当前只有手
 [m4-rag-implementation.md §8](../../archive/development/m4-rag-implementation.md)。
 
 **90 题回归已跑**（`GEN-20260808T180053Z`，完整报告
-[m4-rag-eval-GEN-20260809.md](../eval/m4-rag-eval-GEN-20260809.md)）：
+[GEN-20260809 报告](../eval/rag-tuning-log.md)）：
 
 | 指标 | 门控前 | 门控后 | Δ |
 |---|---:|---:|---:|
@@ -587,7 +587,7 @@ NVFP4                                          67 个分块
 
 ### B1 基线：90 题黄金集实测（2026-08-03）
 
-完整报告 [m4-rag-eval-B1.md](../eval/m4-rag-eval-B1.md)，逐题数据 [JSON](../eval/m4-rag-eval-B1-20260803.json)。
+完整报告 [B1 报告](../eval/rag-tuning-log.md)，逐题数据 [JSON](../eval/m4-rag-eval-B1-20260803.json)。
 `eval_run_id = B1-20260803T144251Z`。
 
 | 指标 | 纯稠密 B1 |
@@ -621,7 +621,7 @@ NVFP4                                          67 个分块
 
 ### B2 稀疏通道：修好了预测中的失败，也暴露了没预测到的问题
 
-完整报告 [m4-rag-eval-B2.md](../eval/m4-rag-eval-B2.md)。
+完整报告 [B2 报告](../eval/rag-tuning-log.md)。
 
 | 变体 | Recall@10 | Recall@20 | MRR | nDCG@10 |
 |---|---:|---:|---:|---:|
@@ -650,7 +650,7 @@ ADR-0015 的 zhparser 触发条件据此**修正为系统级**（中文近邻实
 
 ### B3 RRF + 时间过滤：关上了最大的缺口
 
-完整报告 [m4-rag-eval-B3.md](../eval/m4-rag-eval-B3.md)。
+完整报告 [B3 报告](../eval/rag-tuning-log.md)。
 
 | 变体 | Recall@10 | Recall@20 | MRR | nDCG@10 |
 |---|---:|---:|---:|---:|
@@ -676,7 +676,7 @@ ADR-0015 的 zhparser 触发条件据此**修正为系统级**（中文近邻实
 
 ### B4 重排：过了门槛，而且候选越少越好
 
-完整报告 [m4-rag-eval-B4.md](../eval/m4-rag-eval-B4.md)。模型 `BAAI/bge-reranker-v2-m3`。
+完整报告 [B4 报告](../eval/rag-tuning-log.md)。模型 `BAAI/bge-reranker-v2-m3`。
 
 | 变体 | Recall@10 | Recall@20 | MRR | nDCG@10 |
 |---|---:|---:|---:|---:|
@@ -784,7 +784,7 @@ Anthropic 事件是**四篇不同文档**，文档级限流拦不住后者。
 
 ### 生成侧评测：90 题端到端（2026-08-04）
 
-完整报告 [m4-rag-eval-GEN.md](../eval/m4-rag-eval-GEN.md)。检索侧指标看不见生成的任何东西，
+完整报告 [GEN 报告](../eval/rag-tuning-log.md)。检索侧指标看不见生成的任何东西，
 B5/B6 尤其如此——它们改变模型读到什么，不改变排序。
 
 | 指标 | 实测 |
@@ -829,7 +829,7 @@ RAG-GOLD-049 引用精度 0.00 —— 问「哪个模型发布了 NVFP4 量化�
 
 ### B7 时效融合：把 B4 唯一的退化补回来（2026-08-04）
 
-完整报告 [m4-rag-eval-B7.md](../eval/m4-rag-eval-B7.md)。
+完整报告 [B7 报告](../eval/rag-tuning-log.md)。
 
 B4 的重排在五个类别上大幅提升，只有 `recent_updates` 退步（MRR 0.7333 → 0.6484）——
 **交叉编码器不知道时间**，而对资讯产品来说新近本身就是相关性的一部分。
@@ -853,7 +853,7 @@ B4 的重排在五个类别上大幅提升，只有 `recent_updates` 退步（MR
 
 ### 端到端延迟：p50 10.5s / p95 13.9s（2026-08-04）
 
-完整报告 [m4-rag-eval-LAT.md](../eval/m4-rag-eval-LAT.md)。规格 §14 要求的唯一一项此前完全没有数字的指标。
+完整报告 [LAT 报告](../eval/rag-tuning-log.md)。规格 §14 要求的唯一一项此前完全没有数字的指标。
 
 | 阶段 | p50 | 占比 |
 |---|---:|---:|
@@ -878,7 +878,7 @@ prompt p95 达 **21.6k token**，说明父块展开确实在起作用，也解�
 
 ### B8 融合权重网格调优：负结果，但是有价值的那种（2026-08-04）
 
-完整报告 [m4-rag-eval-B8.md](../eval/m4-rag-eval-B8.md)。`AHR-RAG-400` §5 要求权重必须用评测集调优。
+完整报告 [B8 报告](../eval/rag-tuning-log.md)。`AHR-RAG-400` §5 要求权重必须用评测集调优。
 
 **结论：42 组网格跑完，保持原权重不变。**
 
@@ -937,7 +937,7 @@ prompt p95 达 **21.6k token**，说明父块展开确实在起作用，也解�
 
 ### B9 §6 剩余两个重排维度（2026-08-04）
 
-完整报告 [m4-rag-eval-B9.md](../eval/m4-rag-eval-B9.md)。§6 规定重排输出四个维度，
+完整报告 [B9 报告](../eval/rag-tuning-log.md)。§6 规定重排输出四个维度，
 `relevance` 由 B4 给出、`temporal_fit` 由 B7 给出，这一轮补齐 `directness` 与 `source_fit`。
 
 | | R@10 | R@20 | MRR | nDCG@10 |
@@ -984,7 +984,7 @@ answer 「在 2026-07-28 至 2026-08-04 期间，llama.cpp 发布了…」
 
 ### B10 §6 最后两条调整：我先前的「拿不到数据」是错判（2026-08-04）
 
-完整报告 [m4-rag-eval-B10.md](../eval/m4-rag-eval-B10.md)。
+完整报告 [B10 报告](../eval/rag-tuning-log.md)。
 
 我上一轮把「目标实体为主语 +0.05」「重复转载 −0.10」写成**当前拿不到数据**并列为不实现。
 **这个判断从没去库里核对过。** 实际查一下：
@@ -2384,24 +2384,24 @@ processed_event       消费幂等记录
 - [x] 分块质量修复 + 全量向量化（4140 / 4140）
 - [x] **90 题黄金集**（六类各 15 题，127 个标注 item，全部经库校验）
 - [x] **评测框架**（Recall@10/20、MRR、nDCG@10，item 层去重计分，22 个用例）
-- [x] **B1 纯稠密基线** —— 见 [m4-rag-eval-B1.md](../eval/m4-rag-eval-B1.md)
-- [x] **稀疏 FTS 通道 → B2** —— 见 [m4-rag-eval-B2.md](../eval/m4-rag-eval-B2.md)。MXFP4 题 R@20 0.33 → **1.00**
+- [x] **B1 纯稠密基线** —— 见 [B1 报告](../eval/rag-tuning-log.md)
+- [x] **稀疏 FTS 通道 → B2** —— 见 [B2 报告](../eval/rag-tuning-log.md)。MXFP4 题 R@20 0.33 → **1.00**
 - [x] **Planner（时间解析 + 意图分类）+ 时间过滤** —— `recent_updates` MRR **0.4676 → 0.7333**
-- [x] **RRF 融合 → B3** —— 见 [m4-rag-eval-B3.md](../eval/m4-rag-eval-B3.md)。R@20 **0.9036**，击败 B1 与 B2
-- [x] **Reranker → B4** —— 见 [m4-rag-eval-B4.md](../eval/m4-rag-eval-B4.md)。**过门槛**：MRR **0.8574**、R@20 **0.9126**
+- [x] **RRF 融合 → B3** —— 见 [B3 报告](../eval/rag-tuning-log.md)。R@20 **0.9036**，击败 B1 与 B2
+- [x] **Reranker → B4** —— 见 [B4 报告](../eval/rag-tuning-log.md)。**过门槛**：MRR **0.8574**、R@20 **0.9126**
 - [x] **父块三级阶梯 → B5** —— `rag/parent.py`，查询派生不落表
 - [x] **Story 折叠 → B6** —— `rag/folding.py`，实测四家媒体同一事件收敛为 3 条独立信源
 - [x] **生成 + 句级引用绑定 + 拒答** —— `rag/answer.py`、`rag/service.py`，四条不变量已断言
 - [x] **问答 API + 页面** —— `POST /rag/ask` + `/ask`，**SSE 流式未做**（见下）
-- [x] **生成侧评测**（groundedness / 引用精度 / Story coverage / 拒答）—— 见 [m4-rag-eval-GEN.md](../eval/m4-rag-eval-GEN.md)
+- [x] **生成侧评测**（groundedness / 引用精度 / Story coverage / 拒答）—— 见 [GEN 报告](../eval/rag-tuning-log.md)
 - [x] **修复零分块内容** —— 根因在采集侧未重开状态，见 3.12。有正文而检索不到的条目 **10 → 0**
-- [x] **`temporal_fit` 进重排（B7）** —— `recent_updates` MRR **0.6484 → 0.7522**，见 [m4-rag-eval-B7.md](../eval/m4-rag-eval-B7.md)
+- [x] **`temporal_fit` 进重排（B7）** —— `recent_updates` MRR **0.6484 → 0.7522**，见 [B7 报告](../eval/rag-tuning-log.md)
 - [x] **B7 接入生产路径** —— 评测跑过但从未接进 `service.py`，已修并加测试锁死
-- [x] **端到端 p50/p95 度量** —— p50 **10.5s** / p95 **13.9s**，见 [m4-rag-eval-LAT.md](../eval/m4-rag-eval-LAT.md)
-- [x] **融合权重网格调优（B8）** —— 42 组跑完，**结论是不改**，见 [m4-rag-eval-B8.md](../eval/m4-rag-eval-B8.md)
-- [x] **`directness` / `source_fit` 维度（B9）** —— MRR **0.8645 → 0.8731**，见 [m4-rag-eval-B9.md](../eval/m4-rag-eval-B9.md)
+- [x] **端到端 p50/p95 度量** —— p50 **10.5s** / p95 **13.9s**，见 [LAT 报告](../eval/rag-tuning-log.md)
+- [x] **融合权重网格调优（B8）** —— 42 组跑完，**结论是不改**，见 [B8 报告](../eval/rag-tuning-log.md)
+- [x] **`directness` / `source_fit` 维度（B9）** —— MRR **0.8645 → 0.8731**，见 [B9 报告](../eval/rag-tuning-log.md)
 - [x] **SSE 流式下发**（`AHR-API-500` §4）—— `POST /rag/ask/stream`，流的是阶段进度
-- [x] **§6 五条调整全部实现（B10）** —— 补上 `entity_subject` / `repost`，见 [m4-rag-eval-B10.md](../eval/m4-rag-eval-B10.md)
+- [x] **§6 五条调整全部实现（B10）** —— 补上 `entity_subject` / `repost`，见 [B10 报告](../eval/rag-tuning-log.md)
 - [x] **问答界面重做** —— 引用可点、信源等级、多信源佐证、检索计划可见、拒答给出路
 - [x] **token 级流式** —— 见 3.16。原来记的「必须先改 prompt 契约」是错判
 - [x] **问答永久链接 `/ask/{rag_query_id}`** —— 见 3.17
