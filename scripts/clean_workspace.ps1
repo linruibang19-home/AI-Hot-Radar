@@ -52,6 +52,16 @@ $fileTargets = @(Get-ChildItem -LiteralPath $repositoryRoot -File -Recurse -Forc
     } |
     Sort-Object FullName -Unique)
 
+# A cache file inside a directory target (for example `.next/cache/.tsbuildinfo`)
+# is already gone once that directory is removed; resolving it afterwards would
+# stop the run half-way. Keep only files that no directory target contains.
+$fileTargets = @($fileTargets | Where-Object {
+    $candidate = $_
+    -not ($targets | Where-Object {
+        $candidate.FullName.StartsWith(($_.FullName.TrimEnd('\') + '\'), [StringComparison]::OrdinalIgnoreCase)
+    } | Select-Object -First 1)
+})
+
 $rows = @(foreach ($target in $targets) {
     $bytes = (Get-ChildItem -LiteralPath $target.FullName -File -Recurse -Force -ErrorAction SilentlyContinue |
         Measure-Object -Property Length -Sum).Sum
