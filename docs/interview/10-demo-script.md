@@ -75,11 +75,11 @@ pgvector 的当前边界，以及按什么证据引入队列、独立搜索或�
 |---|---|
 | 采集与全文 | `apps/ai-service/src/ahr/ingestion/`、`config/ingestion-profiles.yaml` |
 | 切块与结构化 | `apps/ai-service/src/ahr/processing/` |
-| RAG | `apps/ai-service/src/ahr/rag/`、`docs/status/eval/` |
+| RAG | `apps/ai-service/src/ahr/rag/`、`data/eval-runs/` |
 | API/订阅 | `apps/core-api/src/main/`、Flyway V023 |
 | 前端 | `apps/web/app/`、`apps/web/lib/` |
 | 部署 | `infra/compose/`、`infra/scripts/`、`.github/workflows/release.yml` |
-| 决策与反例 | `docs/adr/`、`docs/status/history/project-status.md` |
+| 决策与反例 | `docs/adr/`、`docs/archive/project-status.md` |
 
 先指出文件职责，再选一个函数/测试讲输入、状态、失败和验证；不要一次打开几十个文件。
 

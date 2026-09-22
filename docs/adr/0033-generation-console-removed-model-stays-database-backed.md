@@ -28,7 +28,7 @@ ADR-0032 把供应商地址和密钥做进了 `/admin/models`。之后还有一�
 
 1. **删除控制台及其 HTTP 面**：Web 的 `app/admin/models/`、`app/api/admin/models/` 与侧边栏
    入口；Core API 的 `GenerationModelController/Service`、`GenerationProviderController/
-   Service/Probe`、`GenerationCredentialCipher` 及其测试；`api/openapi.yaml` 里两个
+   Service/Probe`、`GenerationCredentialCipher` 及其测试；`contracts/openapi.yaml` 里两个
    `/admin/models/generation*` 端点与三个 schema。
 2. **保留数据库层**：`generation_model_config`（单行）、`generation_model_catalog`、
    `generation_provider_config` 三张表和 `build_client_from_env` 的读路径不动。理由有二：

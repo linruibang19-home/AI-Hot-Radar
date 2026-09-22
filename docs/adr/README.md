@@ -1,7 +1,7 @@
 # 架构决策记录（ADR）索引
 
 ADR 只回答“为什么这样选、否决了什么、什么证据会触发回滚”，不承担实时状态记录。
-当前运行事实见 [`../status/current/`](../status/current/README.md)，实现细节见
+当前运行事实见 [`../status/current/`](../status/README.md)，实现细节见
 [`../handbook/`](../handbook/README.md)。
 
 ## 两层编号为什么同时存在

@@ -31,7 +31,7 @@
 | 报告 | 37 |
 
 内容从 2816 涨到 4113，其中约 240 条来自 `docs_changelog` 档位的修复
-（见 [v0.1.21 发布记录](../delivery/changelog-recovery-release-20260831.md)）：
+（见 [v0.1.21 发布记录](../evidence/changelog-recovery-release-20260831.md)）：
 该档位 12 个信源此前每个恰好 1 条内容，被唯一索引静默挡掉。
 这些数字会随调度继续增长。网站、报告、邮件、RAG、订阅和审计的业务事实均来自 PostgreSQL；
 Redis 只保存可重建缓存、限流计数、短锁、RAG 会话热副本和 30 秒运行统计快照。
@@ -50,14 +50,14 @@ Redis 只保存可重建缓存、限流计数、短锁、RAG 会话热副本和 
 
 ## 4. 生产验证证据
 
-- v0.1.20 发布与部署验收：[`../delivery/ui-type-scale-release-20260819.md`](../delivery/ui-type-scale-release-20260819.md)；
-- v0.1.19 发布与部署验收：[`../delivery/model-console-release-20260819.md`](../delivery/model-console-release-20260819.md)；
-- 架构与业务流程通读核查：[`architecture-review-20260818.md`](architecture-review-20260818.md)；
-- 当前交接与 v0.1.18 验收历史：[`handoff-20260814.md`](handoff-20260814.md)；
-- 国内官方源和信源后台：[`../product/domestic-source-expansion-20260817.md`](../product/domestic-source-expansion-20260817.md)；
-- 生产压测：[`../loadtest/2026-08-14-m5-020-production.md`](../loadtest/2026-08-14-m5-020-production.md)；
-- 首次部署：[`../delivery/production-deployment-20260811.md`](../delivery/production-deployment-20260811.md)；
-- RAG 发布门：[`../product/rag-specialist-audit-20260811.md`](../product/rag-specialist-audit-20260811.md)。
+- v0.1.20 发布与部署验收：[`../evidence/ui-type-scale-release-20260819.md`](../evidence/ui-type-scale-release-20260819.md)；
+- v0.1.19 发布与部署验收：[`../evidence/model-console-release-20260819.md`](../evidence/model-console-release-20260819.md)；
+- 架构与业务流程通读核查：[`../evidence/architecture-review-20260818.md`](../evidence/architecture-review-20260818.md)；
+- 当前交接与 v0.1.18 验收历史：[`../../archive/handoff-20260814.md`](../../archive/handoff-20260814.md)；
+- 国内官方源和信源后台：[`../evidence/domestic-source-expansion-20260817.md`](../evidence/domestic-source-expansion-20260817.md)；
+- 生产压测：[`../evidence/loadtest-m5-020-production-20260814.md`](../evidence/loadtest-m5-020-production-20260814.md)；
+- 首次部署：[`../evidence/production-deployment-20260811.md`](../evidence/production-deployment-20260811.md)；
+- RAG 发布门：[`../evidence/rag-specialist-audit-20260811.md`](../evidence/rag-specialist-audit-20260811.md)。
 
 ## 5. 当前任务
 

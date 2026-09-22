@@ -49,7 +49,7 @@ AI 的新东西散落在官方博客、GitHub Release、arXiv 和几十家媒体
 用 RRF 按名次融合，再经 cross-encoder 精排。Recall@20 **0.8994**。
 最早用最简单的轮流取合并，实测 MRR 从 `0.7630` 掉到 `0.7480`——**多一路不等于更好**。
 
-**负结果和正结果一样留档。** `docs/status/eval/` 里保留了三类"没有采纳"的实验：
+**负结果和正结果一样留档。** `data/eval-runs/` 里保留了三类"没有采纳"的实验：
 B2 简单合并反而退化、B8 权重扫参在重排后收益只剩 `0.0004` 所以**不改生产配置**、
 B13 中文分词对 RAG 端到端 ±0 但对站内搜索是 10–32 倍。
 
@@ -218,8 +218,8 @@ app/ask/ → app/api/ask/route.ts（同源代理）
 |---|---|
 | 系统怎么工作、代码在哪 | [`docs/handbook/`](docs/handbook/README.md) — 23 篇工程教材 |
 | 为什么这样选、什么时候回滚 | [`docs/adr/`](docs/adr/README.md) — 32 条决策记录 |
-| 现在线上跑的是什么 | [`docs/status/current/`](docs/status/current/README.md) — 唯一当前事实入口 |
-| 逐轮评测证据（含负结果） | [`docs/status/eval/`](docs/status/eval/) |
+| 现在线上跑的是什么 | [`docs/status/current/`](docs/status/current/) — 最新交接与生产基线 |
+| 逐轮评测证据（含负结果） | [`data/eval-runs/`](data/eval-runs/README.md) 逐题 JSON + [调优纪要](docs/status/evidence/rag-tuning-log.md) |
 
 > 引用本仓库任何指标时请带上日期、样本量、模型版本和测量环境。历史快照不是实时承诺。
 

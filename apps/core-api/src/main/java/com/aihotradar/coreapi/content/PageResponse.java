@@ -3,7 +3,7 @@ package com.aihotradar.coreapi.content;
 import java.util.List;
 
 /**
- * Cursor-paged envelope matching {@code ItemPage} in api/openapi.yaml.
+ * Cursor-paged envelope matching {@code ItemPage} in contracts/openapi.yaml.
  *
  * <p>Cursor paging rather than offset paging: the feed is append-heavy, and an
  * offset would skip or repeat rows whenever new content lands between requests.

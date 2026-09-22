@@ -105,7 +105,7 @@
 python scripts/build_eval_summary.py
 ```
 
-从 `docs/status/eval/m4-rag-eval-*.json` 的指定 run 构建。打开/刷新浏览器不会重新跑 90 题，不会调用模型，也不会随在线用户问题改变。只有主动跑评测、人工检查输出、更新被采纳 run 并重新构建/发布 Web 后，质量页才变化。
+从 `data/eval-runs/m4-rag-eval-*.json` 的指定 run 构建。打开/刷新浏览器不会重新跑 90 题，不会调用模型，也不会随在线用户问题改变。只有主动跑评测、人工检查输出、更新被采纳 run 并重新构建/发布 Web 后，质量页才变化。
 
 这和 `/ops` 不同：`/ops` 查询近 30 天 `llm_usage`、`rag_query` 等生产记录，并用 Redis 缓存 30 秒；因此运行状态会随真实调用变化，但价格仍是“调用时保存的价目快照或历史 fallback”，不是供应商账单。
 
@@ -151,12 +151,12 @@ docker compose -f infra/compose/docker-compose.yml exec ai-service \
 # 检索基线/当前配置；output 要使用新的 run 文件名，不能覆盖历史证据
 docker compose -f infra/compose/docker-compose.yml exec ai-service \
   python -m ahr.cli rag-eval --golden /app/data/golden \
-  --variant b9-dimensions --output /app/docs/status/eval/<new-run>.json
+  --variant b9-dimensions --output /app/data/eval-runs/<new-run>.json
 
 # 生成侧会真实消耗模型额度
 docker compose -f infra/compose/docker-compose.yml exec ai-service \
   python -m ahr.cli rag-eval --golden /app/data/golden \
-  --variant generation --output /app/docs/status/eval/<new-generation-run>.json
+  --variant generation --output /app/data/eval-runs/<new-generation-run>.json
 
 # 确认要采纳哪些 run 后再构建前端摘要
 python scripts/build_eval_summary.py

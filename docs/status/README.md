@@ -1,83 +1,97 @@
-# 状态、验收与历史证据索引
+# 状态与证据索引
 
-`status/` 保存实际运行产生的事实。这里既有当前入口，也有历史快照和逐题评测；历史文件不能
-用来推断当前生产状态，但不能删除，因为它们记录问题、假设、负结果和验收证据。
+`status/` 保存实际运行产生的事实，只有两层：
 
-## 当前入口
+- [`current/`](current/)：**现在是什么**。只放最新交接和生产基线，随生产变更更新；
+- [`evidence/`](evidence/)：**当时发生了什么**。带日期的验收、实验、压测、发布与事故记录，冻结后
+  不改数字。它们不能用来推断当前生产状态，但记录了问题、假设、负结果和验收证据，不能删除。
 
-| 用途 | 文档 |
+被取代的交接和累计开发日志在 [`../archive/`](../archive/)；逐题评测 JSON 在
+[`../../data/eval-runs/`](../../data/eval-runs/README.md)。事实优先级与写入规则见
+[`../README.md`](../README.md)。
+
+## 当前
+
+| 文档 | 内容 |
 |---|---|
-| 当前事实优先级与阅读顺序 | [current/README.md](current/README.md) |
-| 当前生产版本、服务、数据和边界 | [production-baseline.md](current/production-baseline.md) |
-| 累计项目历史与问题根因 | [project-status.md](history/project-status.md)（冻结日志） |
-| 完整交付导航 | [../spec/12-delivery-index.md](../spec/12-delivery-index.md) |
-| 腾讯云迁移 | [tencent-cloud-migration-readiness-20260812.md](operations/tencent-cloud-migration-readiness-20260812.md) |
-| 仓库清理与归档 | [repository-hygiene-20260812.md](operations/repository-hygiene-20260812.md) |
-| 实现事实与文档教材审计 | [documentation-audit-20260813.md](delivery/documentation-audit-20260813.md) |
-| 文档事实源与全仓一致性复核 | [documentation-refresh-20260817.md](delivery/documentation-refresh-20260817.md) |
-| GitHub Actions Node 24 运行时升级 | [ci-actions-node24-20260817.md](delivery/ci-actions-node24-20260817.md) |
-| 主题地图关联分层与语料克隆验收 | [topic-map-quality-20260813.md](product/topic-map-quality-20260813.md) |
-| 主题地图关系黄金集第一阶段 | [topic-map-golden-set-20260813.md](product/topic-map-golden-set-20260813.md) |
-| 主题/厂商时间线与导航性能 | [topic-timeline-performance-20260813.md](product/topic-timeline-performance-20260813.md) |
-| RAG 原文切块与向量覆盖审计 | [rag-corpus-audit-20260813.md](product/rag-corpus-audit-20260813.md) |
-| 中文信源 Sitemap 回源与全文门禁 | [domestic-source-expansion-20260817.md](product/domestic-source-expansion-20260817.md) |
-| 本地 Web/Core/AI、PostgreSQL、Redis 分层压测 | [loadtest/2026-08-13-local-baseline.md](loadtest/2026-08-13-local-baseline.md) |
-| 香港 2C4G 低风险生产压测 | [loadtest/2026-08-14-m5-020-production.md](loadtest/2026-08-14-m5-020-production.md) |
+| [handoff-20260922.md](current/handoff-20260922.md) | **冷启动先读**：线上登录、版本、数据、备份、本地环境与下一步 |
+| [production-baseline.md](current/production-baseline.md) | 生产版本、服务、数据、质量与已知边界的基线快照 |
 
-## 目录职责
+## 证据
 
-| 目录 | 只回答什么 |
+### RAG 与评测
+
+| 文档 | 内容 |
 |---|---|
-| [`current/`](current/) | 唯一生产基线、当前任务入口与冻结的累计开发日志 |
-| [`product/`](product/) | 某项产品/RAG 功能的日期化验收证据 |
-| [`operations/`](operations/) | 性能、存储、迁移和仓库治理事实 |
-| [`delivery/`](delivery/) | 预检、部署、作品集封版等交付关口 |
-| [`loadtest/`](loadtest/README.md) | 可复现的本地/生产分层压测结果 |
-| [`eval/`](eval/README.md) | 固定黄金集逐轮结果；不是实时监控 |
-| [`history/`](history/) | 被当前交接取代的历史快照 |
+| [rag-tuning-log.md](evidence/rag-tuning-log.md) | **B1–B15、生成侧与延迟的调优纪要**，含负结果；JSON 对照见 `data/eval-runs/` |
+| [rag-product-readiness-20260810.md](evidence/rag-product-readiness-20260810.md) | RAG 全链路、成熟产品对标与优化顺序 |
+| [planner-diff-20260810.md](evidence/planner-diff-20260810.md) | Planner 对照：正则 0.6667 vs LLM 0.9067 |
+| [query-type-sweep-20260810.md](evidence/query-type-sweep-20260810.md) | query_type 标签几乎不改变检索结果 |
+| [rag-specialist-audit-20260811.md](evidence/rag-specialist-audit-20260811.md) | 专项发布门禁与人工引用审计 |
+| [rag-security-performance-20260811.md](evidence/rag-security-performance-20260811.md) | 安全、超时、缓存与 SLO |
+| [rag-ui-polish-20260811.md](evidence/rag-ui-polish-20260811.md) | 问答界面精修 |
+| [rag-operations-ui-20260811.md](evidence/rag-operations-ui-20260811.md) | 质量与运行页面 |
+| [generation-model-selection-20260811.md](evidence/generation-model-selection-20260811.md) | DeepSeek 生成模型切换 |
+| [rag-corpus-audit-20260813.md](evidence/rag-corpus-audit-20260813.md) | 语料、原文切块与向量覆盖审计 |
+| [golden-refresh-20260830.md](evidence/golden-refresh-20260830.md) | 黄金集刷新（标注阶段） |
+| [listing-articles-undated-20260830.md](evidence/listing-articles-undated-20260830.md) | HTML 列表档位抽不到发布日期 |
 
-## RAG 证据
+`/eval` 页面是 `scripts/build_eval_summary.py` 从选定 JSON 生成的发布快照，不是实时监控。
 
-| 范围 | 文档 |
+### 信源、内容与主题
+
+| 文档 | 内容 |
 |---|---|
-| 当前发布门与人工审计 | [rag-specialist-audit-20260811.md](product/rag-specialist-audit-20260811.md) |
-| 安全、超时、缓存与 SLO | [rag-security-performance-20260811.md](product/rag-security-performance-20260811.md) |
-| 产品成熟度与对标 | [rag-product-readiness-20260810.md](product/rag-product-readiness-20260810.md) |
-| RAG UI | [rag-ui-polish-20260811.md](product/rag-ui-polish-20260811.md) |
-| 质量/运行工程页 | [rag-operations-ui-20260811.md](product/rag-operations-ui-20260811.md) |
-| B1–B15、生成、专项与延迟原始产物 | [eval/README.md](eval/README.md) |
+| [m1-canary-evidence.md](evidence/m1-canary-evidence.md) | M1 信源探测验收（逐源原始数据在同名 `.json`） |
+| [story-public-experience-20260813.md](evidence/story-public-experience-20260813.md) | Story 公开入口有效性 |
+| [topic-map-quality-20260813.md](evidence/topic-map-quality-20260813.md) | 主题地图关联分层与语料克隆验收 |
+| [topic-map-golden-set-20260813.md](evidence/topic-map-golden-set-20260813.md) | 主题地图关系黄金集第一阶段 |
+| [topic-timeline-performance-20260813.md](evidence/topic-timeline-performance-20260813.md) | 主题/厂商时间线与导航性能 |
+| [domestic-source-expansion-20260817.md](evidence/domestic-source-expansion-20260817.md) | 中文信源 Sitemap 回源与全文门禁 |
 
-`eval/*.json` 是版本化实验结果，不是缓存。它们只有在模型、语料截止时间、配置和样本量一起
-给出时才有意义；站内 `/eval` 是由其中选定轮次生成的发布摘要，不是实时监控。
+### 报告与订阅
 
-## 产品与上线闭环
-
-| 范围 | 文档 |
+| 文档 | 内容 |
 |---|---|
-| 报告阅读 | [report-reader-20260811.md](product/report-reader-20260811.md) |
-| 报告发布状态机 | [report-publication-20260811.md](product/report-publication-20260811.md) |
-| 邮箱订阅 | [report-subscriptions-20260811.md](product/report-subscriptions-20260811.md) |
-| 精选时间与真实订阅验收 | [v016-selection-email-20260812.md](product/v016-selection-email-20260812.md) |
-| 模型配置 | [generation-model-selection-20260811.md](product/generation-model-selection-20260811.md) |
-| 生产预检 | [production-preflight-20260811.md](delivery/production-preflight-20260811.md) |
-| 首次生产部署 | [production-deployment-20260811.md](delivery/production-deployment-20260811.md) |
-| v0.1.15 中文公共阅读门与教材发布 | [production-deployment-v015-20260815.md](delivery/production-deployment-v015-20260815.md) |
-| Docker 存储控制 | [docker-storage-controls-20260812.md](operations/docker-storage-controls-20260812.md) |
+| [report-reader-20260811.md](evidence/report-reader-20260811.md) | 报告阅读体验与结构化只读模型 |
+| [report-publication-20260811.md](evidence/report-publication-20260811.md) | 非阻塞报告发布状态机 |
+| [report-subscriptions-20260811.md](evidence/report-subscriptions-20260811.md) | 邮箱订阅与定时投递 |
+| [v016-selection-email-20260812.md](evidence/v016-selection-email-20260812.md) | 精选时间与真实订阅生产验收 |
 
-## 作品集与体验
+### 发布与部署
 
-- [navigation-performance-20260812.md](operations/navigation-performance-20260812.md)：页面点击反馈与导航回归；
-- [portfolio-closeout-20260812.md](delivery/portfolio-closeout-20260812.md)：工程页面语义和截图封版；
-- [portfolio-interview-completion-20260812.md](delivery/portfolio-interview-completion-20260812.md)：README 与面试材料验收。
+| 文档 | 内容 |
+|---|---|
+| [prelaunch-release-gate-20260811.md](evidence/prelaunch-release-gate-20260811.md) | 上线前最终本地门禁 |
+| [production-preflight-20260811.md](evidence/production-preflight-20260811.md) | 生产部署预检与恢复门禁 |
+| [production-deployment-20260811.md](evidence/production-deployment-20260811.md) | 首次生产部署 |
+| [production-deployment-v015-20260815.md](evidence/production-deployment-v015-20260815.md) | v0.1.15 中文公共阅读门与教材发布 |
+| [ci-actions-node24-20260817.md](evidence/ci-actions-node24-20260817.md) | GitHub Actions Node 24 运行时升级 |
+| [model-console-release-20260819.md](evidence/model-console-release-20260819.md) | v0.1.19 发布 |
+| [ui-type-scale-release-20260819.md](evidence/ui-type-scale-release-20260819.md) | v0.1.20 发布 |
+| [changelog-recovery-release-20260831.md](evidence/changelog-recovery-release-20260831.md) | v0.1.21 发布 |
 
-## 历史快照
+### 运维、性能与事故
 
-- `handoff-20260810.md`：M4 末期历史状态，已被 08-11 与 08-12 交接取代；
-- `handoff-20260811.md`：首次上线前后过渡状态，已被 08-12 交接取代；
-- `handoff-20260812.md`：作品集封版快照，已被 08-14 交接取代；
-- `current/handoff-20260814.md`：v0.1.18 发布交接，已被日期无关的当前生产基线取代；
-- `prelaunch-release-gate-20260811.md`：上线前门禁，不代表当前运行版本；
-- `m1-canary-evidence.*`：M1 信源阶段证据。
+| 文档 | 内容 |
+|---|---|
+| [navigation-performance-20260812.md](evidence/navigation-performance-20260812.md) | 页面点击反馈与导航回归 |
+| [docker-storage-controls-20260812.md](evidence/docker-storage-controls-20260812.md) | Docker 磁盘增长控制 |
+| [tencent-cloud-migration-readiness-20260812.md](evidence/tencent-cloud-migration-readiness-20260812.md) | 腾讯云新机与迁移基线 |
+| [loadtest-local-baseline-20260813.md](evidence/loadtest-local-baseline-20260813.md) | 本地 Web/Core/AI、PostgreSQL、Redis 分层压测 |
+| [loadtest-m5-020-production-20260814.md](evidence/loadtest-m5-020-production-20260814.md) | 香港 2C4G 低风险生产压测（不是容量寻顶） |
+| [architecture-review-20260818.md](evidence/architecture-review-20260818.md) | 代码、仓库、生产机三方通读核查 |
+| [incident-server-loss-20260918.md](evidence/incident-server-loss-20260918.md) | 事故复盘：生产服务器到期消失，从转储重建 |
 
-历史快照保留原路径以维持引用和审计链。需要“现在是什么状态”时只读当前入口；需要“为什么
-变成这样”时再沿历史与 eval 记录回溯。
+压测证据必须写明日期、Git SHA、硬件/容器限制、数据规模、脚本、请求组合、持续时间、缓存冷热、
+错误率和 P50/P95/P99；脚本入口见 [`infra/loadtest/`](../../infra/loadtest/README.md)。
+
+### 文档与作品集
+
+| 文档 | 内容 |
+|---|---|
+| [repository-hygiene-20260812.md](evidence/repository-hygiene-20260812.md) | 全仓盘点、清理与可恢复归档 |
+| [portfolio-closeout-20260812.md](evidence/portfolio-closeout-20260812.md) | 工程页面语义和截图封版 |
+| [portfolio-interview-completion-20260812.md](evidence/portfolio-interview-completion-20260812.md) | README 与面试材料验收 |
+| [documentation-audit-20260813.md](evidence/documentation-audit-20260813.md) | 实现事实校准与文档教材重构 |
+| [documentation-refresh-20260817.md](evidence/documentation-refresh-20260817.md) | 文档事实源与全仓一致性复核 |

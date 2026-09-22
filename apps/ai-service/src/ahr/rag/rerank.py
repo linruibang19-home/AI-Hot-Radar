@@ -7,7 +7,7 @@ more of the right documents entered the candidate set, and they ranked worse.
 buried, and reranking is where the gain is.
 
 So B4 has a gate rather than an aspiration. From
-`docs/design/m4-rag-evaluation.md`: it enters the MVP only if it pulls MRR back
+`docs/archive/m4-rag-evaluation.md`: it enters the MVP only if it pulls MRR back
 above B1's 0.7630 while holding B3's Recall@20 of 0.9036 — and only if the
 latency it costs is worth it. A reranker that improves nDCG@10 by under 3% while
 doubling p95 does not ship.

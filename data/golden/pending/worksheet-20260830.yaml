@@ -291,7 +291,7 @@ questions:
       这题挖出的是采集缺陷，不是检索缺陷，也不是覆盖缺口——我最初判断成"信源库里
       没有智谱官方源"，那是错的。glm-new-releases 一直配着、enabled、ACTIVE、
       连续失败 0、最近一次成功 08-28，而库里只有 1 条内容。原因见
-      docs/status/eval/golden-refresh-20260830.md：changelog 的每条都是同一页面的
+      docs/status/evidence/golden-refresh-20260830.md：changelog 的每条都是同一页面的
       一个 #锚点，而 canonicalize_url 按通用规则丢掉 fragment，于是 26 条发布
       哈希成同一个 URL，唯一索引留下第一条。GLM-5.1/5.2/5.3/5.3-Flash 全在页面上。
       提问当时（08-10）语料里确实没有这些文档，所以 answerable: false 对快照成立；

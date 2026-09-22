@@ -12,7 +12,7 @@
 | AI Service | `apps/ai-service/src/ahr/` | 采集、加工、Story、报告生成、RAG 与评测 |
 | PostgreSQL | `database/migrations/` | 唯一业务事实源；Flyway 只前进、不改历史迁移 |
 | Redis | Java `cache/`、Python `rag/cache.py` | 缓存、配额与短状态；丢失后可由 PostgreSQL 恢复 |
-| 契约与配置 | `api/`、`schemas/`、`config/` | HTTP、事件、信源、采集 Profile 和分类法 |
+| 契约与配置 | `contracts/`、`config/` | HTTP、事件、信源、采集 Profile 和分类法 |
 | 交付 | `infra/`、`.github/workflows/` | Compose、Caddy、备份、监控、CI 与不可变镜像发布 |
 
 ## 2. 从信源到页面
@@ -91,7 +91,7 @@ Web AskPanel
 
 对应迁移：V012 向量索引、V013 检索轨迹、V014 CJK bigram、V015 限制说明、V020 会话、
 V021 历史答案修复、V026 chunk set 版本化。完整算法背景见 `docs/interview/03-rag-deep-dive.md` 和
-`docs/archive/development/m4-rag-implementation.md`。
+`docs/archive/m4-rag-implementation.md`。
 
 ## 5. 管理、权限与模型配置
 
