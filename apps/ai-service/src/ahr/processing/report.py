@@ -13,6 +13,7 @@ down is worse than one without a narrative paragraph.
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -22,6 +23,8 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ahr.processing.llm import LlmClient, LlmUnavailableError, TokenUsage
+
+logger = logging.getLogger(__name__)
 
 REPORT_PROMPT_VERSION = "report-v3"
 
@@ -306,6 +309,7 @@ async def build_report(
         )
         usage: TokenUsage | None = None
         succeeded = False
+        raw = ""
         try:
             raw, usage = await client.summarize(
                 system_prompt=(
@@ -319,9 +323,19 @@ async def build_report(
             model_name = client.model_name
             model_config_version = client.model_config_version
             succeeded = True
-        except (LlmUnavailableError, ValidationError, ValueError):
+        except (LlmUnavailableError, ValidationError, ValueError) as exc:
             # Invalid model output is untrusted. A deterministic digest is still
-            # useful; a missing report or unvalidated narrative is not.
+            # useful; a missing report or unvalidated narrative is not. It must
+            # not be quiet, though: from 2026-09-10 a quarter of digests landed
+            # here and were published with the template sentence, and the only
+            # trace was `succeeded = false` in llm_usage.
+            logger.warning(
+                "report %s:%s summary rejected, publishing the deterministic digest: %s | raw=%r",
+                period,
+                key,
+                " ".join(str(exc).split())[:300],
+                raw[:300],
+            )
             summary = ""
         finally:
             if usage is not None:

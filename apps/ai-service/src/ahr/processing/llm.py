@@ -194,6 +194,27 @@ def _strip_code_fence(text: str) -> str:
     return match.group(1) if match else text.strip()
 
 
+def _drop_response_format_echo(text: str) -> str:
+    """Remove this client's own `response_format` value echoed into the answer.
+
+    Measured on production 2026-09-22: since 2026-09-10 deepseek-v4-flash
+    intermittently appends `"type":"json_object"` — the value of the
+    `response_format` parameter sent below — as an extra top-level key of an
+    otherwise correct object (2 of 4 replays of one daily digest). A caller with
+    a strict schema then throws away a good answer. Only that exact key/value is
+    removed; any other unexpected field is left for the caller's schema to
+    reject, which is the point of having a strict one.
+    """
+    try:
+        parsed = json.loads(text)
+    except ValueError:
+        return text
+    if not isinstance(parsed, dict) or parsed.get("type") != "json_object":
+        return text
+    del parsed["type"]
+    return json.dumps(parsed, ensure_ascii=False)
+
+
 class LlmClient:
     """Chat-completions client for OpenAI-compatible providers (DeepSeek)."""
 
@@ -274,7 +295,8 @@ class LlmClient:
 
             body = response.json()
             usage.add(body.get("usage"), elapsed_ms=int((time.monotonic() - started) * 1000))
-            return strip_reasoning_prefix(str(body["choices"][0]["message"]["content"]))
+            content = strip_reasoning_prefix(str(body["choices"][0]["message"]["content"]))
+            return _drop_response_format_echo(content) if json_mode else content
 
         raise LlmUnavailableError(
             f"llm unavailable after {self._config.max_attempts} attempts: {last_error}"

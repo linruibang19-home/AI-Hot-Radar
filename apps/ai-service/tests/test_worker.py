@@ -247,3 +247,33 @@ def test_staleness_boundary_is_strict(delta_hours: int) -> None:
     expected = delta_hours > 0
     connection = _Connection([(generated,), (newest,)])
     assert _report_is_stale(connection, "daily", "2026-08-02") is expected
+
+
+# --- a fallback digest must not become permanent -------------------------------
+
+
+def test_a_fallback_digest_is_retried_when_a_model_is_available() -> None:
+    """2026-09-12/13/20 kept the template sentence because nothing new arrived.
+
+    The row is `(generated_at, model_name IS NULL)`; no newer selection exists,
+    so freshness alone would leave the fallback in place for good.
+    """
+    connection = _Connection(
+        [(datetime(2026, 9, 21, 12, 0), True), (datetime(2026, 9, 20, 18, 0),)]
+    )
+    assert _report_is_stale(connection, "daily", "2026-09-20", retry_fallback=True) is True
+
+
+def test_a_fallback_digest_is_left_alone_without_a_model() -> None:
+    """With the provider down a rebuild would produce the same digest every pass."""
+    connection = _Connection(
+        [(datetime(2026, 9, 21, 12, 0), True), (datetime(2026, 9, 20, 18, 0),)]
+    )
+    assert _report_is_stale(connection, "daily", "2026-09-20", retry_fallback=False) is False
+
+
+def test_a_model_written_digest_is_not_retried() -> None:
+    connection = _Connection(
+        [(datetime(2026, 9, 21, 12, 0), False), (datetime(2026, 9, 20, 18, 0),)]
+    )
+    assert _report_is_stale(connection, "daily", "2026-09-20", retry_fallback=True) is False

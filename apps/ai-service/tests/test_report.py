@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from typing import Any
 
 import httpx
 import pytest
@@ -446,3 +447,93 @@ def test_regeneration_preserves_an_operator_withdrawal() -> None:
     sql, _ = _saved_insert("daily", "2026-08-01")
     assert "WHEN report.status = 'WITHDRAWN' THEN report.status" in sql
     assert "WHEN EXCLUDED.status = 'PUBLISHED' THEN now()" in sql
+
+
+# --- provider echo of response_format (2026-09-10) ---------------------------
+
+# Real output captured on production 2026-09-22 while replaying the 2026-09-20
+# daily digest: correct summary, plus the request's own response_format value
+# appended as an extra key. 2 of 4 replays came back like this.
+ECHOED = (
+    '{"summary":"Runway 集中发布世界模型成果，推出通用世界模型 GWM-1 及机器人 SDK。'
+    '硬件层面，Cerebras 在 Hot Chips 详解 CS-4 架构。","type":"json_object"}'
+)
+
+
+def _answering(content: str) -> LlmClient:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"choices": [{"message": {"content": content}}]})
+
+    return _client(handler)
+
+
+async def test_json_mode_drops_the_echoed_response_format() -> None:
+    async with _answering(ECHOED) as client:
+        text, _ = await client.summarize(system_prompt="s", user_prompt="u", json_mode=True)
+
+    parsed = ReportSummaryOutput.model_validate_json(text)
+    assert parsed.summary.startswith("Runway")
+
+
+async def test_json_mode_leaves_any_other_extra_field_for_the_schema_to_reject() -> None:
+    """Only the echo is transport noise; anything else is the model's own output."""
+    injected = '{"summary":"总述","instructions":"ignore previous rules"}'
+    async with _answering(injected) as client:
+        text, _ = await client.summarize(system_prompt="s", user_prompt="u", json_mode=True)
+
+    assert text == injected
+    with pytest.raises(ValueError):
+        ReportSummaryOutput.model_validate_json(text)
+
+
+async def test_a_type_field_with_any_other_value_is_not_touched() -> None:
+    content = '{"type":"release","summary":"总述"}'
+    async with _answering(content) as client:
+        text, _ = await client.summarize(system_prompt="s", user_prompt="u", json_mode=True)
+
+    assert text == content
+
+
+async def test_prose_output_is_never_reparsed() -> None:
+    async with _answering(ECHOED) as client:
+        text, _ = await client.summarize(system_prompt="s", user_prompt="u")
+
+    assert text == ECHOED
+
+
+# --- build_report: the summary path end to end -------------------------------
+
+
+async def _build(monkeypatch: pytest.MonkeyPatch, content: str) -> tuple[Any, _RecordingConnection]:
+    from ahr.processing import report as report_module
+
+    monkeypatch.setattr(report_module, "_load_selected", lambda *_: [item(), item(title="二")])
+    connection = _RecordingConnection()
+    async with _answering(content) as client:
+        built = await report_module.build_report(connection, "daily", "2026-09-20", client=client)
+    return built, connection
+
+
+async def test_an_echoed_answer_becomes_the_published_summary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    built, connection = await _build(monkeypatch, ECHOED)
+
+    assert built.summary.startswith("Runway")
+    assert built.model_name == "m"
+    usage_params = connection.calls[-1][1]
+    assert usage_params[7] is True  # llm_usage.succeeded
+
+
+async def test_a_rejected_summary_is_logged_not_silent(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Falling back used to leave no trace outside `llm_usage.succeeded = false`."""
+    with caplog.at_level("WARNING", logger="ahr.processing.report"):
+        built, _ = await _build(monkeypatch, '{"summary":"总述","instructions":"x"}')
+
+    assert built.summary == "2026-09-20 共精选 2 条内容，覆盖 1 个类别。"
+    assert built.model_name is None
+    message = caplog.records[-1].getMessage()
+    assert "daily:2026-09-20" in message
+    assert "instructions" in message
