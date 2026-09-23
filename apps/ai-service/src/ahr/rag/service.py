@@ -280,12 +280,18 @@ async def retrieve(
     query_vector: list[float] | None = None,
     window_override: tuple[date, date] | None = None,
     inherited_window: tuple[date, date] | None = None,
+    corpus_cutoff: datetime | None = None,
 ) -> tuple[list[ChunkHit], Any, dict[str, Any]]:
     """The B4 pipeline, returning hits, the frozen plan, and what happened.
 
     `trace` observes; it never decides. Every number it records is already
     computed here and discarded at the next hand-off — channel ranks disappear
     into RRF, and `FusedHit.channels` / `.boosts` are read by nothing.
+
+    `corpus_cutoff` is for evaluation only: the corpus as it stood at that
+    moment. It narrows what the channels can return and nothing else — the
+    plan, and so the window the answer states, stay exactly what a reader
+    would have got.
     """
     started = time.monotonic()
     stages: dict[str, int] = {}
@@ -317,6 +323,10 @@ async def retrieve(
     if retrieval_plan.time_range is not None:
         window = (retrieval_plan.time_range.start, retrieval_plan.time_range.end)
     filter_window = window if retrieval_plan.freshness_required else None
+    temporal_window = window
+    if corpus_cutoff is not None:
+        filter_window = bound_to_cutoff(filter_window, corpus_cutoff)
+        temporal_window = bound_to_cutoff(window, corpus_cutoff) if window else None
 
     # The caller may have embedded the question already — it has to, if it
     # wants to consult the semantic cache, which needs the vector to look
@@ -351,11 +361,11 @@ async def retrieve(
     await mark("sparse", step, found=len(sparse), aliases=len(aliases))
 
     channels: dict[str, list[ChunkHit]] = {"dense": dense, "sparse": sparse}
-    if window is not None:
+    if temporal_window is not None:
         step = time.monotonic()
         temporal = temporal_search(
             connection,
-            window=window,
+            window=temporal_window,
             limit=TEMPORAL_SQL_TOP_K,
             entity_ids=query_family_entities,
         )
@@ -823,6 +833,25 @@ async def _store_in_cache(answer: Answer, state: _CacheState) -> None:
         await semantic_remember(client, state.vector, key=state.key, fingerprint=state.fingerprint)
 
 
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+
+
+def bound_to_cutoff(
+    window: tuple[datetime, datetime] | None, cutoff: datetime
+) -> tuple[datetime, datetime]:
+    """Cap a channel window at `cutoff`; no window becomes everything up to it.
+
+    The generation evaluation answered golden questions asked on 2026-08-03 from
+    whatever the corpus held on the day it ran: RAG-GOLD-080 cited a release
+    published on 08-12. Two runs then differed by corpus as much as by code,
+    and nothing in the report said which. Retrieval evaluation has frozen its
+    corpus this way (`eval.runner.snapshot_window`) since B3.
+    """
+    if window is None:
+        return (_EPOCH, cutoff)
+    return (window[0], min(window[1], cutoff))
+
+
 def _numeric_audit_rejection(audited: dict[str, Any] | None) -> str | None:
     """Why an audit reply cannot replace the draft, or None when it can (ADR-0023/0034)."""
     if audited is None:
@@ -845,6 +874,7 @@ async def answer_question(
     bypass_cache: bool = False,
     window_override: tuple[date, date] | None = None,
     conversation_id: str | None = None,
+    corpus_cutoff: datetime | None = None,
 ) -> Answer:
     """Answer one question, or refuse, and record what was cited.
 
@@ -982,6 +1012,7 @@ async def answer_question(
             query_vector=cache_state.vector,
             window_override=window_override,
             inherited_window=inherited_window,
+            corpus_cutoff=corpus_cutoff,
         )
         metrics["cache"] = cache_state.as_metrics()
         step = time.monotonic()

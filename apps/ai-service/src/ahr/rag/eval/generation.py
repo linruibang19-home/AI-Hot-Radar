@@ -440,6 +440,10 @@ async def run_generation_eval(
             # The evaluation must not fill rag_query with 90 synthetic rows
             # every time it runs.
             persist=False,
+            # The corpus as the question's author saw it. Without this a run
+            # answered 08-03 questions from 08-12 material, and two runs could
+            # not be compared (ADR-0034, 回归结果).
+            corpus_cutoff=question.asked_at,
         )
         with psycopg.connect(get_settings().database_url) as connection:
             scored = score_answer(connection, question, answer)
@@ -481,6 +485,9 @@ async def run_generation_eval(
             "reranker": reranker.model_name if reranker else None,
             "support_threshold": SUPPORT_THRESHOLD,
             "questions": len(results),
+            # Runs before 2026-09-24 answered from the whole corpus as of the
+            # day they ran; only runs carrying this key are comparable.
+            "corpus_cutoff": "asked_at",
         },
         "summary": summarise(results),
         "questions": [asdict(r) for r in results],

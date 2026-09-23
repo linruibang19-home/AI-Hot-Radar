@@ -459,3 +459,53 @@ def test_vendor_alias_specialist_set_is_complete_and_adversarial() -> None:
     assert {q.cohort for q in golden.questions} == {"zh_vendor_to_latin_model"}
     assert all(q.distractor_items for q in golden.questions)
     assert all(q.must_contain for q in golden.questions)
+
+
+# --- the generation evaluation answers from the corpus as it was -------------
+
+
+def test_a_missing_window_becomes_everything_up_to_the_cutoff() -> None:
+    from datetime import UTC, datetime
+
+    from ahr.rag.service import bound_to_cutoff
+
+    cutoff = datetime(2026, 8, 3, 15, 59, tzinfo=UTC)
+    start, end = bound_to_cutoff(None, cutoff)
+    assert start < datetime(2000, 1, 1, tzinfo=UTC)
+    assert end == cutoff
+
+
+def test_a_window_reaching_past_the_cutoff_is_capped_not_moved() -> None:
+    from datetime import UTC, datetime
+
+    from ahr.rag.service import bound_to_cutoff
+
+    cutoff = datetime(2026, 8, 3, tzinfo=UTC)
+    week = (datetime(2026, 7, 28, tzinfo=UTC), datetime(2026, 8, 10, tzinfo=UTC))
+    assert bound_to_cutoff(week, cutoff) == (week[0], cutoff)
+    earlier = (datetime(2026, 7, 1, tzinfo=UTC), datetime(2026, 7, 8, tzinfo=UTC))
+    assert bound_to_cutoff(earlier, cutoff) == earlier
+
+
+def test_generation_evaluation_freezes_the_corpus_at_asked_at() -> None:
+    """RAG-GOLD-080, asked 2026-08-03, cited a release published on 08-12."""
+    import inspect
+
+    from ahr.rag.eval import generation
+
+    assert "corpus_cutoff=question.asked_at" in inspect.getsource(generation.run_generation_eval)
+
+
+def test_every_retrieval_channel_honours_the_cutoff() -> None:
+    import inspect
+
+    from ahr.rag import service
+
+    source = inspect.getsource(service.retrieve)
+    assert "filter_window = bound_to_cutoff(filter_window, corpus_cutoff)" in source
+    assert "window=temporal_window" in source
+    # The plan — and so the window the answer states — must not move.
+    assert (
+        "build_plan(" in source
+        and "corpus_cutoff" not in source.split("build_plan(")[1].split(")")[0]
+    )
