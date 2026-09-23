@@ -48,6 +48,12 @@ python scripts/build_eval_summary.py
 | SPECIALIST-FINAL2 | `m4-rag-eval-SPECIALIST-FINAL2-20260811.json` | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 15 题生成与人工 P0 审计；14 答、1 个已知缺口安全拒答 |
 | POST-FINALIZER | `m4-rag-eval-POST-FINALIZER-RAG009-20260811.json` 等 4 份 | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 支持度过滤后的逐句门禁真实重放，4/4 完整性 1.0000 |
 
+## 诊断运行（非发布）
+
+| 轮次 | JSON | 结论 |
+|---|---|---|
+| NUMAUDIT（09-24，本地） | `m4-rag-eval-GEN-NUMAUDIT-20260924.json`<br>`m4-rag-eval-SPECIALIST-NUMAUDIT-20260924.json` | ADR-0034 回归：数值审计 44 次触发、改动 15 次、fail-closed 0；生成评测未冻结语料，与发布基线的其余差异不可比 |
+
 ## 没有出现在 `/eval` 上的几份，以及为什么留着
 
 站内摘要只展示能构成一条趋势线的轮次。下面这些不在其中，但都是真实产物，

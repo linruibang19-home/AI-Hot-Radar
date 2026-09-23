@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import re
 import statistics
+from collections import Counter
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -92,6 +93,11 @@ class GenerationResult:
     support_as_read_mean: float | None = None
     support_as_read_supported: float | None = None
     latency_ms: int | None = None
+    # ADR-0023's audit turn, as the pipeline recorded it: whether it fired, how
+    # it ended, whether it changed the draft and why an attempt was rejected.
+    # Without it a run could not say how often the audit costs a refusal — the
+    # question ADR-0034 had to settle from a production incident instead.
+    numeric_audit: dict[str, Any] | None = None
 
 
 def split_sentences(text: str) -> list[str]:
@@ -255,6 +261,7 @@ def score_answer(
             _relevant_stories(connection, question),
         ),
         latency_ms=int(answer.metrics.get("total_ms") or 0),
+        numeric_audit=answer.metrics.get("numeric_audit"),
     )
 
     result.question = question.question
@@ -371,6 +378,19 @@ def summarise(results: list[GenerationResult]) -> dict[str, Any]:
                 for r in answerable
                 if r.refused
             )
+
+    audits = [
+        r.numeric_audit for r in results if r.numeric_audit and r.numeric_audit.get("triggered")
+    ]
+    if audits:
+        summary["numeric_audit"] = {
+            "triggered": len(audits),
+            "changed": sum(1 for a in audits if a.get("changed")),
+            "fail_closed": sum(
+                1 for a in audits if str(a.get("status", "")).endswith("fail_closed")
+            ),
+            "statuses": dict(sorted(Counter(str(a.get("status")) for a in audits).items())),
+        }
 
     by_category: dict[str, Any] = {}
     for category in sorted({r.category for r in results}):

@@ -104,6 +104,8 @@ _NUMERIC_RELATION_RE = re.compile(
     re.IGNORECASE,
 )
 _CURRENCY_VALUE_RE = re.compile(r"[$￥¥]\s*\d+(?:[.,]\d+)*")
+_PERCENT_VALUE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*[%％]")
+_CHANGE_WORD_RE = re.compile(r"降|减|便宜|低|省|涨|升|增|高|贵|多|少|打折|折扣")
 
 # Bare evidence labels, including ranges: `E3`, `E6-E10`, `E6–E10`.
 _BARE_LABEL_RE = re.compile(r"\bE\d+(?:\s*[-–—~]\s*E?\d+)?")
@@ -458,13 +460,68 @@ def has_unsafe_percentage_currency_mix(answer_markdown: str) -> bool:
     """A hard post-audit invariant for the observed denominator failure.
 
     A percentage and two prices may all be true while referring to different
-    denominators.  Keeping them in separate sentences makes the relationship
-    explicit and prevents ``64%, i.e. $4.65 vs $8.37`` from surviving merely
-    because every token occurs in one evidence passage.
+    denominators: ``64%, i.e. $4.65 vs $8.37`` survives every citation check
+    because each token occurs in the same evidence passage, yet 64% is a
+    per-task figure and those are per-rollout prices.
+
+    The first version rejected *any* sentence holding a percentage and two
+    prices. That also rejected the most ordinary correct answer there is —
+    measured on production 2026-09-23, 「从 $0.50 降至 $0.20，下降 60%」 twice
+    in a row, so the whole answer to 「API 价格降了多少」 was refused. The
+    two cases differ in arithmetic, not in layout: 60% *is* the change from
+    $0.50 to $0.20, while 64% is neither the change between $4.65 and $8.37
+    (44% / 80%) nor their ratio (56%). So a sentence is unsafe only when one
+    of its percentages cannot be computed from any pair of its prices.
+
+    Clauses split on semicolons as well. The same replay produced 「max effort
+    下每任务 $5.98 对 $5.86；『便宜 40%』适用于默认设置」 — the model keeping
+    two denominators apart *explicitly*, which is what the audit asks for. The
+    P0 joined them with 「，即」, which stays inside one clause.
     """
-    for sentence in re.split(r"[。！？!?\n]", answer_markdown):
-        if ("%" in sentence or "％" in sentence) and len(_CURRENCY_VALUE_RE.findall(sentence)) >= 2:
+    for sentence in re.split(r"[。！？!?；;\n]", answer_markdown):
+        percents = [float(m) for m in _PERCENT_VALUE_RE.findall(sentence)]
+        amounts = [_currency_amount(m) for m in _CURRENCY_VALUE_RE.findall(sentence)]
+        prices = [p for p in amounts if p is not None and p > 0]
+        if not percents or len(prices) < 2:
+            continue
+        # 「下降 40%」 next to $0.50 → $0.20 is wrong even though 0.20 is 40% of
+        # 0.50: a sentence that states a change may only be explained by a
+        # change. The ratio reading is for 「为原价的 80%」 phrasing alone.
+        allow_ratio = _CHANGE_WORD_RE.search(sentence) is None
+        if any(not _percent_explained_by(p, prices, allow_ratio=allow_ratio) for p in percents):
             return True
+    return False
+
+
+# Sources round to whole percents ("about 40 percent"), so an exact match would
+# reject correct restatements; one point is wide enough for rounding and far
+# too narrow to excuse a wrong denominator (64 vs 44/56/80 in the case above).
+_PERCENT_TOLERANCE = 1.0
+
+
+def _currency_amount(token: str) -> float | None:
+    digits = re.sub(r"[^\d.,]", "", token).replace(",", "")
+    try:
+        return float(digits)
+    except ValueError:
+        return None
+
+
+def _percent_explained_by(percent: float, prices: list[float], *, allow_ratio: bool) -> bool:
+    """Whether some pair of prices yields this percentage as a change (or a ratio)."""
+    for i, first in enumerate(prices):
+        for second in prices[i + 1 :]:
+            low, high = sorted((first, second))
+            if low == high:
+                continue
+            candidates = [
+                (high - low) / high * 100,  # 「便宜 / 下降 X%」
+                (high - low) / low * 100,  # 「贵 / 上涨 X%」
+            ]
+            if allow_ratio:
+                candidates.append(low / high * 100)  # 「为原价的 X%」
+            if any(abs(candidate - percent) <= _PERCENT_TOLERANCE for candidate in candidates):
+                return True
     return False
 
 

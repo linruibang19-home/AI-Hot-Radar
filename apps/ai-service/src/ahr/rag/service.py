@@ -823,6 +823,15 @@ async def _store_in_cache(answer: Answer, state: _CacheState) -> None:
         await semantic_remember(client, state.vector, key=state.key, fingerprint=state.fingerprint)
 
 
+def _numeric_audit_rejection(audited: dict[str, Any] | None) -> str | None:
+    """Why an audit reply cannot replace the draft, or None when it can (ADR-0023/0034)."""
+    if audited is None:
+        return "unparseable"
+    if has_unsafe_percentage_currency_mix(str(audited.get("answer_markdown") or "")):
+        return "unsafe_mix"
+    return None
+
+
 async def answer_question(
     question: str,
     *,
@@ -1074,9 +1083,17 @@ async def answer_question(
                 usage.latency_ms += audited_usage.latency_ms
 
                 audited = parse_numeric_audit_output(audited_raw)
-                if audited is None or has_unsafe_percentage_currency_mix(
-                    str(audited.get("answer_markdown") or "") if audited else ""
-                ):
+                first_failure = _numeric_audit_rejection(audited)
+                if audited is not None and first_failure is None:
+                    numeric_audit["status"] = "passed"
+                    parsed = audited
+                else:
+                    # Recorded because the two failures need opposite fixes: an
+                    # unparseable reply is a transport/prompt problem, an unsafe
+                    # mix is the invariant doing its job (or being too strict,
+                    # which is how 2026-09-23 refused a correct price answer).
+                    failures = [first_failure or "unparseable"]
+                    numeric_audit["failures"] = failures
                     repair_raw, repair_usage = await llm.summarize(
                         system_prompt=NUMERIC_AUDIT_SYSTEM_PROMPT,
                         user_prompt=(
@@ -1095,9 +1112,12 @@ async def answer_question(
                     usage.latency_ms += repair_usage.latency_ms
 
                     repaired = parse_numeric_audit_output(repair_raw)
-                    if repaired is None or has_unsafe_percentage_currency_mix(
-                        str(repaired.get("answer_markdown") or "") if repaired else ""
-                    ):
+                    second_failure = _numeric_audit_rejection(repaired)
+                    if repaired is not None and second_failure is None:
+                        numeric_audit["status"] = "repaired"
+                        parsed = repaired
+                    else:
+                        failures.append(second_failure or "unparseable")
                         numeric_audit["status"] = "invalid_fail_closed"
                         parsed = {
                             "answer_markdown": "",
@@ -1107,12 +1127,13 @@ async def answer_question(
                                 "未发布高风险数字比较。"
                             ],
                         }
-                    else:
-                        numeric_audit["status"] = "repaired"
-                        parsed = repaired
-                else:
-                    numeric_audit["status"] = "passed"
-                    parsed = audited
+                # `passed` only means the audit reply was well-formed; the reply
+                # always replaces the draft. Whether it actually altered anything
+                # was never recorded, so "has the audit ever corrected an answer"
+                # could not be answered from production data.
+                numeric_audit["changed"] = (
+                    str(parsed.get("answer_markdown") or "") != candidate_markdown
+                )
             except LlmUnavailableError as exc:
                 logger.warning("numeric relation audit unavailable: %s", exc)
                 numeric_audit["status"] = "unavailable_fail_closed"
