@@ -18,6 +18,10 @@ from typing import Any
 
 # AHR-RAG-400 §5: VECTOR_PASSAGE topK. Chosen there, to be re-tuned here.
 VECTOR_PASSAGE_TOP_K = 60
+# Candidates ranked before the joins in the windowless dense path. 167 real
+# questions on the 2026-09-22 corpus kept the exact top 60 with 400; the
+# fallback covers any question where filtering thins the list below `limit`.
+DENSE_CANDIDATES = 400
 
 # AHR-RAG-400 §5: KEYWORD_FTS topK.
 KEYWORD_FTS_TOP_K = 40
@@ -66,6 +70,72 @@ class ChunkHit:
     channels: tuple[str, ...] = ()
 
 
+def _dense_ranked_first(
+    connection: Any, query_vector: list[float], *, limit: int
+) -> list[ChunkHit] | None:
+    """Exact top `limit`, ranking chunks before joining; None when not provably exact.
+
+    The candidate list is the nearest `DENSE_CANDIDATES` active chunks. If at
+    least `limit` of them survive the joins, those are the exact answer: any
+    eligible chunk outside the list has `DENSE_CANDIDATES` nearer active chunks,
+    `limit` of them eligible, so it cannot rank in the top `limit`. When fewer
+    survive the caller falls back to the full query, so the result is never an
+    approximation.
+    """
+    with connection.cursor() as cursor:
+        # `+ 0` keeps the HNSW index out of this subquery on purpose. Left to
+        # itself the planner chose the index on production, which returns at
+        # most `hnsw.ef_search` (40) approximate rows — fewer than `limit`, so
+        # every question fell back to the slow query having paid for this one
+        # too. Exact, index-free: 2.0–2.4 s on production against 11.3 s.
+        cursor.execute(
+            """
+            WITH candidate AS MATERIALIZED (
+                SELECT ch.id, ch.content_revision_id,
+                       (ch.embedding <=> %s::vector) + 0 AS distance
+                  FROM content_chunk ch
+                 WHERE ch.is_active
+                   AND ch.embedding IS NOT NULL
+                 -- id breaks exact ties (duplicate passages share a vector),
+                 -- which the joined query left to chance.
+                 ORDER BY 3, 1
+                 LIMIT %s
+            )
+            SELECT candidate.id::text,
+                   ci.id::text,
+                   1 - candidate.distance AS similarity,
+                   COALESCE(ci.zh_title, ci.title),
+                   s.name,
+                   s.id,
+                   s.source_tier
+              FROM candidate
+              JOIN content_revision cr ON cr.id = candidate.content_revision_id
+              JOIN content_item ci ON ci.id = cr.content_item_id
+                                  AND ci.current_revision_id = cr.id
+              JOIN source s ON s.id = ci.source_id
+             WHERE ci.duplicate_of_id IS NULL
+             ORDER BY candidate.distance, candidate.id
+             LIMIT %s
+            """,
+            (str(query_vector), max(DENSE_CANDIDATES, limit), limit),
+        )
+        rows = cursor.fetchall()
+    if len(rows) < limit:
+        return None
+    return [
+        ChunkHit(
+            chunk_id=row[0],
+            content_item_id=row[1],
+            score=float(row[2]),
+            title=row[3] or "",
+            source_name=row[4] or "",
+            source_id=row[5] or "",
+            source_tier=row[6] or "",
+        )
+        for row in rows
+    ]
+
+
 def dense_search(
     connection: Any,
     query_vector: list[float],
@@ -83,7 +153,19 @@ def dense_search(
     sources, which are re-fetched and re-chunked whenever the page changes: old
     revisions keep their chunks and would otherwise return stale passages that
     no longer exist on the page being cited.
+
+    Without a window the joins came first and every eligible chunk was joined,
+    detoasted and sorted: 11.3 s on the production host (2026-09-24, 40k
+    chunks), which is most of why explainer and comparison questions took
+    20 s. Ranking the chunk table alone first and joining a bounded candidate
+    list returns the same rows in 2.0–2.4 s. HNSW was measured and rejected: even
+    at ef_search 800 it dropped up to 10% of the exact top 20 on some of 167
+    real questions.
     """
+    if window is None:
+        rows = _dense_ranked_first(connection, query_vector, limit=limit)
+        if rows is not None:
+            return rows
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -650,6 +732,14 @@ def sparse_search(
     with connection.cursor() as cursor:
         cursor.execute(
             """
+            -- Each lexeme's tsquery is parsed once here rather than once per
+            -- matching chunk and term. Same rows and scores on 167 real
+            -- questions; about 12% faster (p50 142 -> 126 ms locally). Most of
+            -- the channel's cost is matching, not parsing.
+            WITH term AS MATERIALIZED (
+                SELECT t.idf, to_tsquery('simple', t.lexeme) AS query
+                  FROM unnest(%s::text[], %s::float8[]) AS t(lexeme, idf)
+            )
             SELECT ch.id::text,
                    ci.id::text,
                    -- IDF-weighted overlap, not `ts_rank_cd`.
@@ -666,9 +756,9 @@ def sparse_search(
                    -- Summing ln(N/df) over the terms a chunk actually matches is
                    -- what BM25 would do about it, and it needs no new index: the
                    -- frequencies were already computed to build this query.
-                   (SELECT COALESCE(sum(t.idf), 0)
-                      FROM unnest(%s::text[], %s::float8[]) AS t(lexeme, idf)
-                     WHERE ch.search_vector @@ to_tsquery('simple', t.lexeme)) AS rank,
+                   (SELECT COALESCE(sum(term.idf), 0)
+                      FROM term
+                     WHERE ch.search_vector @@ term.query) AS rank,
                    COALESCE(ci.zh_title, ci.title),
                    s.name,
                    s.id,
