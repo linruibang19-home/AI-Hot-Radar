@@ -2148,6 +2148,11 @@ summary:focus-visible {
   color: var(--muted-2);
 }
 
+.cite-pop-hint {
+  color: var(--muted-2);
+  font-size: var(--fs-xs);
+}
+
 /* The source's own words, set as a quotation. This is the half that makes the
    preview worth hovering; the claim below it is the model's restatement, and
    the two must never look alike. */

@@ -362,6 +362,9 @@ function renderWithCitations(
               {citation.claim}
             </span>
           )}
+          {/* The tooltip cannot hold a link — it vanishes as the pointer
+              leaves the number — so it says where the link is. */}
+          <span className="cite-pop-hint">点击编号查看来源与原文链接</span>
         </span>
       </span>
     );
@@ -466,6 +469,12 @@ function ChatTurn({
 
   const focusCitation = (number: number) => {
     setActiveCite(number);
+    // The source list is folded by default, and scrolling to an entry inside a
+    // closed <details> does nothing — so clicking [n] looked dead, and the
+    // publisher link behind it was unreachable from the answer (2026-09-24).
+    // Open it first; the list stays uncontrolled so the reader can fold it back.
+    const sources = document.getElementById(`sources-${key}`);
+    if (sources instanceof HTMLDetailsElement) sources.open = true;
     document
       .getElementById(`cite-${key}-${number}`)
       ?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -597,7 +606,7 @@ function ChatTurn({
           )}
 
           {turn.citations.length > 0 && (
-            <details className="ask-sources">
+            <details className="ask-sources" id={`sources-${key}`}>
               <summary className="ask-sources-title">
                 引用来源
                 <span className="ask-sources-count">

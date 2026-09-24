@@ -1,0 +1,10 @@
+{
+  "$comment": "Release gate thresholds. Read by apps/web/src/app/eval/page.tsx (what /eval shows) and scripts/check_release_gate.py (what CI enforces) — one file, so the two cannot disagree. Reasoning for each value is in the page's comments.",
+  "recall_at_20_min": 0.85,
+  "citation_coverage_min": 0.95,
+  "support_supported_min": 0.9,
+  "presupposition_asserted_rate_max": 0,
+  "over_refusal_rate_max": 0.05,
+  "stochastic_refusal_causes": ["all_sentences_uncited", "model_declined"],
+  "specialist_must_pass": true
+}

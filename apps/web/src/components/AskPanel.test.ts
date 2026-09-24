@@ -228,4 +228,16 @@ describe("pipeline numbers have exactly one home", () => {
     expect(TRACE).toMatch(/const inEvidence = rows\.filter\(/);
     expect(TRACE).toContain("展开全部");
   });
+
+  it("opens the folded source list when a citation number is clicked", () => {
+    // Clicking [n] scrolled to an entry inside a closed <details>, which does
+    // nothing, so the publisher link behind a citation could not be reached
+    // from the answer. The list must be opened before the scroll.
+    expect(SOURCE).toContain('id={`sources-${key}`}');
+    const focus = SOURCE.slice(SOURCE.indexOf("const focusCitation"));
+    expect(focus.indexOf("sources.open = true")).toBeGreaterThan(-1);
+    expect(focus.indexOf("sources.open = true")).toBeLessThan(focus.indexOf("scrollIntoView"));
+    // The tooltip cannot carry the link, so it says where the link is.
+    expect(SOURCE).toContain("点击编号查看来源与原文链接");
+  });
 });

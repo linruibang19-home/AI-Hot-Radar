@@ -21,6 +21,9 @@ jobs:
       - run: pip install pyyaml jsonschema
       - run: python scripts/validate_spec.py
       - run: python scripts/validate_docs.py
+      # The published RAG snapshot must be derived from data/eval-runs and pass
+      # apps/web/src/data/release-gate.json -- the thresholds /eval displays.
+      - run: python scripts/check_release_gate.py
 
   ai-service:
     name: AI service
