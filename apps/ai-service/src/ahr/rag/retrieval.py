@@ -734,12 +734,26 @@ def sparse_search(
     # about 12 percent faster (p50 142 -> 126 ms locally). Most of the
     # channel's cost is matching, not parsing. This note stays out of the SQL:
     # psycopg reads a percent sign inside a SQL comment as a placeholder.
+    #
+    # `matched` takes the GIN index first and only then joins, for the reason the
+    # dense path ranks before joining. With the match in the join list, production
+    # (v0.1.30, 42k chunks) estimated the item-revision join at 1 row, where 7,521
+    # come back, and chose a nested loop that fetched every chunk of every
+    # revision to test the tsquery on it: 48,521 pages read, 13.4 s for
+    # 「MXFP4 量化是什么？」 — against 0.15 s locally, where the whole table sits in
+    # memory. Materialising the index scan pins the order. Same rows, same scores.
     with connection.cursor() as cursor:
         cursor.execute(
             """
             WITH term AS MATERIALIZED (
                 SELECT t.idf, to_tsquery('simple', t.lexeme) AS query
                   FROM unnest(%s::text[], %s::float8[]) AS t(lexeme, idf)
+            ),
+            matched AS MATERIALIZED (
+                SELECT ch.id, ch.content_revision_id, ch.search_vector
+                  FROM content_chunk ch
+                 WHERE ch.is_active
+                   AND ch.search_vector @@ to_tsquery('simple', %s)
             )
             SELECT ch.id::text,
                    ci.id::text,
@@ -764,14 +778,12 @@ def sparse_search(
                    s.name,
                    s.id,
                    s.source_tier
-              FROM to_tsquery('simple', %s) AS q
-              JOIN content_chunk ch ON ch.search_vector @@ q
+              FROM matched ch
               JOIN content_revision cr ON cr.id = ch.content_revision_id
               JOIN content_item ci ON ci.id = cr.content_item_id
                                   AND ci.current_revision_id = cr.id
               JOIN source s ON s.id = ci.source_id
-             WHERE ch.is_active
-               AND ci.duplicate_of_id IS NULL
+             WHERE ci.duplicate_of_id IS NULL
                AND (%s::timestamptz IS NULL
                     OR COALESCE(ci.published_at, ci.observed_at) >= %s)
                AND (%s::timestamptz IS NULL
