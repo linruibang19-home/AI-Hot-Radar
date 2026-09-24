@@ -244,12 +244,18 @@ export default async function EvalPage() {
             <span>
               语料截止 {release.snapshot.cutoff.slice(0, 10)} ·{" "}
               {release.snapshot.items} 条内容
+              {release.snapshot.generationFrozenAtAskedAt &&
+                " · 生成按每题提问时间冻结"}
             </span>
           </div>
           <div>
             <span>{release.snapshot.embeddingModel}</span>
             <span>{release.snapshot.rerankerModel}</span>
-            <span>{release.snapshot.generationModel}</span>
+            <span>
+              {release.snapshot.generationModel}
+              {release.snapshot.generationServedAs &&
+                `（由 ${release.snapshot.generationServedAs} 提供服务）`}
+            </span>
           </div>
         </div>
         {/* How much of today's corpus the frozen set never sees. The panel said
@@ -360,13 +366,13 @@ export default async function EvalPage() {
           (ADR-0037), so the number cannot be read as "every sentence". */}
       <div className="notice">
         <strong>段落支持达标率按每条引用的一句论断计。</strong>
-        一条引用常被多句话共用（{sentenceSupport.citations} 条里有{" "}
-        {sentenceSupport.sharedCitations} 条），按「每句话 × 它的每条引用」重算{" "}
-        {sentenceSupport.pairs} 对：模型读到的上下文支持{" "}
-        {percent(sentenceSupport.asRead)}，悬停显示的检索段落支持{" "}
-        {percent(sentenceSupport.hitPassage)}，按句选段落后{" "}
-        {percent(sentenceSupport.anchoredPassage)}。交叉编码器测的是相关性而不是蕴含，
-        逐句删除实测会误删原文里有的句子，所以不据此删句。
+        一条引用常被多句话共用，按「每句话 × 它的每条引用」重算本快照{" "}
+        {sentenceSupport.pairs} 对：悬停显示的段落支持{" "}
+        {percent(sentenceSupport.passage ?? 0)}，模型读到的上下文支持{" "}
+        {percent(sentenceSupport.asRead ?? 0)}。同一批答案离线对照，按句选段落把前者从{" "}
+        {percent(sentenceSupport.offline.hitPassage)} 提到{" "}
+        {percent(sentenceSupport.offline.anchoredPassage)}
+        。交叉编码器测的是相关性而不是蕴含，逐句删除实测会误删原文里有的句子，所以不据此删句。
       </div>
 
       {/* Why the ceiling is not zero, stated where the number is. A threshold

@@ -31,6 +31,8 @@ python scripts/build_eval_summary.py
 | ENTITY | `m4-rag-eval-ENTITY-20260810.json` | [产品成熟度复核](../../docs/status/evidence/rag-product-readiness-20260810.md) | 在线时间通道对齐、实体时间通道与来源多样性诊断（B3，无重排） |
 | B9-FINAL | `m4-rag-eval-B9-FINAL-20260811.json` | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 90 题完整重排发布回归，Recall@20 0.8994 |
 | SPECIALIST | `m4-rag-eval-SPECIALIST-20260811.json` | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 15 题同快照实体/噪声 A/B；Recall@20 0.9333，噪声无退化 |
+| **B9-RELEASE** | `m4-rag-eval-B9-RELEASE-20260924.json` | [调优纪要](../../docs/status/evidence/rag-tuning-log.md) | **v0.1.30 发布快照（检索）**：重排 40 候选（生产深度），Recall@20 0.8998，重排失败 0 |
+| **SPECIALIST-RELEASE** | `m4-rag-eval-SPECIALIST-RELEASE-20260924.json` | [调优纪要](../../docs/status/evidence/rag-tuning-log.md) | **v0.1.30 发布快照（专项）**：15 题 entity / noise Recall@20 0.9333 / 0.9333，通过 |
 | SPECIALIST-IDENTIFIER | `m4-rag-eval-SPECIALIST-IDENTIFIER-20260811.json` | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | **负结果**：扩大深度/identifier 未救回第 27 名目标，未上线 |
 
 ## 生成侧与延迟
@@ -46,6 +48,7 @@ python scripts/build_eval_summary.py
 | GEN（08-09 双口径） | `m4-rag-eval-GEN-20260809-dual.json` | [双口径说明](../../docs/status/evidence/rag-tuning-log.md) | 段落级 0.9371；父块级 1.0000 是门控结果，不作独立判据 |
 | GENERATION-FINAL | `m4-rag-eval-GENERATION-FINAL-20260811.json` | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 90 题：完整性 0.9881，段落支持达标率 0.9344，拒答准确率 1.0000 |
 | SPECIALIST-FINAL2 | `m4-rag-eval-SPECIALIST-FINAL2-20260811.json` | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 15 题生成与人工 P0 审计；14 答、1 个已知缺口安全拒答 |
+| **GENERATION-RELEASE** | `m4-rag-eval-GENERATION-RELEASE-20260924.json` | [调优纪要](../../docs/status/evidence/rag-tuning-log.md) | **v0.1.30 发布快照（生成）**：首个按提问时间冻结语料的发布轮。完整性 1.0000，段落支持 0.9900（每条引用），逐句 0.9319 / 0.9382（631 对），误拒 1/78，诱导题 0/12；deepseek-v4-flash 由 DeepSeek-V4.1-Flash 提供服务 |
 | POST-FINALIZER | `m4-rag-eval-POST-FINALIZER-RAG009-20260811.json` 等 4 份 | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 支持度过滤后的逐句门禁真实重放，4/4 完整性 1.0000 |
 
 ## 诊断运行（非发布）
