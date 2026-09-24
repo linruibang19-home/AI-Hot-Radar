@@ -38,7 +38,7 @@ def main() -> int:
     social = load_yaml("config/social-watchlist.yaml")
     profiles_doc = load_yaml("config/ingestion-profiles.yaml")
     overrides_doc = load_yaml("config/site-overrides.yaml")
-    schema = load_json("schemas/source-registry.schema.json")
+    schema = load_json("contracts/source-registry.schema.json")
 
     sources = registry.get("sources", [])
     profiles = profiles_doc.get("profiles", {})
@@ -85,9 +85,9 @@ def main() -> int:
 
     required_files = [
         "README.md", "AGENTS.md", ".env.example",
-        "database/migrations/V001__baseline.sql", "api/openapi.yaml",
+        "database/migrations/V001__baseline.sql", "contracts/openapi.yaml",
         "docs/spec/10-source-adapter-implementation.md", "docs/spec/11-end-to-end-runbook.md",
-        "schemas/source-registry.schema.json", "schemas/ingestion-event.schema.json",
+        "contracts/source-registry.schema.json", "contracts/ingestion-event.schema.json",
     ]
     for relative in required_files:
         require((ROOT / relative).is_file(), f"missing required file: {relative}", errors)

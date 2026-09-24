@@ -2,7 +2,7 @@
 
 日期：2026-08-01
 状态：已接受
-关联：`AHR-SOURCE-900`、`schemas/source-registry.schema.json`、`config/ingestion-profiles.yaml`
+关联：`AHR-SOURCE-900`、`contracts/source-registry.schema.json`、`config/ingestion-profiles.yaml`
 
 ## 背景
 
@@ -50,4 +50,4 @@ Schema 原本已经用 `allOf` 表达了正确意图（`github_release_api` 要�
 
 ## 回滚
 
-还原 `schemas/source-registry.schema.json` 即可；该文件不参与数据库迁移，无数据影响。
+还原 `contracts/source-registry.schema.json` 即可；该文件不参与数据库迁移，无数据影响。

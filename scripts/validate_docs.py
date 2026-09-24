@@ -227,7 +227,6 @@ def main() -> int:
     for canonical in [
         "DEVELOPMENT.md",
         "docs/README.md",
-        "docs/archive-policy.md",
         "docs/handbook/README.md",
         "docs/interview/README.md",
         "docs/spec/12-delivery-index.md",

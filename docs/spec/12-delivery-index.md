@@ -2,9 +2,9 @@
 
 文档 ID：`AHR-INDEX-1200`
 
-版本：`v1.5.0`
+版本：`v1.6.0`
 
-更新时间：2026-08-17
+更新时间：2026-09-22
 
 本页回答“仓库交付了什么、证据放在哪里”，不复制易变化的生产数字。当前线上版本、
 镜像、迁移、容器和数据量只以
@@ -16,13 +16,13 @@
 | 需要了解什么 | 首选入口 | 事实性质 |
 |---|---|---|
 | 项目定位、架构与快速体验 | [`README.md`](../../README.md) | 稳定说明 + 带日期快照 |
-| 当前生产事实 | [`status/current/README.md`](../status/current/README.md) | 唯一 current 入口 |
+| 当前生产事实 | [`status/current/`](../status/current/) | 最新交接 + 生产基线 |
 | 从业务到实现系统学习 | [`handbook/README.md`](../handbook/README.md) | 当前实现教材 |
 | 面试表达、追问和代码走读 | [`interview/README.md`](../interview/README.md) | 基于实现的训练材料 |
 | 锁定需求与架构边界 | [`00-master-spec.md`](00-master-spec.md) + [`adr/`](../adr/README.md) | 规范/决策 |
 | 当前任务与完成历史 | [`08-roadmap-ai-ide.md`](08-roadmap-ai-ide.md) | 任务卡台账 |
-| 部署、备份、恢复与迁移 | [`status/operations/`](../status/operations/) | 带日期运维证据 |
-| RAG 实验和发布门 | [`status/eval/`](../status/eval/) | 固定 run 证据 |
+| 部署、备份、恢复与迁移 | [`design/`](../design/) 作业手册 + [`status/evidence/`](../status/README.md) | 手册 + 带日期运维证据 |
+| RAG 实验和发布门 | [`rag-tuning-log.md`](../status/evidence/rag-tuning-log.md) + [`data/eval-runs/`](../../data/eval-runs/README.md) | 纪要 + 固定 run 证据 |
 
 ## 2. 可执行交付物
 
@@ -32,9 +32,10 @@
 | `apps/core-api/` | Spring Boot Core API | 公共读 API、报告/订阅、管理 RBAC 与审计 |
 | `apps/ai-service/` | FastAPI AI Service + worker | 采集、正文抽取、结构化、聚类、报告生成、RAG 与评测 |
 | `database/migrations/` | Flyway 迁移链 | PostgreSQL/pgvector 的唯一结构演进历史，禁止删除或压平 |
-| `api/` + `schemas/` | 跨服务契约 | OpenAPI、JSON Schema 与生成类型输入 |
+| `contracts/` | 跨服务契约 | OpenAPI、JSON Schema 与生成类型输入 |
 | `config/` | 运行策略 | 信源注册、采集 Profile、主题词表与模型白名单 |
 | `data/golden/` | 固定评测输入 | 90 题黄金集、fixture 和可复现实验数据；不放生产秘密 |
+| `data/eval-runs/` | 评测产物 | 每轮检索/生成/延迟的逐题 JSON，`/eval` 摘要由此生成 |
 | `infra/compose/` | 本地/生产编排 | PostgreSQL、Redis、三服务、worker、Caddy 与运维容器 |
 | `infra/scripts/` | 生产脚本 | 预检、部署、smoke、备份、隔离恢复与监控 |
 | `.github/workflows/` | CI/CD | 分层验证、镜像构建、GHCR 发布与发布门 |
@@ -82,24 +83,17 @@
 | 管理操作可追责 | OPERATOR RBAC、二次确认、幂等键与审计记录 |
 
 任何指标都必须同时带日期、样本量、模型/配置版本和测量环境。当前数字见生产基线；
-历史 run 见 `docs/status/eval/`，两者不得混用。
+历史 run 见 `data/eval-runs/`，两者不得混用。
 
 ## 5. 文档层级
 
-| 目录 | 回答的问题 | 是否允许记录动态数字 |
-|---|---|---|
-| `docs/spec/` | 产品和架构必须是什么 | 原则上否；任务状态除外 |
-| `docs/adr/` | 为什么这样选、何时回滚 | 只记录决策当时证据 |
-| `docs/handbook/` | 当前代码实际上怎样工作 | 少量稳定常量；动态事实链接 current |
-| `docs/interview/` | 怎样基于代码讲清楚并应对追问 | 可引用，但必须标日期和环境 |
-| `docs/status/current/` | 现在部署的是什么 | 是；必须标 `as of` |
-| `docs/status/{product,operations,eval,delivery,history}/` | 某次验收或实验发生了什么 | 是；冻结后不追改历史结论 |
-| `docs/design/` | 某项实现前后的设计证据 | 需标 current 或 historical |
+各目录回答什么、能否记录动态数字、怎样冻结与归档，统一见
+[`docs/README.md`](../README.md)，本页不再复制。
 
 ## 6. 维护规则
 
 1. 当前事实只更新 `docs/status/current/production-baseline.md`，其他入口链接它。
 2. 版本发布后保留原验收文档，不把旧数字改成新数字伪装成当时结果。
 3. 数据库、服务边界、认证、RAG 策略、核心实体或破坏性 API 改动先写 ADR。
-4. migrations、schemas、CI 和 infra 是可验证交付的一部分，不能为缩短目录而删除。
+4. migrations、contracts、CI 和 infra 是可验证交付的一部分，不能为缩短目录而删除。
 5. 新工作只从 `08-roadmap-ai-ide.md` 领取一张任务卡；本索引不维护“下一阶段愿望清单”。

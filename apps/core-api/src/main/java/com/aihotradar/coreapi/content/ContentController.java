@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Public content endpoints, matching api/openapi.yaml. */
+/** Public content endpoints, matching contracts/openapi.yaml. */
 @RestController
 @RequestMapping("/api/v1")
 public class ContentController {

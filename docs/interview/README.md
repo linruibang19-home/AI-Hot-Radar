@@ -27,8 +27,8 @@
 | 16 | [`16-backend-layering-runtime-interview.md`](16-backend-layering-runtime-interview.md) | 业务域分层、FastAPI、JVM、Redis 与部署如何被追问？ |
 | 17 | [`17-resume-glossary.md`](17-resume-glossary.md) | 简历上每个术语一句话怎么解释？哪些该删？**投简历前念一遍** |
 
-补充材料：[`../interview-guide.md`](../archive/interview/interview-guide-20260812.md) 是已冻结的早期深挖稿，内容已迁入
-工程手册和本目录；[`../status/history/project-status.md`](../status/history/project-status.md) 是累计历史，不用于
+补充材料：[`../archive/interview-guide-20260812.md`](../archive/interview-guide-20260812.md) 是已冻结的早期深挖稿，内容已迁入
+工程手册和本目录；[`../archive/project-status.md`](../archive/project-status.md) 是累计历史，不用于
 判断当前生产事实。
 
 ## 四阶段训练法
@@ -55,7 +55,7 @@
 |---|---|
 | 产品可用 | 线上站点、根 README 五张脱敏截图 |
 | 内容持续更新 | `/`、`/ops`、`/admin/sources` 的本次读取和最近成功时间 |
-| RAG 达到发布门 | `/eval`、`../status/eval/`、90 题逐题 artifacts |
+| RAG 达到发布门 | `/eval`、[`data/eval-runs/`](../../data/eval-runs/README.md) 的 90 题逐题 artifacts |
 | 引用可追溯 | `/ask/{id}` 的句级编号、原文卡片和检索轨迹 |
 | 报告与邮件闭环 | `/reports`、订阅确认、`email_delivery` 状态与 SMTP 验收 |
 | 生产可恢复 | [`../status/current/production-baseline.md`](../status/current/production-baseline.md)、备份清单、SHA-256 和隔离恢复记录 |

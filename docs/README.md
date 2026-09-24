@@ -1,26 +1,74 @@
 # 文档导航
 
-本目录按用途分为七类：`spec/` 是锁定契约，`adr/` 记录偏离契约的决策，
-`design/current/` 是随开发修订的当前方案，`status/` 是实际运行产生的事实，
-`handbook/` 是完整工程教材，`interview/` 把事实训练成答辩表达，`archive/` 保存已取代但仍可审计的
-开发方案和早期讲稿。
+`docs/` 只放给人读的文字，也是全部文档规则的唯一出处。评测原始 JSON 在
+[`../data/eval-runs/`](../data/eval-runs/README.md)，跨服务契约（OpenAPI、JSON Schema）在
+[`../contracts/`](../contracts/)。
 
-## `handbook/` — 完整工程教材
+## 从哪里开始
 
-[工程手册入口](handbook/README.md) 从产品问题、四条业务链路、运行服务、数据状态、信源、
-内容、报告邮件一路讲到 RAG、Java/Python/Next、部署和工程权衡；01–15 是主线，16–23 是
-按问题选择的实现专题。它回答“系统怎样工作、代码
-在哪里、为什么这样做、失败如何恢复”，是吃透项目的第一入口。
+| 想知道什么 | 读哪里 |
+|---|---|
+| 现在线上什么状态、下一步做什么 | [`status/current/`](status/current/) 里日期最新的 `handoff-*.md`，当前是 [handoff-20260922](status/current/handoff-20260922.md) |
+| 生产版本、服务与数据基线 | [`status/current/production-baseline.md`](status/current/production-baseline.md) |
+| 系统怎么工作、代码在哪 | [`handbook/`](handbook/README.md)、[`code-map.md`](code-map.md) |
+| 为什么这样选、何时回滚 | [`adr/`](adr/README.md) |
+| 产品与架构必须是什么 | [`spec/00-master-spec.md`](spec/00-master-spec.md)，其余规格见文末清单 |
+| 当前任务 | [`spec/08-roadmap-ai-ide.md`](spec/08-roadmap-ai-ide.md) 中最后一张状态为执行中的任务卡 |
+| 面试准备 | [`interview/`](interview/README.md) |
+| 某次验收、实验、压测或事故当时发生了什么 | [`status/README.md`](status/README.md) |
 
-## `spec/` — 工程规格（唯一事实源）
+## 目录与更新规则
 
-产品、架构、数据、接口、采集、RAG、前端、安全与路线图的锁定规格。发生冲突时以
-`spec/00-master-spec.md` 的锁定决策优先。
+| 目录 | 内容 | 更新规则 |
+|---|---|---|
+| `spec/` | 锁定的产品、架构、数据、接口规格 | 冲突时以 `00-master-spec.md` 为准；实质变更先写 ADR |
+| `adr/` | 偏离或补充规格的决策 | 只追加，不改写历史 ADR |
+| `design/` | 规格没规定、实现必须定下来的方案，以及运维作业手册 | 活文档，随实测修订 |
+| `handbook/` | 完整工程教材：01–15 主线，16–23 按问题选读的专题 | 随代码更新；动态数字链接 `status/current/` |
+| `interview/` | 把事实训练成答辩表达 | 引用数字须标日期和环境 |
+| `status/current/` | 现在是什么：最新交接与生产基线 | 随生产变更更新，必须写「截至」日期 |
+| `status/evidence/` | 带日期的验收、实验、压测、发布与事故证据 | 冻结：不改数字，只新增更晚的快照 |
+| `archive/` | 被取代的方案、交接、讲稿与累计开发日志 | 冻结：顶部写明替代入口，不再追赶当前代码 |
+| `assets/screenshots/` | 根 README 的截图 | `node scripts/refresh-screenshots.mjs docs/assets/screenshots` |
+
+判断写到哪里：「规格没说，需要定一个做法」→ `design/`；「规格说了 A，我们要做 B」→ **先写
+ADR**，再改 `design/`；「跑出来的数字」→ `status/`。
+
+`design/` 的两条硬约定：
+
+1. **每份文档必须有「变更记录」小节**，写明方案因何被修正。多数调整源于实测发现的缺陷，
+   不留原因，下一个人会把同一个坑再踩一遍。
+2. **参数必须标注来源**：`实测标定` / `规格规定` / `待评测标定`，禁止来历不明的魔数。
+
+## 事实优先级
+
+```text
+当前环境实时查询
+  > status/current/ 中带日期的交接与生产基线
+  > status/evidence/ 中的日期化验收证据
+  > spec / ADR 中的目标与锁定决策
+  > handbook / interview 中的讲解示例
+```
+
+## 动态数字
+
+内容、chunk、Story、信源、测试数、容器数和延迟只能以三种形式出现：带日期和环境的快照；
+从 CI 或数据库动态生成的当前值；明确写「示例 / 目标 / 历史」。历史证据不为追上当前而改写原数字。
+
+仓库 `main`、Release 标签和生产 `IMAGE_TAG` 必须分开写：仅含文档的提交不等于生产镜像已重新发布。
+
+## 归档与门禁
+
+- 文档不再代表当前事实时，用 `git mv` 移进 `archive/`（保留 Git 历史），并在顶部写替代入口。
+- 评测 JSON、失败实验、迁移、fixture 和生产验收是不可再生证据，永不当缓存删除。
+- `scripts/validate_docs.py` 检查全部相对 Markdown 链接、handbook/interview 必需章节和已纠正的
+  旧说法；CI 与 `scripts/validate_spec.py` 一起执行。
+
+## 规格清单
 
 | 文件 | 作用 |
 |---|---|
 | [00-master-spec.md](spec/00-master-spec.md) | 总规格与 ADR-001~011 锁定决策 |
-| [adr/README.md](adr/README.md) | 一级锁定决策与独立 ADR-0012~0032 的编号、主题和维护规则 |
 | [01-product-requirements.md](spec/01-product-requirements.md) | 页面、角色与产品验收 |
 | [02-system-architecture.md](spec/02-system-architecture.md) | 服务边界、状态机、部署 |
 | [03-data-ingestion.md](spec/03-data-ingestion.md) | 数据模型、去重、切块、Story |
@@ -32,73 +80,4 @@
 | [09-source-registry-fulltext.md](spec/09-source-registry-fulltext.md) | 信源分层与全文标准 |
 | [10-source-adapter-implementation.md](spec/10-source-adapter-implementation.md) | 各类接口读取与字段映射 |
 | [11-end-to-end-runbook.md](spec/11-end-to-end-runbook.md) | 联调与恢复流程 |
-| [12-delivery-index.md](spec/12-delivery-index.md) | 交付索引 |
-
-## `code-map.md` — 代码学习入口
-
-[代码全景与学习地图](code-map.md) 按“采集到页面、报告与邮件、RAG、管理权限、发布与测试”
-组织全部实现文件。它用于回答代码在哪里，不替代规格和 ADR。
-
-## `adr/` — 架构决策记录
-
-偏离或补充规格的决策都必须先有 ADR。格式：背景、决策、备选、后果、回滚。
-
-| 编号 | 决策 |
-|---|---|
-| [0012](adr/0012-source-schema-discovery-url-conditional.md) | `discovery_url` 改为按 profile 条件必填 |
-| [0013](adr/0013-openai-cdn-blocks-non-browser-clients.md) | OpenAI 官网回源被 CDN 拒绝，降级 metadata_only |
-| [0014](adr/0014-entity-types-align-to-taxonomy.md) | 实体类型以 `config/taxonomy.yaml` 的 8 类为准 |
-| [0015](adr/0015-rag-sparse-channel-uses-postgres.md) | 稀疏检索复用 Postgres 既有索引，不引入 ES / Neo4j |
-| [0016](adr/0016-rag-adaptive-parent-block.md) | 父块自适应阶梯，由查询派生而非物化落表 |
-| [0017–0027](adr/) | 缓存、CJK、鉴权、拒答、引用、迁移、数字审计、发布、订阅与模型配置 |
-| [0028](adr/0028-current-task-orchestration-is-database-polling.md) | 当前后台编排是 PostgreSQL 轮询，Outbox 未消费 |
-| [0029](adr/0029-evidence-passage-is-the-content-chunk-physical-row.md) | evidence passage 的当前物理行是 `content_chunk` |
-| [0030](adr/0030-vendor-navigation-uses-auditable-relations.md) | 厂商导航使用可审计关系，不做无依据推断 |
-| [0031](adr/0031-content-chunk-sets-are-versioned.md) | `content_chunk` 以不可变 chunk set 版本化 |
-| [0032](adr/0032-generation-provider-credentials-are-database-backed.md) | 生成供应商地址与密钥入库加密，只接官方兼容端点 |
-| [0033](adr/0033-generation-console-removed-model-stays-database-backed.md) | 删除模型控制台；模型选择留在数据库层，凭证回到环境变量 |
-
-## `design/` — 开发方案（活文档）
-
-规格没有规定、但实现必须定下来的做法，以及开发中因实测发现而做的方案调整。
-每份文档都有「变更记录」小节，记录方案因何被修正。
-
-| 文件 | 范围 |
-|---|---|
-| [design/README.md](design/README.md) | 四层文档的分工与写入规则 |
-| [m4-rag-implementation.md](archive/development/m4-rag-implementation.md) | M4 RAG 全流程实现方案与外部方案取舍 |
-| [m4-rag-evaluation.md](archive/development/m4-rag-evaluation.md) | 90 题黄金集、指标含义与发布门禁 |
-| [m5-deployment.md](design/current/m5-deployment.md) | 单机生产部署、安全与恢复设计 |
-| [m5-first-deploy-checklist.md](design/current/m5-first-deploy-checklist.md) | 首次部署逐步检查表与危险操作边界 |
-| [server-migration-runbook.md](design/current/server-migration-runbook.md) | 换服务器：迁什么、什么顺序、切换窗口多长 |
-
-## `status/` — 运行状态与验收证据
-
-由实际运行生成，随开发进度更新。
-
-| 文件 | 内容 |
-|---|---|
-| [status/README.md](status/README.md) | **状态总索引**：当前入口、历史快照、RAG 与发布证据 |
-| [current/README.md](status/current/README.md) | **唯一当前入口**：事实优先级和阅读顺序 |
-| [production-baseline.md](status/current/production-baseline.md) | 当前生产版本、服务、数据、质量与边界 |
-| [project-status.md](status/history/project-status.md) | 冻结的累计开发日志：旧版本、失败假设和已关闭待办 |
-| [m1-canary-evidence.md](status/history/m1-canary-evidence.md) | M1 信源探测验收证据 |
-| [m1-canary-evidence.json](status/history/m1-canary-evidence.json) | 逐源原始数据 |
-| [rag-product-readiness-20260810.md](status/product/rag-product-readiness-20260810.md) | **当前 RAG 全链路、成熟产品对标与优化顺序** |
-| [handoff-20260814.md](status/current/handoff-20260814.md) | v0.1.18 发布交接历史，已由生产基线取代 |
-| [repository-hygiene-20260812.md](status/operations/repository-hygiene-20260812.md) | 本轮全仓盘点、清理与可恢复归档证据 |
-
-`handoff-20260810.md` 与 `handoff-20260811.md` 是历史快照，不用来判断当前运行版本。
-
-## 其他入口
-
-- [../README.md](../README.md) — 项目总入口与规范优先级
-- [../DEVELOPMENT.md](../DEVELOPMENT.md) — 本地开发、启动、常见问题
-- [interview/README.md](interview/README.md) — 面试准备导航、系统地图、题库与演示脚本
-- [handbook/19-backend-layering-runtime-and-redis.md](handbook/19-backend-layering-runtime-and-redis.md) — Java/Python 分层、生产 JVM 与 Redis 实现
-- [handbook/20-ingestion-evidence-and-chunking.md](handbook/20-ingestion-evidence-and-chunking.md) — RSS、GitHub、arXiv、API 等信源的真实入库、切块与图片/PDF 边界
-- [handbook/21-redis-cache-and-short-lived-state.md](handbook/21-redis-cache-and-short-lived-state.md) — Java/Python 的 Redis key、TTL、失效、限流与数据库兜底
-- [handbook/22-rag-golden-set-and-quality-page.md](handbook/22-rag-golden-set-and-quality-page.md) — 90 题黄金集、逐轮实验、质量页刷新机制与发布门
-- [interview/16-backend-layering-runtime-interview.md](interview/16-backend-layering-runtime-interview.md) — 后端架构、运行时与缓存专项问答
-- [interview-guide.md](archive/interview/interview-guide-20260812.md) — 2026-08-12 冻结的早期深挖稿；新材料已迁入 handbook/interview
-- [archive-policy.md](archive-policy.md) — 文档状态、冻结与归档规则
+| [12-delivery-index.md](spec/12-delivery-index.md) | 交付物与证据索引 |

@@ -1,20 +1,20 @@
 """Turn the evaluation JSONs into one summary the web app can render (T1-2).
 
 Ten rounds of retrieval evaluation, plus generation and latency runs, live in
-`docs/status/eval/` as per-question JSON. None of it is reachable from the site. A
+`data/eval-runs/` as per-question JSON. None of it is reachable from the site. A
 project with numbers and a project without numbers are different projects in an
 interview, and right now this one looks like the second from the outside.
 
 **Why a generated file rather than reading the JSONs at request time.** The web
-image is built from `apps/web` alone, so it cannot reach `docs/`, and the raw
+image is built from `apps/web` alone, so it cannot reach `data/`, and the raw
 files are 90 questions deep — three megabytes to render a table of sixteen rows.
 This writes the summary once, into the app's own source tree, where the build
 picks it up like any other module.
 
 **Why the narrative is here and not derived.** What a round changed, what it was
 required to beat, and what the result meant are the parts worth reading, and
-none of them are recoverable from a metrics blob. They are transcribed from the
-markdown reports next to each JSON, which stay the long-form record.
+none of them are recoverable from a metrics blob. They are transcribed from
+`docs/status/evidence/rag-tuning-log.md`, which stays the long-form record.
 
 Re-run after any new evaluation:
 
@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
-STATUS = ROOT / "docs" / "status" / "eval"
+RUNS = ROOT / "data" / "eval-runs"
 TARGET = ROOT / "apps" / "web" / "src" / "data" / "eval-summary.json"
 
 # The story of each round, in the order it happened. `file` is the JSON that
@@ -349,7 +349,7 @@ EXTRA: list[dict[str, Any]] = [
 
 
 def _load(name: str) -> dict[str, Any]:
-    return json.loads((STATUS / name).read_text(encoding="utf-8"))
+    return json.loads((RUNS / name).read_text(encoding="utf-8"))
 
 
 def _retrieval_metrics(payload: dict[str, Any]) -> dict[str, Any]:
@@ -433,7 +433,7 @@ def build() -> dict[str, Any]:
     corpus_snapshot = retrieval_config["corpus_snapshot"]
 
     return {
-        "generatedFrom": "docs/status/eval/m4-rag-eval-*.json",
+        "generatedFrom": "data/eval-runs/m4-rag-eval-*.json",
         "release": {
             "retrievalRunId": release_retrieval["run_id"],
             "generationRunId": release_generation["run_id"],

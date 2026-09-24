@@ -22,7 +22,7 @@ P95 510 ms。把 Python health 换成真正的 `/rag/stats` 后，复跑降到 6
 6. 以满足 SLO 的最高稳定档为容量，保留至少 30% 余量，并做长时间 soak 找泄漏。
 
 脚本：`infra/loadtest/read-paths.js`、两份 pgbench SQL 与 `run-production-readonly.sh`；证据：
-`docs/status/loadtest/2026-08-13-local-baseline.md` 和 `2026-08-14-m5-020-production.md`。
+`docs/status/evidence/loadtest-local-baseline-20260813.md` 和 `2026-08-14-m5-020-production.md`。
 
 ## 高频追问
 

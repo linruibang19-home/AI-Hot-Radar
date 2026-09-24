@@ -89,6 +89,6 @@ B2、B8、B13 和 GEN/GEN-FIX 展示了工程判断：
 - `apps/ai-service/src/ahr/rag/eval/`
 - `apps/ai-service/tests/test_rag_eval.py`
 - `data/golden/`
-- `docs/status/eval/`
-- `docs/status/product/rag-specialist-audit-20260811.md`
+- `data/eval-runs/`
+- `docs/status/evidence/rag-specialist-audit-20260811.md`
 

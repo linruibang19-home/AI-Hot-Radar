@@ -1,5 +1,5 @@
 {
-  "generatedFrom": "docs/status/eval/m4-rag-eval-*.json",
+  "generatedFrom": "data/eval-runs/m4-rag-eval-*.json",
   "release": {
     "retrievalRunId": "B9-20260810T195839Z",
     "generationRunId": "GEN-20260830T020806Z",

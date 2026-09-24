@@ -29,8 +29,7 @@ ai-hot-radar/
 │   ├── web/                 # Next.js
 │   ├── core-api/            # Spring Boot
 │   └── ai-service/          # FastAPI + workers
-├── api/                     # OpenAPI 公共契约
-├── schemas/                 # Java/Python 共享 JSON Schema
+├── contracts/               # OpenAPI 公共契约 + Java/Python 共享 JSON Schema
 ├── database/
 │   └── migrations/          # Flyway SQL，唯一数据库迁移入口
 ├── config/
