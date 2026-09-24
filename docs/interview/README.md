@@ -1,5 +1,8 @@
 # AI Hot Radar 面试准备总入口
 
+> 2026-09-24 已按 v0.1.32 与 `/eval` 的 v0.1.30 发布快照更新。**当前投递的简历全文**在
+> [`08-resume-and-star-stories.md`](08-resume-and-star-stories.md) 开头，新增 STAR 13–16 与题库 121–132。
+
 本目录不是第二套规格；事实和边界仍以 [`../spec/00-master-spec.md`](../spec/00-master-spec.md)、
 领域规格、ADR 和状态证据为准。先读完整的 [`../handbook/`](../handbook/README.md) 建立知识，
 再用这里训练不同面试场景。这里不是摘要，而是“怎么讲、从哪里看代码、被追问如何证明”。
@@ -46,7 +49,7 @@
 1. **动态数据与固定评测分开。** 首页、`/ops`、信源后台读当前数据库；`/eval` 是固定语料、
    模型和黄金集上的发布快照，只在主动重评时变化。
 2. **实现事实与技术判断分开。** “使用 pgvector HNSW”是事实；“当前不需要 Milvus”是基于
-   八千级分块、低并发和事务过滤的阶段性判断。
+   约 4 万分块、低并发和事务过滤的阶段性判断。
 3. **预留不等于完成。** `outbox_event` 当前只写不读；不能把它包装成已经工作的消息架构。
 
 ## 证据索引
@@ -55,11 +58,13 @@
 |---|---|
 | 产品可用 | 线上站点、根 README 五张脱敏截图 |
 | 内容持续更新 | `/`、`/ops`、`/admin/sources` 的本次读取和最近成功时间 |
-| RAG 达到发布门 | `/eval`、[`data/eval-runs/`](../../data/eval-runs/README.md) 的 90 题逐题 artifacts |
+| RAG 达到发布门 | `/eval`、[`data/eval-runs/`](../../data/eval-runs/README.md) 的 90 题逐题 artifacts；门禁由 CI 执行（`scripts/check_release_gate.py`，ADR-0038） |
+| 评测没有泄漏 | 生成评测按提问时间冻结；`GEN-FROZEN` 与旧 run 的逐题配对（STAR 13） |
+| 性能结论来自生产 | v0.1.31 的执行计划与前后对比（STAR 14、15 篇） |
 | 引用可追溯 | `/ask/{id}` 的句级编号、原文卡片和检索轨迹 |
 | 报告与邮件闭环 | `/reports`、订阅确认、`email_delivery` 状态与 SMTP 验收 |
 | 生产可恢复 | [`../status/current/production-baseline.md`](../status/current/production-baseline.md)、备份清单、SHA-256 和隔离恢复记录 |
-| 技术取舍有依据 | `../adr/`、B2/B8/B13/GEN-FIX 负结果与回滚条件 |
+| 技术取舍有依据 | `../adr/`、B2/B8/B13/GEN-FIX 与 2026-09 的中文去碎片、LLM 规划器、逐句删句三个负结果 |
 
 ## 三个实现专题
 

@@ -3,6 +3,8 @@
 ## 演示前检查
 
 - 公网 `/`、`/reports`、`/ask`、`/eval`、`/ops`、`/admin/sources` 返回 200；
+- **查 DeepSeek 余额**：余额耗尽时 `/ask` 只会显示"生成服务不可用"，演示当场失败；
+- 线上一次回答约 10–20 秒，提前想好等待时讲什么（执行轨迹、召回通道），别干等；
 - 准备一个可答问题、一个时间问题、一个带假前提的不可答问题；
 - 预先打开一条已保存 `/ask/{id}`，避免模型或网络故障时无内容；
 - README 截图不含邮箱、令牌、密钥、服务器管理信息和浏览器隐私；
@@ -26,18 +28,22 @@ RAG 最终引用 canonical 正文 chunk。
 打开 `/ask` 提问，再进入结果页：
 
 1. 展示解析后的时间范围和证据数；
-2. 点句级引用到来源卡与原文；
+2. 点答案里的编号 `[n]`：底部来源列表自动展开并高亮这一条，再点「阅读原文 ↗」到信源原页；
 3. 展开“为什么是这些证据”，讲 dense/sparse、rerank、Story 折叠和淘汰原因；
 4. 提带假前提问题，展示拒绝错误前提而不是顺着编。
 
 ### 2:35–3:25 质量门
 
-打开 `/eval`，先说这是固定 90 题发布快照，不随在线提问变化；展示 Recall、引用覆盖、支持度、误拒
-和诱导题，再指出 B2/B8/B13 负结果和 GEN-FIX 原假设被证伪。
+打开 `/eval`，先说这是固定 90 题发布快照，不随在线提问变化；指给面试官看快照那一行写着
+**"生成按每题提问时间冻结"**和**"由 DeepSeek-V4.1-Flash 提供服务"**，顺势讲评测泄漏（08 STAR 13）。
+再展示 Recall、引用完整性、段落支持、误拒和诱导题五格，并说明这些门槛由 CI 执行，不达标发不出版本。
 
-**讲误拒那一格时不要说"零误拒"**，说"约 4%，而且它是随机量——同配置连跑四轮是 2/1/1/3，
+**讲误拒那一格时不要说"零误拒"**，说"本轮 1/78，而且它是随机量——同配置连跑四轮是 2/1/1/3，
 所以门禁是阈值不是零容忍；真正零容忍的是诱导题的编造，那一项实测稳定为 0"。这句话
 四十秒，是整场 demo 里性价比最高的一段：它同时证明你会做实验、会读方差、会设计门禁。
+
+**讲段落支持 99% 时主动补一句**："这是按每条引用一句算的，逐句是 93%——下面那段黄色说明就是讲这个的。"
+主动说出口径，比被追问后再解释可信得多。
 
 ### 3:25–4:15 报告与邮件
 
@@ -75,9 +81,9 @@ pgvector 的当前边界，以及按什么证据引入队列、独立搜索或�
 |---|---|
 | 采集与全文 | `apps/ai-service/src/ahr/ingestion/`、`config/ingestion-profiles.yaml` |
 | 切块与结构化 | `apps/ai-service/src/ahr/processing/` |
-| RAG | `apps/ai-service/src/ahr/rag/`、`data/eval-runs/` |
+| RAG | `apps/ai-service/src/ahr/rag/`、`data/eval-runs/`、`scripts/check_release_gate.py` |
 | API/订阅 | `apps/core-api/src/main/`、Flyway V023 |
-| 前端 | `apps/web/app/`、`apps/web/lib/` |
+| 前端 | `apps/web/src/app/`、`apps/web/src/components/`、`apps/web/src/lib/` |
 | 部署 | `infra/compose/`、`infra/scripts/`、`.github/workflows/release.yml` |
 | 决策与反例 | `docs/adr/`、`docs/archive/project-status.md` |
 
