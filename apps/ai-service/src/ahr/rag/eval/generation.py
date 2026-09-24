@@ -71,6 +71,12 @@ class GenerationResult:
     # question immediately after and the one a report still could not answer.
     uncited_examples: list[str] = field(default_factory=list)
     citations: int = 0
+    # Each surviving citation: its number, the chunk it points at, the item,
+    # the sentence it backs and the live gate's score. Without these a run
+    # could say *that* passage-level support moved but not which citation
+    # moved it, and re-scoring one change against the same answers meant
+    # paying for all ninety generations again.
+    cited: list[dict[str, Any]] = field(default_factory=list)
     must_contain_hit: float | None = None
     must_not_claim_mentions: list[str] = field(default_factory=list)
     # What the answer actually said. Stored so a finished run can be
@@ -254,6 +260,16 @@ def score_answer(
         # before it becomes the next refusal.
         uncited_examples=list(answer.metrics.get("uncited_examples") or []),
         citations=len(answer.citations),
+        cited=[
+            {
+                "number": c.number,
+                "chunk_id": c.chunk_id,
+                "item_id": c.content_item_id,
+                "claim": c.claim_text[:400],
+                "support": c.support_score,
+            }
+            for c in answer.citations
+        ],
         citation_coverage=citation_coverage(answer.answer_markdown),
         citation_precision=citation_precision(cited_items, question.relevant_ids),
         story_coverage=story_coverage(
