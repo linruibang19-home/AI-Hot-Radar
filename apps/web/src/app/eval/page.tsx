@@ -1,4 +1,5 @@
 import summary from "@/data/eval-summary.json";
+import gate from "@/data/release-gate.json";
 
 import type { Metadata } from "next";
 
@@ -101,7 +102,7 @@ export const metadata: Metadata = {
  * in every run ever recorded. That is a threshold this system can actually
  * hold.
  */
-const OVER_REFUSAL_CEILING = 0.05;
+const OVER_REFUSAL_CEILING = gate.over_refusal_rate_max;
 
 /**
  * Refusal causes the model produces, which vary between identical runs.
@@ -111,7 +112,7 @@ const OVER_REFUSAL_CEILING = 0.05;
  * provider being down — and a pipeline that refuses is a defect however rarely
  * it happens. Those block regardless of the rate.
  */
-const STOCHASTIC_CAUSES = ["all_sentences_uncited", "model_declined"];
+const STOCHASTIC_CAUSES: string[] = gate.stochastic_refusal_causes;
 
 const CAUSE_LABELS: Record<string, string> = {
   all_sentences_uncited: "模型漏标引用，整句被删",
@@ -144,6 +145,11 @@ function metric(value: number | null | undefined) {
 
 function percent(value: number) {
   return `${(value * 100).toFixed(1)}%`;
+}
+
+/** A threshold as written in the gate, without the false precision of `percent`. */
+function threshold(value: number) {
+  return `${Math.round(value * 100)}%`;
 }
 
 /**
@@ -203,14 +209,18 @@ export default async function EvalPage() {
   const codeSideCause = Object.keys(
     release.generation.over_refusal_causes ?? {},
   ).find((cause) => !STOCHASTIC_CAUSES.includes(cause));
+  // The same conditions `scripts/check_release_gate.py` enforces in CI, from
+  // the same file. The page used to hold its own literals, so the verdict shown
+  // here was never checked by anything that could fail a build.
   const releasePassed =
-    release.retrieval["recall@20"] >= 0.85 &&
-    release.generation.citation_coverage >= 0.95 &&
-    release.generation.support_supported >= 0.9 &&
-    release.generation.presupposition_asserted_rate === 0 &&
+    release.retrieval["recall@20"] >= gate.recall_at_20_min &&
+    release.generation.citation_coverage >= gate.citation_coverage_min &&
+    release.generation.support_supported >= gate.support_supported_min &&
+    release.generation.presupposition_asserted_rate <=
+      gate.presupposition_asserted_rate_max &&
     release.generation.over_refusal_rate <= OVER_REFUSAL_CEILING &&
     codeSideCause === undefined &&
-    release.specialist.passed;
+    (!gate.specialist_must_pass || release.specialist.passed);
 
   return (
     <>
@@ -319,19 +329,25 @@ export default async function EvalPage() {
           <div className="stat-value">
             {percent(release.retrieval["recall@20"])}
           </div>
-          <div className="stat-label">主集 Recall@20 · 门槛 85%</div>
+          <div className="stat-label">
+            主集 Recall@20 · 门槛 {threshold(gate.recall_at_20_min)}
+          </div>
         </div>
         <div className="stat">
           <div className="stat-value">
             {percent(release.generation.citation_coverage)}
           </div>
-          <div className="stat-label">事实句引用完整性 · 门槛 95%</div>
+          <div className="stat-label">
+            事实句引用完整性 · 门槛 {threshold(gate.citation_coverage_min)}
+          </div>
         </div>
         <div className="stat">
           <div className="stat-value">
             {percent(release.generation.support_supported)}
           </div>
-          <div className="stat-label">段落支持达标率 · 门槛 90%</div>
+          <div className="stat-label">
+            段落支持达标率 · 门槛 {threshold(gate.support_supported_min)}
+          </div>
         </div>
         {/* Derived, not written. Both tiles said 「0 /」 as a literal, which was
             true when the gate demanded zero and became a lie the moment the
@@ -357,7 +373,9 @@ export default async function EvalPage() {
             )}{" "}
             / {release.generation.unanswerable}
           </div>
-          <div className="stat-label">诱导题错误断言 · 门槛 0</div>
+          <div className="stat-label">
+            诱导题错误断言 · 门槛 {gate.presupposition_asserted_rate_max}
+          </div>
         </div>
       </div>
 

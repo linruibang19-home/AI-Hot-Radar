@@ -35,6 +35,7 @@ ADR 只回答“为什么这样选、否决了什么、什么证据会触发回�
 | 引用锚点改挂到父块内真正支持论断的分块（修订 0016） | [0035](0035-citation-anchor-points-at-the-supporting-sibling.md) |
 | 数值审计无需修改时只回 ok，不再全文复述（修订 0023） | [0036](0036-numeric-audit-answers-ok-instead-of-copying.md) |
 | 逐句判定支持度：用于选段落和评测，不用于删句（修订 0035） | [0037](0037-support-is-judged-per-sentence-for-anchors-not-deletion.md) |
+| RAG 发布门禁由 CI 执行，页面与 CI 共用一份门槛 | [0038](0038-release-gate-is-enforced-in-ci.md) |
 
 ## 维护规则
 
