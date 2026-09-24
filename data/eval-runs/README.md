@@ -53,6 +53,7 @@ python scripts/build_eval_summary.py
 | 轮次 | JSON | 结论 |
 |---|---|---|
 | GEN-FROZEN（09-24，本地） | `m4-rag-eval-GEN-FROZEN-20260924.json` | **首个按提问时间冻结语料的生成评测**，此后的生成侧对比以它为基线。引用准确率 0.6888（与未冻结的 NUMAUDIT 逐题配对 +0.124）；273 个被引（题, 条目）无一晚于提问时间；逐条记录引用，可离线重打分 |
+| SENTENCE（09-24，本地） | `sentence-support-pairs-20260924.json` | FROZEN 全部 685 个句子–引用对，对父块、命中分块、每个兄弟分块的交叉编码器分数。逐句删除 23 句中至少 14 句原文有，删除不上线；按句选锚点段落级 0.8613 → 0.8993 |
 | PLANNER-AB（09-24，本地） | `m4-rag-eval-PLANNER-AB-regex-20260924.json`<br>`m4-rag-eval-PLANNER-AB-llm-20260924.json` | 生产检索配置（重排 40 候选）上正则 vs LLM 规划器：R@20 0.8998 vs 0.8908，逐题 0 升 2 降；两轮重排失败均为 0。补上 B16 丢失的逐题数据 |
 | AUDIT-AB（09-24，本地） | `audit-ab-golden-20260924.json`<br>`audit-ab-specialist-20260924.json` | ADR-0036 配对实验：同一草稿上新旧审计提示词各判一次，逐条保存草稿与两份输出。黄金集 31 次审计耗时均值 3875 → 998 ms；9 次分歧全是旧提示词拆句；专项集 5 次完全一致，P0 RAG-VENDOR-010 两边都改写 |
 | SPARSE（09-24，本地） | `m4-rag-eval-SPARSE-20260924.json` | 纯稀疏通道复测（不带实体词）：纯中文 8 题 R@20 0.3438（B2 为 0），含英文 70 题 0.3231。逐版本拆解与带实体词的生产口径见[调优纪要](../../docs/status/evidence/rag-tuning-log.md)「ZH」一节 |
