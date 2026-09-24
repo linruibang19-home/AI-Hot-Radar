@@ -14,7 +14,7 @@
 5. `processing/worker.py`：advisory lock 和阶段推进；
 6. `processing/selection.py`：评分、来源/类别配额；
 7. `ContentController.java`：公开 DTO 和 SQL；
-8. `apps/web/app/page.tsx` 及组件：SSR、筛选和卡片；
+8. `apps/web/src/app/page.tsx` 及 `src/components/`：SSR、筛选和卡片；
 9. 对应 fixture、scheduler、selection、controller 和 Web 测试。
 
 追问准备：如果 cursor 先提交会怎样？为什么单源失败不 rollback 全批？为什么 12:00 不是精确

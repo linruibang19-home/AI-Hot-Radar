@@ -38,7 +38,7 @@ PostgreSQL 事务、revision CAS、advisory lock、subscription/report unique de
 
 ### 6. 质量与安全
 
-固定黄金集、引用绑定、逐句支持、拒答；SSRF、RBAC、二次确认、secret env、内部端口隔离、备份恢复。
+固定黄金集（冻结语料、门禁在 CI）、引用绑定、逐引用支持度、拒答；SSRF、RBAC、二次确认、secret env、内部端口隔离、备份恢复。
 
 ## 30 分钟版本
 
