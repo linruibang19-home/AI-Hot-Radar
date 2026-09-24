@@ -27,7 +27,7 @@ from psycopg.types.json import Json
 from ahr import tracing
 from ahr.config import get_settings
 from ahr.processing.llm import LlmClient, LlmUnavailableError, TokenUsage
-from ahr.rag.anchor import Siblings, choose_anchors, visible_siblings
+from ahr.rag.anchor import Siblings, choose_anchors, sentences_by_citation, visible_siblings
 from ahr.rag.answer import (
     ANSWER_PROMPT_VERSION,
     MAX_EVIDENCE,
@@ -1226,16 +1226,21 @@ async def answer_question(
         # assertions), so `unsupported_numbers` still keeps the strongest
         # candidate whenever one passes the bounded safety rule.
         step = time.monotonic()
-        # Anchor selection rides the same round trip: it needs only the claims
-        # and the siblings, and applying it waits until every gate below has
-        # decided which citations survive.
+        # Anchor selection rides the same round trip: it needs only the
+        # sentences each citation backs and the siblings, and applying it waits
+        # until every gate below has decided which citations survive.
         scores, anchors = await asyncio.gather(
             score_citations(
                 reranker,
                 citations,
                 {e.chunk_id: e.text for e in evidence},
             ),
-            choose_anchors(reranker, citations, siblings, threshold=SUPPORT_THRESHOLD),
+            choose_anchors(
+                reranker,
+                sentences_by_citation(text, citations),
+                siblings,
+                threshold=SUPPORT_THRESHOLD,
+            ),
         )
         for citation in citations:
             citation.support_score = scores.get(citation.chunk_id)

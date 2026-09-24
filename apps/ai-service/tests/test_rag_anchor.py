@@ -6,7 +6,13 @@ import asyncio
 import inspect
 
 from ahr.rag import service
-from ahr.rag.anchor import Siblings, choose_anchors, pick_anchor, visible_siblings
+from ahr.rag.anchor import (
+    Siblings,
+    choose_anchors,
+    pick_anchor,
+    sentences_by_citation,
+    visible_siblings,
+)
 from ahr.rag.answer import Citation
 from ahr.rag.parent import ParentBlock
 from ahr.rag.rerank import RerankUnavailableError
@@ -76,44 +82,80 @@ def test_chunks_past_the_prompt_cut_are_not_candidates() -> None:
     assert block == Siblings(chunk_ids=("c0", "c1"), texts=("aaaa", "bb"))
 
 
-def test_a_hit_that_supports_its_claim_stays() -> None:
-    assert pick_anchor("c1", ("c0", "c1"), {0: 0.99, 1: 0.45}, threshold=THRESHOLD) is None
+def test_a_hit_that_supports_every_sentence_stays() -> None:
+    scores = [{0: 0.99, 1: 0.45}, {0: 0.9, 1: 0.8}]
+    assert pick_anchor("c1", ("c0", "c1"), scores, threshold=THRESHOLD) is None
 
 
 def test_an_unsupported_hit_moves_to_the_sibling_that_says_it() -> None:
     """The production case: the price is in the headline chunk, not the hit."""
-    assert pick_anchor("c1", ("c0", "c1"), {0: 0.97, 1: 0.02}, threshold=THRESHOLD) == "c0"
+    assert pick_anchor("c1", ("c0", "c1"), [{0: 0.97, 1: 0.02}], threshold=THRESHOLD) == "c0"
+
+
+def test_the_sibling_backing_more_sentences_wins() -> None:
+    """The hit backs one of three sentences; c2 backs two, c0 only the third."""
+    scores = [
+        {0: 0.01, 1: 0.9, 2: 0.10},
+        {0: 0.02, 1: 0.1, 2: 0.95},
+        {0: 0.97, 1: 0.1, 2: 0.60},
+    ]
+    assert pick_anchor("c1", ("c0", "c1", "c2"), scores, threshold=THRESHOLD) == "c2"
+
+
+def test_a_tie_on_supported_sentences_keeps_the_hit() -> None:
+    """Moving must be strictly better; equal coverage with a higher total is not enough."""
+    scores = [{0: 0.9, 1: 0.1}, {0: 0.1, 1: 0.9}]
+    assert pick_anchor("c1", ("c0", "c1"), scores, threshold=THRESHOLD) is None
 
 
 def test_no_better_sibling_means_no_move() -> None:
-    assert pick_anchor("c1", ("c0", "c1"), {0: 0.01, 1: 0.02}, threshold=THRESHOLD) is None
+    assert pick_anchor("c1", ("c0", "c1"), [{0: 0.01, 1: 0.02}], threshold=THRESHOLD) is None
 
 
 def test_a_hit_cut_from_view_counts_as_failing() -> None:
-    assert pick_anchor("c9", ("c0", "c1"), {0: 0.2, 1: 0.6}, threshold=THRESHOLD) == "c1"
+    assert pick_anchor("c9", ("c0", "c1"), [{0: 0.2, 1: 0.6}], threshold=THRESHOLD) == "c1"
 
 
-def test_moves_are_keyed_by_the_hit() -> None:
+def test_every_sentence_carrying_the_marker_backs_the_citation() -> None:
+    first = _citation("c1")
+    second = Citation(
+        number=2,
+        chunk_id="c7",
+        content_item_id="item",
+        claim_text="只在 claims 里出现的论断。",
+        title="t",
+        source_name="s",
+        canonical_url="https://example.com",
+        published_at=None,
+    )
+    text = "API 价格打 8 折。[1] 缓存读取价砍了 60%。[1]\n另一句。[1]"
+    assert sentences_by_citation(text, [first, second]) == {
+        "c1": ["API 价格打 8 折。", "缓存读取价砍了 60%。", "另一句。"],
+        # No marker in the prose: its own claim is the only sentence it backs.
+        "c7": ["只在 claims 里出现的论断。"],
+    }
+
+
+def test_moves_are_keyed_by_the_hit_and_score_each_sentence() -> None:
     reranker = _Reranker([0.97, 0.02])
     siblings = {"c1": Siblings(chunk_ids=("c0", "c1"), texts=("价格打 8 折", "正文"))}
-    moved = asyncio.run(
-        choose_anchors(reranker, [_citation("c1")], siblings, threshold=THRESHOLD)  # type: ignore[arg-type]
-    )
+    backing = {"c1": ["API 价格打 8 折。", "缓存读取价砍了 60%。"]}
+    moved = asyncio.run(choose_anchors(reranker, backing, siblings, threshold=THRESHOLD))  # type: ignore[arg-type]
     assert moved == {"c1": "c0"}
-    assert reranker.calls == [("API 价格打 8 折。", ["价格打 8 折", "正文"])]
+    assert [query for query, _ in reranker.calls] == ["API 价格打 8 折。", "缓存读取价砍了 60%。"]
 
 
 def test_an_outage_moves_nothing() -> None:
     siblings = {"c1": Siblings(chunk_ids=("c0", "c1"), texts=("a", "b"))}
     moved = asyncio.run(
-        choose_anchors(_Reranker(None), [_citation("c1")], siblings, threshold=THRESHOLD)  # type: ignore[arg-type]
+        choose_anchors(_Reranker(None), {"c1": ["x"]}, siblings, threshold=THRESHOLD)  # type: ignore[arg-type]
     )
     assert moved == {}
 
 
 def test_citations_without_siblings_cost_no_request() -> None:
     reranker = _Reranker([0.9])
-    moved = asyncio.run(choose_anchors(reranker, [_citation("c1")], {}, threshold=THRESHOLD))  # type: ignore[arg-type]
+    moved = asyncio.run(choose_anchors(reranker, {"c1": ["x"]}, {}, threshold=THRESHOLD))  # type: ignore[arg-type]
     assert moved == {} and reranker.calls == []
 
 

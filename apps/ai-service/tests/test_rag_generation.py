@@ -1,5 +1,6 @@
 """Generation-side quality metrics."""
 
+import asyncio
 from datetime import UTC, datetime
 from typing import Any
 
@@ -8,9 +9,11 @@ from ahr.rag.eval.generation import (
     GenerationResult,
     citation_coverage,
     score_answer,
+    sentence_support,
     summarise,
 )
 from ahr.rag.eval.golden import GoldenQuestion
+from ahr.rag.rerank import RerankUnavailableError
 
 
 def test_citation_after_terminal_punctuation_belongs_to_the_sentence() -> None:
@@ -101,3 +104,81 @@ def test_a_scored_answer_keeps_each_citation_it_was_scored_on() -> None:
             "support": 0.91,
         }
     ]
+
+
+class _Reranker:
+    """Scores (passage, parent) from a table keyed by the sentence."""
+
+    def __init__(self, table: dict[str, tuple[float, float]] | None) -> None:
+        self.table = table
+        self.calls = 0
+
+    async def rerank(
+        self, query: str, documents: list[str], *, top_n: int
+    ) -> list[tuple[int, float]]:
+        self.calls += 1
+        if self.table is None:
+            raise RerankUnavailableError("down")
+        passage, parent = self.table[query]
+        return [(0, passage), (1, parent)]
+
+
+def _cite(number: int, chunk_id: str) -> Citation:
+    return Citation(
+        number=number,
+        chunk_id=chunk_id,
+        content_item_id=f"item-{chunk_id}",
+        claim_text="x",
+        title="t",
+        source_name="s",
+        canonical_url="https://example.com",
+        published_at=None,
+    )
+
+
+def test_every_published_pair_is_scored_on_both_bases() -> None:
+    """A marker shared by two sentences is two things a reader checks."""
+    answer = Answer(
+        question="q",
+        answer_markdown="融资约 50 亿美元。[1] 六成投向研发。[1][2]",
+        citations=[_cite(1, "a"), _cite(2, "b")],
+    )
+    reranker = _Reranker({"融资约 50 亿美元。": (0.1, 0.9), "六成投向研发。": (0.8, 0.9)})
+    result = asyncio.run(
+        sentence_support(reranker, answer, {"a": "A", "b": "B"}, {"a": "PA", "b": "PB"})  # type: ignore[arg-type]
+    )
+    assert result == (3, 2, 3)
+    assert reranker.calls == 3
+
+
+def test_an_outage_is_not_a_zero() -> None:
+    answer = Answer(question="q", answer_markdown="一句。[1]", citations=[_cite(1, "a")])
+    result = asyncio.run(
+        sentence_support(_Reranker(None), answer, {"a": "A"}, {"a": "PA"})  # type: ignore[arg-type]
+    )
+    assert result is None
+
+
+def test_sentence_support_is_pooled_over_pairs_not_averaged_per_answer() -> None:
+    small = GenerationResult(
+        question_id="a",
+        category="fact_check",
+        answerable=True,
+        refused=False,
+        sentence_pairs=1,
+        sentence_supported=0,
+        sentence_supported_as_read=1,
+    )
+    large = GenerationResult(
+        question_id="b",
+        category="fact_check",
+        answerable=True,
+        refused=False,
+        sentence_pairs=9,
+        sentence_supported=9,
+        sentence_supported_as_read=9,
+    )
+    overall = summarise([small, large])["overall"]
+    assert overall["sentence_pairs"] == 10
+    assert overall["sentence_support_supported"] == 0.9  # a per-answer mean would say 0.5
+    assert overall["sentence_support_as_read_supported"] == 1.0

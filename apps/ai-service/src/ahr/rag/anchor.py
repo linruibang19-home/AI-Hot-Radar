@@ -19,10 +19,16 @@ changes what the reader is shown and nothing about what the model read or what
 the gate judged. In the `neighbours` tier each chunk has its own window, and a
 move would quietly change the as-read basis the evaluation compares against.
 
-**Only when the hit fails on its own.** A hit that already supports the claim
-stays, even if a sibling scores a little higher: the citation is correct, and
-swapping one supporting passage for another is churn a reader cannot see the
-reason for.
+**Only when the hit fails on its own.** A hit that already supports its
+sentences stays, even if a sibling scores a little higher: the citation is
+correct, and swapping one supporting passage for another is churn a reader
+cannot see the reason for.
+
+**Judged on every sentence the citation backs (ADR-0037).** The first version
+used the citation's one `claim_text`; a marker is usually shared, and across
+all 685 published sentence–citation pairs of the frozen run that moved
+passage-level support only from 0.8613 to 0.8701. Scoring every backed sentence
+reaches 0.8993.
 """
 
 from __future__ import annotations
@@ -34,6 +40,7 @@ from dataclasses import dataclass
 from ahr.rag.answer import Citation
 from ahr.rag.parent import ParentBlock
 from ahr.rag.rerank import RerankClient, RerankUnavailableError
+from ahr.rag.sentence_support import cited_sentences
 
 logger = logging.getLogger(__name__)
 
@@ -79,36 +86,66 @@ def visible_siblings(parent: ParentBlock, *, max_chars: int) -> Siblings | None:
     return Siblings(chunk_ids=tuple(ids), texts=tuple(texts))
 
 
+def sentences_by_citation(answer_markdown: str, citations: list[Citation]) -> dict[str, list[str]]:
+    """`hit chunk_id -> every published sentence that carries its marker`.
+
+    A citation with no marker in the prose (bound from `claims` because the
+    model wrote none) falls back to its `claim_text`: that is the only
+    sentence it is known to back.
+    """
+    by_number = {c.number: c for c in citations}
+    backing: dict[str, list[str]] = {c.chunk_id: [] for c in citations}
+    for sentence in cited_sentences(answer_markdown):
+        for number in sentence.numbers:
+            citation = by_number.get(number)
+            if citation is not None:
+                backing[citation.chunk_id].append(sentence.text)
+    for citation in citations:
+        if not backing[citation.chunk_id] and citation.claim_text:
+            backing[citation.chunk_id] = [citation.claim_text]
+    return backing
+
+
 def pick_anchor(
     hit: str,
     chunk_ids: tuple[str, ...],
-    scores: dict[int, float],
+    scores: list[dict[int, float]],
     *,
     threshold: float,
 ) -> str | None:
     """The sibling to move to, or None to keep the hit.
 
-    `scores` maps an index into `chunk_ids` to the cross-encoder's score for
-    (claim, that chunk). A hit that was cut from view has no score and counts
-    as failing: the model cannot have read the claim there.
+    `scores` holds one mapping per sentence the citation backs, from an index
+    into `chunk_ids` to the cross-encoder's score for (sentence, that chunk).
+
+    The hit stays when it supports every one of its sentences. Otherwise the
+    candidate supporting the most sentences wins, ties broken by total score,
+    and it replaces the hit only if it ranks strictly higher. A hit cut from
+    view has no scores and ranks lowest: the model cannot have read it.
     """
     if not scores:
         return None
     hit_index = chunk_ids.index(hit) if hit in chunk_ids else None
-    hit_score = scores.get(hit_index) if hit_index is not None else None
-    if hit_score is not None and hit_score >= threshold:
+
+    def rank(index: int | None) -> tuple[int, float]:
+        if index is None:
+            return (0, 0.0)
+        values = [sentence.get(index) for sentence in scores]
+        supported = sum(1 for v in values if v is not None and v >= threshold)
+        return (supported, sum(v for v in values if v is not None))
+
+    if rank(hit_index)[0] == len(scores):
         return None
-    best = max(scores, key=lambda index: scores[index])
-    if best == hit_index:
-        return None
-    if hit_score is not None and scores[best] <= hit_score:
+    candidates = sorted({index for sentence in scores for index in sentence})
+    best = max(candidates, key=rank)
+    if best == hit_index or rank(best) <= rank(hit_index):
         return None
     return chunk_ids[best]
 
 
 async def choose_anchors(
     reranker: RerankClient | None,
-    citations: list[Citation],
+    backing: dict[str, list[str]],
     siblings: dict[str, Siblings],
     *,
     threshold: float,
@@ -118,32 +155,46 @@ async def choose_anchors(
     Keyed by the hit rather than the citation number because numbers are
     rewritten each time a later gate drops a citation; the hit is fixed.
 
-    One rerank request per citation — one claim against its siblings — issued
-    together, so the wall clock is one round trip. A failure keeps the hit: an
-    outage must not move citations, only fail to improve them.
+    One rerank request per sentence a movable citation backs — that sentence
+    against the citation's visible siblings — all issued together, so the wall
+    clock is one round trip. On the frozen golden run that is 2.2 requests per
+    answer. Any failed request keeps that citation's hit: an outage must not
+    move citations, only fail to improve them.
     """
     if reranker is None:
         return {}
     work = [
-        (c.chunk_id, c.claim_text, siblings[c.chunk_id])
-        for c in citations
-        if c.chunk_id in siblings and c.claim_text
+        (hit, sentence, siblings[hit])
+        for hit, sentences in backing.items()
+        if hit in siblings
+        for sentence in sentences
+        if sentence
     ]
     if not work:
         return {}
 
-    async def one(hit: str, claim: str, block: Siblings) -> tuple[str, str] | None:
-        try:
-            ranked = await reranker.rerank(claim, list(block.texts), top_n=len(block.texts))
-        except RerankUnavailableError as exc:
-            logger.warning("anchor selection unavailable: %s", exc)
-            return None
-        moved = pick_anchor(
-            hit, block.chunk_ids, {index: score for index, score in ranked}, threshold=threshold
-        )
-        return (hit, moved) if moved else None
+    async def one(sentence: str, block: Siblings) -> dict[int, float]:
+        ranked = await reranker.rerank(sentence, list(block.texts), top_n=len(block.texts))
+        return {index: score for index, score in ranked}
 
     results = await asyncio.gather(
-        *(one(hit, claim, block) for hit, claim, block in work), return_exceptions=True
+        *(one(sentence, block) for _, sentence, block in work), return_exceptions=True
     )
-    return {item[0]: item[1] for item in results if not isinstance(item, BaseException) and item}
+    per_hit: dict[str, list[dict[int, float]]] = {}
+    failed: set[str] = set()
+    for (hit, _, _), result in zip(work, results, strict=True):
+        if isinstance(result, BaseException):
+            if isinstance(result, RerankUnavailableError):
+                logger.warning("anchor selection unavailable: %s", result)
+            failed.add(hit)
+            continue
+        per_hit.setdefault(hit, []).append(result)
+
+    moved: dict[str, str] = {}
+    for hit, scores in per_hit.items():
+        if hit in failed:
+            continue
+        target = pick_anchor(hit, siblings[hit].chunk_ids, scores, threshold=threshold)
+        if target is not None:
+            moved[hit] = target
+    return moved

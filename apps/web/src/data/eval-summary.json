@@ -60,11 +60,20 @@
       "passed": true
     }
   },
+  "sentenceSupport": {
+    "file": "sentence-support-pairs-20260924.json",
+    "pairs": 685,
+    "citations": 272,
+    "sharedCitations": 155,
+    "asRead": 0.9168,
+    "hitPassage": 0.8613,
+    "anchoredPassage": 0.8993
+  },
   "ragas": [
     {
       "ragas": "Faithfulness",
       "asks": "答案有没有说出证据里没有的东西",
-      "ours": "support_mean / support_supported（交叉编码器对「论断 × 被引段落」打分）",
+      "ours": "support_mean / support_supported（交叉编码器对「每条引用的一句论断 × 被引段落」打分）；逐句口径 sentence_support_*（每句话 × 它的每条引用）",
       "value": "0.8907 / 0.9344",
       "note": "另有一条硬约束不在指标里：`check_invariants` 会把「有 [n] 却解析不到引用」或「零引用却不是拒答」的回答直接判为不可发布。指标衡量程度，不变量划定底线。"
     },

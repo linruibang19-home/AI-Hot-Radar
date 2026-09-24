@@ -38,6 +38,7 @@ from ahr.rag.embeddings import EmbeddingClient
 from ahr.rag.eval.abstention import judge as judge_abstention
 from ahr.rag.eval.golden import GoldenQuestion, GoldenSet
 from ahr.rag.rerank import RerankClient, RerankUnavailableError
+from ahr.rag.sentence_support import cited_sentences
 from ahr.rag.service import answer_question
 
 # A cited passage scoring below this does not visibly support its claim.
@@ -98,6 +99,13 @@ class GenerationResult:
     # the cited passage alone — the basis the live gate uses.
     support_as_read_mean: float | None = None
     support_as_read_supported: float | None = None
+    # Every published sentence-citation pair (ADR-0037), counted rather than
+    # averaged so the summary can pool them: a marker shared by five sentences
+    # is five things a reader checks, and the per-citation figures above score
+    # one of them.
+    sentence_pairs: int | None = None
+    sentence_supported: int | None = None
+    sentence_supported_as_read: int | None = None
     latency_ms: int | None = None
     # ADR-0023's audit turn, as the pipeline recorded it: whether it fired, how
     # it ended, whether it changed the draft and why an attempt was rejected.
@@ -148,6 +156,47 @@ def story_coverage(cited_stories: list[str | None], relevant_stories: set[str]) 
         return None
     covered = {s for s in cited_stories if s is not None} & relevant_stories
     return len(covered) / len(relevant_stories)
+
+
+async def sentence_support(
+    reranker: RerankClient | None,
+    answer: Answer,
+    passages: dict[str, str],
+    parents: dict[str, str],
+) -> tuple[int, int, int] | None:
+    """`(pairs, supported by the passage shown, supported by the text read)`.
+
+    Every sentence the answer publishes, once per `[n]` it carries: the unit a
+    reader checks. `support_scores` below scores each citation against one
+    sentence, its `claim_text`, and a marker is usually shared — on the frozen
+    golden run 155 of 272 citations backed two or more sentences.
+
+    One request per pair, both bases in it. None when nothing could be scored or
+    the reranker failed: an outage must not read as "unsupported".
+    """
+    if reranker is None or not answer.citations:
+        return None
+    by_number = {c.number: c for c in answer.citations}
+    pairs = [
+        (sentence.text, by_number[number].chunk_id)
+        for sentence in cited_sentences(answer.answer_markdown)
+        for number in sentence.numbers
+        if number in by_number
+    ]
+    pairs = [(t, c) for t, c in pairs if t and passages.get(c) and parents.get(c)]
+    if not pairs:
+        return None
+    supported = as_read = 0
+    for text, chunk_id in pairs:
+        try:
+            ranked = dict(
+                await reranker.rerank(text, [passages[chunk_id], parents[chunk_id]], top_n=2)
+            )
+        except RerankUnavailableError:
+            return None
+        supported += ranked.get(0, 0.0) >= SUPPORT_THRESHOLD
+        as_read += ranked.get(1, 0.0) >= SUPPORT_THRESHOLD
+    return len(pairs), supported, as_read
 
 
 async def support_scores(
@@ -298,6 +347,28 @@ def score_answer(
     return result
 
 
+def _pooled_sentence_support(answered: list[GenerationResult]) -> dict[str, Any]:
+    """Sentence-level support pooled over every pair, not averaged per answer.
+
+    Absent before 2026-09-24. On the frozen golden run the per-citation
+    `support_supported` read 0.97 while all 685 published pairs read 0.8613
+    against the passage shown and 0.9168 against the text the model read.
+    """
+    rows = [r for r in answered if r.sentence_pairs]
+    pairs = sum(r.sentence_pairs or 0 for r in rows)
+    if not pairs:
+        return {"sentence_pairs": 0}
+    return {
+        "sentence_pairs": pairs,
+        "sentence_support_supported": round(
+            sum(r.sentence_supported or 0 for r in rows) / pairs, 4
+        ),
+        "sentence_support_as_read_supported": round(
+            sum(r.sentence_supported_as_read or 0 for r in rows) / pairs, 4
+        ),
+    }
+
+
 def summarise(results: list[GenerationResult]) -> dict[str, Any]:
     def mean(values: list[float | None]) -> float | None:
         present = [v for v in values if v is not None]
@@ -322,6 +393,7 @@ def summarise(results: list[GenerationResult]) -> dict[str, Any]:
         "support_supported": mean([r.support_supported for r in answered]),
         "support_as_read_mean": mean([r.support_as_read_mean for r in answered]),
         "support_as_read_supported": mean([r.support_as_read_supported for r in answered]),
+        **_pooled_sentence_support(answered),
         "must_contain_hit": mean([r.must_contain_hit for r in answerable]),
         "avg_citations": round(statistics.fmean([r.citations for r in answered]), 2)
         if answered
@@ -469,24 +541,27 @@ async def run_generation_eval(
         )
         with psycopg.connect(get_settings().database_url) as connection:
             scored = score_answer(connection, question, answer)
-        mean_support, supported = await support_scores(
-            reranker,
-            answer,
-            _load_context_passages(answer),
-        )
+        passages = _load_context_passages(answer)
+        parents = _load_parent_passages(answer)
+        mean_support, supported = await support_scores(reranker, answer, passages)
         scored.support_mean = mean_support
         scored.support_supported = supported
 
         # The gate's own basis, reported alongside rather than instead of the
         # passage-level number. See `support_scores` for why replacing it would
         # leave the report measuring only what the gate already enforces.
-        as_read_mean, as_read_supported = await support_scores(
-            reranker,
-            answer,
-            _load_parent_passages(answer),
-        )
+        as_read_mean, as_read_supported = await support_scores(reranker, answer, parents)
         scored.support_as_read_mean = as_read_mean
         scored.support_as_read_supported = as_read_supported
+
+        # Every sentence the reader sees, not one per citation (ADR-0037).
+        sentences = await sentence_support(reranker, answer, passages, parents)
+        if sentences is not None:
+            (
+                scored.sentence_pairs,
+                scored.sentence_supported,
+                scored.sentence_supported_as_read,
+            ) = sentences
 
         # Only for the trap questions, and only where the trap is written down.
         # One extra call each on twelve questions, against ninety answers that

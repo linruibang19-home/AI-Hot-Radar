@@ -178,7 +178,8 @@ function delta(current?: number | null, previous?: number | null) {
 }
 
 export default async function EvalPage() {
-  const { rounds, extra, goldenQuestions, ragas, release } = summary;
+  const { rounds, extra, goldenQuestions, ragas, release, sentenceSupport } =
+    summary;
   const state = await loadLive();
   const live = state?.quality ?? null;
   // What share of today's corpus the frozen snapshot never sees. Derived on
@@ -354,6 +355,20 @@ export default async function EvalPage() {
         </div>
       </div>
 
+      {/* The support tile scores each citation against one sentence, and a
+          marker is usually shared. Stated beside the tile, from the pair file
+          (ADR-0037), so the number cannot be read as "every sentence". */}
+      <div className="notice">
+        <strong>段落支持达标率按每条引用的一句论断计。</strong>
+        一条引用常被多句话共用（{sentenceSupport.citations} 条里有{" "}
+        {sentenceSupport.sharedCitations} 条），按「每句话 × 它的每条引用」重算{" "}
+        {sentenceSupport.pairs} 对：模型读到的上下文支持{" "}
+        {percent(sentenceSupport.asRead)}，悬停显示的检索段落支持{" "}
+        {percent(sentenceSupport.hitPassage)}，按句选段落后{" "}
+        {percent(sentenceSupport.anchoredPassage)}。交叉编码器测的是相关性而不是蕴含，
+        逐句删除实测会误删原文里有的句子，所以不据此删句。
+      </div>
+
       {/* Why the ceiling is not zero, stated where the number is. A threshold
           that looks lax needs its reasoning attached, or the next person tightens
           it back to zero and spends a week re-deriving why that does not work. */}
@@ -442,8 +457,9 @@ export default async function EvalPage() {
                   <td>
                     <strong>引用支持度达标率</strong>
                     <div className="eval-meta">
-                      交叉编码器对「论断 × 被引段落」打分 ≥{" "}
-                      {live.supportThreshold}
+                      每条引用一句论断，交叉编码器打分 ≥ {live.supportThreshold}。
+                      左栏对被引段落、门控前；右栏对模型读到的上下文、门控后——
+                      不达标的已被删除，右栏接近 100% 是门控的结果，两栏口径不同
                     </div>
                   </td>
                   <td className="eval-num">

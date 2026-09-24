@@ -215,7 +215,10 @@ RAGAS_MAPPING: list[dict[str, Any]] = [
     {
         "ragas": "Faithfulness",
         "asks": "答案有没有说出证据里没有的东西",
-        "ours": "support_mean / support_supported（交叉编码器对「论断 × 被引段落」打分）",
+        "ours": (
+            "support_mean / support_supported（交叉编码器对「每条引用的一句论断 × 被引段落」打分）；"
+            "逐句口径 sentence_support_*（每句话 × 它的每条引用）"
+        ),
         "value": "0.8907 / 0.9344",
         "note": (
             "另有一条硬约束不在指标里：`check_invariants` 会把「有 [n] 却解析不到引用」"
@@ -348,6 +351,41 @@ EXTRA: list[dict[str, Any]] = [
 ]
 
 
+# Same value as `ahr.rag.support.SUPPORT_THRESHOLD`; this script runs without
+# the service package on its path.
+SUPPORT_THRESHOLD = 0.30
+
+# ADR-0037: every published sentence–citation pair of the frozen golden run,
+# scored against the text the model read, the passage retrieval hit, and the
+# passage per-sentence anchor selection shows.
+SENTENCE_SUPPORT_FILE = "sentence-support-pairs-20260924.json"
+
+
+def _sentence_support() -> dict[str, Any]:
+    """Sentence-level support, derived from the pair file rather than written down.
+
+    The release tile scores each citation against one sentence. A marker is
+    usually shared, so this is the figure that says what a reader hovering any
+    sentence would find.
+    """
+    pairs = json.loads((RUNS / SENTENCE_SUPPORT_FILE).read_text(encoding="utf-8"))
+
+    def rate(key: str) -> float:
+        return round(sum(1 for p in pairs if (p.get(key) or 0) >= SUPPORT_THRESHOLD) / len(pairs), 4)
+
+    citations = {(p["q"], p["chunk_id"]) for p in pairs}
+    shared = {c for c in citations if sum(1 for p in pairs if (p["q"], p["chunk_id"]) == c) > 1}
+    return {
+        "file": SENTENCE_SUPPORT_FILE,
+        "pairs": len(pairs),
+        "citations": len(citations),
+        "sharedCitations": len(shared),
+        "asRead": rate("as_read"),
+        "hitPassage": rate("hit_score"),
+        "anchoredPassage": rate("anchor_score"),
+    }
+
+
 def _load(name: str) -> dict[str, Any]:
     return json.loads((RUNS / name).read_text(encoding="utf-8"))
 
@@ -454,6 +492,7 @@ def build() -> dict[str, Any]:
                 "passed": release_specialist["decision"]["entity_recall_at_20_passed"],
             },
         },
+        "sentenceSupport": _sentence_support(),
         "ragas": RAGAS_MAPPING,
         "goldenQuestions": _load(ROUNDS[0]["file"]).get("config", {}).get("golden_questions"),
         "rounds": rounds,
