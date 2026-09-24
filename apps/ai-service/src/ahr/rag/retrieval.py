@@ -729,13 +729,14 @@ def sparse_search(
         for lexeme, df in terms
     ]
 
+    # Each lexeme's tsquery is parsed once, in `term`, rather than once per
+    # matching chunk and term. Same rows and scores on 167 real questions;
+    # about 12 percent faster (p50 142 -> 126 ms locally). Most of the
+    # channel's cost is matching, not parsing. This note stays out of the SQL:
+    # psycopg reads a percent sign inside a SQL comment as a placeholder.
     with connection.cursor() as cursor:
         cursor.execute(
             """
-            -- Each lexeme's tsquery is parsed once here rather than once per
-            -- matching chunk and term. Same rows and scores on 167 real
-            -- questions; about 12% faster (p50 142 -> 126 ms locally). Most of
-            -- the channel's cost is matching, not parsing.
             WITH term AS MATERIALIZED (
                 SELECT t.idf, to_tsquery('simple', t.lexeme) AS query
                   FROM unnest(%s::text[], %s::float8[]) AS t(lexeme, idf)
