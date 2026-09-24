@@ -52,6 +52,8 @@ python scripts/build_eval_summary.py
 
 | 轮次 | JSON | 结论 |
 |---|---|---|
+| GEN-FROZEN（09-24，本地） | `m4-rag-eval-GEN-FROZEN-20260924.json` | **首个按提问时间冻结语料的生成评测**，此后的生成侧对比以它为基线。引用准确率 0.6888（与未冻结的 NUMAUDIT 逐题配对 +0.124）；273 个被引（题, 条目）无一晚于提问时间；逐条记录引用，可离线重打分 |
+| SPARSE（09-24，本地） | `m4-rag-eval-SPARSE-20260924.json` | 纯稀疏通道复测（不带实体词）：纯中文 8 题 R@20 0.3438（B2 为 0），含英文 70 题 0.3231。逐版本拆解与带实体词的生产口径见[调优纪要](../../docs/status/evidence/rag-tuning-log.md)「ZH」一节 |
 | NUMAUDIT（09-24，本地） | `m4-rag-eval-GEN-NUMAUDIT-20260924.json`<br>`m4-rag-eval-SPECIALIST-NUMAUDIT-20260924.json` | ADR-0034 回归：数值审计 44 次触发、改动 15 次、fail-closed 0；生成评测未冻结语料，与发布基线的其余差异不可比 |
 
 ## 没有出现在 `/eval` 上的几份，以及为什么留着
