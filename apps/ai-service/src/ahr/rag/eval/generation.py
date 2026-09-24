@@ -406,6 +406,12 @@ def summarise(results: list[GenerationResult]) -> dict[str, Any]:
                 1 for a in audits if str(a.get("status", "")).endswith("fail_closed")
             ),
             "statuses": dict(sorted(Counter(str(a.get("status")) for a in audits).items())),
+            # ADR-0036: how often the auditor agreed without rewriting. Absent
+            # before 2026-09-24, when every accepted reply was a rewrite.
+            "verdicts": dict(
+                sorted(Counter(str(a.get("verdict")) for a in audits if a.get("verdict")).items())
+            ),
+            "ms_mean": round(statistics.fmean(int(a.get("ms") or 0) for a in audits)),
         }
 
     by_category: dict[str, Any] = {}

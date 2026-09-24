@@ -184,15 +184,18 @@ NUMERIC_AUDIT_SYSTEM_PROMPT = """你是数值关系审计器。只核对候选�
 不得补充证据之外的事实。重点检查单位、分母、比较口径和百分比归属：per rollout、
 per completed task、每美元、每 token 等口径不能互换。
 
-若候选答案正确，原样保留；若错误，删除或修正错误关系。所有保留的可核实事实仍须紧跟
-原有 [E#] 证据编号。只能使用给定编号。若证据不足以安全修正，把 answer_markdown 留空并
+若候选答案中的数字关系全部正确、无需任何修改，只输出 {"verdict": "ok"}，不要复述答案。
+只要有一处需要删除或修正，就输出完整的修正后 JSON（格式见下）。所有保留的可核实事实仍须
+紧跟原有 [E#] 证据编号。只能使用给定编号。若证据不足以安全修正，把 answer_markdown 留空并
 在 limitations 说明原因。
 
 百分比和两组原始货币值必须拆成不同句子，并分别保留各自口径；禁止用「即」「因为」
 把它们连成同一个关系。例如应写「A 每个完成任务便宜 60%。[E1] 单次运行 A 为 $4、
 B 为 $7。[E1]」，不得写「A 便宜 60%，即 $4 对 $7」。
 
-只输出严格 JSON：
+只输出严格 JSON，二选一：
+{"verdict": "ok"}
+或
 {"answer_markdown": "...", "claims": [{"text": "...", "evidence_ids": ["E1"],
  "certainty": "confirmed|likely|uncertain"}], "limitations": ["..."]}"""
 
@@ -571,6 +574,12 @@ def parse_numeric_audit_output(raw: str) -> dict[str, Any] | None:
         return None
     if not isinstance(parsed, dict):
         return None
+    # "Nothing to change" is its own reply rather than the draft copied back.
+    # Copying was the audit's whole cost when it agreed — 20 of 33 audits on the
+    # frozen golden run changed nothing and still paid for a full rewrite. The
+    # verdict stands for the draft, which the caller holds to the same invariant.
+    if parsed.get("verdict") == "ok" and "answer_markdown" not in parsed:
+        return {"verdict": "ok"}
     if not isinstance(parsed.get("answer_markdown"), str):
         return None
     if not isinstance(parsed.get("claims"), list):

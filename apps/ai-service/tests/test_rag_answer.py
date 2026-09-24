@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from ahr.rag.answer import (
+    NUMERIC_AUDIT_SYSTEM_PROMPT,
     SYSTEM_PROMPT,
     Citation,
     Evidence,
@@ -161,6 +162,40 @@ def test_numeric_audit_output_requires_the_strict_json_contract() -> None:
     assert parse_numeric_audit_output(valid) is not None
     assert parse_numeric_audit_output("答案 [E1]。") is None
     assert parse_numeric_audit_output('{"answer_markdown":"答案"}') is None
+
+
+def test_an_ok_verdict_is_its_own_reply() -> None:
+    assert parse_numeric_audit_output('{"verdict": "ok"}') == {"verdict": "ok"}
+    # Anything else claiming a verdict must still be a complete rewrite.
+    assert parse_numeric_audit_output('{"verdict": "changed"}') is None
+    assert parse_numeric_audit_output('{"verdict": "ok", "answer_markdown": "x"}') is None
+
+
+def test_an_ok_verdict_is_held_to_the_same_invariant_as_a_rewrite() -> None:
+    """Agreeing with an unsafe draft must fail exactly as writing one would."""
+    from ahr.rag.service import _audit_candidate, _numeric_audit_rejection
+
+    unsafe = {"answer_markdown": "便宜 64%，$4.65 对 $8.37。[E1]", "claims": [], "limitations": []}
+    candidate, verdict = _audit_candidate({"verdict": "ok"}, unsafe)
+    assert verdict == "ok" and candidate is unsafe
+    assert _numeric_audit_rejection(candidate) == "unsafe_mix"
+
+    safe = {
+        "answer_markdown": "从 $0.50 降至 $0.20，下降 60%。[E1]",
+        "claims": [],
+        "limitations": [],
+    }
+    candidate, verdict = _audit_candidate({"verdict": "ok"}, safe)
+    assert _numeric_audit_rejection(candidate) is None
+
+    rewrite = {"answer_markdown": "改写。[E1]", "claims": [], "limitations": []}
+    assert _audit_candidate(rewrite, safe) == (rewrite, "rewritten")
+    assert _audit_candidate(None, safe) == (None, "rewritten")
+
+
+def test_the_auditor_is_told_to_answer_ok_instead_of_copying() -> None:
+    assert '{"verdict": "ok"}' in NUMERIC_AUDIT_SYSTEM_PROMPT
+    assert "原样保留" not in NUMERIC_AUDIT_SYSTEM_PROMPT
 
 
 def test_percentage_and_two_prices_must_be_separate_after_audit() -> None:

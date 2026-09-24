@@ -855,6 +855,20 @@ def bound_to_cutoff(
     return (window[0], min(window[1], cutoff))
 
 
+def _audit_candidate(
+    reply: dict[str, Any] | None, draft: dict[str, Any]
+) -> tuple[dict[str, Any] | None, str]:
+    """What an audit reply proposes to publish, and whether it was a verdict or a rewrite.
+
+    An `ok` verdict proposes the draft itself. It is then checked exactly as a
+    rewrite would be, so agreeing with an unsafe draft fails the same way as
+    writing one — the verdict saves output, never the invariant (ADR-0036).
+    """
+    if reply is not None and reply.get("verdict") == "ok":
+        return draft, "ok"
+    return reply, "rewritten"
+
+
 def _numeric_audit_rejection(audited: dict[str, Any] | None) -> str | None:
     """Why an audit reply cannot replace the draft, or None when it can (ADR-0023/0034)."""
     if audited is None:
@@ -1120,10 +1134,11 @@ async def answer_question(
                 usage.attempts += audited_usage.attempts
                 usage.latency_ms += audited_usage.latency_ms
 
-                audited = parse_numeric_audit_output(audited_raw)
+                audited, verdict = _audit_candidate(parse_numeric_audit_output(audited_raw), parsed)
                 first_failure = _numeric_audit_rejection(audited)
                 if audited is not None and first_failure is None:
                     numeric_audit["status"] = "passed"
+                    numeric_audit["verdict"] = verdict
                     parsed = audited
                 else:
                     # Recorded because the two failures need opposite fixes: an
@@ -1149,10 +1164,13 @@ async def answer_question(
                     usage.attempts += repair_usage.attempts
                     usage.latency_ms += repair_usage.latency_ms
 
-                    repaired = parse_numeric_audit_output(repair_raw)
+                    repaired, verdict = _audit_candidate(
+                        parse_numeric_audit_output(repair_raw), parsed
+                    )
                     second_failure = _numeric_audit_rejection(repaired)
                     if repaired is not None and second_failure is None:
                         numeric_audit["status"] = "repaired"
+                        numeric_audit["verdict"] = verdict
                         parsed = repaired
                     else:
                         failures.append(second_failure or "unparseable")
