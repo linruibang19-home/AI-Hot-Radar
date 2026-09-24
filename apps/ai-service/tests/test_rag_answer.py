@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from ahr.rag.answer import (
+    NUMERIC_AUDIT_SYSTEM_PROMPT,
     SYSTEM_PROMPT,
     Citation,
     Evidence,
@@ -163,11 +164,91 @@ def test_numeric_audit_output_requires_the_strict_json_contract() -> None:
     assert parse_numeric_audit_output('{"answer_markdown":"答案"}') is None
 
 
+def test_an_ok_verdict_is_its_own_reply() -> None:
+    assert parse_numeric_audit_output('{"verdict": "ok"}') == {"verdict": "ok"}
+    # Anything else claiming a verdict must still be a complete rewrite.
+    assert parse_numeric_audit_output('{"verdict": "changed"}') is None
+    assert parse_numeric_audit_output('{"verdict": "ok", "answer_markdown": "x"}') is None
+
+
+def test_an_ok_verdict_is_held_to_the_same_invariant_as_a_rewrite() -> None:
+    """Agreeing with an unsafe draft must fail exactly as writing one would."""
+    from ahr.rag.service import _audit_candidate, _numeric_audit_rejection
+
+    unsafe = {"answer_markdown": "便宜 64%，$4.65 对 $8.37。[E1]", "claims": [], "limitations": []}
+    candidate, verdict = _audit_candidate({"verdict": "ok"}, unsafe)
+    assert verdict == "ok" and candidate is unsafe
+    assert _numeric_audit_rejection(candidate) == "unsafe_mix"
+
+    safe = {
+        "answer_markdown": "从 $0.50 降至 $0.20，下降 60%。[E1]",
+        "claims": [],
+        "limitations": [],
+    }
+    candidate, verdict = _audit_candidate({"verdict": "ok"}, safe)
+    assert _numeric_audit_rejection(candidate) is None
+
+    rewrite = {"answer_markdown": "改写。[E1]", "claims": [], "limitations": []}
+    assert _audit_candidate(rewrite, safe) == (rewrite, "rewritten")
+    assert _audit_candidate(None, safe) == (None, "rewritten")
+
+
+def test_the_auditor_is_told_to_answer_ok_instead_of_copying() -> None:
+    assert '{"verdict": "ok"}' in NUMERIC_AUDIT_SYSTEM_PROMPT
+    assert "原样保留" not in NUMERIC_AUDIT_SYSTEM_PROMPT
+
+
 def test_percentage_and_two_prices_must_be_separate_after_audit() -> None:
     assert has_unsafe_percentage_currency_mix("每个任务便宜 64%，即 $4.65 对 $8.37。[E1]")
     assert not has_unsafe_percentage_currency_mix(
         "每个完成任务便宜 64%。[E1] 单次运行是 $4.65 对 $8.37。[E1]"
     )
+
+
+def test_a_percentage_the_prices_actually_produce_is_safe() -> None:
+    """2026-09-23: this exact sentence was rejected twice and the answer refused.
+
+    The audit returned it unchanged on the repair turn, so 「Claude Opus 5.5 的
+    API 价格降了多少」 got no answer although every number in it was right.
+    """
+    assert not has_unsafe_percentage_currency_mix(
+        "- 缓存读取价格从每百万 token $0.50 降至 $0.20，下降 60%。[E4][E6]"
+    )
+    assert not has_unsafe_percentage_currency_mix(
+        "标价下调 20%，从 Opus 5 的 $5/$25 降至 $4/$20。[E1][E5]"
+    )
+    assert not has_unsafe_percentage_currency_mix("A 比 B 贵 80%，$8.37 对 $4.65。[E1]")
+    assert not has_unsafe_percentage_currency_mix("新价为原价的 80%：$4 对 $5。[E1]")
+    # The second replay: two denominators kept apart by a semicolon, on purpose.
+    assert not has_unsafe_percentage_currency_mix(
+        "max effort 下 Opus 5.5 每任务 $5.98，Opus 5 为 $5.86，此时节省消失；"
+        "「便宜 40%」的说法适用于默认（medium）设置。[E1]"
+    )
+
+
+def test_a_percentage_no_price_pair_produces_is_still_unsafe() -> None:
+    """The ADR-0023 P0: 64% is per task; $4.65 / $8.37 give 44%, 80% or 56%."""
+    assert has_unsafe_percentage_currency_mix("每个任务便宜 64%，$4.65 对 $8.37。[E1]")
+    assert has_unsafe_percentage_currency_mix(
+        "每个任务便宜 64%，即 $4.65 对 $8.37；另见官方说明。[E1]"
+    )
+    assert has_unsafe_percentage_currency_mix("从 $0.50 降至 $0.20，下降 40%。[E1]")
+    # Every percentage in the sentence must be explained, not merely one of them.
+    assert has_unsafe_percentage_currency_mix("从 $5 降至 $4，下降 20%，任务成本低 40%。[E1]")
+
+
+def test_numeric_audit_rejections_are_named_for_the_fix_they_need() -> None:
+    from ahr.rag.service import _numeric_audit_rejection
+
+    assert _numeric_audit_rejection(None) == "unparseable"
+    unsafe = {"answer_markdown": "便宜 64%，$4.65 对 $8.37。[E1]", "claims": [], "limitations": []}
+    assert _numeric_audit_rejection(unsafe) == "unsafe_mix"
+    safe = {
+        "answer_markdown": "从 $0.50 降至 $0.20，下降 60%。[E1]",
+        "claims": [],
+        "limitations": [],
+    }
+    assert _numeric_audit_rejection(safe) is None
 
 
 def test_uncited_sentences_are_removed_without_borrowing_a_source() -> None:

@@ -45,6 +45,10 @@ class ParentBlock:
     text: str
     token_count: int
     chunk_ids: tuple[str, ...]
+    # Each chunk's body, in the order `text` joins them. Lets a citation be
+    # re-pointed at the sibling that actually says the claim (`rag.anchor`)
+    # without a second read of rows this query already returned.
+    chunk_texts: tuple[str, ...] = ()
 
 
 def choose_tier(
@@ -134,6 +138,7 @@ def expand(
         text="\n\n".join(str(row[2] or "") for row in selected),
         token_count=sum(int(row[3] or 0) for row in selected),
         chunk_ids=tuple(str(row[0]) for row in selected),
+        chunk_texts=tuple(str(row[2] or "") for row in selected),
     )
 
 

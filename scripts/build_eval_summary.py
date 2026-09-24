@@ -215,8 +215,10 @@ RAGAS_MAPPING: list[dict[str, Any]] = [
     {
         "ragas": "Faithfulness",
         "asks": "答案有没有说出证据里没有的东西",
-        "ours": "support_mean / support_supported（交叉编码器对「论断 × 被引段落」打分）",
-        "value": "0.8907 / 0.9344",
+        "ours": (
+            "support_mean / support_supported（交叉编码器对「每条引用的一句论断 × 被引段落」打分）；"
+            "逐句口径 sentence_support_*（每句话 × 它的每条引用）"
+        ),
         "note": (
             "另有一条硬约束不在指标里：`check_invariants` 会把「有 [n] 却解析不到引用」"
             "或「零引用却不是拒答」的回答直接判为不可发布。指标衡量程度，不变量划定底线。"
@@ -226,7 +228,6 @@ RAGAS_MAPPING: list[dict[str, Any]] = [
         "ragas": "Answer Relevancy",
         "asks": "答案是不是在回答这个问题",
         "ours": "must_contain_hit + over_refusal_rate",
-        "value": "1.0000 / 0.0000",
         "note": (
             "误拒率必须与拒答率一起看：**全都拒答的系统在拒答指标上满分且毫无用处**。"
             "把「该答的没答」算作最严重的一种不切题。"
@@ -236,7 +237,6 @@ RAGAS_MAPPING: list[dict[str, Any]] = [
         "ragas": "Context Precision",
         "asks": "检索到的上下文里相关的占比，且相关的是否排在前面",
         "ours": "citation_precision + MRR + nDCG@10",
-        "value": "0.6686 / 0.8608 / 0.8066",
         "note": (
             "拆成两个数：引用精度看**模型选了什么**，MRR/nDCG 看**检索排了什么**。"
             "B8 那一轮的教训是这两者会分离——融合前的排序指标提升 5.9 点，"
@@ -247,14 +247,12 @@ RAGAS_MAPPING: list[dict[str, Any]] = [
         "ragas": "Context Recall",
         "asks": "该被检索到的内容有没有被检索到",
         "ours": "Recall@10 / Recall@20（对黄金集标注）",
-        "value": "0.8541 / 0.8994",
         "note": "标注是人工的，127 个 item 全部经库校验；零分块的条目会被守卫拦下并计数。",
     },
     {
         "ragas": "（无对应）",
         "asks": "同一事件被多少家独立信源覆盖",
         "ours": "story_coverage",
-        "value": "0.6921",
         "note": (
             "RAGAS 没有这一项，因为它假设文档之间彼此独立。资讯语料不是："
             "四家媒体报道同一次披露是**一条**证据不是四条，M3 的事件聚类就是为此存在的。"
@@ -264,14 +262,12 @@ RAGAS_MAPPING: list[dict[str, Any]] = [
         "ragas": "（无对应）",
         "asks": "答案里带引用的句子占比",
         "ours": "citation_coverage",
-        "value": "0.9881",
         "note": "本项目的核心主张是「每条事实可回原文」，所以句级覆盖率是一个独立的验收项。",
     },
     {
         "ragas": "Noise Sensitivity（专项小样本）",
         "asks": "混入无关上下文时答案会不会被带偏",
         "ours": "15 题同候选快照：entity / noise Recall@20",
-        "value": "0.9333 / 0.9333",
         "note": (
             "已用 15 道中文厂商专项题与 8 个经原文核验的真实近邻噪声做同候选快照 A/B。"
             "这是专项小样本，不冒充完整 90 题噪声回归。"
@@ -348,6 +344,77 @@ EXTRA: list[dict[str, Any]] = [
 ]
 
 
+# Same value as `ahr.rag.support.SUPPORT_THRESHOLD`; this script runs without
+# the service package on its path.
+SUPPORT_THRESHOLD = 0.30
+
+# ADR-0037: every published sentence–citation pair of the frozen golden run,
+# scored against the text the model read, the passage retrieval hit, and the
+# passage per-sentence anchor selection shows.
+SENTENCE_SUPPORT_FILE = "sentence-support-pairs-20260924.json"
+
+
+# The model name a run records is the one the client sent. DeepSeek retired
+# `deepseek-v4-flash` and serves that name with DeepSeek-V4.1-Flash (API docs,
+# checked 2026-09-24: the completion reports `model: deepseek-flash`).
+SERVED_AS: dict[str, str] = {"deepseek-v4-flash": "DeepSeek-V4.1-Flash"}
+
+
+def _sentence_support(generation: dict[str, Any]) -> dict[str, Any]:
+    """Sentence-level support: the release run's pairs, plus the offline before/after.
+
+    The release tile scores each citation against one sentence. A marker is
+    usually shared, so this is the figure that says what a reader hovering any
+    sentence would find. The pair file adds what per-sentence anchor selection
+    changed on identical answers, which a single run cannot show.
+    """
+    pairs = json.loads((RUNS / SENTENCE_SUPPORT_FILE).read_text(encoding="utf-8"))
+
+    def rate(key: str) -> float:
+        return round(sum(1 for p in pairs if (p.get(key) or 0) >= SUPPORT_THRESHOLD) / len(pairs), 4)
+
+    citations = {(p["q"], p["chunk_id"]) for p in pairs}
+    shared = {c for c in citations if sum(1 for p in pairs if (p["q"], p["chunk_id"]) == c) > 1}
+    return {
+        "pairs": generation.get("sentence_pairs"),
+        "passage": generation.get("sentence_support_supported"),
+        "asRead": generation.get("sentence_support_as_read_supported"),
+        "offline": {
+            "file": SENTENCE_SUPPORT_FILE,
+            "pairs": len(pairs),
+            "citations": len(citations),
+            "sharedCitations": len(shared),
+            "hitPassage": rate("hit_score"),
+            "anchoredPassage": rate("anchor_score"),
+        },
+    }
+
+
+def _ragas(
+    retrieval: dict[str, Any], generation: dict[str, Any], specialist: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """The mapping, with each value read from the release runs rather than typed in.
+
+    The values used to be literals copied from the 08-11 runs and went on being
+    shown after two newer releases.
+    """
+    def f(value: Any) -> str:
+        return "—" if value is None else f"{value:.4f}"
+
+    values = [
+        f"{f(generation.get('support_mean'))} / {f(generation.get('support_supported'))}",
+        f"{f(generation.get('must_contain_hit'))} / {f(generation.get('over_refusal_rate'))}",
+        f"{f(generation.get('citation_precision'))} / {f(retrieval.get('mrr'))} / {f(retrieval.get('ndcg@10'))}",
+        f"{f(retrieval.get('recall@10'))} / {f(retrieval.get('recall@20'))}",
+        f(generation.get("story_coverage")),
+        f(generation.get("citation_coverage")),
+        f"{f(specialist['entity']['overall'].get('recall@20'))} / "
+        f"{f(specialist['noise']['overall'].get('recall@20'))}",
+    ]
+    assert len(values) == len(RAGAS_MAPPING)
+    return [{**row, "value": value} for row, value in zip(RAGAS_MAPPING, values, strict=True)]
+
+
 def _load(name: str) -> dict[str, Any]:
     return json.loads((RUNS / name).read_text(encoding="utf-8"))
 
@@ -418,13 +485,18 @@ def build() -> dict[str, Any]:
             }
         )
 
-    release_retrieval = _load("m4-rag-eval-B9-FINAL-20260811.json")
+    # 2026-09-24: the first release whose generation half answers from the
+    # corpus as of each question (ADR-0034 regression, `corpus_cutoff`), rerun
+    # on the code being deployed. Retrieval and specialist use the production
+    # rerank depth (40); the default 100 hit SiliconFlow 429s and fell back to
+    # fused order, which is not what serves.
+    release_retrieval = _load("m4-rag-eval-B9-RELEASE-20260924.json")
     # 2026-08-30: re-run on deepseek-v4-flash, the model actually serving. The
     # 08-11 file measured deepseek-chat and the page went on certifying it for
     # nineteen days after the switch. Kept on disk — `status/` is an archive —
     # but no longer the published snapshot.
-    release_generation = _load("m4-rag-eval-GENERATION-FINAL-20260830.json")
-    release_specialist = _load("m4-rag-eval-SPECIALIST-20260811.json")
+    release_generation = _load("m4-rag-eval-GENERATION-RELEASE-20260924.json")
+    release_specialist = _load("m4-rag-eval-SPECIALIST-RELEASE-20260924.json")
     retrieval_overall = release_retrieval["summary"]["overall"]
     generation_overall = release_generation["summary"]["overall"]
     specialist_summaries = release_specialist["summaries"]
@@ -444,6 +516,8 @@ def build() -> dict[str, Any]:
                 "embeddingModel": retrieval_config["embedding_model"],
                 "rerankerModel": retrieval_config["reranker_model"],
                 "generationModel": generation_config["llm"],
+                "generationServedAs": SERVED_AS.get(generation_config["llm"]),
+                "generationFrozenAtAskedAt": generation_config.get("corpus_cutoff") == "asked_at",
             },
             "retrieval": retrieval_overall,
             "generation": generation_overall,
@@ -454,7 +528,8 @@ def build() -> dict[str, Any]:
                 "passed": release_specialist["decision"]["entity_recall_at_20_passed"],
             },
         },
-        "ragas": RAGAS_MAPPING,
+        "sentenceSupport": _sentence_support(generation_overall),
+        "ragas": _ragas(retrieval_overall, generation_overall, specialist_summaries),
         "goldenQuestions": _load(ROUNDS[0]["file"]).get("config", {}).get("golden_questions"),
         "rounds": rounds,
         "extra": extra,

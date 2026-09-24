@@ -198,7 +198,7 @@ function supportBadge(score: number | null | undefined) {
   return (
     <span
       className={`support-dot ${supported ? "support-ok" : "support-weak"}`}
-      title={`证据支持度 ${score.toFixed(3)}（交叉编码器对「论断 × 被引段落」打分，阈值 ${SUPPORT_THRESHOLD}）`}
+      title={`证据支持度 ${score.toFixed(3)}（交叉编码器对这条引用所配的一句论断 × 模型读到的上下文打分，阈值 ${SUPPORT_THRESHOLD}）`}
     >
       {supported ? "已核验" : "支持弱"}
     </span>

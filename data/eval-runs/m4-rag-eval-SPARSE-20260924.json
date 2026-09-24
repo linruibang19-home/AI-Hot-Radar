@@ -1,0 +1,1903 @@
+{
+  "run_id": "B2-20260924T050544Z",
+  "config": {
+    "variant": "B2-sparse-only",
+    "recall_depths": [
+      10,
+      20
+    ],
+    "ndcg_depth": 10,
+    "golden_files": [
+      "01-recent-updates.yaml",
+      "02-timeline.yaml",
+      "03-comparison.yaml",
+      "04-fact-check.yaml",
+      "05-explainer.yaml",
+      "06-abstention.yaml"
+    ],
+    "golden_questions": 90,
+    "sparse_depth": 40,
+    "corpus_snapshot": {
+      "snapshot_cutoff": "2026-08-03T23:59:00+08:00",
+      "newest_item": "2026-08-30T13:31:41.607180+00:00",
+      "items_in_snapshot": 1167,
+      "items_total": 3327,
+      "items_ignored": 2160
+    }
+  },
+  "summary": {
+    "overall": {
+      "questions": 90,
+      "scored": 78,
+      "unanswerable": 12,
+      "recall@10": 0.215,
+      "recall@20": 0.3252,
+      "mrr": 0.2322,
+      "ndcg@10": 0.1723,
+      "distinct_sources@10": 3.26,
+      "dominant_source_share@10": 0.5654,
+      "primary_source@5": 0.0974
+    },
+    "by_category": {
+      "recent_updates": {
+        "questions": 15,
+        "recall@10": 0.14,
+        "recall@20": 0.2133,
+        "mrr": 0.1464,
+        "ndcg@10": 0.0994,
+        "distinct_sources@10": 3.2,
+        "dominant_source_share@10": 0.5667,
+        "primary_source@5": 0.08
+      },
+      "timeline": {
+        "questions": 15,
+        "recall@10": 0.1,
+        "recall@20": 0.1333,
+        "mrr": 0.115,
+        "ndcg@10": 0.0746,
+        "distinct_sources@10": 3.33,
+        "dominant_source_share@10": 0.5733,
+        "primary_source@5": 0.0667
+      },
+      "comparison": {
+        "questions": 15,
+        "recall@10": 0.2722,
+        "recall@20": 0.4056,
+        "mrr": 0.307,
+        "ndcg@10": 0.2009,
+        "distinct_sources@10": 3.8,
+        "dominant_source_share@10": 0.56,
+        "primary_source@5": 0.1067
+      },
+      "fact_check": {
+        "questions": 15,
+        "recall@10": 0.4056,
+        "recall@20": 0.5389,
+        "mrr": 0.5115,
+        "ndcg@10": 0.3867,
+        "distinct_sources@10": 3.13,
+        "dominant_source_share@10": 0.5733,
+        "primary_source@5": 0.1067
+      },
+      "explainer": {
+        "questions": 15,
+        "recall@10": 0.2,
+        "recall@20": 0.2667,
+        "mrr": 0.1206,
+        "ndcg@10": 0.1345,
+        "distinct_sources@10": 2.87,
+        "dominant_source_share@10": 0.5533,
+        "primary_source@5": 0.1333
+      },
+      "abstention": {
+        "questions": 3,
+        "recall@10": 0.0,
+        "recall@20": 0.6667,
+        "mrr": 0.0342,
+        "ndcg@10": 0.0,
+        "distinct_sources@10": 3.0,
+        "dominant_source_share@10": 0.5667,
+        "primary_source@5": 0.0667
+      }
+    },
+    "abstention_separation": {
+      "answerable": {
+        "n": 78,
+        "mean": 28.0397,
+        "min": 11.6325,
+        "p10": 15.5479
+      },
+      "unanswerable": {
+        "n": 12,
+        "mean": 24.4464,
+        "max": 43.6483,
+        "p90": 32.6263
+      },
+      "overlap": 32.0158
+    }
+  },
+  "questions": [
+    {
+      "question_id": "RAG-GOLD-001",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 24.661,
+      "retrieved_items": 23,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "0c54905d-2643-4e2b-ac9b-fc7a04d75a8a",
+        "26f2c55a-2131-4e19-acbd-f2ba80a90ff6",
+        "7a7232f6-5fac-473f-933d-da4f32617cc0",
+        "e896d823-77a0-46ce-ae5e-34dea6471654",
+        "ebfd0a1a-e9a7-4b84-a30f-ba85015780f9",
+        "f1513d17-95b5-4b07-b10e-7eb62311d00f"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-002",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 21.2711,
+      "retrieved_items": 28,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.03571428571428571,
+      "ndcg": 0.0,
+      "first_hit_rank": 28,
+      "missed_items": [
+        "4bd0491a-dbe5-42fd-b6fc-2c6089d5e8db",
+        "938d9ada-25bf-4c98-99e3-b11795f84a02"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-003",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 27.8719,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 0.25,
+        "20": 0.5
+      },
+      "mrr": 1.0,
+      "ndcg": 0.4396592698888862,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "1418aaf4-7fe3-4f2e-85c3-d574c617a75e",
+        "6081607a-9e0c-4f31-9a7c-14c9271053e6"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-004",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 11.9954,
+      "retrieved_items": 24,
+      "recall": {
+        "10": 0.0,
+        "20": 0.25
+      },
+      "mrr": 0.058823529411764705,
+      "ndcg": 0.0,
+      "first_hit_rank": 17,
+      "missed_items": [
+        "432822e4-9a0a-44c4-8958-0b56397ce96f",
+        "6b7fe826-f4ef-430b-8046-dff82a2c0f6b",
+        "b28812b6-6b72-4945-b994-5d6c3f123e83"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-005",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 20.1633,
+      "retrieved_items": 21,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "27f7a8b2-a2a9-4018-9b99-0c1494d0dd9b",
+        "68481188-b365-4fbf-b059-07903799059a",
+        "8eb210b0-48b8-4bef-a6d2-9ecb7d9b0d78",
+        "c77929e8-3ebb-444b-b44a-3cd81077f2b0"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-006",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 15.49,
+      "retrieved_items": 22,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.14285714285714285,
+      "ndcg": 0.3333333333333333,
+      "first_hit_rank": 7,
+      "missed_items": [],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.7,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-007",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 15.2392,
+      "retrieved_items": 24,
+      "recall": {
+        "10": 0.4,
+        "20": 0.8
+      },
+      "mrr": 0.5,
+      "ndcg": 0.47054637065131494,
+      "first_hit_rank": 2,
+      "missed_items": [],
+      "distinct_sources_at_10": 5,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-008",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 12.4179,
+      "retrieved_items": 22,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "0b62b31d-c434-4974-8ba8-7233d9f61eff",
+        "14be4039-77b9-42a8-ab33-960754a7750d",
+        "18e5766c-0475-4d0c-8fde-8929132dda00",
+        "392e5ceb-2af6-43d6-8740-50ac95ef85cf"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-009",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 16.0689,
+      "retrieved_items": 29,
+      "recall": {
+        "10": 0.0,
+        "20": 0.2
+      },
+      "mrr": 0.058823529411764705,
+      "ndcg": 0.0,
+      "first_hit_rank": 17,
+      "missed_items": [
+        "5c213cd6-c62a-4fc3-bd5d-92350e067bf8",
+        "6f459060-1fa7-424e-9ecd-baa82fb8d2dc",
+        "8044d683-118b-4006-b1d3-debffe4b5f76",
+        "9208f901-d591-467b-a644-c2a5d457265b"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.8,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-010",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 40.8265,
+      "retrieved_items": 19,
+      "recall": {
+        "10": 0.25,
+        "20": 0.25
+      },
+      "mrr": 0.2,
+      "ndcg": 0.19928998603536255,
+      "first_hit_rank": 5,
+      "missed_items": [
+        "0bc8eefa-f384-456c-a376-ea2b22297a32",
+        "b26f9eca-2a6e-45ab-a793-869f1ec527a6",
+        "c71d99f4-02a6-4f78-98e1-f43848503889"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-011",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 30.8419,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "776c9f80-05c2-470c-9eaf-2c630d480cce"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.4,
+      "primary_source_at_5": 0.4
+    },
+    {
+      "question_id": "RAG-GOLD-012",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 17.6906,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "885cc411-18e0-4219-a4ac-2f1f627a12ed",
+        "9812e0cb-09a6-4ee8-b7c3-2e3ff29b20ce"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-013",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 26.2651,
+      "retrieved_items": 27,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "56301dd4-44b7-4a02-85e8-745bf87bd575",
+        "90935d20-2293-406c-ba0a-13a0539aa328",
+        "979d5db5-f851-43e5-868c-96097160d8a0",
+        "fb1c99ab-7ca8-47cd-898c-17955e1de97b"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-014",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 15.5704,
+      "retrieved_items": 24,
+      "recall": {
+        "10": 0.2,
+        "20": 0.2
+      },
+      "mrr": 0.2,
+      "ndcg": 0.04792722246291238,
+      "first_hit_rank": 5,
+      "missed_items": [
+        "03316b32-69de-4188-98cc-70cf580fcfb6",
+        "21545cf0-05a2-4f4b-84f7-62a90ac40f59",
+        "2ed4dac8-4591-4767-981e-064ffeb7ed8c",
+        "62efb4b4-b2b7-4503-8610-ce3ea0ddf494"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-015",
+      "category": "recent_updates",
+      "answerable": true,
+      "top_score": 11.6325,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "6ec50583-33e8-4d47-8080-d9d47d44653c",
+        "8760393e-e695-4e4b-8351-ff8e9653797d",
+        "cf830cae-a5c1-4d95-8cd2-a471f90156d6"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.7,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-016",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 50.0196,
+      "retrieved_items": 20,
+      "recall": {
+        "10": 0.25,
+        "20": 0.25
+      },
+      "mrr": 1.0,
+      "ndcg": 0.3903800499921017,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "03316b32-69de-4188-98cc-70cf580fcfb6",
+        "0c0ba9c9-a7bf-4953-b78b-2e974cd1db22",
+        "21545cf0-05a2-4f4b-84f7-62a90ac40f59"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-017",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 25.5874,
+      "retrieved_items": 27,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "26521b9a-36be-48e8-b077-d7b29f9673c5",
+        "4339ea8b-5b12-47f8-8333-320b968c53f3",
+        "522e3093-c327-47b7-8b45-ab07e7348f13",
+        "ee8aec00-ed03-498b-8aee-ca8dd940e490"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-018",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 42.9831,
+      "retrieved_items": 24,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "6e7eccd5-8c01-4970-90f0-797d988e128f",
+        "742e42ca-f307-48ca-918b-e146ceac107d",
+        "8c1d36bd-af2b-49d7-af2d-d16a7132e248"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-019",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 19.7057,
+      "retrieved_items": 28,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "1b960b84-2850-45f0-b833-897956d2cbe9",
+        "48bff481-f69f-4d67-9bc9-5a2738f5c9c5",
+        "69a8d5e3-6454-436b-9b9f-49ae06e77be7",
+        "93a5dfe3-e868-44aa-af63-ca56b62df079"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-020",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 34.8635,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 0.5,
+        "20": 0.75
+      },
+      "mrr": 0.16666666666666666,
+      "ndcg": 0.20546082180074093,
+      "first_hit_rank": 6,
+      "missed_items": [
+        "392e5ceb-2af6-43d6-8740-50ac95ef85cf"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.4,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-021",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 28.8846,
+      "retrieved_items": 20,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "62e2876a-aef6-4284-9a50-7565bd51f1e5",
+        "8c4b9c40-5509-4cbd-9e00-cbc2a2aa72f3",
+        "e896d823-77a0-46ce-ae5e-34dea6471654",
+        "ebfd0a1a-e9a7-4b84-a30f-ba85015780f9",
+        "f7597c70-7e8e-401c-b505-321043618670"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-022",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 22.4048,
+      "retrieved_items": 27,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "5a8170f1-fd42-473c-a376-c63c2ddbaec7",
+        "a3e3f006-f7b7-40b6-9514-66f9e5076cea",
+        "f1fb676d-73d5-4614-9e38-4d26268dbdb2",
+        "fc702f51-a25b-4bb5-9a3a-e259c0058fc9"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-023",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 27.9838,
+      "retrieved_items": 31,
+      "recall": {
+        "10": 0.0,
+        "20": 0.25
+      },
+      "mrr": 0.058823529411764705,
+      "ndcg": 0.0,
+      "first_hit_rank": 17,
+      "missed_items": [
+        "1d1fa214-c888-4ed6-91d8-11425d88b628",
+        "ba9cc7cf-2fb3-4819-9208-b6dcb5551ef8",
+        "bfec2cd0-c380-4fae-af1a-13abfbaf5f56"
+      ],
+      "distinct_sources_at_10": 5,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-024",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 21.3127,
+      "retrieved_items": 26,
+      "recall": {
+        "10": 0.75,
+        "20": 0.75
+      },
+      "mrr": 0.5,
+      "ndcg": 0.5234395301482766,
+      "first_hit_rank": 2,
+      "missed_items": [
+        "ba1f2ee5-1aab-41dc-a517-b7910b898fd3"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.4,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-025",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 41.8774,
+      "retrieved_items": 19,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "845ddf30-bd70-4e4a-af52-d7ae366b9069",
+        "87ef7256-c904-4900-b5ee-078ec4f4fccf",
+        "b3de3675-eb3d-498d-af97-d3bfe459b6f4"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.7,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-026",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 32.4246,
+      "retrieved_items": 22,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "446a6b4a-0989-496d-b1d9-284ab26a1831",
+        "6221d75f-6237-47a7-a3d1-8084de27d73a",
+        "9d0504f4-986c-4064-8360-0cd7c55fe2a7",
+        "cca66b4c-1470-41c7-acef-ce629ebe6958"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-027",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 18.7714,
+      "retrieved_items": 27,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "8c170ada-4108-4609-a4e5-56faa1125354",
+        "f5ac39ea-6797-4d6d-bd3e-0762d2974802"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-028",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 22.0725,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "53784074-d82e-4d6a-85c6-0319ff7c8372",
+        "5db9bcab-46b1-4e85-825a-09aa6825091c",
+        "95115170-399e-4cdb-ada5-4e0e9ca0c34f",
+        "e9c04365-99e6-4246-a983-50b778f0a819"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.7,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-029",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 25.356,
+      "retrieved_items": 27,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "3d444a67-51b5-4030-b8a8-1ca7fceefbe3",
+        "6ec50583-33e8-4d47-8080-d9d47d44653c",
+        "cf830cae-a5c1-4d95-8cd2-a471f90156d6",
+        "ea238078-b3fb-4ced-abf3-62682cfcd0ed"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-030",
+      "category": "timeline",
+      "answerable": true,
+      "top_score": 28.8217,
+      "retrieved_items": 27,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "7a7232f6-5fac-473f-933d-da4f32617cc0"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.8,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-031",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 37.546,
+      "retrieved_items": 24,
+      "recall": {
+        "10": 0.6666666666666666,
+        "20": 0.6666666666666666
+      },
+      "mrr": 0.3333333333333333,
+      "ndcg": 0.35013779382394095,
+      "first_hit_rank": 3,
+      "missed_items": [
+        "32781478-fde4-4e93-acc9-d07b90e5687f"
+      ],
+      "distinct_sources_at_10": 6,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-032",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 46.804,
+      "retrieved_items": 26,
+      "recall": {
+        "10": 0.25,
+        "20": 0.25
+      },
+      "mrr": 1.0,
+      "ndcg": 0.17171904689021833,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "1a71f88c-c3de-44f8-8863-c6b2a39dc579",
+        "2717b0e9-c80b-490b-83a1-a77fd34a9aa4"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-033",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 16.7368,
+      "retrieved_items": 23,
+      "recall": {
+        "10": 0.3333333333333333,
+        "20": 1.0
+      },
+      "mrr": 0.2,
+      "ndcg": 0.2152055950263274,
+      "first_hit_rank": 5,
+      "missed_items": [],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.8,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-034",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 25.6212,
+      "retrieved_items": 20,
+      "recall": {
+        "10": 0.5,
+        "20": 1.0
+      },
+      "mrr": 0.2,
+      "ndcg": 0.23719771276929622,
+      "first_hit_rank": 5,
+      "missed_items": [],
+      "distinct_sources_at_10": 5,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-035",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 43.1059,
+      "retrieved_items": 28,
+      "recall": {
+        "10": 0.3333333333333333,
+        "20": 0.3333333333333333
+      },
+      "mrr": 1.0,
+      "ndcg": 0.5562983930884396,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "caafdef0-ad57-40e6-9468-defa7fd2deca",
+        "dafcc35b-6bb2-44b9-b531-0cb76c529838"
+      ],
+      "distinct_sources_at_10": 5,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-036",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 36.8001,
+      "retrieved_items": 22,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "5a8170f1-fd42-473c-a376-c63c2ddbaec7",
+        "ac52d6e1-d0b1-4c94-820e-a46f73b595a6",
+        "ba1f2ee5-1aab-41dc-a517-b7910b898fd3",
+        "ee7f4bf0-dcc8-4642-840f-d9e8bcb2caa8"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-037",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 27.0696,
+      "retrieved_items": 20,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "446a6b4a-0989-496d-b1d9-284ab26a1831",
+        "4bd0491a-dbe5-42fd-b6fc-2c6089d5e8db",
+        "9d0504f4-986c-4064-8360-0cd7c55fe2a7",
+        "cca66b4c-1470-41c7-acef-ce629ebe6958"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-038",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 27.1997,
+      "retrieved_items": 30,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.045454545454545456,
+      "ndcg": 0.0,
+      "first_hit_rank": 22,
+      "missed_items": [],
+      "distinct_sources_at_10": 5,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-039",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 27.4358,
+      "retrieved_items": 29,
+      "recall": {
+        "10": 0.5,
+        "20": 0.5
+      },
+      "mrr": 1.0,
+      "ndcg": 0.8262346571285599,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "2091e08c-b719-4ea5-8e6f-5781dbcf905a"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-040",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 27.9037,
+      "retrieved_items": 21,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "8044d683-118b-4006-b1d3-debffe4b5f76",
+        "9208f901-d591-467b-a644-c2a5d457265b"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-041",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 20.4228,
+      "retrieved_items": 26,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.25,
+      "ndcg": 0.48247555939075515,
+      "first_hit_rank": 4,
+      "missed_items": [],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-042",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 35.3295,
+      "retrieved_items": 18,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "479d8d9f-38b1-44f6-83d7-f22b5386d007",
+        "75208601-cdc6-4840-b9ba-a54d0094cecc"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-043",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 29.3948,
+      "retrieved_items": 20,
+      "recall": {
+        "10": 0.5,
+        "20": 1.0
+      },
+      "mrr": 0.5,
+      "ndcg": 0.17376534287144002,
+      "first_hit_rank": 2,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-044",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 17.1431,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 0.0,
+        "20": 0.3333333333333333
+      },
+      "mrr": 0.07692307692307693,
+      "ndcg": 0.0,
+      "first_hit_rank": 13,
+      "missed_items": [
+        "28264453-79df-474b-8d90-e70201bf6ec4",
+        "bc1bbe5c-d7fd-4f94-9a5f-55bbf5df2fe9"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-045",
+      "category": "comparison",
+      "answerable": true,
+      "top_score": 28.2176,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "18e5766c-0475-4d0c-8fde-8929132dda00",
+        "32781478-fde4-4e93-acc9-d07b90e5687f",
+        "ac52d6e1-d0b1-4c94-820e-a46f73b595a6"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-046",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 23.834,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "7a7232f6-5fac-473f-933d-da4f32617cc0"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.4,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-047",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 15.5479,
+      "retrieved_items": 27,
+      "recall": {
+        "10": 0.3333333333333333,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 0.24207625393180188,
+      "first_hit_rank": 1,
+      "missed_items": [],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-048",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 25.4342,
+      "retrieved_items": 22,
+      "recall": {
+        "10": 0.0,
+        "20": 0.3333333333333333
+      },
+      "mrr": 0.07692307692307693,
+      "ndcg": 0.0,
+      "first_hit_rank": 13,
+      "missed_items": [
+        "1a71f88c-c3de-44f8-8863-c6b2a39dc579",
+        "a01bb9f2-8020-4829-b776-8e2dd5d6529b"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.8,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-049",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 25.1377,
+      "retrieved_items": 23,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "2717b0e9-c80b-490b-83a1-a77fd34a9aa4"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.9,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-050",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 23.1832,
+      "retrieved_items": 22,
+      "recall": {
+        "10": 0.25,
+        "20": 0.25
+      },
+      "mrr": 1.0,
+      "ndcg": 0.17171904689021833,
+      "first_hit_rank": 1,
+      "missed_items": [
+        "03316b32-69de-4188-98cc-70cf580fcfb6",
+        "0c0ba9c9-a7bf-4953-b78b-2e974cd1db22",
+        "21545cf0-05a2-4f4b-84f7-62a90ac40f59"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-051",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 45.3245,
+      "retrieved_items": 22,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": [],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-052",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 27.3756,
+      "retrieved_items": 20,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": [],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-053",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 35.0348,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 0.0,
+        "20": 1.0
+      },
+      "mrr": 0.05263157894736842,
+      "ndcg": 0.0,
+      "first_hit_rank": 19,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-054",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 20.1992,
+      "retrieved_items": 21,
+      "recall": {
+        "10": 0.5,
+        "20": 0.5
+      },
+      "mrr": 0.5,
+      "ndcg": 0.3868528072345416,
+      "first_hit_rank": 2,
+      "missed_items": [
+        "1a71f88c-c3de-44f8-8863-c6b2a39dc579"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-055",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 21.0728,
+      "retrieved_items": 24,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": [],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-056",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 41.6098,
+      "retrieved_items": 21,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": [],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-057",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 34.8629,
+      "retrieved_items": 21,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "4339ea8b-5b12-47f8-8333-320b968c53f3",
+        "ee8aec00-ed03-498b-8aee-ca8dd940e490"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-058",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 19.7308,
+      "retrieved_items": 24,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.043478260869565216,
+      "ndcg": 0.0,
+      "first_hit_rank": 23,
+      "missed_items": [],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-059",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 20.2807,
+      "retrieved_items": 19,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "1804e434-4389-406e-a837-b05b2fb298b4"
+      ],
+      "distinct_sources_at_10": 6,
+      "dominant_source_share_at_10": 0.4,
+      "primary_source_at_5": 0.4
+    },
+    {
+      "question_id": "RAG-GOLD-060",
+      "category": "fact_check",
+      "answerable": true,
+      "top_score": 25.2843,
+      "retrieved_items": 28,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-061",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 40.5246,
+      "retrieved_items": 19,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "5c6413c2-1bd2-47fb-90d7-afc15ebf7322",
+        "938d9ada-25bf-4c98-99e3-b11795f84a02",
+        "a8afca1b-cd51-44e2-bb78-229bc3ecfc27"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-062",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 12.584,
+      "retrieved_items": 26,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.5,
+      "ndcg": 0.6309297535714574,
+      "first_hit_rank": 2,
+      "missed_items": [],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.4,
+      "primary_source_at_5": 0.4
+    },
+    {
+      "question_id": "RAG-GOLD-063",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 85.3005,
+      "retrieved_items": 20,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 1.0,
+      "ndcg": 1.0,
+      "first_hit_rank": 1,
+      "missed_items": [],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-064",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 50.0492,
+      "retrieved_items": 20,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "ad1b3825-03e7-4957-bcc8-23dc726f5d80"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-065",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 33.7552,
+      "retrieved_items": 20,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "9812e0cb-09a6-4ee8-b7c3-2e3ff29b20ce"
+      ],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-066",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 25.3423,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 1.0,
+        "20": 1.0
+      },
+      "mrr": 0.2,
+      "ndcg": 0.38685280723454163,
+      "first_hit_rank": 5,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.4
+    },
+    {
+      "question_id": "RAG-GOLD-067",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 46.8552,
+      "retrieved_items": 19,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "6221d75f-6237-47a7-a3d1-8084de27d73a"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-068",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 26.4883,
+      "retrieved_items": 22,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "114c8e21-7b67-4eb6-b875-448d1ceebb42"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-069",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 21.8243,
+      "retrieved_items": 26,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.041666666666666664,
+      "ndcg": 0.0,
+      "first_hit_rank": 24,
+      "missed_items": [
+        "e4d7ba5e-c4b0-4400-81e6-7cb996bfa87c"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-070",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 18.291,
+      "retrieved_items": 26,
+      "recall": {
+        "10": 0.0,
+        "20": 1.0
+      },
+      "mrr": 0.06666666666666667,
+      "ndcg": 0.0,
+      "first_hit_rank": 15,
+      "missed_items": [],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-071",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 25.321,
+      "retrieved_items": 22,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "5c6413c2-1bd2-47fb-90d7-afc15ebf7322",
+        "a8afca1b-cd51-44e2-bb78-229bc3ecfc27"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.7,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-072",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 30.5879,
+      "retrieved_items": 24,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "03316b32-69de-4188-98cc-70cf580fcfb6",
+        "62efb4b4-b2b7-4503-8610-ce3ea0ddf494",
+        "64485d22-c2e4-4c39-b4bb-d35aa5984128"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-073",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 25.0056,
+      "retrieved_items": 24,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "44f4f5de-7e3c-453d-aa48-15591cb30be5",
+        "733c399d-a628-4840-8679-f8eeedb31156"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-074",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 19.9431,
+      "retrieved_items": 23,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "0ecc8e53-48c4-412f-ae30-c510f95a359d"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-075",
+      "category": "explainer",
+      "answerable": true,
+      "top_score": 18.3535,
+      "retrieved_items": 22,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "a0d94654-cfae-455a-9e2c-97ae72d75ad8",
+        "e4d7ba5e-c4b0-4400-81e6-7cb996bfa87c"
+      ],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-076",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 14.6409,
+      "retrieved_items": 30,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-077",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 14.3742,
+      "retrieved_items": 25,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.4
+    },
+    {
+      "question_id": "RAG-GOLD-078",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 43.6483,
+      "retrieved_items": 23,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.7,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-079",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 26.3431,
+      "retrieved_items": 22,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-080",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 15.6266,
+      "retrieved_items": 26,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.4,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-081",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 24.9992,
+      "retrieved_items": 31,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-082",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 30.9703,
+      "retrieved_items": 24,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 5,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-083",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 32.6263,
+      "retrieved_items": 27,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-084",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 21.3103,
+      "retrieved_items": 24,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.6,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-085",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 18.8144,
+      "retrieved_items": 24,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-086",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 18.4297,
+      "retrieved_items": 27,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.4,
+      "primary_source_at_5": 0.4
+    },
+    {
+      "question_id": "RAG-GOLD-087",
+      "category": "abstention",
+      "answerable": false,
+      "top_score": 31.5736,
+      "retrieved_items": 20,
+      "recall": {},
+      "mrr": null,
+      "ndcg": null,
+      "first_hit_rank": null,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-088",
+      "category": "abstention",
+      "answerable": true,
+      "top_score": 51.4961,
+      "retrieved_items": 20,
+      "recall": {
+        "10": 0.0,
+        "20": 1.0
+      },
+      "mrr": 0.05263157894736842,
+      "ndcg": 0.0,
+      "first_hit_rank": 19,
+      "missed_items": [],
+      "distinct_sources_at_10": 3,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    },
+    {
+      "question_id": "RAG-GOLD-089",
+      "category": "abstention",
+      "answerable": true,
+      "top_score": 30.5882,
+      "retrieved_items": 25,
+      "recall": {
+        "10": 0.0,
+        "20": 1.0
+      },
+      "mrr": 0.05,
+      "ndcg": 0.0,
+      "first_hit_rank": 20,
+      "missed_items": [],
+      "distinct_sources_at_10": 4,
+      "dominant_source_share_at_10": 0.7,
+      "primary_source_at_5": 0.2
+    },
+    {
+      "question_id": "RAG-GOLD-090",
+      "category": "abstention",
+      "answerable": true,
+      "top_score": 23.0662,
+      "retrieved_items": 23,
+      "recall": {
+        "10": 0.0,
+        "20": 0.0
+      },
+      "mrr": 0.0,
+      "ndcg": 0.0,
+      "first_hit_rank": null,
+      "missed_items": [
+        "438f95a4-62c2-4d47-ac18-5002995c1b78"
+      ],
+      "distinct_sources_at_10": 2,
+      "dominant_source_share_at_10": 0.5,
+      "primary_source_at_5": 0.0
+    }
+  ]
+}

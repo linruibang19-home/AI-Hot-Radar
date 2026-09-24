@@ -101,7 +101,9 @@ def _period_keys(now: datetime) -> list[tuple[str, str]]:
     return keys
 
 
-def _report_is_stale(connection: Any, period: str, key: str) -> bool:
+def _report_is_stale(
+    connection: Any, period: str, key: str, *, retry_fallback: bool = False
+) -> bool:
     """Regenerate only when there is new material *in this report's window*.
 
     Reports cost an LLM call each, so a fixed interval would spend money
@@ -116,19 +118,31 @@ def _report_is_stale(connection: Any, period: str, key: str) -> bool:
     Scoping the query to the edition's own date range is the whole fix: a
     selection outside `[start, end]` cannot alter this report's contents, so it
     must not trigger a rewrite.
+
+    The one exception is an edition written without a model summary
+    (`model_name IS NULL`: the deterministic digest). Freshness alone never
+    revisits it — once yesterday's selections settle, a single rejected model
+    answer became the published summary for good, which is how 2026-09-12,
+    09-13 and 09-20 went out with the template sentence. With `retry_fallback`
+    (the caller has a model to retry with) such an edition is regenerated on the
+    next pass while it is still in the refresh window. That is at most one call
+    per open edition per pass, and only while the model keeps failing.
     """
     from ahr.processing.report import _period_range
 
     start, end, _ = _period_range(period, key)
     with connection.cursor() as cursor:
         cursor.execute(
-            "SELECT generated_at FROM report WHERE period_type = %s AND period_key = %s",
+            "SELECT generated_at, model_name IS NULL FROM report"
+            " WHERE period_type = %s AND period_key = %s",
             (period, key),
         )
         row = cursor.fetchone()
         if row is None:
             return True
         generated_at = row[0]
+        if retry_fallback and row[1]:
+            return True
 
         # selection_record has no updated_at, so a reason rewritten in place
         # would not move this timestamp. That is the right behaviour here: the
@@ -276,7 +290,7 @@ async def _refresh_reports(
     for period, key in _period_keys(datetime.now(UTC)):
         label = f"{period}:{key}"
         with psycopg.connect(get_settings().database_url) as connection:
-            if not _report_is_stale(connection, period, key):
+            if not _report_is_stale(connection, period, key, retry_fallback=client is not None):
                 written[label] = "unchanged"
                 continue
 

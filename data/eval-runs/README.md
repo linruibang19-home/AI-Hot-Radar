@@ -31,6 +31,8 @@ python scripts/build_eval_summary.py
 | ENTITY | `m4-rag-eval-ENTITY-20260810.json` | [产品成熟度复核](../../docs/status/evidence/rag-product-readiness-20260810.md) | 在线时间通道对齐、实体时间通道与来源多样性诊断（B3，无重排） |
 | B9-FINAL | `m4-rag-eval-B9-FINAL-20260811.json` | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 90 题完整重排发布回归，Recall@20 0.8994 |
 | SPECIALIST | `m4-rag-eval-SPECIALIST-20260811.json` | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 15 题同快照实体/噪声 A/B；Recall@20 0.9333，噪声无退化 |
+| **B9-RELEASE** | `m4-rag-eval-B9-RELEASE-20260924.json` | [调优纪要](../../docs/status/evidence/rag-tuning-log.md) | **v0.1.30 发布快照（检索）**：重排 40 候选（生产深度），Recall@20 0.8998，重排失败 0 |
+| **SPECIALIST-RELEASE** | `m4-rag-eval-SPECIALIST-RELEASE-20260924.json` | [调优纪要](../../docs/status/evidence/rag-tuning-log.md) | **v0.1.30 发布快照（专项）**：15 题 entity / noise Recall@20 0.9333 / 0.9333，通过 |
 | SPECIALIST-IDENTIFIER | `m4-rag-eval-SPECIALIST-IDENTIFIER-20260811.json` | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | **负结果**：扩大深度/identifier 未救回第 27 名目标，未上线 |
 
 ## 生成侧与延迟
@@ -46,7 +48,19 @@ python scripts/build_eval_summary.py
 | GEN（08-09 双口径） | `m4-rag-eval-GEN-20260809-dual.json` | [双口径说明](../../docs/status/evidence/rag-tuning-log.md) | 段落级 0.9371；父块级 1.0000 是门控结果，不作独立判据 |
 | GENERATION-FINAL | `m4-rag-eval-GENERATION-FINAL-20260811.json` | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 90 题：完整性 0.9881，段落支持达标率 0.9344，拒答准确率 1.0000 |
 | SPECIALIST-FINAL2 | `m4-rag-eval-SPECIALIST-FINAL2-20260811.json` | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 15 题生成与人工 P0 审计；14 答、1 个已知缺口安全拒答 |
+| **GENERATION-RELEASE** | `m4-rag-eval-GENERATION-RELEASE-20260924.json` | [调优纪要](../../docs/status/evidence/rag-tuning-log.md) | **v0.1.30 发布快照（生成）**：首个按提问时间冻结语料的发布轮。完整性 1.0000，段落支持 0.9900（每条引用），逐句 0.9319 / 0.9382（631 对），误拒 1/78，诱导题 0/12；deepseek-v4-flash 由 DeepSeek-V4.1-Flash 提供服务 |
 | POST-FINALIZER | `m4-rag-eval-POST-FINALIZER-RAG009-20260811.json` 等 4 份 | [专项发布审计](../../docs/status/evidence/rag-specialist-audit-20260811.md) | 支持度过滤后的逐句门禁真实重放，4/4 完整性 1.0000 |
+
+## 诊断运行（非发布）
+
+| 轮次 | JSON | 结论 |
+|---|---|---|
+| GEN-FROZEN（09-24，本地） | `m4-rag-eval-GEN-FROZEN-20260924.json` | **首个按提问时间冻结语料的生成评测**，此后的生成侧对比以它为基线。引用准确率 0.6888（与未冻结的 NUMAUDIT 逐题配对 +0.124）；273 个被引（题, 条目）无一晚于提问时间；逐条记录引用，可离线重打分 |
+| SENTENCE（09-24，本地） | `sentence-support-pairs-20260924.json` | FROZEN 全部 685 个句子–引用对，对父块、命中分块、每个兄弟分块的交叉编码器分数。逐句删除 23 句中至少 14 句原文有，删除不上线；按句选锚点段落级 0.8613 → 0.8993 |
+| PLANNER-AB（09-24，本地） | `m4-rag-eval-PLANNER-AB-regex-20260924.json`<br>`m4-rag-eval-PLANNER-AB-llm-20260924.json` | 生产检索配置（重排 40 候选）上正则 vs LLM 规划器：R@20 0.8998 vs 0.8908，逐题 0 升 2 降；两轮重排失败均为 0。补上 B16 丢失的逐题数据 |
+| AUDIT-AB（09-24，本地） | `audit-ab-golden-20260924.json`<br>`audit-ab-specialist-20260924.json` | ADR-0036 配对实验：同一草稿上新旧审计提示词各判一次，逐条保存草稿与两份输出。黄金集 31 次审计耗时均值 3875 → 998 ms；9 次分歧全是旧提示词拆句；专项集 5 次完全一致，P0 RAG-VENDOR-010 两边都改写 |
+| SPARSE（09-24，本地） | `m4-rag-eval-SPARSE-20260924.json` | 纯稀疏通道复测（不带实体词）：纯中文 8 题 R@20 0.3438（B2 为 0），含英文 70 题 0.3231。逐版本拆解与带实体词的生产口径见[调优纪要](../../docs/status/evidence/rag-tuning-log.md)「ZH」一节 |
+| NUMAUDIT（09-24，本地） | `m4-rag-eval-GEN-NUMAUDIT-20260924.json`<br>`m4-rag-eval-SPECIALIST-NUMAUDIT-20260924.json` | ADR-0034 回归：数值审计 44 次触发、改动 15 次、fail-closed 0；生成评测未冻结语料，与发布基线的其余差异不可比 |
 
 ## 没有出现在 `/eval` 上的几份，以及为什么留着
 

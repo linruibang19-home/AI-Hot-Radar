@@ -1,0 +1,107 @@
+[
+ {
+  "repair": false,
+  "draft": "阿里最新旗舰 Qwen3.8-Max 在第三方榜单和官方自测中表现直逼 Claude 系列，编程能力甚至超过 Claude Opus 5 和 Fable 5 的 High 版本 [E1]。不过这些对比数据多来自厂商自测，独立验证尚未完成 [E2]。\n\n- Qwen3.8-Max 总参数量 **2.4 万亿**，每次查询激活 950 亿参数，基于 Qwen3.5 架构 [E2]。\n- 在最新放榜的 Arena 榜单中，Qwen3.8-Max 冲进全球大模型第一梯队，表现直逼 Anthropic 的 Claude 系列 [E1]。\n- 编程能力（前端）榜单上，Qwen3.8-Max 超过了 Claude Opus 5 和 Fable 5 的 High 版本 [E1]。\n- 在 Qwen 团队公布的基准表中，Qwen3.8-Max 在多个类别上接近或超过 Claude Opus 4.8、Claude Fable 5 和 GPT-5.6 Sol [E2]。\n- PaperBench 上 Qwen3.8-Max 得分 **93**，为对比中最高 [E2]。\n- TerminalBench 2.1 上 Qwen3.8-Max 得分 **86.6**，落后于 GPT-5.6 Sol 的 88.8 [E2]。\n- 价格方面，Qwen3.8-Max 国内每百万 Tokens 输入 12 元、输出 36 元，隐式缓存命中 1.5 元；输入与输出的国际价格仅为 Opus 5 的 40% 与 24% [E1]。\n- Claude Opus 5 定价为每百万输入 tokens **5 美元**、输出 25 美元，与 Opus 4.8 相同 [E8]。\n- Claude Opus 5 在 Epoch 的 ECI 评估中得分为 **159**，略低于 Fable 5 的 161，但在软件工程基准 SWE-ECI 上与 Fable 5 持平于 161 [E3]。\n- 有用户反馈 Opus 5 相比 Opus 4.8 仅提升 1 个 ECI 点，但实际使用中感觉「各方面都好得多」 [E3]。\n- 证据没有给出 Qwen3.8-Max 与 Claude 在统一口径下的直接对比数值。",
+  "new_raw": "{\"answer_markdown\": \"阿里最新旗舰 Qwen3.8-Max 在第三方榜单和官方自测中表现直逼 Claude 系列，编程能力甚至超过 Claude Opus 5 和 Fable 5 的 High 版本 [E1]。不过这些对比数据多来自厂商自测，独立验证尚未完成 [E2]。\\n\\n- Qwen3.8-Max 总参数量 **2.4 万亿**，每次查询激活 950 亿参数，基于 Qwen3.5 架构 [E2]。\\n- 在最新放榜的 Arena 榜单中，Qwen3.8-Max 冲进全球大模型第一梯队，表现直逼 Anthropic 的 Claude 系列 [E1]。\\n- 编程能力（前端）榜单上，Qwen3.8-Max 超过了 Claude Opus 5 和 Fable 5 的 High 版本 [E1]。\\n- 在 Qwen 团队公布的基准表中，Qwen3.8-Max 在多个类别上接近或超过 Claude Opus 4.8、Claude Fable 5 和 GPT-5.6 Sol [E2]。\\n- PaperBench 上 Qwen3.8-Max 得分 **93**，为对比中最高 [E2]。\\n- TerminalBench 2.1 上 Qwen3.8-Max 得分 **86.6**，落后于 GPT-5.6 Sol 的 88.8 [E2]。\\n- Qwen3.8-Max 国内每百万 Tokens 输入 12 元、输出 36 元，隐式缓存命中 1.5 元。[E1] 输入与输出的国际价格仅为 Opus 5 的 40% 与 24%。[E1]\\n- Claude Opus 5 定价为每百万输入 tokens **5 美元**、输出 25 美元，与 Opus 4.8 相同 [E8]。\\n- Claude Opus 5 在 Epoch 的 ECI 评估中得分为 **159**，略低于 Fable 5 的 161。[E3] 在软件工程基准 SWE-ECI 上，Claude Opus 5 与 Fable 5 持平于 161。[E3]\\n- 有用户反馈 Opus 5 相比 Opus 4.8 仅提升 1 个 ECI 点，但实际使用中感觉「各方面都好得多」 [E3]。\\n- 证据没有给出 Qwen3.8-Max 与 Claude 在统一口径下的直接对比数值。\", \"claims\": [{\"text\": \"阿里最新旗舰 Qwen3.8-Max 在第三方榜单和官方自测中表现直逼 Claude 系列，编程能力甚至超过 Claude Opus 5 和 Fable 5 的 High 版本\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"这些对比数据多来自厂商自测，独立验证尚未完成\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"Qwen3.8-Max 总参数量 2.4 万亿，每次查询激活 950 亿参数，基于 Qwen3.5 架构\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"在最新放榜的 Arena 榜单中，Qwen3.8-Max 冲进全球大模型第一梯队，表现直逼 Anthropic 的 Claude 系列\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"编程能力（前端）榜单上，Qwen3.8-Max 超过了 Claude Opus 5 和 Fable 5 的 High 版本\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"在 Qwen 团队公布的基准表中，Qwen3.8-Max 在多个类别上接近或超过 Claude Opus 4.8、Claude Fable 5 和 GPT-5.6 Sol\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"PaperBench 上 Qwen3.8-Max 得分 93，为对比中最高\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"TerminalBench 2.1 上 Qwen3.8-Max 得分 86.6，落后于 GPT-5.6 Sol 的 88.8\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"Qwen3.8-Max 国内每百万 Tokens 输入 12 元、输出 36 元，隐式缓存命中 1.5 元\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"Qwen3.8-Max 输入与输出的国际价格仅为 Opus 5 的 40% 与 24%\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"Claude Opus 5 定价为每百万输入 tokens 5 美元、输出 25 美元，与 Opus 4.8 相同\", \"evidence_ids\": [\"E8\"], \"certainty\": \"confirmed\"}, {\"text\": \"Claude Opus 5 在 Epoch 的 ECI 评估中得分为 159，略低于 Fable 5 的 161\", \"evidence_ids\": [\"E3\"], \"certainty\": \"confirmed\"}, {\"text\": \"在软件工程基准 SWE-ECI 上，Claude Opus 5 与 Fable 5 持平于 161\", \"evidence_ids\": [\"E3\"], \"certainty\": \"confirmed\"}, {\"text\": \"有用户反馈 Opus 5 相比 Opus 4.8 仅提升 1 个 ECI 点，但实际使用中感觉「各方面都好得多」\", \"evidence_ids\": [\"E3\"], \"certainty\": \"confirmed\"}], \"limitations\": [\"证据没有给出 Qwen3.8-Max 与 Claude 在统一口径下的直接对比数值，两侧数据来自不同来源和不同评测体系，无法直接换算或比较。\", \"Qwen3.8-Max 的对比数据多来自厂商自测，独立验证尚未完成。\"]}",
+  "new_ms": 4062,
+  "new_out": 1396,
+  "old_raw": "{\"answer_markdown\": \"阿里最新旗舰 Qwen3.8-Max 在第三方榜单和官方自测中表现直逼 Claude 系列，编程能力甚至超过 Claude Opus 5 和 Fable 5 的 High 版本 [E1]。不过这些对比数据多来自厂商自测，独立验证尚未完成 [E2]。\\n\\n- Qwen3.8-Max 总参数量 **2.4 万亿**，每次查询激活 950 亿参数，基于 Qwen3.5 架构 [E2]。\\n- 在最新放榜的 Arena 榜单中，Qwen3.8-Max 冲进全球大模型第一梯队，表现直逼 Anthropic 的 Claude 系列 [E1]。\\n- 编程能力（前端）榜单上，Qwen3.8-Max 超过了 Claude Opus 5 和 Fable 5 的 High 版本 [E1]。\\n- 在 Qwen 团队公布的基准表中，Qwen3.8-Max 在多个类别上接近或超过 Claude Opus 4.8、Claude Fable 5 和 GPT-5.6 Sol [E2]。\\n- PaperBench 上 Qwen3.8-Max 得分 **93**，为对比中最高 [E2]。\\n- TerminalBench 2.1 上 Qwen3.8-Max 得分 **86.6**，落后于 GPT-5.6 Sol 的 88.8 [E2]。\\n- Qwen3.8-Max 国内每百万 Tokens 输入 12 元、输出 36 元，隐式缓存命中 1.5 元 [E1]。\\n- Qwen3.8-Max 输入与输出的国际价格仅为 Opus 5 的 40% 与 24% [E1]。\\n- Claude Opus 5 定价为每百万输入 tokens **5 美元**、输出 25 美元，与 Opus 4.8 相同 [E8]。\\n- Claude Opus 5 在 Epoch 的 ECI 评估中得分为 **159**，略低于 Fable 5 的 161 [E3]。\\n- Claude Opus 5 在软件工程基准 SWE-ECI 上与 Fable 5 持平于 161 [E3]。\\n- 有用户反馈 Opus 5 相比 Opus 4.8 仅提升 1 个 ECI 点，但实际使用中感觉「各方面都好得多」 [E3]。\\n- 证据没有给出 Qwen3.8-Max 与 Claude 在统一口径下的直接对比数值。\", \"claims\": [{\"text\": \"阿里最新旗舰 Qwen3.8-Max 在第三方榜单和官方自测中表现直逼 Claude 系列，编程能力甚至超过 Claude Opus 5 和 Fable 5 的 High 版本\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"这些对比数据多来自厂商自测，独立验证尚未完成\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"Qwen3.8-Max 总参数量 2.4 万亿，每次查询激活 950 亿参数，基于 Qwen3.5 架构\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"在最新放榜的 Arena 榜单中，Qwen3.8-Max 冲进全球大模型第一梯队，表现直逼 Anthropic 的 Claude 系列\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"编程能力（前端）榜单上，Qwen3.8-Max 超过了 Claude Opus 5 和 Fable 5 的 High 版本\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"在 Qwen 团队公布的基准表中，Qwen3.8-Max 在多个类别上接近或超过 Claude Opus 4.8、Claude Fable 5 和 GPT-5.6 Sol\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"PaperBench 上 Qwen3.8-Max 得分 93，为对比中最高\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"TerminalBench 2.1 上 Qwen3.8-Max 得分 86.6，落后于 GPT-5.6 Sol 的 88.8\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"Qwen3.8-Max 国内每百万 Tokens 输入 12 元、输出 36 元，隐式缓存命中 1.5 元\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"Qwen3.8-Max 输入与输出的国际价格仅为 Opus 5 的 40% 与 24%\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"Claude Opus 5 定价为每百万输入 tokens 5 美元、输出 25 美元，与 Opus 4.8 相同\", \"evidence_ids\": [\"E8\"], \"certainty\": \"confirmed\"}, {\"text\": \"Claude Opus 5 在 Epoch 的 ECI 评估中得分为 159，略低于 Fable 5 的 161\", \"evidence_ids\": [\"E3\"], \"certainty\": \"confirmed\"}, {\"text\": \"Claude Opus 5 在软件工程基准 SWE-ECI 上与 Fable 5 持平于 161\", \"evidence_ids\": [\"E3\"], \"certainty\": \"confirmed\"}, {\"text\": \"有用户反馈 Opus 5 相比 Opus 4.8 仅提升 1 个 ECI 点，但实际使用中感觉「各方面都好得多」\", \"evidence_ids\": [\"E3\"], \"certainty\": \"confirmed\"}], \"limitations\": [\"证据没有给出 Qwen3.8-Max 与 Claude 在统一口径下的直接对比数值，两侧数据来自不同来源和不同评测体系，无法直接换算或比较。\", \"Qwen3.8-Max 的对比数据多来自厂商自测，独立验证尚未完成。\", \"Qwen3.8-Max 的国内人民币价格与 Claude Opus 5 的美元价格属于不同货币和不同计费口径，不能直接换算或比较。\"]}",
+  "old_ms": 4594,
+  "old_out": 1444,
+  "qid": "RAG-VENDOR-004",
+  "final_audit": {
+   "triggered": true,
+   "status": "passed",
+   "ms": 8657,
+   "attempts": 1,
+   "verdict": "rewritten",
+   "changed": true
+  },
+  "total_ms": 14967,
+  "refused": false
+ },
+ {
+  "repair": false,
+  "draft": "月之暗面最新公开的旗舰模型 Kimi K3 总参数为 **2.8 万亿**，激活参数约为 **50B 等效**（每 token 激活 896 个专家中的 16 个）[E8]。\n\n- Kimi K3 是自回归 MoE transformer，原生支持视觉，上下文长度 1,000,000 tokens [E8]。\n- 其前代 Kimi K2 的总参数为 1T、激活参数为 32B [E2][E3]。\n- 另有报道称 K3 权重预期为 2.8T 总参数、MoE 896 专家/每 token 激活 16 个 [E4]。\n- 关于 K3 参数规模，还有「超过 2.5 万亿」的传闻说法，属未经官方确认的消息 [E7]。",
+  "new_raw": "{\"verdict\": \"ok\"}",
+  "new_ms": 1234,
+  "new_out": 7,
+  "old_raw": "{\"answer_markdown\": \"月之暗面最新公开的旗舰模型 Kimi K3 总参数为 **2.8 万亿**，激活参数约为 **50B 等效**（每 token 激活 896 个专家中的 16 个）[E8]。\\n\\n- Kimi K3 是自回归 MoE transformer，原生支持视觉，上下文长度 1,000,000 tokens [E8]。\\n- 其前代 Kimi K2 的总参数为 1T、激活参数为 32B [E2][E3]。\\n- 另有报道称 K3 权重预期为 2.8T 总参数、MoE 896 专家/每 token 激活 16 个 [E4]。\\n- 关于 K3 参数规模，还有「超过 2.5 万亿」的传闻说法，属未经官方确认的消息 [E7]。\", \"claims\": [{\"text\": \"Kimi K3 总参数为 2.8 万亿，激活参数约为 50B 等效（每 token 激活 896 个专家中的 16 个）。\", \"evidence_ids\": [\"E8\"], \"certainty\": \"confirmed\"}, {\"text\": \"Kimi K3 是自回归 MoE transformer，原生支持视觉，上下文长度 1,000,000 tokens。\", \"evidence_ids\": [\"E8\"], \"certainty\": \"confirmed\"}, {\"text\": \"Kimi K2 总参数为 1T，激活参数为 32B。\", \"evidence_ids\": [\"E2\", \"E3\"], \"certainty\": \"confirmed\"}, {\"text\": \"有报道称 K3 权重预期为 2.8T 总参数、MoE 896 专家/每 token 激活 16 个。\", \"evidence_ids\": [\"E4\"], \"certainty\": \"likely\"}, {\"text\": \"关于 K3 参数规模还有「超过 2.5 万亿」的传闻说法，属未经官方确认的消息。\", \"evidence_ids\": [\"E7\"], \"certainty\": \"uncertain\"}], \"limitations\": [\"问题问的是「月之暗面的新模型」，证据中同时出现 K2、K2.5、K3 等多个型号，未明确统一「新模型」所指；此处以最新公开的 K3 为主，并列出 K2 数据供参照。\", \"K3 的激活参数在证据中表述为「约 50B 等效」，未给出更精确的数值或分项（如注意力参数与 MoE 专家参数的拆分）。\"]}",
+  "old_ms": 2297,
+  "old_out": 562,
+  "qid": "RAG-VENDOR-007",
+  "final_audit": {
+   "triggered": true,
+   "status": "passed",
+   "ms": 3531,
+   "attempts": 1,
+   "verdict": "ok",
+   "changed": false
+  },
+  "total_ms": 9687,
+  "refused": false
+ },
+ {
+  "repair": false,
+  "draft": "检索到的证据里没有月之暗面新模型（Kimi K3）与 GPT-5.6 Sol 在编码任务上的成本对比数据。证据中确实存在 Kimi K3 与 GPT-5.6 Sol 的成本对比，但那是针对 DeepSWE 软件工程基准的 rollout 成本，不是编码任务的成本差：Kimi K3 每次 rollout 为 **$4.65**，GPT-5.6 Sol 为 **$8.37** [E5]；按每解决一个任务计算，Kimi K3 每 $100 解决 14.7 个任务，Sol 为 5.3 个，约为 2.8 倍 [E5]。证据没有给出两者在编码任务上的成本差额或百分比。",
+  "new_raw": "{\"answer_markdown\": \"检索到的证据里没有月之暗面新模型（Kimi K3）与 GPT-5.6 Sol 在编码任务上的成本对比数据。证据中确实存在 Kimi K3 与 GPT-5.6 Sol 的成本对比，但那是针对 DeepSWE 软件工程基准的 rollout 成本，不是编码任务的成本差：Kimi K3 每次 rollout 为 **$4.65**，GPT-5.6 Sol 为 **$8.37** [E5]；按每解决一个任务计算，Kimi K3 每 $100 解决 14.7 个任务，Sol 为 5.3 个，约为 2.8 倍 [E5]。证据没有给出两者在编码任务上的成本差额或百分比。\", \"claims\": [{\"text\": \"Kimi K3 每次 rollout 成本为 $4.65，GPT-5.6 Sol 为 $8.37\", \"evidence_ids\": [\"E5\"], \"certainty\": \"confirmed\"}, {\"text\": \"按每解决一个任务计算，Kimi K3 每 $100 解决 14.7 个任务，Sol 为 5.3 个，约为 2.8 倍\", \"evidence_ids\": [\"E5\"], \"certainty\": \"confirmed\"}], \"limitations\": [\"证据中没有月之暗面新模型与 GPT-5.6 Sol 在编码任务上的成本对比数据，只有 DeepSWE 基准的 rollout 成本对比，两者口径不同。\", \"证据没有给出两者在编码任务上的成本差额或百分比。\"]}",
+  "new_ms": 1469,
+  "new_out": 352,
+  "old_raw": "{\"answer_markdown\": \"检索到的证据里没有月之暗面新模型（Kimi K3）与 GPT-5.6 Sol 在编码任务上的成本对比数据。证据中确实存在 Kimi K3 与 GPT-5.6 Sol 的成本对比，但那是针对 DeepSWE 软件工程基准的 rollout 成本，不是编码任务的成本差：Kimi K3 每次 rollout 为 **$4.65**，GPT-5.6 Sol 为 **$8.37** [E5]。按每解决一个任务计算，Kimi K3 每 $100 解决 14.7 个任务，Sol 为 5.3 个，约为 2.8 倍 [E5]。证据没有给出两者在编码任务上的成本差额或百分比。\", \"claims\": [{\"text\": \"Kimi K3 每次 rollout 成本为 $4.65，GPT-5.6 Sol 为 $8.37\", \"evidence_ids\": [\"E5\"], \"certainty\": \"confirmed\"}, {\"text\": \"按每解决一个任务计算，Kimi K3 每 $100 解决 14.7 个任务，Sol 为 5.3 个，约为 2.8 倍\", \"evidence_ids\": [\"E5\"], \"certainty\": \"confirmed\"}], \"limitations\": [\"证据中没有月之暗面新模型与 GPT-5.6 Sol 在编码任务上的成本对比数据，只有 DeepSWE 基准的 rollout 成本对比，两者口径不同。\", \"证据没有给出两者在编码任务上的成本差额或百分比。\"]}",
+  "old_ms": 1671,
+  "old_out": 351,
+  "qid": "RAG-VENDOR-010",
+  "final_audit": {
+   "triggered": true,
+   "status": "passed",
+   "ms": 3140,
+   "attempts": 1,
+   "verdict": "rewritten",
+   "changed": false
+  },
+  "total_ms": 8843,
+  "refused": false
+ },
+ {
+  "repair": false,
+  "draft": "智谱当时上线的新旗舰是 **GLM-5.3**，但检索到的证据里没有提到它支持的上下文长度。[E1]\n\n- 证据中标注为「新一代旗舰模型上线」的包括 GLM-5.3、GLM-5.2、GLM-5.1 和 GLM-5，其中 GLM-5.3 被描述为编程能力较 GLM-5.2 提升 50%。[E1]\n- 证据中明确给出上下文长度的是 GLM-5.2，支持 **1M 无损上下文**。[E1]\n- 证据没有说明 GLM-5.3 的上下文窗口大小。",
+  "new_raw": "{\"answer_markdown\": \"智谱当时上线的新旗舰是 **GLM-5.3**，但检索到的证据里没有提到它支持的上下文长度。[E1]\\n\\n- 证据中标注为「新一代旗舰模型上线」的包括 GLM-5.3、GLM-5.2、GLM-5.1 和 GLM-5，其中 GLM-5.3 被描述为编程能力较 GLM-5.2 提升 50%。[E1]\\n- 证据中明确给出上下文长度的是 GLM-5.2，支持 **1M 无损上下文**。[E1]\\n- 证据没有说明 GLM-5.3 的上下文窗口大小。\", \"claims\": [{\"text\": \"智谱上线的新旗舰模型是 GLM-5.3。\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"证据没有提到 GLM-5.3 支持的上下文长度。\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"GLM-5.2 支持 1M 无损上下文。\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"GLM-5.3 的编程能力在智谱内部 Z.ai Code Bench 上较 GLM-5.2 提升了 50%。\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}], \"limitations\": [\"证据中没有给出 GLM-5.3 的上下文窗口长度，因此无法回答「支持多长上下文」这一部分。\", \"证据中只提供了 GLM-5.2 的 1M 上下文数据，不能据此推断 GLM-5.3 的上下文长度。\"]}",
+  "new_ms": 2077,
+  "new_out": 387,
+  "old_raw": "{\"answer_markdown\": \"智谱当时上线的新旗舰是 **GLM-5.3**。[E1]\\n\\n- 证据中标注为「新一代旗舰模型上线」的包括 GLM-5.3、GLM-5.2、GLM-5.1 和 GLM-5。[E1]\\n- 证据中明确给出上下文长度的是 GLM-5.2，支持 **1M 无损上下文**。[E1]\\n- 证据没有说明 GLM-5.3 的上下文窗口大小。[E1]\", \"claims\": [{\"text\": \"智谱上线的新旗舰模型是 GLM-5.3。\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"证据没有提到 GLM-5.3 支持的上下文长度。\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"GLM-5.2 支持 1M 无损上下文。\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}, {\"text\": \"GLM-5.3 的编程能力在智谱内部 Z.ai Code Bench 上较 GLM-5.2 提升了 50%。\", \"evidence_ids\": [\"E1\"], \"certainty\": \"confirmed\"}], \"limitations\": [\"证据中没有给出 GLM-5.3 的上下文窗口长度，因此无法回答「支持多长上下文」这一部分。\", \"证据中只提供了 GLM-5.2 的 1M 上下文数据，不能据此推断 GLM-5.3 的上下文长度。\"]}",
+  "old_ms": 2172,
+  "old_out": 351,
+  "qid": "RAG-VENDOR-011",
+  "final_audit": {
+   "triggered": true,
+   "status": "passed",
+   "ms": 4250,
+   "attempts": 1,
+   "verdict": "rewritten",
+   "changed": false
+  },
+  "total_ms": 10640,
+  "refused": false
+ },
+ {
+  "repair": false,
+  "draft": "Cloudflare 为智谱 GLM 和月之暗面 Kimi 系列模型叠加的三类推理优化是：**KV 缓存量化、模型权重压缩，以及保护共享 KV 缓存** [E2]。\n\n- KV 缓存量化：默认以 16 位精度（BF16）存储的缓存改为 8 位浮点（FP8, e4m3），使其体积减半；在 Kimi K2.6 上，内存可容纳的上下文从约 686,000 token 提升到约 1.37 百万 token [E2]。\n- 模型权重压缩：对 GLM 5.2 把权重从 8 位浮点压缩到 4 位整数（INT4），检查点从 705 GB 缩小到 421 GB（约 40%），8 路张量并行部署下每 GPU 内存从约 88 GB 降到 52 GB [E2]。\n- 保护共享 KV 缓存：前两项优化让更多请求共享同一块 GPU 内存，因此需要保护这些请求共用的缓存 [E2]。\n\nCloudflare 表示这些优化使其能以更低成本服务更多客户，且模型准确率没有变化 [E2]。",
+  "new_raw": "{\"verdict\": \"ok\"}",
+  "new_ms": 1577,
+  "new_out": 7,
+  "old_raw": "{\"answer_markdown\": \"Cloudflare 为智谱 GLM 和月之暗面 Kimi 系列模型叠加的三类推理优化是：**KV 缓存量化、模型权重压缩，以及保护共享 KV 缓存** [E2]。\\n\\n- KV 缓存量化：默认以 16 位精度（BF16）存储的缓存改为 8 位浮点（FP8, e4m3），使其体积减半；在 Kimi K2.6 上，内存可容纳的上下文从约 686,000 token 提升到约 1.37 百万 token [E2]。\\n- 模型权重压缩：对 GLM 5.2 把权重从 8 位浮点压缩到 4 位整数（INT4），检查点从 705 GB 缩小到 421 GB（约 40%），8 路张量并行部署下每 GPU 内存从约 88 GB 降到 52 GB [E2]。\\n- 保护共享 KV 缓存：前两项优化让更多请求共享同一块 GPU 内存，因此需要保护这些请求共用的缓存 [E2]。\\n\\nCloudflare 表示这些优化使其能以更低成本服务更多客户，且模型准确率没有变化 [E2]。\", \"claims\": [{\"text\": \"Cloudflare 为 Kimi 和 GLM 模型叠加的三类推理优化是 KV 缓存量化、模型权重压缩和保护共享 KV 缓存。\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"KV 缓存量化把默认的 BF16 缓存改为 FP8（e4m3），体积减半。\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"在 Kimi K2.6 上，FP8 KV 缓存使内存可容纳的上下文从约 686,000 token 提升到约 1.37 百万 token。\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"对 GLM 5.2，权重从 FP8 压缩到 INT4，检查点从 705 GB 缩小到 421 GB，约 40%。\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"GLM 5.2 在 8 路张量并行部署下每 GPU 内存从约 88 GB 降到 52 GB。\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}, {\"text\": \"Cloudflare 称这些优化使其以更低成本服务更多客户，且模型准确率没有变化。\", \"evidence_ids\": [\"E2\"], \"certainty\": \"confirmed\"}], \"limitations\": [\"证据未说明「保护共享 KV 缓存」这一项的具体技术手段细节（原文在该处被截断）。\"]}",
+  "old_ms": 2391,
+  "old_out": 618,
+  "qid": "RAG-VENDOR-013",
+  "final_audit": {
+   "triggered": true,
+   "status": "passed",
+   "ms": 3969,
+   "attempts": 1,
+   "verdict": "ok",
+   "changed": false
+  },
+  "total_ms": 9641,
+  "refused": false
+ }
+]

@@ -11,6 +11,7 @@ silently discard that evidence.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
@@ -26,6 +27,7 @@ from psycopg.types.json import Json
 from ahr import tracing
 from ahr.config import get_settings
 from ahr.processing.llm import LlmClient, LlmUnavailableError, TokenUsage
+from ahr.rag.anchor import Siblings, choose_anchors, sentences_by_citation, visible_siblings
 from ahr.rag.answer import (
     ANSWER_PROMPT_VERSION,
     MAX_EVIDENCE,
@@ -92,6 +94,7 @@ from ahr.rag.router import DEFAULT_CANDIDATES
 from ahr.rag.router import choose as choose_route
 from ahr.rag.safety import credential_labels
 from ahr.rag.support import (
+    SUPPORT_THRESHOLD,
     is_weak_retrieval,
     score_citations,
     summarise,
@@ -280,12 +283,18 @@ async def retrieve(
     query_vector: list[float] | None = None,
     window_override: tuple[date, date] | None = None,
     inherited_window: tuple[date, date] | None = None,
+    corpus_cutoff: datetime | None = None,
 ) -> tuple[list[ChunkHit], Any, dict[str, Any]]:
     """The B4 pipeline, returning hits, the frozen plan, and what happened.
 
     `trace` observes; it never decides. Every number it records is already
     computed here and discarded at the next hand-off — channel ranks disappear
     into RRF, and `FusedHit.channels` / `.boosts` are read by nothing.
+
+    `corpus_cutoff` is for evaluation only: the corpus as it stood at that
+    moment. It narrows what the channels can return and nothing else — the
+    plan, and so the window the answer states, stay exactly what a reader
+    would have got.
     """
     started = time.monotonic()
     stages: dict[str, int] = {}
@@ -317,6 +326,10 @@ async def retrieve(
     if retrieval_plan.time_range is not None:
         window = (retrieval_plan.time_range.start, retrieval_plan.time_range.end)
     filter_window = window if retrieval_plan.freshness_required else None
+    temporal_window = window
+    if corpus_cutoff is not None:
+        filter_window = bound_to_cutoff(filter_window, corpus_cutoff)
+        temporal_window = bound_to_cutoff(window, corpus_cutoff) if window else None
 
     # The caller may have embedded the question already — it has to, if it
     # wants to consult the semantic cache, which needs the vector to look
@@ -351,11 +364,11 @@ async def retrieve(
     await mark("sparse", step, found=len(sparse), aliases=len(aliases))
 
     channels: dict[str, list[ChunkHit]] = {"dense": dense, "sparse": sparse}
-    if window is not None:
+    if temporal_window is not None:
         step = time.monotonic()
         temporal = temporal_search(
             connection,
-            window=window,
+            window=temporal_window,
             limit=TEMPORAL_SQL_TOP_K,
             entity_ids=query_family_entities,
         )
@@ -823,6 +836,48 @@ async def _store_in_cache(answer: Answer, state: _CacheState) -> None:
         await semantic_remember(client, state.vector, key=state.key, fingerprint=state.fingerprint)
 
 
+_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+
+
+def bound_to_cutoff(
+    window: tuple[datetime, datetime] | None, cutoff: datetime
+) -> tuple[datetime, datetime]:
+    """Cap a channel window at `cutoff`; no window becomes everything up to it.
+
+    The generation evaluation answered golden questions asked on 2026-08-03 from
+    whatever the corpus held on the day it ran: RAG-GOLD-080 cited a release
+    published on 08-12. Two runs then differed by corpus as much as by code,
+    and nothing in the report said which. Retrieval evaluation has frozen its
+    corpus this way (`eval.runner.snapshot_window`) since B3.
+    """
+    if window is None:
+        return (_EPOCH, cutoff)
+    return (window[0], min(window[1], cutoff))
+
+
+def _audit_candidate(
+    reply: dict[str, Any] | None, draft: dict[str, Any]
+) -> tuple[dict[str, Any] | None, str]:
+    """What an audit reply proposes to publish, and whether it was a verdict or a rewrite.
+
+    An `ok` verdict proposes the draft itself. It is then checked exactly as a
+    rewrite would be, so agreeing with an unsafe draft fails the same way as
+    writing one — the verdict saves output, never the invariant (ADR-0036).
+    """
+    if reply is not None and reply.get("verdict") == "ok":
+        return draft, "ok"
+    return reply, "rewritten"
+
+
+def _numeric_audit_rejection(audited: dict[str, Any] | None) -> str | None:
+    """Why an audit reply cannot replace the draft, or None when it can (ADR-0023/0034)."""
+    if audited is None:
+        return "unparseable"
+    if has_unsafe_percentage_currency_mix(str(audited.get("answer_markdown") or "")):
+        return "unsafe_mix"
+    return None
+
+
 async def answer_question(
     question: str,
     *,
@@ -836,6 +891,7 @@ async def answer_question(
     bypass_cache: bool = False,
     window_override: tuple[date, date] | None = None,
     conversation_id: str | None = None,
+    corpus_cutoff: datetime | None = None,
 ) -> Answer:
     """Answer one question, or refuse, and record what was cited.
 
@@ -973,6 +1029,7 @@ async def answer_question(
             query_vector=cache_state.vector,
             window_override=window_override,
             inherited_window=inherited_window,
+            corpus_cutoff=corpus_cutoff,
         )
         metrics["cache"] = cache_state.as_metrics()
         step = time.monotonic()
@@ -994,12 +1051,16 @@ async def answer_question(
         # paragraph; the model reads enough of the document to be right about it.
         step = time.monotonic()
         tiers: dict[str, int] = {}
+        siblings: dict[str, Siblings] = {}
         for item in evidence:
             parent = expand_parent(connection, item.chunk_id)
             if parent is None:
                 continue
             tiers[parent.tier] = tiers.get(parent.tier, 0) + 1
             item.text = parent.text[:MAX_PARENT_CHARS]
+            visible = visible_siblings(parent, max_chars=MAX_PARENT_CHARS)
+            if visible is not None:
+                siblings[item.chunk_id] = visible
         metrics["parent_tiers"] = tiers
         metrics["stages_ms"]["parent"] = int((time.monotonic() - step) * 1000)
         await report("parent", {"ms": metrics["stages_ms"]["parent"], "tiers": tiers})
@@ -1073,10 +1134,19 @@ async def answer_question(
                 usage.attempts += audited_usage.attempts
                 usage.latency_ms += audited_usage.latency_ms
 
-                audited = parse_numeric_audit_output(audited_raw)
-                if audited is None or has_unsafe_percentage_currency_mix(
-                    str(audited.get("answer_markdown") or "") if audited else ""
-                ):
+                audited, verdict = _audit_candidate(parse_numeric_audit_output(audited_raw), parsed)
+                first_failure = _numeric_audit_rejection(audited)
+                if audited is not None and first_failure is None:
+                    numeric_audit["status"] = "passed"
+                    numeric_audit["verdict"] = verdict
+                    parsed = audited
+                else:
+                    # Recorded because the two failures need opposite fixes: an
+                    # unparseable reply is a transport/prompt problem, an unsafe
+                    # mix is the invariant doing its job (or being too strict,
+                    # which is how 2026-09-23 refused a correct price answer).
+                    failures = [first_failure or "unparseable"]
+                    numeric_audit["failures"] = failures
                     repair_raw, repair_usage = await llm.summarize(
                         system_prompt=NUMERIC_AUDIT_SYSTEM_PROMPT,
                         user_prompt=(
@@ -1094,10 +1164,16 @@ async def answer_question(
                     usage.attempts += repair_usage.attempts
                     usage.latency_ms += repair_usage.latency_ms
 
-                    repaired = parse_numeric_audit_output(repair_raw)
-                    if repaired is None or has_unsafe_percentage_currency_mix(
-                        str(repaired.get("answer_markdown") or "") if repaired else ""
-                    ):
+                    repaired, verdict = _audit_candidate(
+                        parse_numeric_audit_output(repair_raw), parsed
+                    )
+                    second_failure = _numeric_audit_rejection(repaired)
+                    if repaired is not None and second_failure is None:
+                        numeric_audit["status"] = "repaired"
+                        numeric_audit["verdict"] = verdict
+                        parsed = repaired
+                    else:
+                        failures.append(second_failure or "unparseable")
                         numeric_audit["status"] = "invalid_fail_closed"
                         parsed = {
                             "answer_markdown": "",
@@ -1107,12 +1183,13 @@ async def answer_question(
                                 "未发布高风险数字比较。"
                             ],
                         }
-                    else:
-                        numeric_audit["status"] = "repaired"
-                        parsed = repaired
-                else:
-                    numeric_audit["status"] = "passed"
-                    parsed = audited
+                # `passed` only means the audit reply was well-formed; the reply
+                # always replaces the draft. Whether it actually altered anything
+                # was never recorded, so "has the audit ever corrected an answer"
+                # could not be answered from production data.
+                numeric_audit["changed"] = (
+                    str(parsed.get("answer_markdown") or "") != candidate_markdown
+                )
             except LlmUnavailableError as exc:
                 logger.warning("numeric relation audit unavailable: %s", exc)
                 numeric_audit["status"] = "unavailable_fail_closed"
@@ -1149,10 +1226,21 @@ async def answer_question(
         # assertions), so `unsupported_numbers` still keeps the strongest
         # candidate whenever one passes the bounded safety rule.
         step = time.monotonic()
-        scores = await score_citations(
-            reranker,
-            citations,
-            {e.chunk_id: e.text for e in evidence},
+        # Anchor selection rides the same round trip: it needs only the
+        # sentences each citation backs and the siblings, and applying it waits
+        # until every gate below has decided which citations survive.
+        scores, anchors = await asyncio.gather(
+            score_citations(
+                reranker,
+                citations,
+                {e.chunk_id: e.text for e in evidence},
+            ),
+            choose_anchors(
+                reranker,
+                sentences_by_citation(text, citations),
+                siblings,
+                threshold=SUPPORT_THRESHOLD,
+            ),
         )
         for citation in citations:
             citation.support_score = scores.get(citation.chunk_id)
@@ -1291,6 +1379,19 @@ async def answer_question(
         # `check_invariants` and the credential policy can both empty the list,
         # and loading text for citations about to be discarded is a query for
         # nothing.
+        # Each surviving citation now points at the sibling that says its claim
+        # where the hit does not (`rag.anchor`). After the gates, because
+        # `check_invariants` rightly insists every citation is a passage the
+        # model was given; before the excerpt, because the excerpt is what the
+        # move is for. The trace still marks the hits: those are what retrieval
+        # found and the model read.
+        cited_hits = [c.chunk_id for c in citations]
+        for citation in citations:
+            citation.chunk_id = anchors.get(citation.chunk_id, citation.chunk_id)
+        metrics["anchors_moved"] = sum(
+            1 for c, hit in zip(citations, cited_hits, strict=True) if c.chunk_id != hit
+        )
+
         if citations:
             excerpts = load_chunk_excerpts(
                 connection, [citation.chunk_id for citation in citations]
@@ -1357,7 +1458,7 @@ async def answer_question(
             # off. Failing to write the trace must not lose the answer: the
             # explanation is worth having, but not at the price of the thing it
             # explains.
-            trace.mark_cited([c.chunk_id for c in citations])
+            trace.mark_cited(cited_hits)
             try:
                 persist_trace(connection, uuid.UUID(str(result.query_id)), trace)
                 connection.commit()
