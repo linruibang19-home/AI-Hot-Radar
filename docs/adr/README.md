@@ -32,6 +32,7 @@ ADR 只回答“为什么这样选、否决了什么、什么证据会触发回�
 | 编排、证据、主题关系与索引版本 | [0028](0028-current-task-orchestration-is-database-polling.md)～[0031](0031-content-chunk-sets-are-versioned.md) |
 | 生成供应商凭证入库，及其控制台的删除 | [0032](0032-generation-provider-credentials-are-database-backed.md)～[0033](0033-generation-console-removed-model-stays-database-backed.md) |
 | 数值安全不变量改为算术一致性校验（修订 0023） | [0034](0034-numeric-safety-invariant-checks-arithmetic.md) |
+| 引用锚点改挂到父块内真正支持论断的分块（修订 0016） | [0035](0035-citation-anchor-points-at-the-supporting-sibling.md) |
 
 ## 维护规则
 

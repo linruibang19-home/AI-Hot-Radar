@@ -11,6 +11,7 @@ silently discard that evidence.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
@@ -26,6 +27,7 @@ from psycopg.types.json import Json
 from ahr import tracing
 from ahr.config import get_settings
 from ahr.processing.llm import LlmClient, LlmUnavailableError, TokenUsage
+from ahr.rag.anchor import Siblings, choose_anchors, visible_siblings
 from ahr.rag.answer import (
     ANSWER_PROMPT_VERSION,
     MAX_EVIDENCE,
@@ -92,6 +94,7 @@ from ahr.rag.router import DEFAULT_CANDIDATES
 from ahr.rag.router import choose as choose_route
 from ahr.rag.safety import credential_labels
 from ahr.rag.support import (
+    SUPPORT_THRESHOLD,
     is_weak_retrieval,
     score_citations,
     summarise,
@@ -1034,12 +1037,16 @@ async def answer_question(
         # paragraph; the model reads enough of the document to be right about it.
         step = time.monotonic()
         tiers: dict[str, int] = {}
+        siblings: dict[str, Siblings] = {}
         for item in evidence:
             parent = expand_parent(connection, item.chunk_id)
             if parent is None:
                 continue
             tiers[parent.tier] = tiers.get(parent.tier, 0) + 1
             item.text = parent.text[:MAX_PARENT_CHARS]
+            visible = visible_siblings(parent, max_chars=MAX_PARENT_CHARS)
+            if visible is not None:
+                siblings[item.chunk_id] = visible
         metrics["parent_tiers"] = tiers
         metrics["stages_ms"]["parent"] = int((time.monotonic() - step) * 1000)
         await report("parent", {"ms": metrics["stages_ms"]["parent"], "tiers": tiers})
@@ -1201,10 +1208,16 @@ async def answer_question(
         # assertions), so `unsupported_numbers` still keeps the strongest
         # candidate whenever one passes the bounded safety rule.
         step = time.monotonic()
-        scores = await score_citations(
-            reranker,
-            citations,
-            {e.chunk_id: e.text for e in evidence},
+        # Anchor selection rides the same round trip: it needs only the claims
+        # and the siblings, and applying it waits until every gate below has
+        # decided which citations survive.
+        scores, anchors = await asyncio.gather(
+            score_citations(
+                reranker,
+                citations,
+                {e.chunk_id: e.text for e in evidence},
+            ),
+            choose_anchors(reranker, citations, siblings, threshold=SUPPORT_THRESHOLD),
         )
         for citation in citations:
             citation.support_score = scores.get(citation.chunk_id)
@@ -1343,6 +1356,19 @@ async def answer_question(
         # `check_invariants` and the credential policy can both empty the list,
         # and loading text for citations about to be discarded is a query for
         # nothing.
+        # Each surviving citation now points at the sibling that says its claim
+        # where the hit does not (`rag.anchor`). After the gates, because
+        # `check_invariants` rightly insists every citation is a passage the
+        # model was given; before the excerpt, because the excerpt is what the
+        # move is for. The trace still marks the hits: those are what retrieval
+        # found and the model read.
+        cited_hits = [c.chunk_id for c in citations]
+        for citation in citations:
+            citation.chunk_id = anchors.get(citation.chunk_id, citation.chunk_id)
+        metrics["anchors_moved"] = sum(
+            1 for c, hit in zip(citations, cited_hits, strict=True) if c.chunk_id != hit
+        )
+
         if citations:
             excerpts = load_chunk_excerpts(
                 connection, [citation.chunk_id for citation in citations]
@@ -1409,7 +1435,7 @@ async def answer_question(
             # off. Failing to write the trace must not lose the answer: the
             # explanation is worth having, but not at the price of the thing it
             # explains.
-            trace.mark_cited([c.chunk_id for c in citations])
+            trace.mark_cited(cited_hits)
             try:
                 persist_trace(connection, uuid.UUID(str(result.query_id)), trace)
                 connection.commit()
