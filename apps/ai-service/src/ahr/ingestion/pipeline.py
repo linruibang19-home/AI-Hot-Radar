@@ -25,8 +25,14 @@ from ahr.ingestion.adapters.listing import HtmlListingAdapter
 from ahr.ingestion.adapters.public_api import PublicJsonApiAdapter
 from ahr.ingestion.adapters.rss import RssAtomAdapter
 from ahr.ingestion.article import ArticleExtraction, extract_article
-from ahr.ingestion.errors import IngestionError
-from ahr.ingestion.fulltext_gate import ExtractedDocument, evaluate
+from ahr.ingestion.errors import AccessRestrictedError, IngestionError
+from ahr.ingestion.fulltext_gate import (
+    DISCOVERY_METADATA,
+    Decision,
+    ExtractedDocument,
+    GateResult,
+    evaluate,
+)
 from ahr.ingestion.http import FetchResult, HttpConfig, HttpFetcher
 from ahr.ingestion.models import DiscoveredDocument, SourceConfig
 from ahr.ingestion.repository import (
@@ -103,6 +109,48 @@ async def _acquire_fulltext(
         published_hint=item.published_at_hint,
     )
     return response, extraction, item.candidate_url
+
+
+def _keep_discovery_metadata(
+    connection: Any,
+    *,
+    source: SourceConfig,
+    item: DiscoveredDocument,
+    refused: AccessRestrictedError,
+    run_id: Any,
+    stats: PersistStats,
+) -> None:
+    """Store what discovery proved when the article itself was refused (ADR-0013).
+
+    `openai-news` discovered every OpenAI post from its feed and fetched none:
+    each article answered 403, each item was rolled back, and the source held
+    zero items for eight weeks while every run reported SUCCESS. The ADR had
+    already decided to keep the metadata; nothing implemented it.
+
+    The body stays empty. The feed's summary is kept only as
+    `discovery_summary`, so the item can be listed and linked but is never
+    chunked and never cited.
+    """
+    gate = GateResult(
+        Decision.METADATA_ONLY,
+        "ARTICLE_ACCESS_RESTRICTED",
+        body_chars=0,
+        paragraph_count=0,
+        link_density=0.0,
+    )
+    persist_document(
+        connection,
+        source=source,
+        item=item,
+        body_text="",
+        body_markdown=None,
+        gate=gate,
+        run_id=run_id,
+        requested_url=item.candidate_url,
+        http_status=refused.status_code,
+        extractor=DISCOVERY_METADATA,
+        stats=stats,
+    )
 
 
 def _state_from_evidence(connection: Any, source_id: str) -> str | None:
@@ -187,9 +235,24 @@ async def ingest_source(
     for item in batch.items[:max_documents]:
         try:
             if item.requires_fetch:
-                response, extraction, requested_url = await _acquire_fulltext(
-                    adapter, source, item, fetcher
-                )
+                try:
+                    response, extraction, requested_url = await _acquire_fulltext(
+                        adapter, source, item, fetcher
+                    )
+                except AccessRestrictedError as refused:
+                    if not source.keeps_metadata_when_refused:
+                        raise
+                    _keep_discovery_metadata(
+                        connection,
+                        source=source,
+                        item=item,
+                        refused=refused,
+                        run_id=run_id,
+                        stats=stats,
+                    )
+                    connection.commit()
+                    committed_external_ids.append(item.external_id)
+                    continue
                 document = extraction.document
                 if document.title and document.title != item.title_hint:
                     # Sitemap/listing discovery often has no anchor title. The

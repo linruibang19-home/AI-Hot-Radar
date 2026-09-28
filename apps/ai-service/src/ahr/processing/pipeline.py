@@ -15,13 +15,16 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import uuid
 from dataclasses import dataclass
+from html import unescape
 from typing import Any
 
 import psycopg
 
 from ahr.config import get_settings
+from ahr.ingestion.fulltext_gate import DISCOVERY_METADATA
 from ahr.processing.chunking import chunk_document
 from ahr.processing.dedup import is_near_duplicate, simhash, to_signed_64
 from ahr.processing.llm import (
@@ -50,6 +53,22 @@ SOURCE_AUTHORITY = {"primary": 90, "secondary": 65, "expert": 75, "community": 4
 # a model call on those is pure cost, so they are marked SKIPPED and stay
 # browsable with their original title and excerpt.
 MIN_BODY_CHARS_FOR_ENRICHMENT = 200
+
+# A revision kept from discovery alone (ADR-0013): no body, but the feed's own
+# summary. Such an item is enriched from that summary so it can be listed, and
+# is never chunked — `_unchunked_revisions` requires a body — so it cannot be
+# RAG evidence. One predicate, used by both queries that must agree on it.
+_DISCOVERY_METADATA_READY = f"""
+    (cr.extraction_method = '{DISCOVERY_METADATA}'
+     AND length(btrim(COALESCE(cr.discovery_summary, ''))) > 0)
+"""
+
+_HTML_TAG = re.compile(r"<[^>]+>")
+
+
+def discovery_text(summary: str) -> str:
+    """The feed summary as plain text. Feeds put markup in `<description>`."""
+    return " ".join(unescape(_HTML_TAG.sub(" ", summary)).split())
 
 
 @dataclass
@@ -150,7 +169,14 @@ def _store_enrichment(
     source_tier: str,
     model_name: str,
     vocabulary: set[str],
+    basis: str = "body",
 ) -> None:
+    """Replace the item's enrichment with `result`.
+
+    `basis` records what the model read: the article `body`, or only the
+    feed's `discovery_summary` when the article was refused (ADR-0013). A
+    reader-facing surface can then say which of the two a summary rests on.
+    """
     score = result.quality_score(source_authority=SOURCE_AUTHORITY.get(source_tier, 50))
 
     with connection.cursor() as cursor:
@@ -179,7 +205,12 @@ def _store_enrichment(
                 score,
                 prompt_version(),
                 model_name,
-                json.dumps({"quality_factors": result.quality_factors.model_dump()}),
+                json.dumps(
+                    {
+                        "quality_factors": result.quality_factors.model_dump(),
+                        "enrichment_basis": basis,
+                    }
+                ),
                 item_id,
             ),
         )
@@ -337,10 +368,13 @@ def close_empty_bodies(connection: Any) -> int:
     Safe to close now that ingestion reopens an item when a new body arrives:
     if one of these ever gains real content, the next revision returns it to
     PENDING rather than leaving it retired on the strength of an old emptiness.
+
+    Discovery-metadata items are empty on purpose and are enriched from their
+    feed summary instead, so they are left for `_pending_items`.
     """
     with connection.cursor() as cursor:
         cursor.execute(
-            """
+            f"""
             UPDATE content_item ci
                SET enrichment_state = 'SKIPPED',
                    enrichment_error = 'no body text extracted',
@@ -349,6 +383,7 @@ def close_empty_bodies(connection: Any) -> int:
              WHERE cr.id = ci.current_revision_id
                AND ci.enrichment_state = 'PENDING'
                AND length(cr.body_text) = 0
+               AND NOT {_DISCOVERY_METADATA_READY}
             """
         )
         closed = int(cursor.rowcount)
@@ -359,21 +394,64 @@ def close_empty_bodies(connection: Any) -> int:
 def _pending_items(connection: Any, limit: int) -> list[tuple[Any, ...]]:
     with connection.cursor() as cursor:
         cursor.execute(
-            """
+            f"""
             SELECT ci.id, ci.title, ci.source_id, ci.source_tier,
-                   cr.id, cr.body_text, s.name
+                   cr.id, cr.body_text, s.name,
+                   cr.extraction_method = '{DISCOVERY_METADATA}', cr.discovery_summary
               FROM content_item ci
               JOIN content_revision cr ON cr.id = ci.current_revision_id
               JOIN source s ON s.id = ci.source_id
              WHERE ci.enrichment_state IN ('PENDING', 'FAILED')
                AND ci.duplicate_of_id IS NULL
-               AND length(cr.body_text) > 0
+               AND (length(cr.body_text) > 0 OR {_DISCOVERY_METADATA_READY})
              ORDER BY ci.published_at DESC NULLS LAST
              LIMIT %s
             """,
             (limit,),
         )
         return list(cursor.fetchall())
+
+
+def _screened_out(
+    connection: Any, item_id: uuid.UUID, revision_id: uuid.UUID, body: str, stats: ProcessStats
+) -> bool:
+    """Fingerprint the body; retire near-duplicates and stubs before any model call."""
+    fingerprint = simhash(body)
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "UPDATE content_revision SET simhash = %s WHERE id = %s",
+            (to_signed_64(fingerprint), revision_id),
+        )
+
+    original = find_near_duplicate(connection, item_id, fingerprint)
+    if original is not None:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE content_item
+                   SET duplicate_of_id = %s, duplicate_kind = 'NEAR',
+                       enrichment_state = 'SKIPPED', updated_at = now()
+                 WHERE id = %s
+                """,
+                (original, item_id),
+            )
+        stats.near_duplicates += 1
+        connection.commit()
+        return True
+
+    if len(body.strip()) < MIN_BODY_CHARS_FOR_ENRICHMENT:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "UPDATE content_item SET enrichment_state = 'SKIPPED',"
+                " enrichment_error = 'body below enrichment threshold'"
+                " WHERE id = %s",
+                (item_id,),
+            )
+        stats.skipped_thin += 1
+        connection.commit()
+        return True
+
+    return False
 
 
 async def process_pending(
@@ -419,43 +497,26 @@ async def process_pending(
             stats.closed_empty += close_empty_bodies(connection)
 
             for row in _pending_items(connection, limit):
-                item_id, title, _source_id, source_tier, revision_id, body, source_name = row
+                (
+                    item_id,
+                    title,
+                    _source_id,
+                    source_tier,
+                    revision_id,
+                    body,
+                    source_name,
+                    from_discovery,
+                    discovery_summary,
+                ) = row
                 item_id = uuid.UUID(str(item_id))
                 revision_id = uuid.UUID(str(revision_id))
 
-                fingerprint = simhash(body)
-                with connection.cursor() as cursor:
-                    cursor.execute(
-                        "UPDATE content_revision SET simhash = %s WHERE id = %s",
-                        (to_signed_64(fingerprint), revision_id),
-                    )
-
-                original = find_near_duplicate(connection, item_id, fingerprint)
-                if original is not None:
-                    with connection.cursor() as cursor:
-                        cursor.execute(
-                            """
-                            UPDATE content_item
-                               SET duplicate_of_id = %s, duplicate_kind = 'NEAR',
-                                   enrichment_state = 'SKIPPED', updated_at = now()
-                             WHERE id = %s
-                            """,
-                            (original, item_id),
-                        )
-                    stats.near_duplicates += 1
-                    connection.commit()
-                    continue
-
-                if len(body.strip()) < MIN_BODY_CHARS_FOR_ENRICHMENT:
-                    with connection.cursor() as cursor:
-                        cursor.execute(
-                            "UPDATE content_item SET enrichment_state = 'SKIPPED',"
-                            " enrichment_error = 'body below enrichment threshold'"
-                            " WHERE id = %s",
-                            (item_id,),
-                        )
-                    stats.skipped_thin += 1
-                    connection.commit()
+                if from_discovery:
+                    # A one-line feed summary is too short for a fingerprint to
+                    # mean anything, and the item's identity is already its URL.
+                    # The model is told it is reading a summary, not an article.
+                    body = discovery_text(discovery_summary or "")
+                elif _screened_out(connection, item_id, revision_id, body, stats):
                     continue
 
                 if llm is None:
@@ -464,7 +525,10 @@ async def process_pending(
 
                 try:
                     result, usage = await llm.enrich(
-                        title=title or "", body_text=body, source_name=source_name
+                        title=title or "",
+                        body_text=body,
+                        source_name=source_name,
+                        discovery_only=bool(from_discovery),
                     )
                     _record_usage(connection, item_id, usage, client=llm, succeeded=True)
                     stats.prompt_tokens += usage.prompt_tokens
@@ -477,6 +541,7 @@ async def process_pending(
                         source_tier=source_tier,
                         model_name=model_name,
                         vocabulary=vocabulary,
+                        basis="discovery_summary" if from_discovery else "body",
                     )
                     stats.enriched += 1
                 except EnrichmentSchemaError as exc:

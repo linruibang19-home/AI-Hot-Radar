@@ -47,6 +47,19 @@ class SourceConfig:
         }
 
     @property
+    def keeps_metadata_when_refused(self) -> bool:
+        """True when the registry accepts this source without its article body.
+
+        `metadata_abstract` reads "fetch the original on demand when permitted":
+        the article is still requested, and when the publisher refuses it the
+        discovery record — title, link, publication time, the feed's own
+        summary — is kept as a METADATA_ONLY item instead of being dropped
+        (ADR-0013). For a full-text source a refusal is a fault to surface, not
+        a shape to store, so those keep failing the item.
+        """
+        return self.content_access == "metadata_abstract"
+
+    @property
     def is_release_like(self) -> bool:
         """True when the body is a complete release note rather than an article."""
         return self.profile in {"github_release_api", "github_repo_activity", "docs_changelog"}

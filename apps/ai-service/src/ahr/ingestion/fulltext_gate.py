@@ -26,6 +26,14 @@ class Decision(StrEnum):
     METADATA_ONLY = "METADATA_ONLY"
 
 
+# `extraction_method` of a revision that holds no body on purpose: the article
+# was refused and only what discovery proved — title, link, time, the feed's
+# own summary — was kept (ADR-0013). Processing reads it to enrich the item
+# from that summary for display, and it is never chunked, so it can never be
+# RAG evidence.
+DISCOVERY_METADATA = "discovery_metadata"
+
+
 @dataclass(frozen=True)
 class GateConfig:
     min_body_chars_article: int = 300

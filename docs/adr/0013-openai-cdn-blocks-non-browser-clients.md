@@ -48,3 +48,27 @@ TASK-M1-001 实测 `openai-news`（`https://openai.com/blog/rss.xml`）时：
 ## 回滚
 
 无代码回滚项。恢复方式为在 `config/sources.yaml` 中把该源的 `content_access` 改回 `full_article_extract`。
+
+## 落地（2026-09-28 补记）
+
+**本 ADR 的第 2 条决策此前没有实现。** 配置仍是 `full_article_extract`，流水线也没有
+「被拒后保留元数据」的分支：每篇文章 403 → 单条异常 → 回滚，整轮仍记 `SUCCESS`。
+生产 09-28 实测：每轮发现 154 条、抓取 0 条，库内 0 条；`/health/sources` 的停滞告警
+已连续触发 5,466 次，无人处理。
+
+实现方式与原文措辞的对应：
+
+- **配置**：`openai-news` 改为 `content_access: metadata_abstract`（「仍请求原文，被允许时取」），
+  `public_render: metadata_link`。回滚仍如上文，只改配置。
+- **流水线**：`metadata_abstract` 信源的文章页返回 401/403 时，写入一条 `METADATA_ONLY` 内容：
+  正文为空，`discovery_summary` 保留 feed 简介，`extraction_method = discovery_metadata`，
+  `fulltext_attempt.reason_code = ARTICLE_ACCESS_RESTRICTED`，`raw_document.http_status` 记 403。
+  写入即推进游标，同一篇不会被反复请求。全文信源的 403 行为不变：仍是失败，不存标题行。
+- **展示而不引用**：处理阶段用标题 + 简介做一次富化（提示词明确「未取得正文，只复述简介」），
+  `attributes.enrichment_basis = discovery_summary`；切块只选有正文的修订，所以这类内容
+  **永远没有分块、不会成为 RAG 证据**，只在列表、详情和厂商页出现，并链接原文。
+
+验证：单元测试覆盖两种信源的 403 分支与处理阶段的三条 SQL；本地真实 PostgreSQL + 生产
+同款 RSS（1,230 条）+ 模拟 403 跑通：5 条入库、0 分块、全部通过公开列表门槛，
+页面显示中文标题、发布时间与「阅读原文」。证据见
+[`../status/evidence/openai-metadata-listing-dates-20260928.md`](../status/evidence/openai-metadata-listing-dates-20260928.md)。

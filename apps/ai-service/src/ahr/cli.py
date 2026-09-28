@@ -346,6 +346,56 @@ def cmd_fix_titles(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_backfill_listing_dates(args: argparse.Namespace) -> int:
+    """Date listing items stored before cards were read for their dates.
+
+    Discovery now reads the date a listing card prints; rows ingested earlier
+    are behind the seen-set and would stay undated. This reads each listing
+    once and fills NULL `published_at` only — nothing already dated changes.
+    """
+    from ahr.ingestion.adapters.listing import listing_card_dates
+    from ahr.ingestion.http import HttpConfig, HttpFetcher
+    from ahr.ingestion.pipeline import _load_sources
+    from ahr.ingestion.repository import fill_missing_published_at
+
+    sources = [
+        source
+        for profile in ("static_listing_to_article", "dynamic_listing_to_article")
+        for source in _load_sources(500, profile, args.source)
+    ]
+
+    async def run() -> dict[str, dict[str, int]]:
+        report: dict[str, dict[str, int]] = {}
+        async with HttpFetcher(HttpConfig()) as fetcher:
+            with psycopg.connect(get_settings().database_url) as connection:
+                for source in sources:
+                    try:
+                        dates = await listing_card_dates(fetcher, source)
+                    except Exception as exc:  # noqa: BLE001 - one listing must not stop the pass
+                        print(f"{source.id}: {type(exc).__name__}: {str(exc)[:80]}")
+                        continue
+                    filled = fill_missing_published_at(
+                        connection, source.id, dates, dry_run=args.dry_run
+                    )
+                    report[source.id] = {"dated_cards": len(dates), "filled": filled}
+                if not args.dry_run:
+                    connection.commit()
+        return report
+
+    report = asyncio.run(run())
+    print(
+        json.dumps(
+            {
+                "sources": report,
+                "filled": sum(r["filled"] for r in report.values()),
+                "dry_run": args.dry_run,
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
 def cmd_rechunk(args: argparse.Namespace) -> int:
     """Re-split every stored revision with the current chunker.
 
@@ -1486,6 +1536,14 @@ def main(argv: list[str] | None = None) -> int:
     fix_titles = sub.add_parser("fix-titles", help="re-sanitise titles already in the database")
     fix_titles.add_argument("--dry-run", action="store_true")
     fix_titles.set_defaults(func=cmd_fix_titles)
+
+    listing_dates = sub.add_parser(
+        "backfill-listing-dates",
+        help="fill missing published_at from the dates listing cards print",
+    )
+    listing_dates.add_argument("--source", default=None)
+    listing_dates.add_argument("--dry-run", action="store_true")
+    listing_dates.set_defaults(func=cmd_backfill_listing_dates)
 
     rechunk = sub.add_parser(
         "rechunk", help="re-split current revisions with the current chunking rules"
