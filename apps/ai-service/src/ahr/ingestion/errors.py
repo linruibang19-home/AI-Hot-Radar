@@ -42,6 +42,12 @@ class AccessRestrictedError(IngestionError):
 
     code = "ACCESS_RESTRICTED"
 
+    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+        super().__init__(message)
+        # Kept so a refusal that is recorded rather than dropped (ADR-0013)
+        # stores the status the publisher actually answered with.
+        self.status_code = status_code
+
 
 class NotFoundError(IngestionError):
     """404/410. Re-check canonical; disable the entry if it persists."""

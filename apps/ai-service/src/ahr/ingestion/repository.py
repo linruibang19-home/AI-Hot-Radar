@@ -58,6 +58,44 @@ def sanitize_published_at(
     return value
 
 
+def fill_missing_published_at(
+    connection: Any, source_id: str, dates: dict[str, datetime], *, dry_run: bool = False
+) -> int:
+    """Date stored items that have none, from `external_id -> date`.
+
+    Only a NULL is ever filled. A stored date came from the feed or the card at
+    ingest time, and a repair pass has no better claim than that.
+    """
+    usable = {
+        external_id: value
+        for external_id, published in dates.items()
+        if (value := sanitize_published_at(published)) is not None
+    }
+    if not usable:
+        return 0
+    with connection.cursor() as cursor:
+        if dry_run:
+            cursor.execute(
+                """
+                SELECT count(*) FROM content_item
+                 WHERE source_id = %s AND external_id = ANY(%s) AND published_at IS NULL
+                """,
+                (source_id, list(usable)),
+            )
+            return int(cursor.fetchone()[0])
+        filled = 0
+        for external_id, value in usable.items():
+            cursor.execute(
+                """
+                UPDATE content_item SET published_at = %s, updated_at = now()
+                 WHERE source_id = %s AND external_id = %s AND published_at IS NULL
+                """,
+                (value, source_id, external_id),
+            )
+            filled += cursor.rowcount
+        return filled
+
+
 @dataclass
 class PersistStats:
     inserted: int = 0

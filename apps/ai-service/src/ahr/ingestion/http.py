@@ -241,7 +241,9 @@ class HttpFetcher:
                 retry_after=_seconds_until_reset(headers.get("x-ratelimit-reset")),
             )
         if status in (401, 403):
-            raise AccessRestrictedError(f"access restricted ({status}) for {final}")
+            raise AccessRestrictedError(
+                f"access restricted ({status}) for {final}", status_code=status
+            )
         if status in (404, 410):
             raise NotFoundError(f"not found ({status}) for {final}")
         if status in RETRY_STATUSES:

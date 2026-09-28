@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import replace
-from datetime import datetime
+from datetime import UTC, datetime
 from html import unescape
 from typing import Any
 from urllib.parse import urljoin, urlsplit
@@ -70,6 +70,67 @@ _SITEMAP_ARTICLE_PATHS = (
 # article candidates.
 _CROSS_PATH_ARTICLE_RE = re.compile(r"^/(?:article/\d+|developer/article/\d+)/?$")
 
+_MONTH_NAMES = (
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "may",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "oct",
+    "nov",
+    "dec",
+)
+_MONTH = (
+    r"\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?"
+    r"|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\.?"
+)
+_CARD_DATE_PATTERNS = (
+    # Sep 23, 2026 / September 23, 2026
+    (re.compile(_MONTH + r"\s+(\d{1,2}),?\s+(\d{4})(?!\d)", re.IGNORECASE), (3, 1, 2)),
+    # 23 Sep 2026
+    (re.compile(r"(?<!\d)(\d{1,2})\s+" + _MONTH + r",?\s+(\d{4})(?!\d)", re.IGNORECASE), (3, 2, 1)),
+    # 2026-09-23 / 2026/09/23
+    (re.compile(r"(?<!\d)(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?!\d)"), (1, 2, 3)),
+    # 2026年9月23日
+    (re.compile(r"(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日"), (1, 2, 3)),
+)
+
+
+def card_date(text: str) -> datetime | None:
+    """The publication date printed on a listing card, when it prints exactly one.
+
+    Anthropic's newsroom renders every card as ``Sep 23, 2026 · Science ·
+    <title>`` inside the link, while its article pages carry no machine-readable
+    date — extracting one there fell back to a site-wide 2023-11-03, which is
+    why all fourteen of its items were stored without a date and sorted as
+    "just published". The card is the one place the date is stated per article.
+
+    Exactly one: a card that also names an event ("… on Oct 6, 2026") is
+    ambiguous, and a wrong date is worse than none — it pins an old item to
+    the top of every time-ordered view. Date-only values are midnight UTC, the
+    same convention as `changelog.parse_heading_date`.
+    """
+    found: set[datetime] = set()
+    for pattern, (year_at, month_at, day_at) in _CARD_DATE_PATTERNS:
+        for match in pattern.finditer(text):
+            month = match.group(month_at)
+            try:
+                month_no = (
+                    int(month) if month.isdigit() else _MONTH_NAMES.index(month[:3].lower()) + 1
+                )
+                found.add(
+                    datetime(
+                        int(match.group(year_at)), month_no, int(match.group(day_at)), tzinfo=UTC
+                    )
+                )
+            except ValueError:
+                continue
+    return found.pop() if len(found) == 1 else None
+
 
 def _collect_jsonld_urls(html: str, base_url: str) -> list[tuple[str, str | None]]:
     found: list[tuple[str, str | None]] = []
@@ -115,10 +176,10 @@ def _looks_like_article(
 
 def _collect_link_urls(
     html: str, base_url: str, *, allow_cross_path_articles: bool = False
-) -> list[tuple[str, str | None]]:
+) -> list[tuple[str, str | None, datetime | None]]:
     base = urlsplit(base_url)
     listing_path = base.path or "/"
-    found: list[tuple[str, str | None]] = []
+    found: list[tuple[str, str | None, datetime | None]] = []
 
     for match in _HREF_RE.finditer(html):
         href = match.group(1).strip()
@@ -135,7 +196,9 @@ def _collect_link_urls(
         ):
             continue
         title = _TAG_RE.sub("", match.group(2)).strip() or None
-        found.append((absolute, title))
+        # Elements joined without a separator read "2026Science"; the date is
+        # looked for in a spaced rendering so element edges stay word edges.
+        found.append((absolute, title, card_date(unescape(_TAG_RE.sub(" ", match.group(2))))))
     return found
 
 
@@ -193,6 +256,43 @@ def _collect_sitemap_urls(xml: str, base_url: str) -> list[tuple[str, str | None
     return [(url, None) for url, _ in found]
 
 
+def _dates_by_external_id(
+    candidates: list[tuple[str, str | None, datetime | None]],
+) -> dict[str, datetime]:
+    """The first dated card for each article, keyed as discovery keys items."""
+    dates: dict[str, datetime] = {}
+    for raw_url, _title, published in candidates:
+        if published is None:
+            continue
+        try:
+            dates.setdefault(url_hash(canonicalize_url(raw_url)), published)
+        except ValueError:
+            continue
+    return dates
+
+
+async def listing_card_dates(fetcher: Any, source: SourceConfig) -> dict[str, datetime]:
+    """Every dated card on the listing as it stands now, by external id.
+
+    For rows stored before cards were read for dates: discovery skips anything
+    already in its seen-set, so without a separate pass those rows stay undated
+    for as long as they remain on the page.
+    """
+    if not source.discovery_url:
+        return {}
+    response = await fetcher.fetch(source.discovery_url)
+    html = response.text()
+    if "<urlset" in html.lower():
+        return {}
+    return _dates_by_external_id(
+        _collect_link_urls(
+            html,
+            response.final_url,
+            allow_cross_path_articles=source.profile == "dynamic_listing_to_article",
+        )
+    )
+
+
 class HtmlListingAdapter:
     """Discovers article URLs from a listing page."""
 
@@ -216,11 +316,16 @@ class HtmlListingAdapter:
             return DiscoveryBatch.unchanged(cursor)
 
         html = response.text()
+        candidates: list[tuple[str, str | None, datetime | None]]
         if "<urlset" in html.lower():
-            candidates = _collect_sitemap_urls(html, response.final_url)
+            candidates = [
+                (url, title, None) for url, title in _collect_sitemap_urls(html, response.final_url)
+            ]
             discovery_method = "sitemap"
         else:
-            candidates = _collect_jsonld_urls(html, response.final_url)
+            candidates = [
+                (url, title, None) for url, title in _collect_jsonld_urls(html, response.final_url)
+            ]
             discovery_method = "json_ld"
         if not candidates:
             candidates = _collect_link_urls(
@@ -229,6 +334,10 @@ class HtmlListingAdapter:
                 allow_cross_path_articles=source.profile == "dynamic_listing_to_article",
             )
             discovery_method = "same_site_links"
+
+        # Read before the window is cut: a card is often linked twice (image and
+        # headline) and only one of the two links carries the date.
+        dates = _dates_by_external_id(candidates)
 
         # A listing adapter is a live-update window, not an implicit historical
         # backfill job. Bound the candidate window before applying the cursor so
@@ -240,7 +349,7 @@ class HtmlListingAdapter:
         items: list[DiscoveredDocument] = []
         collected: list[str] = []
 
-        for raw_url, title in candidates:
+        for raw_url, title, _published in candidates:
             try:
                 canonical = canonicalize_url(raw_url)
             except ValueError:
@@ -257,6 +366,7 @@ class HtmlListingAdapter:
                     external_id=external_id,
                     candidate_url=canonical,
                     title_hint=title,
+                    published_at_hint=dates.get(external_id),
                     # The listing carries no trustworthy body; fetch the article.
                     requires_fetch=True,
                     attributes={"discovery_method": discovery_method},

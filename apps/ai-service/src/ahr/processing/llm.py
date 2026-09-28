@@ -434,12 +434,27 @@ class LlmClient:
                 usage.attempts = 1
 
     async def enrich(
-        self, *, title: str, body_text: str, source_name: str
+        self, *, title: str, body_text: str, source_name: str, discovery_only: bool = False
     ) -> tuple[EnrichmentResult, TokenUsage]:
-        """Structure one article, with a single repair attempt on schema failure."""
-        user_prompt = (
-            f"来源：{source_name}\n原标题：{title}\n\n正文：\n{body_text[:MAX_BODY_CHARS]}"
-        )
+        """Structure one article, with a single repair attempt on schema failure.
+
+        `discovery_only` means the article was refused and `body_text` is the
+        feed's one-line summary (ADR-0013). The model is told so, because the
+        system prompt's "2-4 句摘要" would otherwise invite it to pad a single
+        sentence with things the publisher never said.
+        """
+        if discovery_only:
+            user_prompt = (
+                f"来源：{source_name}\n原标题：{title}\n\n"
+                "注意：未取得正文，下面只是发布方在订阅源里写的一段简介。"
+                "summary_zh 只复述这段简介，写 1-2 句，不得补充简介以外的任何信息；"
+                "quality_factors 按简介实际提供的信息量打分。\n\n"
+                f"简介：\n{body_text[:MAX_BODY_CHARS]}"
+            )
+        else:
+            user_prompt = (
+                f"来源：{source_name}\n原标题：{title}\n\n正文：\n{body_text[:MAX_BODY_CHARS]}"
+            )
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},

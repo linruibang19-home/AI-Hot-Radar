@@ -1,5 +1,5 @@
 schema_version: 2
-registry_version: "2026-09-20.1"
+registry_version: "2026-09-28.1"
 project: AI Hot Radar
 
 # This registry separates discovery from document acquisition. A source is not
@@ -96,7 +96,10 @@ defaults:
 
 sources:
   # 1. Frontier labs, model vendors, platforms, and official changelogs
-  - {id: openai-news, name: OpenAI News, organization: OpenAI, group: official, region: global, tier: primary, priority: P0, profile: rss_to_article, homepage_url: "https://openai.com/news/", discovery_url: "https://openai.com/news/rss.xml", content_access: full_article_extract, verification: page_confirmed, enabled: true}
+  # ADR-0013：feed 可读，文章页对非浏览器客户端一律 403（换 UA 无效，不绕过）。
+  # metadata_abstract = 仍请求原文，被拒时保留 feed 给出的标题、链接、发布时间与简介，
+  # 列表可见、不切块、不作 RAG 证据。此前配置未改，每篇被拒后整条回滚，八周 0 条入库。
+  - {id: openai-news, name: OpenAI News, organization: OpenAI, group: official, region: global, tier: primary, priority: P0, profile: rss_to_article, homepage_url: "https://openai.com/news/", discovery_url: "https://openai.com/news/rss.xml", content_access: metadata_abstract, verification: page_confirmed, enabled: true, public_render: metadata_link}
   # 下面三个 OpenAI 文档站与 xai-news 自 2026-08-11 起对香港出口返回 403，
   # 各自连续失败 99–101 次。配置正确，是出口 IP 被拒；已被状态机隔离并退避，
   # 保留登记以便换出口后能立刻恢复，不删也不停用。
