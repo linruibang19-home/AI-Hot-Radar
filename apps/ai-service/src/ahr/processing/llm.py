@@ -447,7 +447,8 @@ class LlmClient:
             user_prompt = (
                 f"来源：{source_name}\n原标题：{title}\n\n"
                 "注意：未取得正文，下面只是发布方在订阅源里写的一段简介。"
-                "summary_zh 只复述这段简介，写 1-2 句，不得补充简介以外的任何信息；"
+                "summary_zh 只复述这段简介，写 1-2 句，不得补充简介以外的任何信息，"
+                "直接陈述内容，不要出现「简介称」「简介仅说明」之类的说法；"
                 "quality_factors 按简介实际提供的信息量打分。\n\n"
                 f"简介：\n{body_text[:MAX_BODY_CHARS]}"
             )
