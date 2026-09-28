@@ -72,3 +72,24 @@ Python 全量 1142 passed；`ruff check`、`ruff format --check`、`mypy src` �
 - **xAI 仍是 0**：`xai-news` 的列表页本身 403，连发现都做不到，本次改动帮不上。
 - 列表日期只覆盖卡片里印着日期的站；Meta、Together 等仍无日期。已被挤出列表页的旧条目，回填也找不到。
 - 3 个 OpenAI 文档 changelog 仍被隔离（`docs_changelog` 没有「发现」与「正文」之分，整页被拒）。
+
+## 5. 上线（v0.1.33，2026-09-28 17:25）
+
+| 项 | 上线前 | 上线后 |
+|---|---:|---:|
+| `openai-news` 状态 / 条数 | `PROBING` / 0 | `METADATA_ONLY` / 首轮 5 条，积压 154 条按每轮 5 条消化 |
+| 每轮抓取数（`crawl_run.fetched_count`） | 0（发现 154） | 5 |
+| 发布日期为空（全库，去重后） | 1,166 | 1,072 |
+| `anthropic-news` 无日期 | 14 / 14 | 5 / 14 |
+
+- `sync-sources` 写入 151 条，`registry_version = 2026-09-28.1`。
+- `backfill-listing-dates --dry-run` 预计 64 条，正式执行前抽查 Mistral（29）、Anthropic（9）、Cohere（11）
+  各 6 条，卡片日期均与发布日期一致——例如 Mistral Compute 实为 2025-06-11，此前显示为首次抓取的 2026-08-01。
+  正式执行填 64 条。执行前把全部空值 id 存到 `/home/deploy/null-published-at-before-v0.1.33.txt`（1,166 行），可据此回滚。
+- 首批 5 条 OpenAI 内容（GPT-5.6、ChatGPT Work 等 7 月发布）已富化，`enrichment_basis = discovery_summary`，
+  分块 0，线上详情页显示正常。
+
+**上线后发现的问题**：GPT-5.6 发布帖质量分为 0。简介是官方宣传语（"Frontier intelligence that scales with
+your ambition"），模型据此给了 `spam_penalty = 60`。营销水分是正文的属性，模型并没有读到正文，所以简介来源
+不再扣这一项（模型原始打分照存）；同时要求摘要不要出现「简介称」之类的元话语。修复随后续版本上线，
+已富化的条目需重新富化一次。

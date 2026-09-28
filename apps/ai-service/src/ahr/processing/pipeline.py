@@ -177,7 +177,19 @@ def _store_enrichment(
     feed's `discovery_summary` when the article was refused (ADR-0013). A
     reader-facing surface can then say which of the two a summary rests on.
     """
-    score = result.quality_score(source_authority=SOURCE_AUTHORITY.get(source_tier, 50))
+    scored = result
+    if basis == "discovery_summary":
+        # A feed summary is the publisher's tagline, and a tagline reads as
+        # marketing: GPT-5.6's launch post got spam_penalty 60 on "frontier
+        # intelligence that scales with your ambition" and scored 0. Padding is
+        # a property of an article body the model never saw, so it is not
+        # charged here. The model's factors are still stored as it gave them.
+        scored = result.model_copy(
+            update={
+                "quality_factors": result.quality_factors.model_copy(update={"spam_penalty": 0})
+            }
+        )
+    score = scored.quality_score(source_authority=SOURCE_AUTHORITY.get(source_tier, 50))
 
     with connection.cursor() as cursor:
         # A successful enrichment is a complete new judgement, not a patch on

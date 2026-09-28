@@ -284,3 +284,52 @@ def test_the_summary_records_what_it_rests_on() -> None:
         if call.args[0].lstrip().startswith("UPDATE content_item")
     )
     assert json.loads(update[6])["enrichment_basis"] == "discovery_summary"
+
+
+def test_a_tagline_is_not_charged_as_marketing() -> None:
+    """GPT-5.6's launch scored 0 in production on 2026-09-28: its feed summary is
+    a tagline and the model gave it spam_penalty 60. The stored factors keep
+    what the model said; only the score stops charging it."""
+    import uuid
+    from unittest.mock import MagicMock
+
+    from ahr.processing.schemas import EnrichmentResult
+
+    result = EnrichmentResult.model_validate(
+        {
+            "summary_zh": "OpenAI 发布 GPT-5.6。",
+            "zh_title": "GPT-5.6",
+            "content_type": "model_release",
+            "quality_factors": {
+                "relevance": 85,
+                "information_gain": 25,
+                "technical_depth": 10,
+                "spam_penalty": 60,
+            },
+        }
+    )
+
+    def stored(basis: str) -> tuple[float, dict[str, Any]]:
+        connection = MagicMock()
+        cursor = connection.cursor.return_value.__enter__.return_value
+        processing._store_enrichment(
+            connection,
+            uuid.uuid4(),
+            result,
+            source_tier="primary",
+            model_name="m",
+            vocabulary=set(),
+            basis=basis,
+        )
+        params = next(
+            call.args[1]
+            for call in cursor.execute.call_args_list
+            if call.args[0].lstrip().startswith("UPDATE content_item")
+        )
+        return params[3], json.loads(params[6])
+
+    summary_score, attributes = stored("discovery_summary")
+    assert summary_score == 56.5
+    assert attributes["quality_factors"]["spam_penalty"] == 60
+    # An article body is still charged: there the model saw the padding.
+    assert stored("body")[0] == 0.0
