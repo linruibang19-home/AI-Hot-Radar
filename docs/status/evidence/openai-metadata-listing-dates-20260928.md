@@ -93,3 +93,9 @@ Python 全量 1142 passed；`ruff check`、`ruff format --check`、`mypy src` �
 your ambition"），模型据此给了 `spam_penalty = 60`。营销水分是正文的属性，模型并没有读到正文，所以简介来源
 不再扣这一项（模型原始打分照存）；同时要求摘要不要出现「简介称」之类的元话语。修复随后续版本上线，
 已富化的条目需重新富化一次。
+
+## 6. v0.1.34（2026-09-28 17:57）
+
+- 部署后把 10 条已富化的 `openai-news`（`enrichment_basis = discovery_summary`）置回 `PENDING`；18:15 下一轮处理后
+  连同新入库的共 15 条全部重新富化，分块 0。
+- 质量分 44–66，GPT-5.6 发布帖 0 → 55.25（模型原始 `spam_penalty = 60` 照存）；摘要中不再出现「简介称」类元话语。
