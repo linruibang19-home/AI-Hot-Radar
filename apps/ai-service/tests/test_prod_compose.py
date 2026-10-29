@@ -155,4 +155,4 @@ def test_postgres_is_told_the_memory_it_actually_has(compose: dict) -> None:
     assert _mb(settings["effective_cache_size"]) < limit, (
         f"effective_cache_size {settings['effective_cache_size']} exceeds the {limit} MB container"
     )
-    assert settings.get("jit") == "off", "JIT compiles queries that run in milliseconds"
+    assert settings.get("jit") == "off", "jit was measured to make no difference here; keep it off"

@@ -16,7 +16,10 @@ improvement if it returns the same thing:
 
 - a fingerprint of each question's ranked chunk ids. Tuning `random_page_cost`
   or memory can change a plan; it must not change a result. Comparing the
-  fingerprints of two runs proves that, question by question.
+  fingerprints of two runs proves that, question by question — **only with
+  `--corpus-cutoff`**. Production ingests continuously: on 2026-10-30 two passes
+  twenty minutes apart without a cutoff agreed on only 79 of 90 questions, so a
+  mismatch said nothing about the change being measured.
 - buffer hits and reads on `content_chunk` and its indexes during the run, so
   "it got faster" can be attributed to "it stopped reading from disk".
 """
@@ -97,7 +100,7 @@ def _percentiles(values: list[int]) -> dict[str, int]:
     }
 
 
-async def bench(label: str, passes: int) -> None:
+async def bench(label: str, passes: int, corpus_cutoff: datetime | None) -> None:
     from ahr.rag.service import retrieve
 
     vectors = json.loads(VECTORS.read_text())
@@ -129,6 +132,7 @@ async def bench(label: str, passes: int) -> None:
                     asked_at=question.asked_at,
                     on_stage=on_stage,
                     query_vector=vectors[question.id],
+                    corpus_cutoff=corpus_cutoff,
                 )
                 wall = int((time.monotonic() - started) * 1000)
                 ids = ",".join(str(getattr(h, "chunk_id", "")) for h in hits)
@@ -171,6 +175,7 @@ async def bench(label: str, passes: int) -> None:
         "label": label,
         "measured_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "questions": len(questions),
+        "corpus_cutoff": corpus_cutoff.isoformat() if corpus_cutoff else None,
         "settings": settings,
         "runs": runs,
     }
@@ -188,11 +193,17 @@ def main() -> int:
     b = sub.add_parser("bench")
     b.add_argument("--label", required=True)
     b.add_argument("--passes", type=int, default=2)
+    b.add_argument(
+        "--corpus-cutoff",
+        type=datetime.fromisoformat,
+        default=None,
+        help="freeze the corpus at this instant (ISO 8601 with offset) so runs are comparable",
+    )
     args = parser.parse_args()
     if args.mode == "embed":
         asyncio.run(embed())
     else:
-        asyncio.run(bench(args.label, args.passes))
+        asyncio.run(bench(args.label, args.passes, args.corpus_cutoff))
     return 0
 
 

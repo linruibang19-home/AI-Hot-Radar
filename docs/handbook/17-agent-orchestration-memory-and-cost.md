@@ -39,7 +39,7 @@ flowchart LR
 2. 限流、输入长度和危险参数校验先于模型调用；
 3. `planner.py` 用确定性规则识别 query type、厂商实体、日期和“最近”语义；
 4. 查询改写器只看最近问题和历史引用标题，产生独立检索句；原始问题始终保留；
-5. dense、sparse、temporal/entity 通道并行召回；
+5. dense、sparse、temporal/entity 通道依次召回（`spec/04` 要求并行，代码目前串行，见 `docs/design/rag-optimization-plan.md` R0-c）；
 6. RRF 融合、交叉编码器重排、元数据小幅调整；
 7. 在父段预算内补上下文，构造带编号证据；
 8. 生成模型输出结构化 claims 和 evidence ids；
