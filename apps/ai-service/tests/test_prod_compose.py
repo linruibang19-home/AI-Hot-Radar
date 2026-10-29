@@ -100,3 +100,59 @@ def test_the_env_file_sits_beside_the_compose_file(compose: dict) -> None:
         for entry in service.get("env_file", []):
             path = entry["path"] if isinstance(entry, dict) else entry
             assert not str(path).startswith(".."), f"{name} reads {path}"
+
+
+# --- memory (2026-10-30) ---------------------------------------------------
+
+# The production host: 2 cores, 3,623 MB of RAM, 2 GB of swap. Swap is a
+# backstop, not budget. A limit exists so that one runaway process is killed
+# instead of the whole box swapping to a halt, which only holds while the
+# limits together fit in RAM with room left for the OS and the Docker daemon.
+HOST_RAM_MB = 3623
+OS_AND_DOCKER_RESERVE_MB = 256
+
+
+def _mb(value: object) -> int:
+    text = str(value).strip().lower()
+    for suffix, factor in (("gb", 1024), ("g", 1024), ("mb", 1), ("m", 1)):
+        if text.endswith(suffix):
+            return int(float(text[: -len(suffix)]) * factor)
+    raise ValueError(f"unrecognised size: {value!r}")
+
+
+def _postgres_settings(compose: dict) -> dict[str, str]:
+    command = compose["services"]["postgres"].get("command") or []
+    settings = {}
+    for flag, value in zip(command, command[1:], strict=False):
+        if flag == "-c":
+            key, _, setting = value.partition("=")
+            settings[key] = setting
+    return settings
+
+
+def test_memory_limits_fit_the_host(compose: dict) -> None:
+    resident = {
+        name: _mb(service["mem_limit"])
+        for name, service in compose["services"].items()
+        if "tools" not in (service.get("profiles") or [])
+    }
+    assert all(resident.values()), "every resident service needs a mem_limit"
+    total = sum(resident.values())
+    assert total <= HOST_RAM_MB - OS_AND_DOCKER_RESERVE_MB, (
+        f"limits sum to {total} MB on a {HOST_RAM_MB} MB host: {resident}"
+    )
+
+
+def test_postgres_is_told_the_memory_it_actually_has(compose: dict) -> None:
+    """The defaults told the planner it had 4 GB of cache inside a 640 MB
+    container, so it costed index scans as if they were in memory when they
+    were being read from disk."""
+    limit = _mb(compose["services"]["postgres"]["mem_limit"])
+    settings = _postgres_settings(compose)
+    assert _mb(settings["shared_buffers"]) <= limit // 3, (
+        f"shared_buffers {settings['shared_buffers']} leaves too little of {limit} MB for the rest"
+    )
+    assert _mb(settings["effective_cache_size"]) < limit, (
+        f"effective_cache_size {settings['effective_cache_size']} exceeds the {limit} MB container"
+    )
+    assert settings.get("jit") == "off", "JIT compiles queries that run in milliseconds"

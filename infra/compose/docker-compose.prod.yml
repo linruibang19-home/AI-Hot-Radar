@@ -62,9 +62,34 @@ services:
       timeout: 5s
       retries: 20
       start_period: 10s
-    # Measured 300 MB. The rest is room for the shared buffers and
-    # sort memory a growing corpus will want.
-    mem_limit: 640m
+    # Tuned for this 2C4G host (2026-10-30). The defaults assumed a dedicated
+    # server with a spinning disk: 128 MB of shared_buffers against a 578 MB
+    # HNSW index and a 156 MB GIN index, effective_cache_size claiming 4 GB
+    # inside a 640 MB container (so the planner costed index scans as cached
+    # when they were not), random_page_cost 4 on an SSD, and JIT compiling
+    # queries that run in milliseconds. maintenance_work_mem 64 MB is why
+    # rebuilding the vector index during the 10-30 restore took 27 minutes.
+    # The extra memory comes from containers whose limits were 3-5x their
+    # measured peak; the sum of all limits stays under the host's RAM
+    # (test_memory_limits_fit_the_host). Before/after measurements:
+    # docs/status/evidence/postgres-memory-tuning-20261030.md.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=768MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=256MB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - jit=off
+    mem_limit: 1024m
     restart: unless-stopped
 
   redis:
@@ -165,9 +190,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # Measured 53 MB. Embedding and reranking are API calls, so nothing
-    # large is ever resident; the headroom is for request concurrency.
-    mem_limit: 448m
+    # Measured 53 MB idle, 129 MB while running the retrieval benchmark
+    # in-container. Embedding and reranking are API calls, so nothing large is
+    # ever resident; the headroom is for request concurrency and CLI jobs.
+    mem_limit: 384m
     restart: unless-stopped
 
   scheduler:
@@ -229,7 +255,7 @@ services:
       redis:
         condition: service_healthy
     # Measured 46 MB, but it processes documents in batches of 60.
-    mem_limit: 320m
+    mem_limit: 256m
     restart: unless-stopped
     healthcheck:
       disable: true
@@ -252,7 +278,7 @@ services:
       ai-service:
         condition: service_healthy
     # Measured 54 MB. Next's server keeps a render cache.
-    mem_limit: 320m
+    mem_limit: 256m
     restart: unless-stopped
 
   # The only container with a published port.
@@ -273,7 +299,7 @@ services:
       web:
         condition: service_healthy
     # Measured under 20 MB; it terminates TLS and proxies one upstream.
-    mem_limit: 128m
+    mem_limit: 96m
     restart: unless-stopped
 
   # Nightly `pg_dump`, seven days retained. Not a cron on the host: a backup
