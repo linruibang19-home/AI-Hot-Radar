@@ -66,8 +66,8 @@ services:
     # server with a spinning disk: 128 MB of shared_buffers against a 578 MB
     # HNSW index and a 156 MB GIN index, effective_cache_size claiming 4 GB
     # inside a 640 MB container (so the planner costed index scans as cached
-    # when they were not), random_page_cost 4 on an SSD, and JIT compiling
-    # queries that run in milliseconds. maintenance_work_mem 64 MB is why
+    # when they were not), and random_page_cost 4 on an SSD. jit is off: it made
+    # no measured difference on the multi-second dense scan. maintenance_work_mem 64 MB is why
     # rebuilding the vector index during the 10-30 restore took 27 minutes.
     # The extra memory comes from containers whose limits were 3-5x their
     # measured peak; the sum of all limits stays under the host's RAM

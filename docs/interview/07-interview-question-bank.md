@@ -274,7 +274,7 @@ PR/CI → main → release 全量门 → GHCR SHA 镜像 → 服务器 preflight
 | 58 | `evidence_passage` 表在哪？ | 是领域术语，物理实现是 `content_chunk` | ADR-0029/Flyway；不能按旧文档找表 |
 | 59 | embedding 为什么与 chunk 同行？ | 当前单模型减少 join/同步 | ADR-0029；多模型需拆表/双索引 |
 | 60 | PostgreSQL 同时搜索会不会慢？ | 会，且本地测不出：生产关键词检索 13.4 s，规划器把条目⋈版本估成 1 行走了全表；MATERIALIZED 先走 GIN 后 0.8 s | `EXPLAIN (ANALYZE, BUFFERS)`；剩余瓶颈是 2C4G 库内存 |
-| 61 | HNSW 为什么而非 IVFFlat？ | 免训练、高 recall；但无时间窗时反而不用近似：`ef_search=100` 与精确结果重合最低 0.65，改为先排序再 JOIN 的精确路径 | 生产 11.3 s → 约 2 s，结果一致 |
+| 61 | 为什么最终没用 HNSW？ | 测过：`ef_search=100` 与精确结果重合最低 0.65，开到 800 仍漏最多 10% 的精确前 20；改为先排序再 JOIN 的精确扫描。生产统计 HNSW 索引扫描次数为 0 | 4 万分块时 11.3 s → 约 2 s；7.4 万分块时回到约 9 s，下一步二值量化粗排 + 精确精排（方案 R0-b） |
 | 62 | advisory lock 崩溃会死锁吗？ | session 结束自动释放 | processing worker；长任务需监控连接 |
 | 63 | `SKIP LOCKED` 会饿死任务吗？ | 排序/next attempt + 短领取降低风险 | SQL；持续失败靠 backoff/dead state |
 | 64 | CAS 如何防旧结果？ | 输出绑定 input hash/revision/version，提交时比较 | processing tests；外部副作用另处理 |

@@ -11,7 +11,7 @@
 ```text
 canonical 正文 → revision → 结构/语义切块
 → text hash 与定位 → bge-m3 1024 维向量
-→ pgvector HNSW + tsvector/GIN + CJK bigram
+→ pgvector 精确扫描（HNSW 实测漏召回，未启用）+ tsvector/GIN + CJK bigram
 → entity/topic/story/time/source 元数据
 ```
 
@@ -53,7 +53,7 @@ Embedding 记录模型与版本；重建索引先写新版本、验证后切换�
 
 | 通道 | 擅长 | 典型缺陷 |
 |---|---|---|
-| Dense pgvector/HNSW | 自然语言、同义改写、语义相似 | 型号与精确词可能排后 |
+| Dense pgvector（精确扫描） | 自然语言、同义改写、语义相似 | 型号与精确词可能排后 |
 | Sparse tsvector/GIN | 版本号、缩写、模型名、精确术语 | 改写或跨语言表达较弱 |
 | Temporal SQL | 绝对时间窗、已发布状态、来源级别 | 不独立判断语义相关性 |
 | Entity temporal | 目标公司/模型在时间窗内的内容 | 实体消歧错误会漏召回 |
@@ -64,7 +64,8 @@ dense 第 14、sparse 第 1、融合第 3，证明两种召回解决不同问题
 
 两个通道在生产上都踩过执行计划的坑（2026-09-24）：
 
-- **稠密**：无时间窗时不用 HNSW 近似——实测 `ef_search=100` 与精确结果的重合最低只有 0.65。
+- **稠密**：不用 HNSW 近似——实测 `ef_search=100` 与精确结果的重合最低只有 0.65，开到 800 仍会漏掉最多 10%。
+  2026-10-30 生产统计：HNSW 索引扫描次数为 0，带时间窗时规划器也不选它。
   改为「先在分块表按距离排序、再 JOIN 条目」，生产 11.3 s → 约 2 s，结果逐条一致；
 - **关键词**：规划器把「条目⋈版本」估成 1 行（实际 7,521），走嵌套循环逐版本取全部分块再测全文
   匹配，GIN 索引没用上，读盘 48,521 页、13.4 s。用 MATERIALIZED CTE 固定「先走索引再 JOIN」后
